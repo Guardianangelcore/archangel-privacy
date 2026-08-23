@@ -1,0 +1,169 @@
+{
+  "app_name": "Guardian Health & Angel",
+  "personality": "5 Brutalist Mobile",
+  "personality_one_liner": "High-trust utilitarian Swiss design: engineered for absolute reliability, clarity, and survival, using stark contrasts and massive touch targets for extreme accessibility.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#111111",
+    "surfaceSecondary": "#F2F2F2",
+    "onSurfaceSecondary": "#111111",
+    "surfaceTertiary": "#E5E5E5",
+    "onSurfaceTertiary": "#333333",
+    "surfaceInverse": "#111111",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#1B4332",
+    "brandPrimary": "#2D6A4F",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#40916C",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#D8F3DC",
+    "onBrandTertiary": "#1B4332",
+    "success": "#2D6A4F",
+    "onSuccess": "#FFFFFF",
+    "warning": "#E9C46A",
+    "onWarning": "#111111",
+    "error": "#D90429",
+    "onError": "#FFFFFF",
+    "info": "#4A4E69",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E5E5",
+    "borderStrong": "#111111",
+    "divider": "#E5E5E5"
+  },
+  "typography": {
+    "displayFontFamily": "Space Grotesk",
+    "textFontFamily": "Satoshi",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24,
+      "3xl": 48
+    }
+  },
+  "spacing": {
+    "rule": "Generous spacing in Standard Mode for clarity. In Angel Mode, padding expands massively to eliminate dead zones and maximize tap targets.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 0,
+    "md": 0,
+    "lg": 0,
+    "pill": 0
+  },
+  "shadow_tier": "0",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "false",
+    "do's": ["Use solid surfaceInverse for sticky headers and elevated elements"],
+    "dont's": ["Do not use blur or glassmorphism as it clashes with the Brutalist accessibility-first aesthetic"]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "none",
+      "android": "none",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "none",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Onboarding & Auth",
+      "purpose": "Secure entry point featuring Google Auth, language selection (SK, CZ, EN, DE), and the 'Guardian Angel' author credit.",
+      "states": {
+        "loading": "High-contrast geometric spinner with 'Decrypting Identity...' text",
+        "empty": "N/A",
+        "error": "Bold error banner with 'Retry Connection' primary button"
+      },
+      "layout": "Full-bleed background image with a gradient scrim (transparent to 90% surfaceInverse). A rigid grid of language selection chips. Huge, blocky 'Sign in with Google' button pinned to the bottom. 'Vision by Guardian Angel' credited at the top right in mono-spaced small caps."
+    },
+    {
+      "name": "Standard Mode Home",
+      "purpose": "Comprehensive dashboard for medical sovereignty, featuring Vault summaries and Waitlist Hunter tracking.",
+      "states": {
+        "loading": "Skeleton loader using stark rectangular surfaceTertiary blocks",
+        "empty": "Illustration of secure metal lockers with text 'Your health vault is empty. Upload documents.'",
+        "error": "Red outlined card 'Sync failed' with a hard refresh button"
+      },
+      "layout": "Sticky header with 'Guardian' wordmark and a heavy 2pt bottom border. A sticky chip row below for quick filters (Vault, Appointments, Translator). Below, list items for Waitlist Hunter (high contrast dates, specialty). Floating action button for Emergency QR fixed 24px above the bottom tab bar. A prominent toggle switch in the header to activate 'Angel Mode'."
+    },
+    {
+      "name": "Angel Mode Home",
+      "purpose": "Ultra-simplified, high-contrast, accessibility-first dashboard for seniors with four massive touch targets.",
+      "states": {
+        "loading": "Centered text 'Loading Angel Mode...'",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Bottom tabs are hidden. The screen is a 2x2 grid filling 100% of the available space minus safe areas. Four massive tiles: SOS (Red), Call Family, Medications, Documents. Typography is 28-48pt (3xl). Tiles use 2pt borderStrong outlines. A sticky top bar holds the toggle to return to Standard Mode and Voice-Native activation button."
+    },
+    {
+      "name": "Health Vault & AI Translator",
+      "purpose": "Encrypted document storage with AI-powered translation of medical jargon to plain language.",
+      "states": {
+        "loading": "Scanning animation line over the document text",
+        "empty": "Minimalist icon with 'No documents scanned yet.'",
+        "error": "Error block with 'Translation offline. Check connection.'"
+      },
+      "layout": "List of documents using flat timeline layout (Date, File Size, Title). Tapping a document opens it in a full-screen viewer. An 'AI Translate' fixed button at the bottom triggers a bottom sheet that overlays plain-language explanation in oversized, readable text."
+    },
+    {
+      "name": "Fall Detection Verify",
+      "purpose": "Emergency loop screen with a 30-second countdown and a massive cancellation target to prevent false alarms.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Full-screen absolute overlay. Background is pure warning (Mustard) or error (Red). Massive 48pt+ monospaced countdown timer in the center. A colossal 'I'M OK' (Cancel) button fills the bottom 40% of the screen. 'Get Help Now' button placed at the top. Visual heartbeat animation and haptic pulse scale with the countdown."
+    },
+    {
+      "name": "Emergency QR & Donor Card",
+      "purpose": "Life-saving offline screen presenting donor info, critical medical data, and a QR code.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "High-contrast black-and-white layout for optimal scanner readability. Massive QR code centered. Below it, tabular data (Blood Type, Allergies, Emergency Contact) laid out in rigid, border-separated rows. Bright red 'Donor Card' badge at the top."
+    }
+  ],
+  "images": {
+    "onboarding_bg": {
+      "url": "https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "dark": "https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Caregiver sharing a gentle moment with a senior resident"
+    },
+    "guardian_angel_credit": {
+      "url": "https://images.pexels.com/photos/29437052/pexels-photo-29437052.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Vintage angel statue with a weathered look"
+    },
+    "vault_empty_state": {
+      "url": "https://images.unsplash.com/photo-1730207375825-d734728f877e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwxfHxzZWN1cmUlMjBtZWRpY2FsJTIwZG9jdW1lbnQlMjB2YXVsdCUyMGFic3RyYWN0fGVufDB8fHx8MTc4NzQ4MDQ1NXww&ixlib=rb-4.1.0&q=85",
+      "alt": "A row of secure metal lockers"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the Brutalist Mobile LIGHT personality. Use stark white backgrounds, hard black text, and signal red for emergencies. Do not use border radii (everything is 0 / sharp corners).",
+    "Dual-Mode Architecture is critical. 'Standard Mode' uses list items, 4-tab bottom navigation, and regular spacing (md/lg). 'Angel Mode' MUST hide bottom tabs, remove standard padding, and fill the screen with a massive 2x2 grid of touch targets (>150pt height per tile) using the `3xl` typography scale (28-48pt).",
+    "Implement the Dual-Mode toggle directly in the sticky header. Ensure it triggers a strong haptic feedback when toggled.",
+    "For the Fall Detection Verify screen: It must be a full-screen absolute overlay. The countdown must use massive typography. Implement rhythmic haptics (Haptics.impactAsync) that pulse faster as the 30-second countdown progresses.",
+    "The Emergency QR floating button must be positioned exactly 16-24px above the bottom tab bar in Standard Mode.",
+    "Borders are structural: use 1.5pt `borderStrong` for active states, tiles in Angel Mode, and tabular data on the Emergency QR screen to ensure maximum contrast.",
+    "Never use Glassmorphism. Stick to solid `surfaceInverse` or `surfaceTertiary` for elevated elements and sticky headers.",
+    "Include a gradient scrim (transparent to >70% surfaceInverse) strictly behind the text overlay on the Onboarding background image.",
+    "Waitlist Hunter lists should use clear, tabular layouts with high-contrast dates and a chip row filter at the top."
+  ]
+}
