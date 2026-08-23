@@ -430,6 +430,14 @@ async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None))
     await db.documents.update_one({"doc_id": doc_id}, {"$set": {"extracted_text": text}})
     return {"extracted_text": text}
 
+# --------- AI COMPLIANCE (EU AI Act Art. 50 — applicable 2 Aug 2026) ---------
+AI_COMPLIANCE_NOTE = (
+    " COMPLIANCE: You are an AI system and the user must always know they interact with AI (EU AI Act Art. 50). "
+    "Your output is AI-generated, strictly informational and NOT medical, legal or financial advice — the user acts at their own risk. "
+    "Never diagnose, prescribe or draft binding legal acts. In emergencies direct to 112/155 (EU), 999 (UK), 911 (US). "
+    "End with one short disclaimer sentence in the user's language stating this is AI-generated informational content."
+)
+
 # --------- AI HEALTH TRANSLATOR ---------
 LANG_NAMES = {"sk": "Slovak", "cs": "Czech", "en": "English", "de": "German"}
 
@@ -443,7 +451,7 @@ def build_translator_system(lang_code: str) -> str:
         f"2) Čo to znamená / What this means (bullet list of plain-language points), "
         f"3) Odporúčania / Recommendations (2-3 practical next steps). "
         f"NEVER invent medications or diagnoses. If information is unclear, say so. "
-        f"Respond ONLY in {lang}."
+        f"Respond ONLY in {lang}." + AI_COMPLIANCE_NOTE
     )
 
 class TranslateIn(BaseModel):
@@ -680,7 +688,7 @@ async def physio(body: PhysioIn, authorization: Optional[str] = Header(None)):
         f"You are Physio-AI, guided by the Guardian Angel's professional experience in self-massage and ergonomics. "
         f"Give a warm, patient, senior-friendly 5-step self-massage & mobility routine for the {body.region} at {body.intensity} intensity. "
         f"Include: warning about pain, step-by-step actions with duration in seconds, breathing cue, and 1 ergonomic tip. "
-        f"Respond ONLY in {lang}. Use short sentences and numbered steps."
+        f"Respond ONLY in {lang}. Use short sentences and numbered steps." + AI_COMPLIANCE_NOTE
     )
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
@@ -710,17 +718,21 @@ async def list_campaigns(authorization: Optional[str] = Header(None)):
 @api.post("/solidarity/campaigns")
 async def new_campaign(body: CampaignIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    if not user.get("kyc_verified"):
+        raise HTTPException(403, "kyc_required: Campaign creation requires KYC verification (AML). Complete it in Legal & Compliance.")
     doc = {
         "campaign_id": uuid.uuid4().hex,
         "user_id": user["user_id"],
         "owner_name": user.get("name") or user["email"],
         "owner_did": user["did"],
+        "owner_kyc_attestation": user.get("kyc_attestation"),
         **body.model_dump(),
         "raised_amount": 0.0,
         "supporters": 0,
         "created_at": datetime.now(timezone.utc),
     }
     await db.campaigns.insert_one(doc.copy())
+    await _aml_ledger_append(user["user_id"], "campaign_create", {"campaign_id": doc["campaign_id"], "goal": body.goal_amount})
     return clean(doc)
 
 class DonateIn(BaseModel):
@@ -729,11 +741,22 @@ class DonateIn(BaseModel):
 
 @api.post("/solidarity/campaigns/{cid}/donate")
 async def donate(cid: str, body: DonateIn, authorization: Optional[str] = Header(None)):
-    """MOCKED donation — no real payment. Ledger only."""
+    """MOCKED payment rails — but real AML rules engine with tamper-evident ledger."""
     user = await get_current_user(authorization)
+    if body.amount <= 0:
+        raise HTTPException(400, "Invalid amount")
     camp = await db.campaigns.find_one({"campaign_id": cid}, {"_id": 0})
     if not camp:
         raise HTTPException(404, "not found")
+    # AML checks: daily limit + velocity
+    donated, tx = await _donations_today(user["user_id"])
+    limit = AML_VERIFIED_DAILY if user.get("kyc_verified") else AML_UNVERIFIED_DAILY
+    if tx >= AML_MAX_TX_PER_DAY:
+        await _aml_ledger_append(user["user_id"], "aml_block_velocity", {"tx_today": tx})
+        raise HTTPException(403, f"aml_velocity: Max {AML_MAX_TX_PER_DAY} donations per day exceeded.")
+    if donated + body.amount > limit:
+        await _aml_ledger_append(user["user_id"], "aml_block_limit", {"attempted": body.amount, "donated_today": donated, "limit": limit})
+        raise HTTPException(403, f"aml_limit: Daily limit €{limit:.0f} exceeded (today €{donated:.0f}). {'Complete KYC to raise the limit.' if not user.get('kyc_verified') else ''}")
     await db.donations.insert_one({
         "donation_id": uuid.uuid4().hex,
         "campaign_id": cid,
@@ -748,7 +771,8 @@ async def donate(cid: str, body: DonateIn, authorization: Optional[str] = Header
         {"campaign_id": cid},
         {"$inc": {"raised_amount": body.amount, "supporters": 1}},
     )
-    return {"ok": True, "mocked": True}
+    ledger_hash = await _aml_ledger_append(user["user_id"], "donation", {"campaign_id": cid, "amount": body.amount, "kyc": bool(user.get("kyc_verified"))})
+    return {"ok": True, "mocked": True, "ledger_hash": ledger_hash}
 
 # --------- INCLUSIVE RESPECT MAP ---------
 class ProviderIn(BaseModel):
@@ -992,7 +1016,7 @@ async def ai_advice(body: AdviceIn, authorization: Optional[str] = Header(None))
     system = (
         f"You are Jarvis, the proactive Guardian Angel advisor. The user is in the '{body.module}' module. "
         f"Give warm, practical, senior-friendly advice in max 4 short sentences based on the provided data. "
-        f"Be specific and actionable. Respond ONLY in {lang}."
+        f"Be specific and actionable. Respond ONLY in {lang}." + AI_COMPLIANCE_NOTE
     )
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
@@ -1507,6 +1531,256 @@ async def beacon_trigger(body: BeaconIn, authorization: Optional[str] = Header(N
 async def beacon_history(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     return await db.beacon_events.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(20)
+
+# --------- GLOBAL LEGAL ENGINE (2026 standards) ---------
+TOS_VERSION = "2026-06.1"
+EU_CC = {"SK","CZ","DE","AT","PL","HU","FR","IT","ES","PT","NL","BE","LU","IE","DK","SE","FI","EE","LV","LT","SI","HR","RO","BG","GR","CY","MT"}
+COMMON_LAW_CC = {"US","CA","AU","NZ","IE"}
+
+def resolve_jurisdiction(country: Optional[str]) -> str:
+    cc = (country or "").upper()
+    if cc in ("GB", "UK"):
+        return "UK"
+    if cc == "US":
+        return "US"
+    if cc in EU_CC:
+        return "EU"
+    return "OTHER"
+
+def _lang_key(language: str) -> str:
+    return "sk" if language in ("sk", "cs") else "en"
+
+DISCLAIMERS = {
+    "EU": {
+        "sk": [
+            {"id": "eu_ai_act", "title": "EU AI Act — Čl. 50 (účinné od 2. 8. 2026)", "text": "Komunikujete s AI systémom. Všetok obsah generovaný Jarvisom je označený ako AI výstup. Aplikácia nie je vysokorizikový AI systém ani zdravotnícka pomôcka podľa MDR (EÚ) 2017/745 — slúži na všeobecné wellness a informačné účely."},
+            {"id": "eu_gdpr", "title": "GDPR (EÚ) 2016/679", "text": "Vaše zdravotné údaje (čl. 9) sú spracúvané výlučne s vaším súhlasom, uložené šifrovane a ukotvené na vašom DID. Máte právo na prístup, opravu, vymazanie a prenositeľnosť. Prevádzkovateľ nezdieľa údaje s tretími stranami."},
+            {"id": "eu_medical", "title": "Nie je lekárska rada", "text": "AI preklady, wellness analýzy a fyzio-rutiny sú informačné. Nenahrádzajú lekára. V núdzi volajte 112 / 155."},
+        ],
+        "en": [
+            {"id": "eu_ai_act", "title": "EU AI Act — Art. 50 (effective 2 Aug 2026)", "text": "You are interacting with an AI system. All Jarvis content is labelled as AI-generated. This app is not a high-risk AI system nor a medical device under MDR (EU) 2017/745 — it serves general wellness and informational purposes."},
+            {"id": "eu_gdpr", "title": "GDPR (EU) 2016/679", "text": "Your health data (Art. 9) is processed only with your consent, stored encrypted and anchored to your DID. You have rights of access, rectification, erasure and portability."},
+            {"id": "eu_medical", "title": "Not medical advice", "text": "AI translations, wellness analyses and physio routines are informational. They do not replace a doctor. In emergency call 112 / 155."},
+        ],
+    },
+    "UK": {
+        "sk": [
+            {"id": "uk_dpa", "title": "UK GDPR · Data Protection Act 2018 · DUAA 2025", "text": "Spracovanie osobných a zdravotných údajov podlieha UK GDPR a Data (Use and Access) Act 2025. Údaje sú šifrované a viazané na váš DID."},
+            {"id": "uk_ai", "title": "AI transparentnosť", "text": "Komunikujete s AI systémom. Výstupy sú informačné, nie odborná rada. V núdzi volajte 999 / 111 (NHS)."},
+        ],
+        "en": [
+            {"id": "uk_dpa", "title": "UK GDPR · Data Protection Act 2018 · DUAA 2025", "text": "Processing of personal and health data is subject to UK GDPR and the Data (Use and Access) Act 2025. Data is encrypted and bound to your DID."},
+            {"id": "uk_ai", "title": "AI transparency", "text": "You are interacting with an AI system. Outputs are informational, not professional advice. In emergency call 999 / 111 (NHS)."},
+        ],
+    },
+    "US": {
+        "sk": [
+            {"id": "us_fda", "title": "FDA — General Wellness", "text": "Táto aplikácia je „general wellness product” podľa usmernenia FDA — nie je zdravotnícka pomôcka, nediagnostikuje ani nelieči. AI výstupy sú informačné."},
+            {"id": "us_hipaa", "title": "HIPAA", "text": "Prevádzkovateľ nie je „covered entity” podľa HIPAA. Údaje sú šifrované a pod vašou kontrolou cez DID. V núdzi volajte 911."},
+        ],
+        "en": [
+            {"id": "us_fda", "title": "FDA — General Wellness", "text": "This app is a general wellness product under FDA guidance — not a medical device; it does not diagnose or treat. AI outputs are informational only."},
+            {"id": "us_hipaa", "title": "HIPAA", "text": "The operator is not a HIPAA covered entity. Data is encrypted and under your control via DID. In emergency call 911."},
+        ],
+    },
+    "OTHER": {
+        "sk": [
+            {"id": "global", "title": "Globálne upozornenie", "text": "Komunikujete s AI systémom. Všetky výstupy sú informačné, nie lekárska či právna rada. Používate ich na vlastné riziko. V núdzi kontaktujte miestne tiesňové služby."},
+        ],
+        "en": [
+            {"id": "global", "title": "Global notice", "text": "You are interacting with an AI system. All outputs are informational, not medical or legal advice. You use them at your own risk. In emergency contact local emergency services."},
+        ],
+    },
+}
+
+TOS_TEXT = {
+    "sk": (
+        "PODMIENKY POUŽÍVANIA — GUARDIAN HEALTH & ANGEL (v{ver})\n"
+        "=====================================================\n\n"
+        "1. POVAHA SLUŽBY: Aplikácia je suverénny informačný a wellness nástroj. NIE JE poskytovateľom zdravotnej starostlivosti, zdravotníckou pomôckou, právnou kanceláriou ani finančnou inštitúciou.\n\n"
+        "2. AI VÝSTUPY (EU AI Act čl. 50): Všetok obsah generovaný AI (Jarvis) je označený a je VÝLUČNE INFORMAČNÝ. Používateľ berie na vedomie a súhlasí, že AI výstupy používa NA VLASTNÉ RIZIKO a pred akýmkoľvek rozhodnutím o zdraví, práve či financiách sa poradí s kvalifikovaným odborníkom.\n\n"
+        "3. ÚPLNÉ ZBAVENIE ZODPOVEDNOSTI: Zakladateľ a autor („Guardian Angel”), vývojári a prevádzkovatelia NENESÚ ŽIADNU ZODPOVEDNOSŤ za akúkoľvek priamu, nepriamu, náhodnú, následnú alebo exemplárnu škodu vzniknutú použitím aplikácie, AI výstupov, P2P výmen, barterov, majáku, detekcie pádu či komunitných funkcií — v maximálnom rozsahu povolenom právom jurisdikcie používateľa.\n\n"
+        "4. BEZPEČNOSTNÉ FUNKCIE: Detekcia pádu, strážca nečinnosti, scam štít a núdzový maják sú POMOCNÉ funkcie typu best-effort. Nenahrádzajú tiesňové linky ani profesionálny dohľad. Ich zlyhanie nezakladá nárok na náhradu škody.\n\n"
+        "5. P2P A KOMUNITA: Výmeny liekov (len voľnopredajné), barter a trhovisko prebiehajú priamo medzi používateľmi. Prevádzkovateľ nie je zmluvnou stranou, neručí za kvalitu, zákonnosť ani bezpečnosť plnení. Solidarity Hub podlieha AML pravidlám (denné limity, KYC).\n\n"
+        "6. DÁTA: Zero-knowledge princíp; údaje sú viazané na váš DID. Právne dokumenty (splnomocnenia, testamenty) sú ŠABLÓNY — pre plnú právnu záväznosť sa vyžaduje vlastnoručný podpis, prípadne svedkovia či notár podľa vašej jurisdikcie.\n\n"
+        "7. SÚHLAS: Potvrdením vyhlasujete, že máte 18+ rokov, prečítali ste si tieto podmienky, rozumiete im a prijímate ich vrátane úplného zbavenia zodpovednosti podľa bodu 3.\n\n"
+        "AGPL-v3 · Vízia a autorstvo: Guardian Angel · Verzia {ver}"
+    ),
+    "en": (
+        "TERMS OF SERVICE — GUARDIAN HEALTH & ANGEL (v{ver})\n"
+        "===================================================\n\n"
+        "1. NATURE OF SERVICE: The app is a sovereign informational and wellness tool. It is NOT a healthcare provider, medical device, law firm or financial institution.\n\n"
+        "2. AI OUTPUTS (EU AI Act Art. 50): All AI-generated content (Jarvis) is labelled and STRICTLY INFORMATIONAL. The user acknowledges and agrees that AI outputs are used AT THE USER'S OWN RISK and that a qualified professional must be consulted before any health, legal or financial decision.\n\n"
+        "3. TOTAL WAIVER OF LIABILITY: The founder and author (\"Guardian Angel\"), developers and operators BEAR NO LIABILITY WHATSOEVER for any direct, indirect, incidental, consequential or exemplary damages arising from use of the app, AI outputs, P2P exchanges, barter, beacon, fall detection or community features — to the maximum extent permitted by the law of the user's jurisdiction.\n\n"
+        "4. SAFETY FEATURES: Fall detection, inactivity guard, scam shield and the emergency beacon are best-effort AUXILIARY features. They do not replace emergency lines or professional supervision; their failure creates no claim for damages.\n\n"
+        "5. P2P & COMMUNITY: Medicine exchange (OTC only), barter and marketplace occur directly between users. The operator is not a contracting party and does not warrant quality, legality or safety. The Solidarity Hub is subject to AML rules (daily limits, KYC).\n\n"
+        "6. DATA: Zero-knowledge principle; data is bound to your DID. Legal documents (proxies, wills) are TEMPLATES — full legal validity requires a handwritten signature and, depending on your jurisdiction, witnesses or a notary.\n\n"
+        "7. CONSENT: By accepting you declare you are 18+, have read and understood these terms and accept them, including the total waiver of liability in clause 3.\n\n"
+        "AGPL-v3 · Vision & authorship: Guardian Angel · Version {ver}"
+    ),
+}
+
+@api.get("/legal/region")
+async def legal_region(country: Optional[str] = None, language: str = "sk", authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    jur = resolve_jurisdiction(country)
+    lk = _lang_key(language)
+    testament_format = "common_law_uk" if jur == "UK" else ("common_law" if (country or "").upper() in COMMON_LAW_CC else "civil_law_holograph")
+    return {
+        "jurisdiction": jur,
+        "country": (country or "").upper(),
+        "disclaimers": DISCLAIMERS[jur][lk],
+        "tos_version": TOS_VERSION,
+        "testament_format": testament_format,
+        "aml": {"unverified_daily_limit": 150, "verified_daily_limit": 5000, "max_tx_per_day": 10, "currency": "EUR"},
+    }
+
+@api.get("/legal/tos")
+async def legal_tos(country: Optional[str] = None, language: str = "sk", authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    return {"version": TOS_VERSION, "jurisdiction": resolve_jurisdiction(country), "text": TOS_TEXT[_lang_key(language)].format(ver=TOS_VERSION)}
+
+class TosAcceptIn(BaseModel):
+    country: Optional[str] = ""
+    language: str = "sk"
+
+@api.post("/legal/accept")
+async def legal_accept(body: TosAcceptIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
+        "tos_accepted_version": TOS_VERSION,
+        "tos_accepted_at": datetime.now(timezone.utc),
+        "tos_jurisdiction": resolve_jurisdiction(body.country),
+    }})
+    await _aml_ledger_append(user["user_id"], "tos_accept", {"version": TOS_VERSION, "jurisdiction": resolve_jurisdiction(body.country)})
+    return clean(await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0}))
+
+# --------- DECENTRALIZED AML (tamper-evident ledger = smart-contract simulation) ---------
+AML_UNVERIFIED_DAILY = 150.0
+AML_VERIFIED_DAILY = 5000.0
+AML_MAX_TX_PER_DAY = 10
+
+async def _aml_ledger_append(user_id: str, action: str, payload: dict) -> str:
+    last = await db.aml_ledger.find_one({}, {"_id": 0, "entry_hash": 1}, sort=[("seq", -1)])
+    prev_hash = last["entry_hash"] if last else "genesis"
+    seq_doc = await db.aml_ledger.find_one({}, {"_id": 0, "seq": 1}, sort=[("seq", -1)])
+    seq = (seq_doc["seq"] + 1) if seq_doc else 1
+    body = json.dumps({"seq": seq, "user_id": user_id, "action": action, "payload": payload, "prev": prev_hash}, sort_keys=True, default=str)
+    entry_hash = hashlib.sha256(body.encode()).hexdigest()
+    await db.aml_ledger.insert_one({
+        "seq": seq, "user_id": user_id, "action": action, "payload": payload,
+        "prev_hash": prev_hash, "entry_hash": entry_hash,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return entry_hash
+
+class KycIn(BaseModel):
+    full_name: str
+    birth_year: int = Field(ge=1900, le=2010)
+    country: str
+    declaration: bool = False  # sanctions & source-of-funds self-declaration
+
+@api.post("/aml/kyc")
+async def aml_kyc(body: KycIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    if not body.declaration:
+        raise HTTPException(400, "Sanctions & source-of-funds declaration is required")
+    attestation = hashlib.sha256(f"{user['did']}|{body.full_name}|{body.birth_year}|{body.country.upper()}|{datetime.now(timezone.utc).date()}".encode()).hexdigest()
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
+        "kyc_verified": True,
+        "kyc_attestation": attestation,
+        "kyc_country": body.country.upper(),
+        "kyc_verified_at": datetime.now(timezone.utc),
+    }})
+    ledger_hash = await _aml_ledger_append(user["user_id"], "kyc_attestation", {"attestation": attestation, "did": user["did"], "country": body.country.upper()})
+    return {"kyc_verified": True, "attestation": attestation, "ledger_hash": ledger_hash}
+
+async def _donations_today(user_id: str):
+    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    docs = await db.donations.find({"donor_user_id": user_id, "created_at": {"$gte": start}}, {"_id": 0, "amount": 1}).to_list(500)
+    return sum(d.get("amount", 0) for d in docs), len(docs)
+
+@api.get("/aml/status")
+async def aml_status(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    donated, tx = await _donations_today(user["user_id"])
+    verified = bool(user.get("kyc_verified"))
+    limit = AML_VERIFIED_DAILY if verified else AML_UNVERIFIED_DAILY
+    entries = await db.aml_ledger.count_documents({"user_id": user["user_id"]})
+    return {
+        "kyc_verified": verified,
+        "attestation": user.get("kyc_attestation"),
+        "donated_today": donated,
+        "tx_today": tx,
+        "daily_limit": limit,
+        "remaining_today": max(0.0, limit - donated),
+        "max_tx_per_day": AML_MAX_TX_PER_DAY,
+        "ledger_entries": entries,
+    }
+
+# --------- INTERNATIONAL LEGACY / TESTAMENT ENGINE ---------
+class TestamentIn(BaseModel):
+    country: str = "SK"
+    language: str = "sk"
+    full_name: str
+    wishes: str
+    executor_name: Optional[str] = ""
+    witness1: Optional[str] = ""
+    witness2: Optional[str] = ""
+
+TESTAMENT_INSTRUCTIONS = {
+    "civil_law_holograph": {
+        "sk": "HOLOGRAFNÝ TESTAMENT (kontinentálne právo, napr. § 476 Občianskeho zákonníka SR): Aby bol PLATNÝ, musí byť CELÝ napísaný VLASTNOU RUKOU poručiteľa a vlastnoručne PODPÍSANÝ s uvedením dňa, mesiaca a roku. Svedkovia nie sú potrební. Nižšie uvedený text si ODPÍŠTE rukou — vytlačená verzia NIE JE platná.",
+        "en": "HOLOGRAPHIC WILL (civil law, e.g. § 476 Slovak Civil Code): To be VALID it must be written ENTIRELY in the testator's OWN HAND and personally SIGNED with day, month and year. No witnesses required. COPY the text below by hand — a printed version is NOT valid.",
+    },
+    "common_law_uk": {
+        "sk": "ZÁVET PODĽA UK PRÁVA (Wills Act 1837, s. 9 — Anglicko a Wales): Musí byť PÍSOMNÝ, PODPÍSANÝ poručiteľom v SÚČASNEJ prítomnosti DVOCH svedkov, ktorí ho tiež podpíšu. POZOR: holografný (rukou písaný nesvedčený) závet NIE JE v Anglicku a Walese platný. V Škótsku postačuje vlastnoručný podpis na každej strane („self-proving” pri podpise pred 1 svedkom).",
+        "en": "WILL UNDER UK LAW (Wills Act 1837, s. 9 — England & Wales): Must be IN WRITING, SIGNED by the testator in the SIMULTANEOUS presence of TWO witnesses who also sign. NOTE: a holograph (handwritten unwitnessed) will is NOT valid in England & Wales. In Scotland a will subscribed on every page is self-proving if signed before 1 witness.",
+    },
+    "common_law": {
+        "sk": "ZÁVET (common law — napr. USA): Vyžaduje sa PÍSOMNÁ forma, podpis poručiteľa a DVAJA svedkovia (vo väčšine štátov). Niektoré štáty USA uznávajú aj holografný závet — overte miestne právo. Odporúčame notárske overenie (self-proving affidavit).",
+        "en": "WILL (common law — e.g. US): Requires WRITING, the testator's signature and TWO witnesses (most states). Some US states also accept holographic wills — verify local law. A notarized self-proving affidavit is recommended.",
+    },
+}
+
+@api.post("/legal/testament")
+async def legal_testament(body: TestamentIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    cc = body.country.upper()
+    fmt = "common_law_uk" if cc in ("GB", "UK") else ("common_law" if cc in COMMON_LAW_CC else "civil_law_holograph")
+    lk = _lang_key(body.language)
+    now = datetime.now(timezone.utc)
+    witnesses = ""
+    if fmt != "civil_law_holograph":
+        w1 = body.witness1 or "________________"
+        w2 = body.witness2 or "________________"
+        witnesses = (f"\n\nSVEDOK 1 / WITNESS 1: {w1}  Podpis/Signature: ____________\nSVEDOK 2 / WITNESS 2: {w2}  Podpis/Signature: ____________")
+    head = "ZÁVET / POSLEDNÁ VÔĽA" if lk == "sk" else "LAST WILL AND TESTAMENT"
+    doc_body = (
+        f"{head}\n{'=' * len(head)}\n\n"
+        f"{'Ja' if lk == 'sk' else 'I'}, {body.full_name}, DID: {user['did']},\n"
+        f"{'týmto vyhlasujem svoju poslednú vôľu' if lk == 'sk' else 'hereby declare my last will'} ({now.strftime('%Y-%m-%d')}):\n\n"
+        f"{body.wishes}\n\n"
+        f"{'Vykonávateľ závetu' if lk == 'sk' else 'Executor'}: {body.executor_name or '—'}\n"
+        f"{'Miesto a dátum' if lk == 'sk' else 'Place and date'}: ____________, {now.strftime('%d.%m.%Y')}\n"
+        f"{'Vlastnoručný podpis' if lk == 'sk' else 'Handwritten signature'}: ____________"
+        f"{witnesses}"
+    )
+    doc_hash = hashlib.sha256(f"{user['did']}|{body.full_name}|{fmt}|{now.date()}".encode()).hexdigest()
+    document_text = f"{TESTAMENT_INSTRUCTIONS[fmt][lk]}\n\n----------------------------------------\n\n{doc_body}\n\nSHA-256: {doc_hash}"
+    saved = {
+        "user_id": user["user_id"], "format": fmt, "country": cc, "language": body.language,
+        "full_name": body.full_name, "wishes": body.wishes, "executor_name": body.executor_name,
+        "witness1": body.witness1, "witness2": body.witness2,
+        "document_text": document_text, "doc_hash": doc_hash, "updated_at": now,
+    }
+    await db.legal_testaments.update_one({"user_id": user["user_id"]}, {"$set": saved}, upsert=True)
+    return await db.legal_testaments.find_one({"user_id": user["user_id"]}, {"_id": 0})
+
+@api.get("/legal/testament")
+async def get_testament(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.legal_testaments.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
 # --------- ROOT ---------
 @api.get("/")

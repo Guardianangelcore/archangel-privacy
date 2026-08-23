@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +50,10 @@ export default function Home() {
       await fireBeacon();
     } catch (e) { console.log('beacon err', e); }
   };
+
+  if (user && (user as any).tos_accepted_version !== '2026-06.1') {
+    return <TosGate lang={lang} setUser={setUser} />;
+  }
 
   if (angel) return <AngelHome onToggle={toggleAngel} lang={lang} router={router} onBeacon={beacon} beaconSent={beaconSent} />;
 
@@ -125,6 +129,40 @@ export default function Home() {
   );
 }
 
+function TosGate({ lang, setUser }: any) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try { const res: any = await api(`/legal/tos?country=SK&language=${lang}`); setText(res.text); } catch (e) { console.log(e); }
+    })();
+  }, [lang]);
+  const accept = async () => {
+    setBusy(true);
+    try {
+      const u: any = await api('/legal/accept', { method: 'POST', body: JSON.stringify({ country: 'SK', language: lang }) });
+      setUser(u);
+    } finally { setBusy(false); }
+  };
+  return (
+    <SafeAreaView testID="tos-gate" style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
+      <View style={styles.tosHead}>
+        <Ionicons name="shield-checkmark-outline" size={22} color={C.onInverse} />
+        <Text style={styles.tosHeadText}>{t('tos_title', lang).toUpperCase()} · v2026-06.1</Text>
+      </View>
+      <View style={styles.tosBanner}>
+        <Text style={styles.tosBannerText}>AI VÝSTUPY SÚ LEN INFORMAČNÉ · POUŽÍVATE ICH NA VLASTNÉ RIZIKO · ÚPLNÉ ZBAVENIE ZODPOVEDNOSTI AUTORA</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: S.lg }}>
+        {text ? <Text style={styles.tosBody}>{text}</Text> : <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
+      </ScrollView>
+      <Pressable testID="tos-gate-accept" onPress={accept} disabled={busy || !text} style={styles.tosAccept}>
+        {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.tosAcceptText}>{t('tos_accept', lang).toUpperCase()}</Text>}
+      </Pressable>
+    </SafeAreaView>
+  );
+}
+
 function ActionCard({ label, icon, onPress, testID }: any) {
   return (
     <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.card, pressed && { backgroundColor: C.surface3 }]}>
@@ -192,6 +230,13 @@ const styles = StyleSheet.create({
   fabText: { color: C.onError, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   beaconDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.error },
   beaconHint: { marginTop: S.md, fontSize: 9, letterSpacing: 1, color: C.onS3, fontWeight: '700' },
+  tosHead: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse },
+  tosHeadText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 14 },
+  tosBanner: { backgroundColor: C.warn, padding: S.md },
+  tosBannerText: { color: C.onWarn, fontWeight: '900', fontSize: 10, letterSpacing: 0.5 },
+  tosBody: { fontSize: 12, lineHeight: 18, color: C.fg, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
+  tosAccept: { backgroundColor: C.brand, paddingVertical: S.lg, alignItems: 'center', margin: S.lg, borderWidth: 2, borderColor: C.borderStrong },
+  tosAcceptText: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 15 },
   // Angel
   angelHeader: { paddingHorizontal: S.lg, paddingVertical: S.lg, backgroundColor: C.inverse, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   angelHeaderText: { color: C.onInverse, fontWeight: '900', fontSize: 20, letterSpacing: 2 },

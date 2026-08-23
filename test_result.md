@@ -108,3 +108,13 @@ New since iteration 2 (all need testing):
 - Frontend screens: /medicine-cabinet, /healthcare-proxy, /marketplace, /scam-shield, /survival-auditor, /barter; home reorganized into 4 sections; stealth beacon long-press on GUARDIAN logo.
 - Push register returns 500 with placeholder key by design (real key injected at deploy) — treat relay 500 from register-push as EXPECTED in this environment.
 - Auth: create test session directly in Mongo per /app/memory/test_credentials.md.
+
+## Iteration 4 scope (Global Compliance & Indemnity, June 2026)
+- GET /api/legal/region?country=&language= → jurisdiction (EU/UK/US/OTHER) + disclaimers (EU AI Act Art.50, GDPR, UK DPA/DUAA 2025, FDA/HIPAA) + testament_format + aml limits
+- GET /api/legal/tos + POST /api/legal/accept → tos_accepted_version '2026-06.1' on user; TOS gate blocks home until accepted (testID tos-gate, tos-gate-accept)
+- POST /api/aml/kyc (declaration required) → DID attestation + tamper-evident aml_ledger hash chain; GET /api/aml/status
+- AML enforcement on /api/solidarity/campaigns (403 kyc_required without KYC) and donate (403 aml_limit >€150/day unverified, €5000 verified; 403 aml_velocity >10 tx/day)
+- POST/GET /api/legal/testament → region formats: civil_law_holograph (SK §476), common_law_uk (Wills Act 1837 s.9, holograph invalid E&W), common_law (US 2 witnesses)
+- AI prompts now append compliance note (Art. 50); frontend AI disclosure footers
+- New screen /legal (country chips, disclaimers, TOS view/accept, KYC form, testament generator); Profile → legal link; Solidarity AML banner + error msgs
+- NOTE: existing test users likely lack tos_accepted_version → frontend home shows TOS gate first; accept via testID tos-gate-accept or set field in Mongo.

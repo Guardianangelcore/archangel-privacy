@@ -27,6 +27,11 @@ A sovereign, AI-driven mobile OS for medical dignity, senior safety, and communi
 21. **Emergency Beacon (Stealth)** — long-press GUARDIAN logo (standard or Angel header) 0.7s → silent signal with GPS location → `POST /api/beacon/trigger` + push. Discreet red dot confirmation only.
 22. **Jarvis Advisor cross-link** — `POST /api/ai/advice` — reusable JarvisAdvice component on Cabinet, Survival, Marketplace, Barter, Healthcare Proxy screens for proactive module-aware advice.
 23. **Home UI** — reorganized into 4 sections: Zdravie / Angel starostlivosť / Komunita / Prežitie (4 cards each) + Safety row.
+24. **Global Legal Engine (2026)** — `/legal` + `GET /api/legal/region`: jurisdiction resolution (EU/UK/US/OTHER) with adaptive disclaimers (EU AI Act Art. 50 eff. 2 Aug 2026, GDPR, UK DPA 2018/DUAA 2025, US FDA general wellness/HIPAA), GPS country detect.
+25. **TOS Liability Shield** — versioned TOS v2026-06.1 with total founder ("Guardian Angel") liability waiver; mandatory acceptance gate blocks home until accepted (`POST /api/legal/accept`, stored on user).
+26. **Decentralized AML** — DID-anchored KYC attestation (`POST /api/aml/kyc`), tamper-evident hash-chain ledger (`aml_ledger`, smart-contract simulation), enforced in Solidarity Hub: €150/day unverified, €5000/day verified, max 10 tx/day, campaigns require KYC.
+27. **International Testament Engine** — `POST /api/legal/testament`: civil_law_holograph (SK § 476 OZ, handwritten), common_law_uk (Wills Act 1837 s.9, 2 witnesses, holograph invalid in E&W), common_law (US, 2 witnesses); SHA-256 anchored.
+28. **AI Compliance (2026)** — Art. 50 compliance note appended to all LLM system prompts (translator, physio, wellness, advice); AI disclosure footers in UI.
 
 ## Integrations
 - **Auth**: Emergent Google Auth (`/api/auth/session`, `/api/auth/me`, `/api/auth/logout`)
@@ -67,6 +72,10 @@ A sovereign, AI-driven mobile OS for medical dignity, senior safety, and communi
 | GET/POST/DELETE | `/api/survival/items[...]` | Survival inventory, `/api/survival/runway` |
 | GET/POST/DELETE | `/api/barter/offers[...]` | Barter, `/{id}/accept`, `/api/barter/me` |
 | POST | `/api/beacon/trigger` | Stealth emergency beacon (+`/api/beacon/history`) |
+| GET | `/api/legal/region`, `/api/legal/tos` | Jurisdiction disclaimers + versioned TOS |
+| POST | `/api/legal/accept` | TOS acceptance (gate) |
+| POST/GET | `/api/aml/kyc`, `/api/aml/status` | DID KYC attestation + AML status |
+| POST/GET | `/api/legal/testament` | International will generator |
 
 ## Design
 Brutalist Mobile Light — sharp corners (radius 0), 1.5–2 pt borders, monochrome + signal red (#D90429). Green brand (#1B4332). See `/app/design_guidelines.json`.

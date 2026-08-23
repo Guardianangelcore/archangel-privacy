@@ -122,6 +122,15 @@ export const T: Dict = {
   minority_safety: { sk: 'Bezpečie menšín', cs: 'Bezpečí menšin', en: 'Minority safety', de: 'Minderheiten-Sicherheit' },
   real_wait: { sk: 'Reálne čakanie (týž.)', cs: 'Reálné čekání (týd.)', en: 'Real wait (weeks)', de: 'Echte Wartezeit (Wo.)' },
   fin_transparency: { sk: 'Finančná transparentnosť', cs: 'Finanční transparentnost', en: 'Financial transparency', de: 'Finanzielle Transparenz' },
+  legal_hub: { sk: 'Právo a súlad', cs: 'Právo a soulad', en: 'Legal & Compliance', de: 'Recht & Compliance' },
+  tos_title: { sk: 'Podmienky používania', cs: 'Podmínky používání', en: 'Terms of Service', de: 'Nutzungsbedingungen' },
+  tos_accept: { sk: 'Súhlasím a prijímam', cs: 'Souhlasím a přijímám', en: 'I agree and accept', de: 'Ich stimme zu' },
+  tos_accepted: { sk: 'Podmienky prijaté', cs: 'Podmínky přijaty', en: 'Terms accepted', de: 'Bedingungen akzeptiert' },
+  kyc_title: { sk: 'KYC overenie (AML)', cs: 'KYC ověření (AML)', en: 'KYC verification (AML)', de: 'KYC-Verifizierung (AML)' },
+  kyc_verified: { sk: 'KYC overené', cs: 'KYC ověřeno', en: 'KYC verified', de: 'KYC verifiziert' },
+  testament: { sk: 'Závet / Posledná vôľa', cs: 'Závěť / Poslední vůle', en: 'Will / Testament', de: 'Testament' },
+  jurisdiction: { sk: 'Jurisdikcia', cs: 'Jurisdikce', en: 'Jurisdiction', de: 'Gerichtsbarkeit' },
+  ai_disclosure: { sk: 'AI OBSAH · LEN INFORMAČNÉ · NIE JE ODBORNÁ RADA', cs: 'AI OBSAH · POUZE INFORMAČNÍ · NENÍ ODBORNÁ RADA', en: 'AI CONTENT · INFORMATIONAL ONLY · NOT PROFESSIONAL ADVICE', de: 'KI-INHALT · NUR INFORMATIV · KEINE FACHBERATUNG' },
   colors: { sk: '', cs: '', en: '', de: '' },
 };
 

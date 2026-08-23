@@ -143,6 +143,11 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{t('emergency_qr', lang).toUpperCase()}</Text>
         </Pressable>
 
+        <Pressable testID="legal-btn" onPress={() => router.push('/legal')} style={styles.qrBtn}>
+          <Ionicons name="shield-checkmark-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>{t('legal_hub', lang).toUpperCase()} · 2026</Text>
+        </Pressable>
+
         <View style={styles.credit}>
           <Text style={styles.creditTitle}>ABOUT</Text>
           <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Vision & original design: <Text style={{ fontWeight: '900' }}>Guardian Angel</Text>.{'\n'}Open Source · AGPL-v3 · Zero-Knowledge.</Text>

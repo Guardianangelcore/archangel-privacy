@@ -32,6 +32,7 @@ export default function JarvisAdvice({ module, buildContext, lang }: Props) {
         <View testID={`jarvis-advice-out-${module}`} style={styles.card}>
           <Text style={styles.cardLabel}>JARVIS</Text>
           <Text style={styles.cardText}>{advice}</Text>
+          <Text style={styles.disclosure}>⚠ {t('ai_disclosure', lang)}</Text>
         </View>
       ) : null}
     </View>
@@ -45,4 +46,5 @@ const styles = StyleSheet.create({
   card: { marginTop: S.sm, borderWidth: 1.5, borderColor: C.brand, padding: S.md },
   cardLabel: { fontSize: 10, letterSpacing: 2, color: C.brand, fontWeight: '900', marginBottom: 4 },
   cardText: { color: C.fg, fontSize: 14, lineHeight: 21 },
+  disclosure: { marginTop: 8, fontSize: 8, letterSpacing: 0.5, color: C.onS3, fontWeight: '800' },
 });

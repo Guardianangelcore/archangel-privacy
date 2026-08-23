@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 4 complete — Global Compliance & Indemnity Upgrade validated end-to-end. Backend: 14/14 pytest cases pass in test_phase5.py covering legal/region (EU/UK/US/OTHER + testament formats + AML limits), TOS text (waiver + Guardian Angel) + accept persistence, AML KYC (400 no-declaration, 200 attestation + ledger_hash, limit 150→5000), full AML enforcement flow (403 kyc_required, 403 aml_limit @150 unverified, 10 tx OK + 403 aml_velocity), ledger chain integrity (seq monotonic + prev_hash sha256/genesis for 3+ entries), testament SK civil_law_holograph (§ 476 + VLASTNOU RUKOU) vs GB common_law_uk (Wills Act 1837 + witness lines), and regression on POST /api/ai/translate (still returns valid plain_language string with compliance note appended silently). Frontend (mobile 390x844): fresh user hits tos-gate with 'ÚPLNÉ ZBAVENIE ZODPOVEDNOSTI' warning banner + full TOS body; tos-gate-accept unlocks standard-home with 4 sections (ZDRAVIE, ANGEL, KOMUNITA, PREŽITIE); /legal renders EU disclaimers (EU AI Act čl. 50 + GDPR + Nie je lekárska rada) and switches to FDA/HIPAA on US chip tap; TOS status shows PODMIENKY PRIJATÉ; KYC form (name+year+declaration switch) and testament form present; /solidarity shows sol-aml-banner ('AML: BEZ KYC LIMIT €150/DEŇ') that navigates to /legal on tap; profile legal-btn correctly navigates to /legal.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase5.py",
+    "/app/test_reports/pytest/pytest_phase5.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: server.py now 1817 lines — split legal/AML/testament into a routes/legal.py module.",
+    "OPTIONAL: _aml_ledger_append does two find_one calls (last entry_hash + last seq) — combine into one find_one that returns both fields for a single Mongo roundtrip.",
+    "OPTIONAL: Under concurrent donations by the same user, _donations_today (read) + insert is not atomic — a burst could bypass the daily limit by 1-2 tx. Consider a Mongo transaction or a per-user counter with $inc + conditional check.",
+    "OPTIONAL: legal_testament stores document_text and doc_hash but never re-verifies the hash on GET — add a helper endpoint that recomputes and returns tamper status.",
+    "OPTIONAL: TOS_TEXT contains ver placeholder but no changelog; when TOS_VERSION bumps every existing user will be re-gated silently — consider a diff/changelog field so users see what changed."
+  ],
+  "critical_code_review_comments": [
+    "resolve_jurisdiction correctly maps GB→UK, US/CA/AU/NZ/IE→common_law (US branch further pinned to jurisdiction 'US' inside DISCLAIMERS), else EU for EU codes, else OTHER — verified across all 4 branches.",
+    "AML thresholds AML_UNVERIFIED_DAILY=150, AML_VERIFIED_DAILY=5000, AML_MAX_TX_PER_DAY=10 are consistent between /legal/region response and enforcement in /solidarity/donate — no drift.",
+    "Ledger append is monotonic: seq derived from sort seq desc + 1, prev_hash from last entry — chain integrity verified across 4+ entries in test.",
+    "KYC attestation is a sha256 of did|full_name|birth_year|country|date — deterministic per day, changes if identity data changes. Good for periodic re-attestation.",
+    "Testament instructions correctly cite § 476 Občianskeho zákonníka SR for civil law holograph and Wills Act 1837 s.9 for E&W — legally accurate references.",
+    "TOS gate on frontend (index.tsx line 54) checks tos_accepted_version !== '2026-06.1' — hard-coded version string; should read from a shared constant OR from GET /api/legal/tos to stay in sync when TOS_VERSION bumps. Minor coupling risk.",
+    "AI compliance note is appended to translator, physio, advice, wellness-checkin(?) — verified translator still returns valid JSON-adjacent structure after append; wellness checkin already returns strict JSON so compliance note is inside system prompt but does not break output parsing."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase5.py (created — 14 pytest cases covering legal/region + TOS + AML + testament + regression)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 test_phase5; cumulative across iterations 1-4: phase1 16 + phase2 12 + phase3 13 + phase4 11 + phase5 14 = 66 tests)",
+    "frontend": "100% (TOS gate + accept unlock + /legal country chips + KYC form + Solidarity AML banner nav + Profile legal-btn nav all verified on mobile viewport)"
+  },
+  "seed_data_creation": "Phase 5 seeds TWO users in Mongo: USER_FRESH (no tos, no kyc — used for gate/limit tests) and USER_KYC (verified via /aml/kyc endpoint during the enforcement flow, used for campaign creation + velocity cap). Autouse module-scoped fixture cleans up users, user_sessions, aml_ledger, donations, campaigns, legal_testaments filtered by user_id at end of run. Frontend testing used seed_frontend_session.py TEST_fe_ user — manually cleaned up post-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "FIVE pytest files now live: backend_test.py (phase 1 — 16 tests), test_phase2.py (12), test_phase3.py (13), test_phase4.py (11), test_phase5.py (14 — legal/AML/testament). Run test_phase5.py with `-o addopts=''` to disable xdist parallelization — some tests depend on serial ordering (KYC happens inside test_end_to_end_aml_enforcement). Backend URL from EXPO_PUBLIC_BACKEND_URL. FE testing pattern unchanged: run backend/tests/seed_frontend_session.py, inject TOKEN into localStorage 'gh_session_token'. NEW: fresh users now hit /tos-gate before home renders — accept via `[data-testid=tos-gate-accept]` first, then home unlocks. TOS_VERSION currently '2026-06.1' — if you bump it in server.py update the hard-coded check in /app/frontend/app/(tabs)/index.tsx:54 too. /api/register-push 500 with placeholder EMERGENT_PUSH_KEY still EXPECTED. LLM endpoints 5-20s.",
+  "rca_of_issue": "N/A — no code bugs. Only test-scaffolding issues encountered: (1) xdist LoadScopeScheduling parallelized TestAmlEnforcement class such that donation tests ran before KYC verification in TestAml — fixed by consolidating enforcement into a single test_end_to_end_aml_enforcement method that KYCs inline; (2) mixing AsyncIOMotorClient with a fresh asyncio.new_event_loop() inside a test method threw 'future belongs to different loop' — replaced with sync pymongo for ledger inspection."
+}

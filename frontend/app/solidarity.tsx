@@ -20,26 +20,44 @@ export default function Solidarity() {
   const [donateFor, setDonateFor] = useState<Camp | null>(null);
   const [form, setForm] = useState({ title: '', story: '', goal_amount: '', currency: 'EUR' });
   const [amount, setAmount] = useState('10');
+  const [aml, setAml] = useState<any>(null);
+  const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setItems(await api<Camp[]>('/solidarity/campaigns')); } catch (e) {}
+    try {
+      const [c, a] = await Promise.all([api<Camp[]>('/solidarity/campaigns'), api('/aml/status')]);
+      setItems(c); setAml(a);
+    } catch (e) { console.log(e); }
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
 
   const create = async () => {
     if (!form.title || !form.story || !form.goal_amount) return;
-    await api('/solidarity/campaigns', { method: 'POST', body: JSON.stringify({
-      title: form.title, story: form.story, goal_amount: parseFloat(form.goal_amount), currency: form.currency,
-    }) });
-    setModal(false); setForm({ title: '', story: '', goal_amount: '', currency: 'EUR' }); load();
+    setErr('');
+    try {
+      await api('/solidarity/campaigns', { method: 'POST', body: JSON.stringify({
+        title: form.title, story: form.story, goal_amount: parseFloat(form.goal_amount), currency: form.currency,
+      }) });
+      setModal(false); setForm({ title: '', story: '', goal_amount: '', currency: 'EUR' }); load();
+    } catch (e: any) {
+      setModal(false);
+      setErr(String(e.message || e).includes('kyc_required') ? 'KAMPAŇ VYŽADUJE KYC OVERENIE — DOKONČITE HO V „PRÁVO A SÚLAD"' : String(e.message || e));
+    }
   };
 
   const donate = async () => {
     if (!donateFor) return;
-    await api(`/solidarity/campaigns/${donateFor.campaign_id}/donate`, { method: 'POST', body: JSON.stringify({ amount: parseFloat(amount) || 0 }) });
-    setDonateFor(null); setAmount('10'); load();
+    setErr('');
+    try {
+      await api(`/solidarity/campaigns/${donateFor.campaign_id}/donate`, { method: 'POST', body: JSON.stringify({ amount: parseFloat(amount) || 0 }) });
+      setDonateFor(null); setAmount('10'); load();
+    } catch (e: any) {
+      setDonateFor(null);
+      const msg = String(e.message || e);
+      setErr(msg.includes('aml_limit') ? 'AML: PREKROČENÝ DENNÝ LIMIT — ZVÝŠTE HO CEZ KYC V „PRÁVO A SÚLAD"' : msg.includes('aml_velocity') ? 'AML: PRÍLIŠ VEĽA TRANSAKCIÍ DNES' : msg);
+    }
   };
 
   return (
@@ -51,7 +69,14 @@ export default function Solidarity() {
         <Text style={styles.title}>SOLIDARITY HUB</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.banner}><Text style={styles.bannerText}>MOCKED · P2P PAYMENTS DEFERRED</Text></View>
+      <Pressable testID="sol-aml-banner" onPress={() => router.push('/legal')} style={[styles.banner, aml?.kyc_verified && { backgroundColor: C.brandTer }]}>
+        <Text style={[styles.bannerText, aml?.kyc_verified && { color: C.brand }]}>
+          {aml?.kyc_verified
+            ? `KYC ✓ · AML LIMIT €${aml?.daily_limit?.toFixed(0)}/DEŇ · LEDGER #${aml?.ledger_entries}`
+            : `AML: BEZ KYC LIMIT €${aml?.daily_limit?.toFixed(0) ?? 150}/DEŇ · KYC → PRÁVO A SÚLAD`}
+        </Text>
+      </Pressable>
+      {err ? <Text style={styles.errText}>{err}</Text> : null}
       <FlatList
         data={items}
         keyExtractor={i => i.campaign_id}
@@ -129,8 +154,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: S.md, paddingVertical: S.md, backgroundColor: C.inverse },
   title: { color: C.onInverse, fontSize: 18, fontWeight: '900', letterSpacing: 2 },
-  banner: { backgroundColor: C.warn, paddingVertical: 6, alignItems: 'center' },
-  bannerText: { color: C.onWarn, fontWeight: '900', letterSpacing: 2, fontSize: 11 },
+  banner: { backgroundColor: C.warn, paddingVertical: 6, alignItems: 'center', paddingHorizontal: S.md },
+  bannerText: { color: C.onWarn, fontWeight: '900', letterSpacing: 1, fontSize: 10, textAlign: 'center' },
+  errText: { color: C.error, fontWeight: '900', fontSize: 11, letterSpacing: 0.5, paddingHorizontal: S.lg, paddingTop: S.sm },
   empty: { textAlign: 'center', color: C.onS3, marginTop: 60, letterSpacing: 2, fontWeight: '800' },
   card: { borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, marginBottom: S.md },
   cardTitle: { fontSize: 17, fontWeight: '900', color: C.fg, letterSpacing: 1 },
