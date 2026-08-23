@@ -9,7 +9,7 @@ import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
-type Doc = { doc_id: string; title: string; file_name: string; content_type: string; size: number; uploaded_at: string; plain_language?: string };
+type Doc = { doc_id: string; title: string; file_name: string; content_type: string; size: number; uploaded_at: string; plain_language?: string; extracted_text?: string };
 
 export default function Vault() {
   const { user } = useAuth();
@@ -18,6 +18,7 @@ export default function Vault() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [busyDoc, setBusyDoc] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,13 +41,33 @@ export default function Vault() {
   };
 
   const translate = async (doc: Doc) => {
+    setBusyDoc(doc.doc_id);
     try {
       const res: any = await api('/ai/translate-document', {
         method: 'POST',
         body: JSON.stringify({ doc_id: doc.doc_id, language: lang }),
       });
       setDocs(prev => prev.map(d => d.doc_id === doc.doc_id ? { ...d, plain_language: res.plain_language } : d));
-    } catch (e) { console.log(e); }
+    } catch (e) { console.log(e); } finally { setBusyDoc(null); }
+  };
+
+  const isOcrable = (doc: Doc) => {
+    const ct = (doc.content_type || '').toLowerCase();
+    const fn = (doc.file_name || '').toLowerCase();
+    return ct.startsWith('image/') || ct.includes('pdf') || /\.(pdf|jpe?g|png|webp|heic)$/.test(fn);
+  };
+
+  const ocrAndTranslate = async (doc: Doc) => {
+    setBusyDoc(doc.doc_id);
+    try {
+      const ocr: any = await api(`/vault/documents/${doc.doc_id}/ocr`, { method: 'POST' });
+      setDocs(prev => prev.map(d => d.doc_id === doc.doc_id ? { ...d, extracted_text: ocr.extracted_text } : d));
+      const res: any = await api('/ai/translate-document', {
+        method: 'POST',
+        body: JSON.stringify({ doc_id: doc.doc_id, language: lang }),
+      });
+      setDocs(prev => prev.map(d => d.doc_id === doc.doc_id ? { ...d, plain_language: res.plain_language } : d));
+    } catch (e) { console.log('ocr err', e); } finally { setBusyDoc(null); }
   };
 
   const remove = async (doc: Doc) => {
@@ -90,11 +111,24 @@ export default function Vault() {
                 <Text style={styles.translationLabel}>{t('translate', lang).toUpperCase()}</Text>
                 <Text style={styles.translationText}>{item.plain_language}</Text>
               </View>
+            ) : busyDoc === item.doc_id ? (
+              <View style={styles.translateBtn}>
+                <ActivityIndicator color={C.onInverse} size="small" />
+                <Text style={styles.translateBtnText}>{t('reading_document', lang).toUpperCase()}</Text>
+              </View>
             ) : (
-              <Pressable testID={`doc-translate-${item.doc_id}`} onPress={() => translate(item)} style={styles.translateBtn}>
-                <Ionicons name="language-outline" size={16} color={C.onInverse} />
-                <Text style={styles.translateBtnText}>{t('translate', lang).toUpperCase()}</Text>
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: S.sm }}>
+                {isOcrable(item) && (
+                  <Pressable testID={`doc-ocr-${item.doc_id}`} onPress={() => ocrAndTranslate(item)} style={[styles.translateBtn, { flex: 1, backgroundColor: C.brand }]}>
+                    <Ionicons name="scan-outline" size={16} color={C.onInverse} />
+                    <Text style={styles.translateBtnText}>{t('ocr_translate', lang).toUpperCase()}</Text>
+                  </Pressable>
+                )}
+                <Pressable testID={`doc-translate-${item.doc_id}`} onPress={() => translate(item)} style={[styles.translateBtn, { flex: 1 }]}>
+                  <Ionicons name="language-outline" size={16} color={C.onInverse} />
+                  <Text style={styles.translateBtnText}>{t('translate', lang).toUpperCase()}</Text>
+                </Pressable>
+              </View>
             )}
           </View>
         )}
@@ -125,7 +159,7 @@ const styles = StyleSheet.create({
   docHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: S.md },
   docTitle: { fontSize: 16, fontWeight: '800', color: C.fg },
   docMeta: { fontSize: 11, color: C.onS3, marginTop: 4, letterSpacing: 1 },
-  translateBtn: { marginTop: S.md, backgroundColor: C.inverse, paddingVertical: S.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  translateBtn: { marginTop: S.md, backgroundColor: C.inverse, paddingVertical: S.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, paddingHorizontal: 4 },
   translateBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   translation: { marginTop: S.md, borderTopWidth: 1.5, borderColor: C.borderStrong, paddingTop: S.md },
   translationLabel: { fontSize: 10, letterSpacing: 2, color: C.brand, fontWeight: '900', marginBottom: 6 },

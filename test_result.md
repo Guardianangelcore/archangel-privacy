@@ -101,3 +101,10 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## Iteration 3 scope (main agent, June 2026)
+New since iteration 2 (all need testing):
+- UX batch 1: real-time fall detection (expo-sensors, frontend GuardianMonitor), OCR /api/vault/documents/{id}/ocr (gpt-5.4 vision + pypdf/pymupdf), Emergent push (/api/register-push, send_push on waitlist scan hit), Wellness module (/api/wellness/checkin, /checkins, /vitals, /inactivity-alert, /dashboard), Profile guardian toggles (fall_guard, inactivity_guard, inactivity_hours prefs), screens /wellness, /family-dashboard.
+- Killer features batch 2: /api/ai/advice (Jarvis advisor), Medicine Cabinet (/api/cabinet/items CRUD + /api/cabinet/exchange P2P + respond), Healthcare Proxy (/api/proxy-directive GET/PUT, doc template + sha256 hash, surfaced in /api/emergency-qr/{did}), Marketplace (/api/market/services CRUD + book + bookings), Scam Shield (/api/scam/check + history, Claude JSON risk analysis), Survival Auditor (/api/survival/items + /api/survival/runway, family_size pref), Barter (/api/barter/offers + accept credit transfer + /api/barter/me), Beacon (/api/beacon/trigger + history). Respect Map extended metrics (minority_safety, waiting_weeks, financial_transparency aggregates).
+- Frontend screens: /medicine-cabinet, /healthcare-proxy, /marketplace, /scam-shield, /survival-auditor, /barter; home reorganized into 4 sections; stealth beacon long-press on GUARDIAN logo.
+- Push register returns 500 with placeholder key by design (real key injected at deploy) — treat relay 500 from register-push as EXPECTED in this environment.
+- Auth: create test session directly in Mongo per /app/memory/test_credentials.md.

@@ -8,7 +8,7 @@ import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
-type Provider = { provider_id: string; name: string; city: string; specialty: string; avg_score: number; review_count: number; tags: string[] };
+type Provider = { provider_id: string; name: string; city: string; specialty: string; avg_score: number; review_count: number; tags: string[]; avg_minority_safety?: number | null; avg_waiting_weeks?: number | null; avg_financial_transparency?: number | null };
 const TAGS = ['LGBTI+', 'SENIOR-FRIENDLY', 'DISABILITY', 'ROMA', 'MULTILINGUAL', 'RESPECT'];
 
 export default function RespectMap() {
@@ -18,7 +18,7 @@ export default function RespectMap() {
   const [items, setItems] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(false);
-  const [f, setF] = useState({ name: '', city: 'Bratislava', specialty: '', respect_score: 5, tags: [] as string[], review: '' });
+  const [f, setF] = useState({ name: '', city: 'Bratislava', specialty: '', respect_score: 5, tags: [] as string[], review: '', minority_safety: 0, waiting_weeks: '', financial_transparency: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,8 +29,14 @@ export default function RespectMap() {
 
   const submit = async () => {
     if (!f.name || !f.specialty) return;
-    await api('/respect/providers', { method: 'POST', body: JSON.stringify(f) });
-    setModal(false); setF({ name: '', city: 'Bratislava', specialty: '', respect_score: 5, tags: [], review: '' }); load();
+    await api('/respect/providers', { method: 'POST', body: JSON.stringify({
+      name: f.name, city: f.city, specialty: f.specialty, respect_score: f.respect_score,
+      tags: f.tags, review: f.review,
+      minority_safety: f.minority_safety || null,
+      waiting_weeks: f.waiting_weeks !== '' ? parseInt(f.waiting_weeks, 10) : null,
+      financial_transparency: f.financial_transparency || null,
+    }) });
+    setModal(false); setF({ name: '', city: 'Bratislava', specialty: '', respect_score: 5, tags: [], review: '', minority_safety: 0, waiting_weeks: '', financial_transparency: 0 }); load();
   };
 
   const toggleTag = (tg: string) => setF(v => ({ ...v, tags: v.tags.includes(tg) ? v.tags.filter(x => x !== tg) : [...v.tags, tg] }));
@@ -67,6 +73,23 @@ export default function RespectMap() {
             <View style={styles.tagRow}>
               {item.tags?.slice(0,4).map(tg => <View key={tg} style={styles.tagChip}><Text style={styles.tagText}>{tg}</Text></View>)}
             </View>
+            <View style={styles.metricsRow}>
+              <View style={styles.metricBox}>
+                <Ionicons name="heart-outline" size={14} color={C.brand} />
+                <Text style={styles.metricVal}>{item.avg_minority_safety ? item.avg_minority_safety.toFixed(1) : '—'}</Text>
+                <Text style={styles.metricLbl}>{t('minority_safety', lang).toUpperCase()}</Text>
+              </View>
+              <View style={styles.metricBox}>
+                <Ionicons name="time-outline" size={14} color={C.brand} />
+                <Text style={styles.metricVal}>{item.avg_waiting_weeks != null ? `${Math.round(item.avg_waiting_weeks)} t.` : '—'}</Text>
+                <Text style={styles.metricLbl}>{t('real_wait', lang).toUpperCase()}</Text>
+              </View>
+              <View style={styles.metricBox}>
+                <Ionicons name="cash-outline" size={14} color={C.brand} />
+                <Text style={styles.metricVal}>{item.avg_financial_transparency ? item.avg_financial_transparency.toFixed(1) : '—'}</Text>
+                <Text style={styles.metricLbl}>{t('fin_transparency', lang).toUpperCase()}</Text>
+              </View>
+            </View>
             <Text style={styles.reviewCount}>{item.review_count} REVIEW{item.review_count > 1 ? 'S' : ''}</Text>
           </View>
         )}
@@ -102,6 +125,24 @@ export default function RespectMap() {
                   </Pressable>
                 ))}
               </View>
+              <Text style={styles.lbl}>{t('minority_safety', lang).toUpperCase()} (LGBTI+)</Text>
+              <View style={{ flexDirection: 'row', gap: S.sm }}>
+                {[1,2,3,4,5].map(n => (
+                  <Pressable testID={`ms-${n}`} key={n} onPress={() => setF({ ...f, minority_safety: f.minority_safety === n ? 0 : n })} style={[styles.starChip, f.minority_safety === n && styles.starChipActive]}>
+                    <Text style={[styles.starText, f.minority_safety === n && styles.starTextActive]}>{n}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={styles.lbl}>{t('real_wait', lang).toUpperCase()}</Text>
+              <TextInput testID="rm-wait" placeholder="8" value={f.waiting_weeks} onChangeText={v => setF({ ...f, waiting_weeks: v })} keyboardType="numeric" style={styles.input} placeholderTextColor="#999" />
+              <Text style={styles.lbl}>{t('fin_transparency', lang).toUpperCase()}</Text>
+              <View style={{ flexDirection: 'row', gap: S.sm }}>
+                {[1,2,3,4,5].map(n => (
+                  <Pressable testID={`ft-${n}`} key={n} onPress={() => setF({ ...f, financial_transparency: f.financial_transparency === n ? 0 : n })} style={[styles.starChip, f.financial_transparency === n && styles.starChipActive]}>
+                    <Text style={[styles.starText, f.financial_transparency === n && styles.starTextActive]}>{n}</Text>
+                  </Pressable>
+                ))}
+              </View>
               <TextInput testID="rm-review" placeholder="Review (optional)" value={f.review} onChangeText={v => setF({ ...f, review: v })} multiline style={[styles.input, { minHeight: 80 }]} placeholderTextColor="#999" />
             </ScrollView>
             <Pressable testID="rm-submit" onPress={submit} style={styles.saveBtn}><Text style={styles.saveBtnText}>SUBMIT</Text></Pressable>
@@ -129,6 +170,10 @@ const styles = StyleSheet.create({
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: S.sm },
   tagChip: { borderWidth: 1, borderColor: C.borderStrong, paddingHorizontal: 8, paddingVertical: 3 },
   tagText: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  metricsRow: { flexDirection: 'row', gap: S.sm, marginTop: S.sm },
+  metricBox: { flex: 1, alignItems: 'center', gap: 2, borderWidth: 1, borderColor: C.border, paddingVertical: 6, paddingHorizontal: 2 },
+  metricVal: { fontWeight: '900', fontSize: 13, color: C.fg },
+  metricLbl: { fontSize: 7, letterSpacing: 0.5, color: C.onS3, fontWeight: '800', textAlign: 'center' },
   reviewCount: { fontSize: 10, letterSpacing: 2, color: C.onS3, marginTop: S.sm, fontWeight: '800' },
   fab: { position: 'absolute', bottom: 24, right: S.lg, flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: C.inverse, paddingHorizontal: S.lg, paddingVertical: S.md, borderWidth: 2, borderColor: C.borderStrong },
   fabText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 12 },

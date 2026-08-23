@@ -33,6 +33,11 @@ export default function Profile() {
     setUser(u);
   };
 
+  const setPref = async (patch: Record<string, any>) => {
+    const u: any = await api('/me/prefs', { method: 'PATCH', body: JSON.stringify(patch) });
+    setUser(u);
+  };
+
   return (
     <SafeAreaView testID="profile-screen" style={styles.root} edges={['top']}>
       <View style={styles.header}>
@@ -58,6 +63,36 @@ export default function Profile() {
             </Pressable>
           ))}
         </View>
+
+        <Text style={styles.section}>{t('guardian_monitoring', lang).toUpperCase()}</Text>
+        <View style={styles.guardRow}>
+          <Ionicons name="body-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>{t('fall_guard', lang).toUpperCase()}</Text>
+            <Text style={styles.guardSub}>Akcelerometer · auto Fall-Verify</Text>
+          </View>
+          <Switch testID="prof-fall-guard" value={!!(user as any)?.fall_guard} onValueChange={v => setPref({ fall_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
+        </View>
+        <View style={styles.guardRow}>
+          <Ionicons name="time-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>{t('inactivity_guard', lang).toUpperCase()}</Text>
+            <Text style={styles.guardSub}>08:00–21:00 · alarm rodine</Text>
+          </View>
+          <Switch testID="prof-inactivity-guard" value={!!(user as any)?.inactivity_guard} onValueChange={v => setPref({ inactivity_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
+        </View>
+        {!!(user as any)?.inactivity_guard && (
+          <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
+            {[4, 6, 8, 12].map(h => {
+              const active = ((user as any)?.inactivity_hours || 6) === h;
+              return (
+                <Pressable testID={`inactivity-h-${h}`} key={h} onPress={() => setPref({ inactivity_hours: h })} style={[styles.chip, active && styles.chipActive]}>
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{h} h</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         <Text style={styles.section}>{t('donor_card', lang).toUpperCase()} + EMERGENCY PROFILE</Text>
         <Text style={styles.lbl}>FULL NAME</Text>
@@ -127,6 +162,9 @@ const styles = StyleSheet.create({
   identityLbl: { marginTop: S.md, fontSize: 9, letterSpacing: 2, color: C.onS3, fontWeight: '800' },
   identityDid: { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 11, color: C.fg, marginTop: 2 },
   section: { marginTop: S.xl, marginBottom: S.md, fontSize: 11, letterSpacing: 2, color: C.fg, fontWeight: '900' },
+  guardRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, marginBottom: S.sm, backgroundColor: C.bg },
+  guardTitle: { fontWeight: '900', letterSpacing: 1, color: C.fg, fontSize: 13 },
+  guardSub: { color: C.onS3, fontSize: 11, marginTop: 2 },
   chip: { paddingHorizontal: S.md, paddingVertical: 8, borderWidth: 1.5, borderColor: C.borderStrong, height: 36, alignItems: 'center', justifyContent: 'center' },
   chipActive: { backgroundColor: C.inverse },
   chipText: { fontWeight: '800', color: C.fg, letterSpacing: 1, fontSize: 12 },

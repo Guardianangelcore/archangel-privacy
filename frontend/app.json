@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.angelos.qvqss9"
+      "bundleIdentifier": "com.emergent.angelos.qvqss9",
+      "infoPlist": {
+        "NSMotionUsageDescription": "Detect falls and inactivity to keep you safe",
+        "NSLocationWhenInUseUsageDescription": "Send your location to family in emergencies"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +22,12 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.emergent.angelos.qvqss9"
+      "package": "com.emergent.angelos.qvqss9",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +45,14 @@
           "backgroundColor": "#000000"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-notifications",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Detect falls and inactivity to keep you safe"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
