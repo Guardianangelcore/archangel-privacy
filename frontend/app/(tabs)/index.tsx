@@ -50,6 +50,10 @@ export default function Home() {
           <ActionCard testID="action-translate" label={t('translate', lang)} icon="language-outline" onPress={() => router.push('/translate')} />
           <ActionCard testID="action-waitlist" label={t('waitlist', lang)} icon="calendar-outline" onPress={() => router.push('/(tabs)/waitlist')} />
           <ActionCard testID="action-donor" label={t('donor_card', lang)} icon="heart-outline" onPress={() => router.push('/emergency-qr')} />
+          <ActionCard testID="action-solidarity" label={t('solidarity', lang)} icon="people-outline" onPress={() => router.push('/solidarity')} />
+          <ActionCard testID="action-respect" label={t('respect_map', lang)} icon="star-outline" onPress={() => router.push('/respect-map')} />
+          <ActionCard testID="action-physio" label={t('physio', lang)} icon="body-outline" onPress={() => router.push('/physio')} />
+          <ActionCard testID="action-blackout" label={t('blackout', lang)} icon="flash-off-outline" onPress={() => router.push('/blackout')} />
         </View>
 
         <Text style={styles.section}>SAFETY</Text>

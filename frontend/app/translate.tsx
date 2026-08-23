@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { api } from '@/src/api';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { api, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -15,7 +16,28 @@ export default function Translate() {
   const [text, setText] = useState('');
   const [out, setOut] = useState('');
   const [busy, setBusy] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [err, setErr] = useState('');
+  const playerRef = useRef<any>(null);
+
+  useEffect(() => () => { try { playerRef.current?.remove?.(); } catch {} }, []);
+
+  const speak = async () => {
+    if (!out) return;
+    setSpeaking(true);
+    try {
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: out, voice: 'nova', language: lang }) });
+      const token = await getToken();
+      const url = `${API_BASE}${res.url}`;
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
+      try { playerRef.current?.remove?.(); } catch {}
+      const player = createAudioPlayer({ uri: url, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      playerRef.current = player;
+      player.play();
+    } catch (e: any) {
+      setErr(String(e.message || e));
+    } finally { setTimeout(() => setSpeaking(false), 500); }
+  };
 
   const run = async () => {
     if (!text.trim()) return;
@@ -65,6 +87,10 @@ export default function Translate() {
             <View style={styles.outBox}>
               <Text style={styles.outLbl}>PLAIN LANGUAGE</Text>
               <Text style={styles.outText}>{out}</Text>
+              <Pressable testID="tr-speak" onPress={speak} disabled={speaking} style={styles.speakBtn}>
+                <Ionicons name={speaking ? 'volume-high' : 'volume-medium-outline'} size={18} color={C.brand} />
+                <Text style={styles.speakBtnText}>{t('speak', lang).toUpperCase()}</Text>
+              </Pressable>
             </View>
           )}
         </ScrollView>
@@ -86,4 +112,6 @@ const styles = StyleSheet.create({
   outBox: { marginTop: S.lg, borderWidth: 2, borderColor: C.borderStrong, padding: S.md, backgroundColor: C.brandTer },
   outLbl: { fontSize: 10, letterSpacing: 2, fontWeight: '900', color: C.brand, marginBottom: S.sm },
   outText: { color: C.fg, fontSize: 16, lineHeight: 24 },
+  speakBtn: { marginTop: S.md, flexDirection: 'row', gap: 8, alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1.5, borderColor: C.brand, paddingHorizontal: S.md, paddingVertical: 10, backgroundColor: C.bg },
+  speakBtnText: { color: C.brand, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
 });

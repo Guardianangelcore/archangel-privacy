@@ -11,6 +11,9 @@ from pathlib import Path
 import os, uuid, logging, hashlib, httpx, requests, asyncio, json
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from emergentintegrations.llm.openai import OpenAITextToSpeech
+import re
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -477,6 +480,218 @@ async def list_falls(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     events = await db.fall_events.find({"user_id": user["user_id"]}, {"_id": 0}).sort("triggered_at", -1).to_list(50)
     return events
+
+# --------- VOICE: TTS ---------
+_tts_client: Optional[OpenAITextToSpeech] = None
+def get_tts():
+    global _tts_client
+    if _tts_client is None:
+        _tts_client = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
+    return _tts_client
+
+def clean_for_tts(text: str) -> str:
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"`{1,3}[^`]*`{1,3}", "", text)
+    text = re.sub(r"[*_#>~|]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:4000]
+
+_tts_cache: dict = {}  # in-memory {hash: bytes}
+
+class TTSIn(BaseModel):
+    text: str
+    voice: str = "nova"
+    language: str = "sk"
+
+@api.post("/voice/tts")
+async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(500, "TTS key not configured")
+    text = clean_for_tts(body.text)
+    if not text:
+        raise HTTPException(400, "Empty text")
+    key = hashlib.sha256(f"{text}|{body.voice}|1.0|tts-1|mp3".encode()).hexdigest()
+    if key not in _tts_cache:
+        try:
+            audio = await get_tts().generate_speech(text=text, model="tts-1", voice=body.voice)
+            _tts_cache[key] = audio
+        except Exception as e:
+            logger.error(f"tts err {e}")
+            raise HTTPException(502, "TTS service failed")
+    return {"key": key, "url": f"/api/voice/tts/{key}.mp3"}
+
+@api.get("/voice/tts/{key}.mp3")
+async def tts_stream(key: str):
+    audio = _tts_cache.get(key)
+    if not audio:
+        raise HTTPException(404, "not cached")
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "public, max-age=31536000"})
+
+class STTIn(BaseModel):
+    audio_base64: str  # base64-encoded audio
+    language: Optional[str] = "sk"
+
+@api.post("/voice/stt")
+async def voice_stt(body: STTIn, authorization: Optional[str] = Header(None)):
+    """STT stub — returns a mocked transcription. Real Whisper wire-in pending."""
+    await get_current_user(authorization)
+    # MOCKED: real Whisper integration deferred to Phase 3
+    return {"transcript": "[MOCKED transcript — Whisper integration deferred]", "mocked": True}
+
+# --------- PHYSIO-AI ---------
+class PhysioIn(BaseModel):
+    region: str  # neck, back, shoulders, hips, knees, hands, feet
+    intensity: str = "light"
+    language: str = "sk"
+
+@api.post("/physio/session")
+async def physio(body: PhysioIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    lang = LANG_NAMES.get(body.language, "English")
+    system = (
+        f"You are Physio-AI, guided by the Guardian Angel's professional experience in self-massage and ergonomics. "
+        f"Give a warm, patient, senior-friendly 5-step self-massage & mobility routine for the {body.region} at {body.intensity} intensity. "
+        f"Include: warning about pain, step-by-step actions with duration in seconds, breathing cue, and 1 ergonomic tip. "
+        f"Respond ONLY in {lang}. Use short sentences and numbered steps."
+    )
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"physio-{user['user_id']}-{uuid.uuid4().hex[:8]}",
+        system_message=system,
+    ).with_model("anthropic", "claude-sonnet-5")
+    try:
+        resp = await chat.send_message(UserMessage(text=f"Region: {body.region}. Intensity: {body.intensity}."))
+        return {"routine": resp}
+    except Exception as e:
+        logger.error(f"physio err {e}")
+        raise HTTPException(502, "AI unavailable")
+
+# --------- SOLIDARITY HUB (MOCKED P2P) ---------
+class CampaignIn(BaseModel):
+    title: str
+    story: str
+    goal_amount: float
+    currency: str = "EUR"
+
+@api.get("/solidarity/campaigns")
+async def list_campaigns(authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    items = await db.campaigns.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return items
+
+@api.post("/solidarity/campaigns")
+async def new_campaign(body: CampaignIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    doc = {
+        "campaign_id": uuid.uuid4().hex,
+        "user_id": user["user_id"],
+        "owner_name": user.get("name") or user["email"],
+        "owner_did": user["did"],
+        **body.model_dump(),
+        "raised_amount": 0.0,
+        "supporters": 0,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.campaigns.insert_one(doc.copy())
+    return clean(doc)
+
+class DonateIn(BaseModel):
+    amount: float
+    message: Optional[str] = ""
+
+@api.post("/solidarity/campaigns/{cid}/donate")
+async def donate(cid: str, body: DonateIn, authorization: Optional[str] = Header(None)):
+    """MOCKED donation — no real payment. Ledger only."""
+    user = await get_current_user(authorization)
+    camp = await db.campaigns.find_one({"campaign_id": cid}, {"_id": 0})
+    if not camp:
+        raise HTTPException(404, "not found")
+    await db.donations.insert_one({
+        "donation_id": uuid.uuid4().hex,
+        "campaign_id": cid,
+        "donor_user_id": user["user_id"],
+        "donor_did": user["did"],
+        "amount": body.amount,
+        "message": body.message,
+        "created_at": datetime.now(timezone.utc),
+        "mocked": True,
+    })
+    await db.campaigns.update_one(
+        {"campaign_id": cid},
+        {"$inc": {"raised_amount": body.amount, "supporters": 1}},
+    )
+    return {"ok": True, "mocked": True}
+
+# --------- INCLUSIVE RESPECT MAP ---------
+class ProviderIn(BaseModel):
+    name: str
+    city: str
+    specialty: str
+    respect_score: int = Field(ge=1, le=5)
+    tags: List[str] = []
+    review: Optional[str] = ""
+
+@api.get("/respect/providers")
+async def list_providers(city: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    q = {}
+    if city:
+        q["city"] = city
+    docs = await db.providers.find(q, {"_id": 0}).sort("avg_score", -1).to_list(500)
+    return docs
+
+@api.post("/respect/providers")
+async def add_provider(body: ProviderIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    existing = await db.providers.find_one({"name": body.name, "city": body.city}, {"_id": 0})
+    if existing:
+        pid = existing["provider_id"]
+        new_count = existing["review_count"] + 1
+        new_avg = (existing["avg_score"] * existing["review_count"] + body.respect_score) / new_count
+        await db.providers.update_one({"provider_id": pid}, {"$set": {"avg_score": new_avg, "review_count": new_count, "tags": list(set(existing.get("tags", []) + body.tags))}})
+    else:
+        pid = uuid.uuid4().hex
+        await db.providers.insert_one({
+            "provider_id": pid,
+            "name": body.name, "city": body.city, "specialty": body.specialty,
+            "tags": body.tags,
+            "avg_score": float(body.respect_score),
+            "review_count": 1,
+            "created_by": user["user_id"],
+            "created_at": datetime.now(timezone.utc),
+        })
+    if body.review:
+        await db.provider_reviews.insert_one({
+            "provider_id": pid, "user_id": user["user_id"],
+            "score": body.respect_score, "review": body.review, "tags": body.tags,
+            "created_at": datetime.now(timezone.utc),
+        })
+    return await db.providers.find_one({"provider_id": pid}, {"_id": 0})
+
+# --------- BLACKOUT PROTOCOL (Survival Snapshot) ---------
+@api.get("/blackout/snapshot")
+async def blackout_snapshot(authorization: Optional[str] = Header(None)):
+    """Returns everything the phone needs to survive an internet outage — cache locally."""
+    user = await get_current_user(authorization)
+    prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    docs = await db.documents.find({"user_id": user["user_id"]}, {"_id": 0}).sort("uploaded_at", -1).limit(20).to_list(20)
+    contacts = [{
+        "name": prof.get("emergency_contact_name"),
+        "phone": prof.get("emergency_contact_phone"),
+    }]
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "user": {"name": user.get("name"), "did": user["did"], "email": user["email"]},
+        "emergency_profile": prof,
+        "contacts": contacts,
+        "documents_meta": [{"doc_id": d["doc_id"], "title": d["title"], "size": d["size"]} for d in docs],
+        "survival_tips": [
+            "SK: Pri výpadku sietí zdieľajte tento snapshot cez Bluetooth s dôveryhodným zariadením.",
+            "SK: Núdzové čísla: 112 · Záchranná služba 155 · Polícia 158 · Hasiči 150",
+            "SK: QR kód s DID je čitateľný aj bez internetu.",
+        ],
+    }
 
 # --------- ROOT ---------
 @api.get("/")
