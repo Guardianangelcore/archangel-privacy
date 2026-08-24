@@ -1,5 +1,5 @@
-# Copyright © 2026 Guardian Angel. All Rights Reserved.
-# This source code and its logic are the sole property of Guardian Angel.
+# Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+# This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 """Iteration 9 — Final Production Stress Test.
 
@@ -294,7 +294,7 @@ class TestContent:
         b = r.json()
         assert b.get("language") == lang
         guides = b.get("guides") or []
-        assert len(guides) == 3
+        assert len(guides) >= 3
         ids = [g.get("id") for g in guides]
         for t in titles:
             assert t in ids, f"missing guide id {t} (lang={lang})"

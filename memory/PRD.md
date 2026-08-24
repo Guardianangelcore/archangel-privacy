@@ -129,3 +129,18 @@ Guardian Angel — Sole Visionary and Legal Owner. PROPRIETARY LICENSE (AGPL-v3 
 - FIXY: po forku bol EMERGENT_LLM_KEY neplatný (storage/LLM/push 401) → obnovený v backend/.env. Iteration-13 db.campaigns fix POTVRDENÝ testing agentom (žiadne 500, Stripe checkout vracia 503 stripe_key_missing s priateľským SK bannerom v solidarity.tsx — pridal testing agent). test_phase14_ip_protection.py (20 testov) číta build dynamicky z origin.json.
 - TESTY: 238 backend testov — 235 pass paralelne + 3 známe xdist/load flaky (phase7 dignity ×2, phase3 ai_translate) overené sériovo ako PASS. Frontend: login/profile/protocol/solidarity render OK.
 - ZRUŠENÉ POUŽÍVATEĽOM: "Autonomous Agentic Swarm" a "Quantum-Secure Tokenized Swarm" prompty — používateľ požiadal o rollback pred implementáciou; NEBOL napísaný žiadny swarm/token kód.
+
+## Phase 17–18: MASTER-SEAL + GIGA-LAYER + WORLD-CLASS FINALE + MOSAIC PROTOCOL (June 2026) — DONE
+User's final consolidated prompts implemented in one pass:
+1. Sovereign Recovery Suite — Social Recovery (guardian quorum 2-of-N, public initiate/poll with one-time token), QR Talisman (one-time printable key, react-native-qrcode-svg), Passkeys (placeholder), Social 2FA (guardian push handshake on every login, SAFE non-blocking).
+2. Paramedic Key completed — NCZI/ÚZIS state-registry verification (simulated deterministic), bio-beacon counts as verified emergency.
+3. Offline Survival Compass (/compass, AsyncStorage-cached; includes NESCHOPENKA ePN outings + OČKOVANIA booster alerts per user request), Truth-Validator peer consensus, Bio-Beacon (activate/ping/public read).
+4. DAO Rebranding — author/headers/PDF footers → "Guardian Angel Sovereign Foundation (DAO)", /api/dao/manifest, Article 50 (EU AI Act) waiver component (src/Art50.tsx) on all new screens + login, watermark.ts pseudonymous.
+5. Gigs + Refunds frontends (/gigs, /refunds).
+6. Giga-Layer: Satellite Nano-Packet (zlib ≤140 B, Starlink/Globalstar placeholders, swarm broadcasts), IPS HL7 FHIR export (Bundle-uv-ips + PDF), Humanitarian Shield (catastrophe consensus → GA-HUM identity + PDF card).
+7. World-Class Finale: AI Tactical Medic (7 offline protocols, Jarvis TTS steps), Vitals Bio-Scanner (rPPG placeholder), Longevity Engine (bio-age + AI bio-hacks), Environmental Threat Fusion (/enviro mesh consensus).
+8. Elite Monetization: tiers €0 / €29 Guardian / €149 Sentinel / €499 Archangel, annual −20 %, EUR/CZK/GA-T, one-time 7-day Sentinel trial, pay-per-use (bioscan 5 GA-T, IPS 10 GA-T), hard-coded 15% Guardian Tax (marketplace + gig cash), Value Advisor upsell recs, Founder Wealth dashboard (MRR/ACV/revenue, founder-only), luxury Obsidian/Platinum UI for Sentinel/Archangel.
+9. Mosaic Protocol (SIMULATED): ZK-Rollup L2 blocks anchoring GA-T ledger + record hashes, IPFS CID manifest (hybrid layer), Legacy Trigger smart contracts, PQC handshake (Kyber/Dilithium placeholders), Bridge-Watch failover to Base/Polygon, zero-fee abstraction, global node stress test → "READY FOR PUBLISH".
+10. Swarm agent #7 sovereign_guard orchestrates: handshake/recovery expiry, beacon shutdown, satellite broadcast, enviro escalation, Mosaic block production.
+Tests: test_phase17_masterseal.py + test_phase18_worldclass.py (52 passed); full suite regression green.
+Mocked (user-approved): Stripe card, satellite uplink, NCZI/ÚZIS API, rPPG CV, Mosaic/IPFS/PQC crypto, humanitarian feeds.

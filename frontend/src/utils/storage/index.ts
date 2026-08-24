@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Native storage (Metro auto-picks index.web.ts on web — do NOT add Platform.OS checks).
 //
 // Import the ready-made singleton BY NAME and call methods on it — never a default

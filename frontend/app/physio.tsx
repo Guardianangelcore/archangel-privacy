@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ export default function Physio() {
   const [busy, setBusy] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [guides, setGuides] = useState<any[]>([]);
+  const [catLabels, setCatLabels] = useState<Record<string, string>>({});
   const [openGuide, setOpenGuide] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
 
@@ -37,7 +38,11 @@ export default function Physio() {
 
   useEffect(() => {
     (async () => {
-      try { const res: any = await api(`/physio/guides?language=${lang}`); setGuides(res.guides || []); } catch {}
+      try {
+        const res: any = await api(`/physio/guides?language=${lang}`);
+        setGuides(res.guides || []);
+        setCatLabels(res.category_labels || {});
+      } catch {}
     })();
   }, [lang]);
 
@@ -117,28 +122,36 @@ export default function Physio() {
 
         {guides.length > 0 && (
           <>
-            <Text style={styles.lbl}>EXPERTNÉ SPRIEVODCOVIA (FOUNDER)</Text>
-            {guides.map(g => {
-              const open = openGuide === g.id;
+            {(['body', 'expert', 'stress'] as const).map(cat => {
+              const catGuides = guides.filter((g: any) => (g.category || 'body') === cat);
+              if (catGuides.length === 0) return null;
               return (
-                <View key={g.id} style={styles.guideCard}>
-                  <Pressable testID={`guide-${g.id}`} onPress={() => setOpenGuide(open ? null : g.id)} style={styles.guideHead}>
-                    <Ionicons name={g.icon} size={20} color={C.brand} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.guideTitle}>{g.title}</Text>
-                      <Text style={styles.guideSub}>{g.subtitle}</Text>
-                    </View>
-                    <Pressable testID={`guide-play-${g.id}`} onPress={() => speakText(g.tts_text)} hitSlop={8} style={styles.guidePlay}>
-                      <Ionicons name="play" size={16} color={C.onInverse} />
-                    </Pressable>
-                  </Pressable>
-                  {open && (
-                    <View style={styles.guideSteps}>
-                      {g.steps.map((s: string, i: number) => (
-                        <Text key={i} style={styles.guideStep}>{i + 1}. {s}</Text>
-                      ))}
-                    </View>
-                  )}
+                <View key={cat}>
+                  <Text style={styles.lbl}>{catLabels[cat] || cat.toUpperCase()}</Text>
+                  {catGuides.map(g => {
+                    const open = openGuide === g.id;
+                    return (
+                      <View key={g.id} style={styles.guideCard}>
+                        <Pressable testID={`guide-${g.id}`} onPress={() => setOpenGuide(open ? null : g.id)} style={styles.guideHead}>
+                          <Ionicons name={g.icon} size={20} color={C.brand} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.guideTitle}>{g.title}</Text>
+                            <Text style={styles.guideSub}>{g.subtitle}</Text>
+                          </View>
+                          <Pressable testID={`guide-play-${g.id}`} onPress={() => speakText(g.tts_text)} hitSlop={8} style={styles.guidePlay}>
+                            <Ionicons name="play" size={16} color={C.onInverse} />
+                          </Pressable>
+                        </Pressable>
+                        {open && (
+                          <View style={styles.guideSteps}>
+                            {g.steps.map((s: string, i: number) => (
+                              <Text key={i} style={styles.guideStep}>{i + 1}. {s}</Text>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
               );
             })}

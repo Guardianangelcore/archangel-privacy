@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -88,11 +88,31 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.greeting}>Dobrý deň,{'\n'}{(user?.name || 'Guardian').split(' ')[0]}.</Text>
 
+        <Pressable testID="home-daily-brief" onPress={() => router.push('/daily-brief')} style={({ pressed }) => [styles.briefCard, pressed && { opacity: 0.85 }]}>
+          <Ionicons name="sunny" size={22} color="#B8860B" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.briefTitle}>DENNÝ PREHĽAD</Text>
+            <Text style={styles.briefSub}>Lieky · termíny · odkazy od rodiny na jednu obrazovku</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.info} />
+        </Pressable>
+
         <View style={styles.pillarGrid}>
           <PillarTile testID="pillar-health" icon="heart" title="Health Hub" sub="Trezor · AI prekladač · Physio" onPress={() => router.navigate('/(tabs)/health')} />
           <PillarTile testID="pillar-family" icon="people" title="Family Shield" sub="Angel Mode · Family Pulse" onPress={() => router.navigate('/(tabs)/family')} />
           <PillarTile testID="pillar-legacy" icon="rose" title="Legacy & Wealth" sub="Solidarita · Závet · Fond" onPress={() => router.navigate('/(tabs)/legacy')} />
           <PillarTile testID="pillar-hunter" icon="search" title="The Hunter" sub="Termíny · Zásoby · Blackout" onPress={() => router.navigate('/(tabs)/hunter')} />
+        </View>
+
+        <View style={styles.ecoRow}>
+          <Pressable testID="home-token" onPress={() => router.push('/token')} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
+            <Ionicons name="diamond" size={18} color="#B8860B" />
+            <Text style={styles.ecoText}>GA-T WALLET</Text>
+          </Pressable>
+          <Pressable testID="home-fortress" onPress={() => router.push('/fortress')} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
+            <Ionicons name="shield-half" size={18} color={C.brand} />
+            <Text style={styles.ecoText}>CYBER-FORTRESS</Text>
+          </Pressable>
         </View>
 
         <Pressable testID="fab-emergency-qr" onPress={() => router.push('/emergency-qr')} style={styles.sosPill}>
@@ -224,6 +244,10 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                 </Pressable>
               </Animated.View>
               <Text style={styles.jarvisLabel}>HOVORIŤ S JARVISOM</Text>
+              <Pressable testID="angel-daily-brief" onPress={() => router.push('/daily-brief')} style={styles.angelBrief}>
+                <Ionicons name="sunny" size={22} color="#B8860B" />
+                <Text style={styles.angelBriefText}>MÔJ DEŇ</Text>
+              </Pressable>
             </View>
 
             <View style={styles.angelBottom}>
@@ -253,6 +277,14 @@ const styles = StyleSheet.create({
   body: { padding: S.lg, paddingBottom: 120 },
   greeting: { fontSize: 26, fontWeight: '900', color: C.fg, letterSpacing: 0.5, lineHeight: 34 },
   pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginTop: S.xl },
+  ecoRow: { flexDirection: 'row', gap: S.md, marginTop: S.md },
+  ecoTile: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.sm, minHeight: 48, backgroundColor: C.surface2 },
+  ecoText: { color: C.fg, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
+  briefCard: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.lg, backgroundColor: C.surface2, borderWidth: 1.5, borderColor: '#B8860B', borderRadius: R.md, padding: S.md, minHeight: 56 },
+  briefTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+  briefSub: { color: C.info, fontSize: 10.5, marginTop: 2 },
+  angelBrief: { marginTop: S.xl, flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 2, borderColor: '#B8860B', borderRadius: R.pill, paddingHorizontal: S.xl, minHeight: 56, backgroundColor: 'rgba(0,0,0,0.45)' },
+  angelBriefText: { color: '#B8860B', fontWeight: '900', fontSize: 16, letterSpacing: 2 },
   pillar: { width: '48%', flexGrow: 1, minHeight: 156, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: S.lg, justifyContent: 'space-between', gap: S.lg },
   pillarIcon: { width: 48, height: 48, borderRadius: R.pill, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center' },
   pillarTitle: { color: C.fg, fontWeight: '800', fontSize: 16, letterSpacing: 0.3 },

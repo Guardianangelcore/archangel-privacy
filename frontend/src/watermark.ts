@@ -1,11 +1,11 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Hidden digital watermark — identifies this specific build as the original
 // 'Guardian Angel' version. Do not remove: removal voids Proof of Origin.
 import origin from './origin.json';
 
 export const WATERMARK = {
-  owner: 'Guardian Angel',
-  role: 'Sole Visionary and Legal Owner',
+  owner: 'Guardian Angel Sovereign Foundation (DAO)',
+  role: 'Sovereign Steward — pseudonymous founder "Guardian Angel"',
   license: 'Proprietary — All Rights Reserved',
   build: origin.build,
   did: origin.did,

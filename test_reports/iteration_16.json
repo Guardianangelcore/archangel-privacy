@@ -1,0 +1,35 @@
+{
+  "summary": "Phase 16 (Jarvis Autopilot / Medical Sentinel + Daily Brief) fully verified. Backend: 8/8 phase16 tests pass; regression suites phase14 + phase15 (41/41) still green. Frontend: Home renders new DENNÝ PREHĽAD card, /daily-brief screen renders XL senior typography with LIEKY DNES / TERMÍNY / RODINA / JARVIS PRE VÁS VYBAVIL sections, db-notif toggle flips on web without crash, db-back navigates back. /jarvis screen renders AUTOPILOT — MEDICAL SENTINEL section, jv-autopilot Switch persists via PUT, autopilot action cards render with per-step checkmarks (OCR, AI Prekladač, Auto-Booker). Angel Mode home shows angel-daily-brief 'MÔJ DEŇ' button which navigates to /daily-brief. No React Native deprecated packages detected (expo-av already replaced by expo-audio). No red-screen errors, no console errors beyond expected 'expo-notifications web listener' warning.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase16_autopilot_brief.py",
+    "/app/test_reports/pytest/pytest_phase16.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "orchestrator.py:60 — orchestrated flag is set BEFORE any step runs; if OCR/AI/booker raise unexpectedly the doc will be marked orchestrated and manual re-run requires ?force=1. Consider moving the update after the first successful step or wrapping in try/except with rollback. Not blocking — force=1 works.",
+    "orchestrator.py:150 — /jarvis/actions returns action documents WITH user_id field intact; harmless, but consider projecting it out to keep responses minimal.",
+    "health.py:68 — upload_document calls user.get('jarvis_autopilot', True) on the auth-resolved user dict; verify get_current_user returns the full user (it does — confirmed via runtime test). Default ON is by design."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase16_autopilot_brief.py (new — 8 tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 phase16 + 41/41 phase14+15 regression)",
+    "frontend": "100% (all 12 requested UI checks pass)"
+  },
+  "seed_data_creation": "Phase16 tests create small ephemeral PDFs and one TEST med reminder, all self-cleaned. During frontend testing angel_mode was flipped true→false via /api/me/prefs and restored. Jarvis autopilot toggled off then back on during backend test — final state ON.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase16 pytest is idempotent and safe to re-run. Frontend expects EXPO_PUBLIC_BACKEND_URL (not EXPO_BACKEND_URL). Auth token localStorage key is 'gh_session_token'; must be set BEFORE the app boots (evaluate on landing page then reload works reliably; add_init_script may race). Autopilot pipeline takes ~10-25s per doc (AI translation). smoketest-user-1 currently has 3 autopilot actions + booked calendar events + booster-tetanus vaccine event on 2026-08-24. Push 401 warnings in backend logs are expected (placeholder key).",
+  "rca_of_issue": "N/A — no bugs found. All phase 16 features (autopilot pipeline, autopilot toggle persistence, manual orchestrate 404, daily-brief shape, meds→intake flow, angel-mode MÔJ DEŇ entry point) working as specified."
+}

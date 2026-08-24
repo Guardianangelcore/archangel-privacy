@@ -1,5 +1,5 @@
-# Copyright © 2026 Guardian Angel. All Rights Reserved.
-# This source code and its logic are the sole property of Guardian Angel.
+# Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+# This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 from fastapi import HTTPException, Header, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
@@ -7,7 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
-import os, uuid, hashlib, json, io, re, base64, httpx
+import os, uuid, hashlib, json, io, re, base64, httpx, asyncio
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
@@ -63,6 +63,12 @@ async def upload_document(
         size=len(data), storage_path=path, hash=file_hash,
     ).model_dump()
     await db.documents.insert_one(doc.copy())
+    # Jarvis Autopilot (Medical Sentinel) — orchestrate the new document in the
+    # background: OCR → AI preklad → kalendár → rezervácia termínu, bez pýtania.
+    if user.get("jarvis_autopilot", True):
+        from routes.orchestrator import orchestrate_document
+        asyncio.create_task(orchestrate_document(user["user_id"], doc_id))
+        doc["autopilot"] = "started"
     return clean(doc)
 
 @api.get("/vault/documents/{doc_id}/file")
@@ -108,6 +114,40 @@ async def _ocr_image_bytes(img_bytes: bytes, tag: str) -> str:
     ))
     return (resp or "").strip()
 
+async def extract_doc_text(doc: dict) -> str:
+    """Read a vault document from storage and extract its text (PDF text layer,
+    scanned-PDF vision OCR fallback, or image vision OCR). Caches on the doc."""
+    if doc.get("extracted_text"):
+        return doc["extracted_text"]
+    content, _ = await run_in_threadpool(get_object_sync, doc["storage_path"])
+    ctype = (doc.get("content_type") or "").lower()
+    fname = (doc.get("file_name") or "").lower()
+    doc_id = doc["doc_id"]
+    text = ""
+    if "pdf" in ctype or fname.endswith(".pdf"):
+        import io
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(content))
+        text = "\n".join((p.extract_text() or "") for p in reader.pages[:20]).strip()
+        if len(text) < 50:
+            # Scanned PDF — rasterize first pages and run vision OCR
+            import fitz  # pymupdf
+            pdf = fitz.open(stream=content, filetype="pdf")
+            parts = []
+            for i, page in enumerate(pdf):
+                if i >= 3:
+                    break
+                pix = page.get_pixmap(dpi=150)
+                parts.append(await _ocr_image_bytes(pix.tobytes("png"), doc_id))
+            text = "\n\n".join(p for p in parts if p).strip()
+    elif ctype.startswith("image/") or fname.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")):
+        text = await _ocr_image_bytes(content, doc_id)
+    else:
+        raise HTTPException(400, "OCR supports images and PDFs only")
+    if text:
+        await db.documents.update_one({"doc_id": doc_id}, {"$set": {"extracted_text": text}})
+    return text
+
 @api.post("/vault/documents/{doc_id}/ocr")
 async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
@@ -117,34 +157,7 @@ async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None))
     if doc.get("extracted_text"):
         return {"extracted_text": doc["extracted_text"], "cached": True}
     try:
-        content, _ = await run_in_threadpool(get_object_sync, doc["storage_path"])
-    except Exception as e:
-        raise HTTPException(502, f"Storage read failed: {e}")
-
-    ctype = (doc.get("content_type") or "").lower()
-    fname = (doc.get("file_name") or "").lower()
-    text = ""
-    try:
-        if "pdf" in ctype or fname.endswith(".pdf"):
-            import io
-            from pypdf import PdfReader
-            reader = PdfReader(io.BytesIO(content))
-            text = "\n".join((p.extract_text() or "") for p in reader.pages[:20]).strip()
-            if len(text) < 50:
-                # Scanned PDF — rasterize first pages and run vision OCR
-                import fitz  # pymupdf
-                pdf = fitz.open(stream=content, filetype="pdf")
-                parts = []
-                for i, page in enumerate(pdf):
-                    if i >= 3:
-                        break
-                    pix = page.get_pixmap(dpi=150)
-                    parts.append(await _ocr_image_bytes(pix.tobytes("png"), doc_id))
-                text = "\n\n".join(p for p in parts if p).strip()
-        elif ctype.startswith("image/") or fname.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")):
-            text = await _ocr_image_bytes(content, doc_id)
-        else:
-            raise HTTPException(400, "OCR supports images and PDFs only")
+        text = await extract_doc_text(doc)
     except HTTPException:
         raise
     except Exception as e:
@@ -153,7 +166,6 @@ async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None))
 
     if not text:
         raise HTTPException(422, "No text could be extracted from this document")
-    await db.documents.update_one({"doc_id": doc_id}, {"$set": {"extracted_text": text}})
     return {"extracted_text": text}
 
 
@@ -594,17 +606,22 @@ async def mental_techniques(language: str = "sk", authorization: Optional[str] =
         techniques.append({**t, "tts_text": tts})
     return {"language": lk, "techniques": techniques, "disclaimer": MENTAL_DISCLAIMERS[lk]}
 
-# --------- PHYSIO-AI EXPERT GUIDES (Founder content — SK/CS/EN/DE) ---------
+# --------- PHYSIO-AI GLOBAL ENCYCLOPEDIA (Founder content — SK/CS/EN/DE) ---------
 @api.get("/physio/guides")
 async def physio_guides(language: str = "sk", authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
+    from content_physio import PHYSIO_EXTRA, PHYSIO_CATEGORY, CATEGORY_LABELS
     lk = _content_lang(language)
     step_word = STEP_WORD[lk]
     guides = []
     for g in PHYSIO_GUIDES[lk]:
         tts = f"{g['title']}. " + " ".join([f"{step_word} {i+1}: {s}" for i, s in enumerate(g["steps"])])
+        guides.append({**g, "category": PHYSIO_CATEGORY.get(g["id"], "body"), "tts_text": tts})
+    for g in PHYSIO_EXTRA[lk]:
+        tts = f"{g['title']}. " + " ".join([f"{step_word} {i+1}: {s}" for i, s in enumerate(g["steps"])])
         guides.append({**g, "tts_text": tts})
-    return {"language": lk, "guides": guides, "disclaimer": MENTAL_DISCLAIMERS[lk]}
+    return {"language": lk, "guides": guides, "category_labels": CATEGORY_LABELS[lk],
+            "disclaimer": MENTAL_DISCLAIMERS[lk]}
 
 # --------- HEALTH DROP (Referral Bridge — zero-knowledge provider-to-vault upload) ---------
 # Encryption happens IN THE PROVIDER'S BROWSER (tweetnacl box with the patient's public key).
@@ -856,40 +873,64 @@ class SickPayIn(BaseModel):
     contract_type: str = "fulltime"   # fulltime | dpp | dpc
     monthly_gross: float
     days: int = 30
-    country: str = "SK"
+    country: str = "SK"               # SK | CZ | EU | UK | US
+
+SICKPAY_CURRENCY = {"SK": "EUR", "CZ": "CZK", "EU": "EUR", "UK": "GBP", "US": "USD"}
 
 @api.post("/recovery/sickpay")
 async def recovery_sickpay(body: SickPayIn, authorization: Optional[str] = Header(None)):
-    """Simplified SK/CZ sick-pay estimate (informational only, 2026 rules approximation)."""
+    """Global sick-pay estimate — SK/CZ exact-ish 2026 rules, EU/UK/US generic templates.
+    Informational only."""
     await get_current_user(authorization)
     if body.monthly_gross <= 0 or body.days <= 0 or body.days > 365:
         raise HTTPException(400, "monthly_gross > 0 and 1..365 days required")
-    dvz = round(body.monthly_gross * 12 / 365, 4)  # denný vymeriavací základ (approx)
+    country = body.country.upper() if body.country.upper() in SICKPAY_CURRENCY else "SK"
+    cur = SICKPAY_CURRENCY[country]
+    dvz = round(body.monthly_gross * 12 / 365, 4)  # daily assessment base (approx)
     days = body.days
-    warnings = []
-    if body.contract_type in ("dpp", "dpc"):
-        warnings.append("DPP/DPČ: nárok na nemocenské máte len ak ste nemocensky poistený (pravidelný príjem). Overte si to v Sociálnej poisťovni / ČSSZ.")
-    d1_3 = min(days, 3)
-    d4_10 = max(0, min(days, 10) - 3)
-    d11p = max(0, days - 10)
-    employer_pay = round(d1_3 * dvz * 0.25 + d4_10 * dvz * 0.55, 2)
-    social_pay = round(d11p * dvz * 0.55, 2)
-    total = round(employer_pay + social_pay, 2)
+    warnings, breakdown = [], []
+
+    if country in ("SK", "CZ"):
+        if body.contract_type in ("dpp", "dpc"):
+            warnings.append("DPP/DPČ: nárok na nemocenské máte len ak ste nemocensky poistený (pravidelný príjem). Overte si to v Sociálnej poisťovni / ČSSZ.")
+        d1_3 = min(days, 3); d4_10 = max(0, min(days, 10) - 3); d11p = max(0, days - 10)
+        breakdown = [
+            {"period": "Deň 1–3 (zamestnávateľ, 25 %)", "days": d1_3, "amount": round(d1_3 * dvz * 0.25, 2)},
+            {"period": "Deň 4–10 (zamestnávateľ, 55 %)", "days": d4_10, "amount": round(d4_10 * dvz * 0.55, 2)},
+            {"period": "Deň 11+ (Sociálna poisťovňa / ČSSZ, 55 %)", "days": d11p, "amount": round(d11p * dvz * 0.55, 2)},
+        ]
+    elif country == "EU":
+        d1_14 = min(days, 14); d15p = max(0, days - 14)
+        breakdown = [
+            {"period": "Day 1–14 (employer, 70 % — generic EU template)", "days": d1_14, "amount": round(d1_14 * dvz * 0.70, 2)},
+            {"period": "Day 15+ (social insurance, 60 % — generic EU template)", "days": d15p, "amount": round(d15p * dvz * 0.60, 2)},
+        ]
+        warnings.append("Generic EU template (each member state differs). Check your national insurer for exact rates.")
+    elif country == "UK":
+        ssp_daily = round(118.75 / 7, 2)  # Statutory Sick Pay 2026 (£/week / 7)
+        d_wait = min(days, 3); d_paid = min(max(0, days - 3), 28 * 7)
+        breakdown = [
+            {"period": "Day 1–3 (waiting days, £0)", "days": d_wait, "amount": 0.0},
+            {"period": f"Day 4+ (SSP flat £{ssp_daily}/day, max 28 weeks)", "days": d_paid, "amount": round(d_paid * ssp_daily, 2)},
+        ]
+        warnings.append("UK SSP is a flat statutory rate — many employers pay more via Occupational Sick Pay. Check your contract.")
+    else:  # US
+        breakdown = [{"period": "Federal statutory sick pay (none in the US)", "days": days, "amount": 0.0}]
+        warnings.append("The US has no federal statutory sick pay. Check state laws (e.g. CA, NY, WA paid sick leave) and your employer PTO policy.")
+
+    employer_social = round(sum(b["amount"] for b in breakdown), 2)
+    total = employer_social
     normal_income = round(body.monthly_gross / 30 * days, 2)
     shortfall = round(normal_income - total, 2)
     shortfall_pct = round(shortfall / normal_income * 100, 1) if normal_income else 0
     return {
-        "dvz": round(dvz, 2), "days": days,
-        "breakdown": [
-            {"period": "Deň 1–3 (zamestnávateľ, 25 %)", "days": d1_3, "amount": round(d1_3 * dvz * 0.25, 2)},
-            {"period": "Deň 4–10 (zamestnávateľ, 55 %)", "days": d4_10, "amount": round(d4_10 * dvz * 0.55, 2)},
-            {"period": "Deň 11+ (Sociálna poisťovňa / ČSSZ, 55 %)", "days": d11p, "amount": social_pay},
-        ],
+        "dvz": round(dvz, 2), "days": days, "country": country, "currency": cur,
+        "breakdown": breakdown,
         "total_estimate": total, "normal_income": normal_income,
         "shortfall": shortfall, "shortfall_pct": shortfall_pct,
         "solidarity_suggested": shortfall_pct >= 30,
         "warnings": warnings,
-        "disclaimer": "Orientačný výpočet (zjednodušené pravidlá 2026). Presné sumy určí Sociálna poisťovňa / ČSSZ.",
+        "disclaimer": "Orientačný výpočet (zjednodušené pravidlá 2026). Presné sumy určí príslušná poisťovňa / úrad.",
         "simulated": True,
     }
 

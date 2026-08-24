@@ -1,5 +1,5 @@
-# Copyright © 2026 Guardian Angel. All Rights Reserved.
-# This source code and its logic are the sole property of Guardian Angel.
+# Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+# This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 from fastapi import HTTPException, Header, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
@@ -235,6 +235,15 @@ async def market_book(service_id: str, body: BookIn, authorization: Optional[str
     }
     await db.market_bookings.insert_one(booking.copy())
     await db.market_services.update_one({"service_id": service_id}, {"$inc": {"bookings": 1}})
+    # Hard-coded 15% Guardian Tax → foundation treasury (all tiers, no exceptions)
+    if svc.get("price"):
+        try:
+            from routes.subscription import record_revenue
+            await record_revenue("guardian_tax", float(svc["price"]) * 0.15, user["user_id"],
+                                 {"source": "marketplace", "service_id": service_id,
+                                  "gross": svc["price"], "currency": svc.get("currency", "EUR")})
+        except Exception:
+            pass
     try:
         await send_push(
             recipients=[svc["user_id"]],
@@ -832,5 +841,85 @@ async def biometric_will_delete(authorization: Optional[str] = Header(None)):
     if res.deleted_count == 0:
         raise HTTPException(404, "Not found")
     await db.legal_testaments.update_one({"user_id": user["user_id"]}, {"$unset": {"biometric_hash": "", "biometric_ledger_hash": "", "biometric_at": ""}})
+    return {"ok": True}
+
+
+# --------- DIGITAL EXECUTOR — Digital Legacy checklist + subscription liquidator ---------
+LEGACY_CHECKLIST_TEMPLATE = [
+    {"item_id": "fin-accounts", "cat": "financial", "title": "Zoznam bankových účtov a prístupov pre notára"},
+    {"item_id": "fin-insurance", "cat": "financial", "title": "Poistné zmluvy (životné, úrazové, majetkové) na jednom mieste"},
+    {"item_id": "fin-pension", "cat": "financial", "title": "Dôchodkové sporenie (II./III. pilier) — určená oprávnená osoba"},
+    {"item_id": "fin-crypto", "cat": "financial", "title": "Krypto peňaženky: seed frázy v trezore / u notára (NIE v telefóne)"},
+    {"item_id": "fin-debts", "cat": "financial", "title": "Zoznam dlhov a záväzkov (aby dedičia neprevzali prekvapenia)"},
+    {"item_id": "soc-google", "cat": "social", "title": "Google Inactive Account Manager nastavený"},
+    {"item_id": "soc-facebook", "cat": "social", "title": "Facebook/Instagram: zvolený memorializačný kontakt"},
+    {"item_id": "soc-email", "cat": "social", "title": "Prístup k hlavnému e-mailu pre vykonávateľa závetu"},
+    {"item_id": "soc-photos", "cat": "social", "title": "Rodinné fotky a videá: export/záloha pre rodinu"},
+    {"item_id": "prop-deeds", "cat": "property", "title": "List vlastníctva / nájomné zmluvy — kópie v trezore"},
+    {"item_id": "prop-vehicle", "cat": "property", "title": "Vozidlo / loď: technický preukaz + kľúče (miesto uloženia)"},
+    {"item_id": "prop-keys", "cat": "property", "title": "Fyzické kľúče a kódy (dom, schránka, bunker) — kto ich má"},
+    {"item_id": "dig-passwords", "cat": "digital", "title": "Správca hesiel: núdzový prístup pre dôveryhodnú osobu"},
+    {"item_id": "dig-cloud", "cat": "digital", "title": "Cloud úložiská (Drive/iCloud): plán odovzdania"},
+    {"item_id": "dig-domains", "cat": "digital", "title": "Domény a weby: predĺženie/prevod zabezpečený"},
+    {"item_id": "dig-subs", "cat": "digital", "title": "Predplatné: zoznam v Likvidátore nižšie (auto-zrušenie)"},
+]
+CHECKLIST_CATS = {"financial": "FINANCIE", "social": "SOCIÁLNE SIETE", "property": "MAJETOK", "digital": "DIGITÁLNY SVET"}
+
+@api.get("/legacy/checklist")
+async def legacy_checklist(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    states = await db.legacy_checklist.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(100)
+    smap = {s["item_id"]: s for s in states}
+    items = [{**it, "checked": bool(smap.get(it["item_id"], {}).get("checked"))} for it in LEGACY_CHECKLIST_TEMPLATE]
+    done = sum(1 for i in items if i["checked"])
+    return {"items": items, "categories": CHECKLIST_CATS,
+            "progress": {"done": done, "total": len(items), "pct": round(done / len(items) * 100)}}
+
+class ChecklistIn(BaseModel):
+    checked: bool
+
+@api.put("/legacy/checklist/{item_id}")
+async def legacy_checklist_set(item_id: str, body: ChecklistIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    if item_id not in {i["item_id"] for i in LEGACY_CHECKLIST_TEMPLATE}:
+        raise HTTPException(404, "Unknown checklist item")
+    await db.legacy_checklist.update_one(
+        {"user_id": user["user_id"], "item_id": item_id},
+        {"$set": {"checked": body.checked, "updated_at": datetime.now(timezone.utc)}}, upsert=True)
+    return {"item_id": item_id, "checked": body.checked}
+
+SUB_ACTIONS = ["cancel", "transfer", "memorialize"]
+
+class SubscriptionIn(BaseModel):
+    name: str
+    cost_monthly: float = 0.0
+    currency: str = "EUR"
+    action: str = "cancel"
+
+@api.get("/legacy/subscriptions")
+async def legacy_subscriptions(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    subs = await db.legacy_subscriptions.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    saving = round(sum(s.get("cost_monthly", 0) for s in subs if s.get("action") == "cancel"), 2)
+    return {"subscriptions": subs, "monthly_liquidation_saving": saving,
+            "note": "Likvidátor sa spustí pri vykonaní digitálneho závetu — inštrukcie dostane vykonávateľ/notár."}
+
+@api.post("/legacy/subscriptions")
+async def legacy_subscription_add(body: SubscriptionIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    if body.action not in SUB_ACTIONS:
+        raise HTTPException(400, f"action must be one of {SUB_ACTIONS}")
+    sub = {"sub_id": uuid.uuid4().hex, "user_id": user["user_id"], "name": body.name.strip()[:80],
+           "cost_monthly": round(body.cost_monthly, 2), "currency": body.currency.upper()[:4],
+           "action": body.action, "created_at": datetime.now(timezone.utc)}
+    await db.legacy_subscriptions.insert_one(sub.copy())
+    return clean(sub)
+
+@api.delete("/legacy/subscriptions/{sub_id}")
+async def legacy_subscription_delete(sub_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    res = await db.legacy_subscriptions.delete_one({"sub_id": sub_id, "user_id": user["user_id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Not found")
     return {"ok": True}
 

@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -159,6 +159,11 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{t('emergency_qr', lang).toUpperCase()}</Text>
         </Pressable>
 
+        <Pressable testID="recovery-suite-btn" onPress={() => router.push('/recovery-suite')} style={styles.qrBtn}>
+          <Ionicons name="key-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>SOVEREIGN RECOVERY & 2FA</Text>
+        </Pressable>
+
         <Pressable testID="legal-btn" onPress={() => router.push('/legal')} style={styles.qrBtn}>
           <Ionicons name="shield-checkmark-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>{t('legal_hub', lang).toUpperCase()} · 2026</Text>
@@ -190,7 +195,7 @@ export default function Profile() {
 
         <View style={styles.credit}>
           <Text style={styles.creditTitle}>ABOUT</Text>
-          <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Sole Visionary & Legal Owner: <Text style={{ fontWeight: '900' }}>Guardian Angel</Text>.{'\n'}© 2026 Guardian Angel. All Rights Reserved. Proprietary · Zero-Knowledge.</Text>
+          <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Steward: <Text style={{ fontWeight: '900' }}>Guardian Angel Sovereign Foundation (DAO)</Text> — pseudonymous, decentralized governance.{'\n'}© 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. Proprietary · Zero-Knowledge.{'\n'}EU AI Act Art. 50: AI outputs are informational only — you act at your own risk.</Text>
           <Text style={styles.creditText}>{'\n'}Proof of Origin (DID):{'\n'}</Text>
           <Text testID="origin-did" style={[styles.creditText, { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 10 }]}>{WATERMARK.did}</Text>
           <Text style={[styles.creditText, { fontSize: 10, marginTop: 4 }]}>Build {WATERMARK.build} · anchored {WATERMARK.anchored_at?.slice(0, 10)}</Text>

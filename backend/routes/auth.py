@@ -1,5 +1,5 @@
-# Copyright © 2026 Guardian Angel. All Rights Reserved.
-# This source code and its logic are the sole property of Guardian Angel.
+# Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+# This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 from fastapi import HTTPException, Header, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
@@ -23,7 +23,7 @@ from models import User, EmergencyProfile, Document, WaitlistItem, FallEvent
 
 @api.get("/")
 async def root():
-    return {"app": "Guardian Health & Angel", "author": "Guardian Angel", "status": "ok"}
+    return {"app": "Guardian Health & Angel", "author": "Guardian Angel Sovereign Foundation (DAO)", "status": "ok"}
 
 
 # --------- AUTH ---------
@@ -66,6 +66,12 @@ async def auth_session(body: SessionExchangeIn):
         "created_at": datetime.now(timezone.utc),
         "expires_at": datetime.now(timezone.utc) + timedelta(days=7),
     })
+    # Social 2FA — guardian push-handshake on every new login (SAFE, non-blocking)
+    try:
+        from routes.recovery_suite import notify_login_handshake
+        await notify_login_handshake(user_doc, session_token)
+    except Exception as e:
+        logger.warning(f"social 2fa handshake: {e}")
     return {"session_token": session_token, "user": user_doc}
 
 @api.get("/auth/me", name="me")

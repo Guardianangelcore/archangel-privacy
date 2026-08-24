@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Image } from 'expo-image';
@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/auth';
 import { C, S, F } from '@/src/theme';
-import { t, LANG_NAMES, Lang } from '@/src/i18n';
+import { t, LANG_NAMES, Lang, isRTL } from '@/src/i18n';
 
 const BG = 'https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=1200&w=940';
 
@@ -36,14 +36,9 @@ export default function Login() {
           <Text style={styles.hero}>GUARDIAN</Text>
           <Text style={styles.hero2}>HEALTH & ANGEL</Text>
           <View style={styles.divider} />
-          <Text style={styles.tagline}>
-            {lang === 'sk' && 'Suverénny operačný systém pre zdravie a bezpečnosť.'}
-            {lang === 'cs' && 'Suverénní operační systém pro zdraví a bezpečí.'}
-            {lang === 'en' && 'A sovereign OS for medical dignity and safety.'}
-            {lang === 'de' && 'Souveränes Betriebssystem für Gesundheit und Sicherheit.'}
-          </Text>
+          <Text style={[styles.tagline, isRTL(lang) && styles.rtl]}>{t('tagline', lang)}</Text>
 
-          <Text style={styles.langLabel}>{t('choose_language', lang).toUpperCase()}</Text>
+          <Text style={[styles.langLabel, isRTL(lang) && styles.rtl]}>{t('choose_language', lang).toUpperCase()}</Text>
           <View style={styles.langRow}>
             {(Object.keys(LANG_NAMES) as Lang[]).map(l => {
               const active = l === lang;
@@ -70,7 +65,8 @@ export default function Login() {
           >
             <Text style={styles.signBtnText}>{busy ? '...' : t('sign_in_google', lang).toUpperCase()}</Text>
           </Pressable>
-          <Text style={styles.footer}>© 2026 GUARDIAN ANGEL · PROPRIETARY · ZERO-KNOWLEDGE</Text>
+          <Text style={styles.footer}>© 2026 GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO) · PROPRIETARY · ZERO-KNOWLEDGE</Text>
+          <Text style={styles.footerArt50}>EU AI ACT ART. 50 · AI OUTPUTS ARE INFORMATIONAL ONLY · YOU ACT AT YOUR OWN RISK</Text>
         </View>
       </SafeAreaView>
     </View>
@@ -96,4 +92,6 @@ const styles = StyleSheet.create({
   signBtn: { backgroundColor: C.onInverse, paddingVertical: 22, alignItems: 'center', borderWidth: 2, borderColor: C.onInverse },
   signBtnText: { color: C.inverse, fontSize: 18, fontWeight: '900', letterSpacing: 1.5 },
   footer: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center' },
+  footerArt50: { color: C.onInverse, opacity: 0.45, fontSize: 8, letterSpacing: 1, textAlign: 'center', marginTop: 2 },
+  rtl: { writingDirection: 'rtl', textAlign: 'right' },
 });

@@ -1,5 +1,5 @@
-# Copyright © 2026 Guardian Angel. All Rights Reserved.
-# This source code and its logic are the sole property of Guardian Angel.
+# Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+# This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 from fastapi import HTTPException, Header
 from pydantic import BaseModel
@@ -150,6 +150,13 @@ async def marketplace_accept(offer_id: str, authorization: Optional[str] = Heade
             "at": datetime.now(timezone.utc), "payout_status": "simulated"}
     await db.marketplace_sales.insert_one(sale.copy())
     await db.marketplace_optins.update_one({"user_id": user["user_id"]}, {"$inc": {"earnings_eur": offer["reward_eur"]}})
+    # GA-T Proof-of-Health bonus alongside the (simulated) EUR payout
+    try:
+        from routes.token import award_tokens
+        gat_tx = await award_tokens(user["user_id"], "proof_of_health", f"marketplace sale: {offer_id}")
+        sale["gat_reward"] = gat_tx["amount"] if gat_tx else 0
+    except Exception as e:
+        logger.warning(f"marketplace GA-T award failed: {e}")
     return clean(sale)
 
 # --------- 3. GLOBAL SENTINEL NETWORK (anonymized real-time survival signals) ---------
@@ -183,7 +190,14 @@ async def sentinel_report(body: SentinelReportIn, authorization: Optional[str] =
         "anon": anon, "kind": body.kind, "region": body.region.upper()[:8],
         "note": (body.note or "")[:200], "at": datetime.now(timezone.utc),
     })
-    return {"ok": True, "anonymized": True}
+    # GA-T Proof-of-Health — reward anonymized survival signal
+    gat_tx = None
+    try:
+        from routes.token import award_tokens
+        gat_tx = await award_tokens(user["user_id"], "proof_of_health", f"sentinel signal: {body.kind}")
+    except Exception as e:
+        logger.warning(f"proof_of_health award failed: {e}")
+    return {"ok": True, "anonymized": True, "gat_reward": gat_tx["amount"] if gat_tx else 0}
 
 @api.get("/sentinel/aggregate")
 async def sentinel_aggregate(authorization: Optional[str] = Header(None)):

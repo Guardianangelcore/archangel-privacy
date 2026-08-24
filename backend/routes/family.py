@@ -1,5 +1,5 @@
-# Copyright © 2026 Guardian Angel. All Rights Reserved.
-# This source code and its logic are the sole property of Guardian Angel.
+# Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+# This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 from fastapi import HTTPException, Header, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
@@ -588,6 +588,12 @@ async def pulse_respond(req_id: str, body: PulseRespondIn, authorization: Option
         await send_push(recipients=[req["from_user"]], data={"title": title, "message": f"Odpoveď na tichý ping: {body.status}", "action_url": "/pulse-check"})
     except Exception as e:
         logger.warning(f"pulse respond push failed: {e}")
+    # GA-T Proof-of-Help — reward the family member who checked in (loop completed)
+    try:
+        from routes.token import award_tokens
+        await award_tokens(req["from_user"], "proof_of_help", "pulse check completed")
+    except Exception as e:
+        logger.warning(f"proof_of_help award failed: {e}")
     return {"ok": True, "status": body.status}
 
 @api.get("/pulse/sent")

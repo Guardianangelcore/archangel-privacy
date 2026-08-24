@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, ScrollView, Modal, RefreshControl, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +26,16 @@ export default function MedicineCabinet() {
   const [modal, setModal] = useState(false);
   const [f, setF] = useState({ name: '', quantity: '1', unit: 'ks', expires_on: '', category: 'other', prescription: false });
   const [ef, setEf] = useState({ type: 'offer', item_name: '', quantity: '1', unit: 'ks', city: 'Bratislava', note: '' });
+  const [ddi, setDdi] = useState<any>(null);
+  const [ddiBusy, setDdiBusy] = useState(false);
+  const [ddiErr, setDdiErr] = useState('');
+
+  const scanInteractions = async () => {
+    setDdiBusy(true); setDdiErr(''); setDdi(null);
+    try { setDdi(await api('/cabinet/interactions/scan', { method: 'POST' })); }
+    catch (e: any) { setDdiErr(String(e.message || e)); }
+    setDdiBusy(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,7 +103,33 @@ export default function MedicineCabinet() {
           keyExtractor={i => i.item_id}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
           contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
-          ListHeaderComponent={<JarvisAdvice module="medicine_cabinet" lang={lang} buildContext={() => `Medicine stock: ${items.map(i => `${i.name} ${i.quantity}${i.unit} exp:${i.expires_on || '?'} status:${i.status}`).join('; ') || 'empty'}`} />}
+          ListHeaderComponent={
+            <View>
+              <Pressable testID="mc-ddi-scan" onPress={scanInteractions} disabled={ddiBusy} style={styles.ddiBtn}>
+                <Ionicons name="warning-outline" size={16} color={C.onInverse} />
+                <Text style={styles.ddiBtnText}>{ddiBusy ? 'AI KONTROLUJE INTERAKCIE…' : 'SKONTROLOVAŤ LIEKOVÉ INTERAKCIE (AI)'}</Text>
+              </Pressable>
+              {!!ddiErr && <Text style={styles.ddiErr}>{ddiErr}</Text>}
+              {ddi && (
+                <View testID="mc-ddi-result" style={[styles.ddiBox, { borderColor: (ddi.interactions || []).some((x: any) => x.severity === 'high') ? C.error : C.borderStrong }]}>
+                  {(ddi.interactions || []).length === 0 ? (
+                    <Text style={styles.ddiOk}>✓ ŽIADNE ZNÁME RIZIKOVÉ INTERAKCIE ({(ddi.meds_scanned || []).length} liekov){ddi.note ? `\n${ddi.note}` : ''}</Text>
+                  ) : (
+                    (ddi.interactions || []).map((x: any, i: number) => (
+                      <View key={i} style={{ marginBottom: 8 }}>
+                        <Text style={[styles.ddiPair, x.severity === 'high' && { color: C.error }]}>
+                          {x.severity === 'high' ? '⛔' : x.severity === 'moderate' ? '⚠️' : 'ℹ️'} {(x.pair || []).join(' + ')} · {String(x.severity).toUpperCase()}
+                        </Text>
+                        <Text style={styles.ddiWarn}>{x.warning} {x.advice}</Text>
+                      </View>
+                    ))
+                  )}
+                  {!!ddi.disclaimer && <Text style={styles.ddiDisc}>{ddi.disclaimer}</Text>}
+                </View>
+              )}
+              <JarvisAdvice module="medicine_cabinet" lang={lang} buildContext={() => `Medicine stock: ${items.map(i => `${i.name} ${i.quantity}${i.unit} exp:${i.expires_on || '?'} status:${i.status}`).join('; ') || 'empty'}`} />
+            </View>
+          }
           ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text> : null}
           renderItem={({ item }) => {
             const b = badge(item.status);
@@ -230,6 +266,14 @@ const styles = StyleSheet.create({
   respondBtn: { marginTop: S.md, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.inverse, paddingVertical: S.md },
   respondText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
   exNote: { fontSize: 10, letterSpacing: 1.5, color: C.brand, fontWeight: '900', marginBottom: S.sm },
+  ddiBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.inverse, paddingVertical: S.md, minHeight: 48, marginBottom: S.sm },
+  ddiBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 11 },
+  ddiErr: { color: C.error, fontWeight: '800', fontSize: 11, marginBottom: S.sm },
+  ddiBox: { borderWidth: 2, padding: S.md, marginBottom: S.sm, backgroundColor: C.surface2 },
+  ddiOk: { color: C.brand, fontWeight: '800', fontSize: 12, lineHeight: 17 },
+  ddiPair: { color: C.warn, fontWeight: '900', fontSize: 12, letterSpacing: 0.5 },
+  ddiWarn: { color: C.onS3, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  ddiDisc: { color: C.info, fontSize: 9, marginTop: 4, lineHeight: 13 },
   fab: { position: 'absolute', bottom: 24, right: S.lg, flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: C.inverse, paddingHorizontal: S.lg, paddingVertical: S.md, borderWidth: 2, borderColor: C.borderStrong },
   fabText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   modalRoot: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

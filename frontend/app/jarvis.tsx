@@ -1,6 +1,6 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator } from 'react-native';
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -31,7 +31,18 @@ export default function Jarvis() {
   const [busy, setBusy] = useState<string | null>(null);
   const [traces, setTraces] = useState<Record<string, any>>({});
   const [err, setErr] = useState('');
+  const [auto, setAuto] = useState<any>(null);
   const playerRef = useRef<any>(null);
+
+  const loadAuto = async () => {
+    try { setAuto(await api('/jarvis/actions')); } catch {}
+  };
+  useEffect(() => { loadAuto(); }, []);
+
+  const toggleAutopilot = async (v: boolean) => {
+    setAuto({ ...(auto || {}), autopilot: v });
+    try { await api('/jarvis/autopilot', { method: 'PUT', body: JSON.stringify({ enabled: v }) }); } catch { loadAuto(); }
+  };
 
   const ask = async (question: string) => {
     if (!question.trim()) return;
@@ -103,6 +114,27 @@ export default function Jarvis() {
           </View>
         )}
 
+        <Text style={styles.section}>AUTOPILOT — MEDICAL SENTINEL</Text>
+        <View style={styles.autoRow}>
+          <Ionicons name="infinite" size={20} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.chainTitle}>Automatické spracovanie Trezoru</Text>
+            <Text style={styles.chainSub}>Nový dokument → OCR → AI preklad → kalendár → rezervácia termínu. Bez pýtania — dostanete len potvrdenie.</Text>
+          </View>
+          <Switch testID="jv-autopilot" value={auto?.autopilot !== false} onValueChange={toggleAutopilot} trackColor={{ true: C.brand, false: C.surface3 }} />
+        </View>
+        {(auto?.actions || []).slice(0, 4).map((a: any) => (
+          <View key={a.action_id} style={styles.chainCard}>
+            <Text style={styles.chainTitle}>📄 {a.doc_title || 'Dokument'}{a.booked_slot ? '  ·  ✅ ZAREZERVOVANÉ' : ''}</Text>
+            {(a.steps || []).map((s: any, i: number) => (
+              <View key={i} style={styles.traceRow}>
+                <Ionicons name={s.status === 'ok' ? 'checkmark-circle' : 'remove-circle-outline'} size={14} color={s.status === 'ok' ? '#5FA779' : C.info} />
+                <Text style={styles.traceText}><Text style={{ fontWeight: '900' }}>{s.step}:</Text> {s.detail}</Text>
+              </View>
+            ))}
+          </View>
+        ))}
+
         <Text style={styles.section}>SENTIENT REŤAZE (AUTOMATIZÁCIE)</Text>
         {CHAINS.map(c => {
           const tr = traces[c.id];
@@ -170,6 +202,7 @@ const styles = StyleSheet.create({
   speakBtn: { marginTop: S.md, flexDirection: 'row', gap: 6, alignItems: 'center', alignSelf: 'flex-start', minHeight: 44 },
   speakText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   section: { marginTop: S.xl, marginBottom: S.sm, fontSize: 11, letterSpacing: 2, color: C.info, fontWeight: '800' },
+  autoRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.brand, padding: S.md, marginBottom: S.sm },
   chainCard: { backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: S.md, marginBottom: S.sm },
   chainIcon: { width: 38, height: 38, borderRadius: R.sm, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center' },
   chainTitle: { color: C.fg, fontWeight: '900', fontSize: 13 },

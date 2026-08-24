@@ -1,18 +1,31 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-// Simple i18n dictionary for Guardian Health & Angel
-export type Lang = 'sk' | 'cs' | 'en' | 'de';
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+// Adaptive i18n dictionary for Guardian Health & Angel — 14-language global launch
+export type Lang = 'sk' | 'cs' | 'en' | 'de' | 'pl' | 'hu' | 'ru' | 'es' | 'fr' | 'it' | 'uk' | 'zh' | 'ja' | 'ar';
 
 export const LANG_NAMES: Record<Lang, string> = {
   sk: 'Slovenčina',
   cs: 'Čeština',
   en: 'English',
   de: 'Deutsch',
+  pl: 'Polski',
+  hu: 'Magyar',
+  ru: 'Русский',
+  es: 'Español',
+  fr: 'Français',
+  it: 'Italiano',
+  uk: 'Українська',
+  zh: '中文',
+  ja: '日本語',
+  ar: 'العربية',
 };
 
-type Dict = Record<string, Record<Lang, string>>;
+export const isRTL = (l: Lang) => l === 'ar';
+
+type Dict = Record<string, Partial<Record<Lang, string>>>;
 
 export const T: Dict = {
   app_name: { sk: 'Guardian Health & Angel', cs: 'Guardian Health & Angel', en: 'Guardian Health & Angel', de: 'Guardian Health & Angel' },
+  tagline: { sk: 'Suverénny operačný systém pre zdravie a bezpečnosť.', cs: 'Suverénní operační systém pro zdraví a bezpečí.', en: 'A sovereign OS for medical dignity and safety.', de: 'Souveränes Betriebssystem für Gesundheit und Sicherheit.' },
   author_credit: { sk: 'Vízia: Guardian Angel', cs: 'Vize: Guardian Angel', en: 'Vision by Guardian Angel', de: 'Vision von Guardian Angel' },
   sign_in_google: { sk: 'Prihlásiť sa cez Google', cs: 'Přihlásit se přes Google', en: 'Sign in with Google', de: 'Mit Google anmelden' },
   choose_language: { sk: 'Vyberte jazyk', cs: 'Vyberte jazyk', en: 'Choose language', de: 'Sprache wählen' },
@@ -132,6 +145,12 @@ export const T: Dict = {
   testament: { sk: 'Závet / Posledná vôľa', cs: 'Závěť / Poslední vůle', en: 'Will / Testament', de: 'Testament' },
   jurisdiction: { sk: 'Jurisdikcia', cs: 'Jurisdikce', en: 'Jurisdiction', de: 'Gerichtsbarkeit' },
   ai_disclosure: { sk: 'AI OBSAH · LEN INFORMAČNÉ · NIE JE ODBORNÁ RADA', cs: 'AI OBSAH · POUZE INFORMAČNÍ · NENÍ ODBORNÁ RADA', en: 'AI CONTENT · INFORMATIONAL ONLY · NOT PROFESSIONAL ADVICE', de: 'KI-INHALT · NUR INFORMATIV · KEINE FACHBERATUNG' },
+  art50_waiver: {
+    sk: 'ČL. 50 EU AI ACT — TRANSPARENTNOSŤ: Komunikujete s AI systémom. Všetky výstupy sú AI-generované, len informačné a nie sú lekárskou, právnou ani finančnou radou. Guardian Angel Sovereign Foundation (DAO) nenesie žiadnu zodpovednosť — konáte výhradne na vlastné riziko. V núdzi volajte 112.',
+    cs: 'ČL. 50 EU AI ACT — TRANSPARENTNOST: Komunikujete s AI systémem. Veškeré výstupy jsou AI-generované, pouze informační a nejsou lékařskou, právní ani finanční radou. Guardian Angel Sovereign Foundation (DAO) nenese žádnou odpovědnost — jednáte výhradně na vlastní riziko. V nouzi volejte 112.',
+    en: 'EU AI ACT ART. 50 — TRANSPARENCY: You are interacting with an AI system. All outputs are AI-generated, informational only, and are not medical, legal or financial advice. Guardian Angel Sovereign Foundation (DAO) bears no liability — you act solely at your own risk. In emergencies call 112.',
+    de: 'ART. 50 EU-KI-VERORDNUNG — TRANSPARENZ: Sie interagieren mit einem KI-System. Alle Ausgaben sind KI-generiert, rein informativ und keine medizinische, rechtliche oder finanzielle Beratung. Die Guardian Angel Sovereign Foundation (DAO) übernimmt keine Haftung — Sie handeln auf eigenes Risiko. Im Notfall 112 anrufen.',
+  },
   meds_reminders: { sk: 'Lieky dnes', cs: 'Léky dnes', en: 'Meds today', de: 'Medikamente heute' },
   taken_btn: { sk: 'Užil(a) som', cs: 'Užil(a) jsem', en: 'I took it', de: 'Eingenommen' },
   done_taken: { sk: 'Hotovo', cs: 'Hotovo', en: 'Done', de: 'Erledigt' },
@@ -144,5 +163,80 @@ export const T: Dict = {
 };
 
 export function t(key: string, lang: Lang): string {
-  return T[key]?.[lang] ?? T[key]?.en ?? key;
+  return T[key]?.[lang] ?? EXT[lang]?.[key] ?? T[key]?.en ?? key;
 }
+
+// Core-surface translations for the 10 additional launch languages.
+// Any key missing here gracefully falls back to English.
+const EXT: Partial<Record<Lang, Record<string, string>>> = {
+  pl: {
+    tagline: 'Suwerenny system operacyjny dla zdrowia i bezpieczeństwa.', author_credit: 'Wizja: Guardian Angel',
+    sign_in_google: 'Zaloguj się przez Google', choose_language: 'Wybierz język', standard_mode: 'Tryb standardowy', angel_mode: 'Tryb Angel',
+    home: 'Start', vault: 'Sejf', waitlist: 'Terminy', profile: 'Profil', sos: 'SOS', call_family: 'Zadzwoń do rodziny',
+    medications: 'Leki', documents: 'Dokumenty', upload_doc: 'Prześlij dokument', translate: 'Tłumacz AI',
+    im_ok: 'JESTEM OK', get_help_now: 'Pomoc TERAZ', save: 'Zapisz', cancel: 'Anuluj', logout: 'Wyloguj', loading: 'Odszyfrowywanie tożsamości…', add: 'Dodaj',
+  },
+  hu: {
+    tagline: 'Szuverén operációs rendszer az egészségért és biztonságért.', author_credit: 'Vízió: Guardian Angel',
+    sign_in_google: 'Bejelentkezés Google-fiókkal', choose_language: 'Válasszon nyelvet', standard_mode: 'Normál mód', angel_mode: 'Angel mód',
+    home: 'Kezdőlap', vault: 'Széf', waitlist: 'Időpontok', profile: 'Profil', sos: 'SOS', call_family: 'Család hívása',
+    medications: 'Gyógyszerek', documents: 'Dokumentumok', upload_doc: 'Dokumentum feltöltése', translate: 'AI fordító',
+    im_ok: 'JÓL VAGYOK', get_help_now: 'Segítség MOST', save: 'Mentés', cancel: 'Mégse', logout: 'Kijelentkezés', loading: 'Identitás visszafejtése…', add: 'Hozzáadás',
+  },
+  ru: {
+    tagline: 'Суверенная операционная система для здоровья и безопасности.', author_credit: 'Видение: Guardian Angel',
+    sign_in_google: 'Войти через Google', choose_language: 'Выберите язык', standard_mode: 'Стандартный режим', angel_mode: 'Режим Angel',
+    home: 'Главная', vault: 'Сейф', waitlist: 'Приёмы', profile: 'Профиль', sos: 'SOS', call_family: 'Позвонить семье',
+    medications: 'Лекарства', documents: 'Документы', upload_doc: 'Загрузить документ', translate: 'AI-перевод',
+    im_ok: 'Я В ПОРЯДКЕ', get_help_now: 'Помощь СЕЙЧАС', save: 'Сохранить', cancel: 'Отмена', logout: 'Выйти', loading: 'Расшифровка личности…', add: 'Добавить',
+  },
+  es: {
+    tagline: 'Un sistema operativo soberano para la dignidad médica y la seguridad.', author_credit: 'Visión: Guardian Angel',
+    sign_in_google: 'Iniciar sesión con Google', choose_language: 'Elige idioma', standard_mode: 'Modo estándar', angel_mode: 'Modo Angel',
+    home: 'Inicio', vault: 'Caja fuerte', waitlist: 'Citas', profile: 'Perfil', sos: 'SOS', call_family: 'Llamar a la familia',
+    medications: 'Medicamentos', documents: 'Documentos', upload_doc: 'Subir documento', translate: 'Traductor IA',
+    im_ok: 'ESTOY BIEN', get_help_now: 'Ayuda AHORA', save: 'Guardar', cancel: 'Cancelar', logout: 'Cerrar sesión', loading: 'Descifrando identidad…', add: 'Añadir',
+  },
+  fr: {
+    tagline: 'Un OS souverain pour la dignité médicale et la sécurité.', author_credit: 'Vision : Guardian Angel',
+    sign_in_google: 'Se connecter avec Google', choose_language: 'Choisir la langue', standard_mode: 'Mode standard', angel_mode: 'Mode Angel',
+    home: 'Accueil', vault: 'Coffre', waitlist: 'Rendez-vous', profile: 'Profil', sos: 'SOS', call_family: 'Appeler la famille',
+    medications: 'Médicaments', documents: 'Documents', upload_doc: 'Téléverser un document', translate: 'Traduction IA',
+    im_ok: 'JE VAIS BIEN', get_help_now: 'Aide MAINTENANT', save: 'Enregistrer', cancel: 'Annuler', logout: 'Se déconnecter', loading: 'Déchiffrement de l’identité…', add: 'Ajouter',
+  },
+  it: {
+    tagline: 'Un sistema operativo sovrano per la dignità medica e la sicurezza.', author_credit: 'Visione: Guardian Angel',
+    sign_in_google: 'Accedi con Google', choose_language: 'Scegli la lingua', standard_mode: 'Modalità standard', angel_mode: 'Modalità Angel',
+    home: 'Home', vault: 'Cassaforte', waitlist: 'Appuntamenti', profile: 'Profilo', sos: 'SOS', call_family: 'Chiama la famiglia',
+    medications: 'Farmaci', documents: 'Documenti', upload_doc: 'Carica documento', translate: 'Traduttore IA',
+    im_ok: 'STO BENE', get_help_now: 'Aiuto ORA', save: 'Salva', cancel: 'Annulla', logout: 'Esci', loading: 'Decifrando l’identità…', add: 'Aggiungi',
+  },
+  uk: {
+    tagline: 'Суверенна операційна система для здоров’я та безпеки.', author_credit: 'Візія: Guardian Angel',
+    sign_in_google: 'Увійти через Google', choose_language: 'Оберіть мову', standard_mode: 'Стандартний режим', angel_mode: 'Режим Angel',
+    home: 'Головна', vault: 'Сейф', waitlist: 'Прийоми', profile: 'Профіль', sos: 'SOS', call_family: 'Подзвонити родині',
+    medications: 'Ліки', documents: 'Документи', upload_doc: 'Завантажити документ', translate: 'AI-переклад',
+    im_ok: 'Я В ПОРЯДКУ', get_help_now: 'Допомога ЗАРАЗ', save: 'Зберегти', cancel: 'Скасувати', logout: 'Вийти', loading: 'Розшифрування особистості…', add: 'Додати',
+  },
+  zh: {
+    tagline: '守护健康与安全的主权操作系统。', author_credit: '愿景：Guardian Angel',
+    sign_in_google: '使用 Google 登录', choose_language: '选择语言', standard_mode: '标准模式', angel_mode: '天使模式',
+    home: '首页', vault: '保险库', waitlist: '预约', profile: '个人资料', sos: 'SOS', call_family: '呼叫家人',
+    medications: '药物', documents: '文件', upload_doc: '上传文件', translate: 'AI 翻译',
+    im_ok: '我很好', get_help_now: '立即求助', save: '保存', cancel: '取消', logout: '退出登录', loading: '正在解密身份…', add: '添加',
+  },
+  ja: {
+    tagline: '健康と安全のためのソブリンOS。', author_credit: 'ビジョン：Guardian Angel',
+    sign_in_google: 'Googleでログイン', choose_language: '言語を選択', standard_mode: '標準モード', angel_mode: 'エンジェルモード',
+    home: 'ホーム', vault: '金庫', waitlist: '予約', profile: 'プロフィール', sos: 'SOS', call_family: '家族に電話',
+    medications: '薬', documents: '書類', upload_doc: '書類をアップロード', translate: 'AI翻訳',
+    im_ok: '無事です', get_help_now: '今すぐ助けて', save: '保存', cancel: 'キャンセル', logout: 'ログアウト', loading: '本人確認を復号中…', add: '追加',
+  },
+  ar: {
+    tagline: 'نظام تشغيل سيادي للكرامة الطبية والسلامة.', author_credit: 'الرؤية: Guardian Angel',
+    sign_in_google: 'تسجيل الدخول عبر Google', choose_language: 'اختر اللغة', standard_mode: 'الوضع القياسي', angel_mode: 'وضع الملاك',
+    home: 'الرئيسية', vault: 'الخزنة', waitlist: 'المواعيد', profile: 'الملف الشخصي', sos: 'استغاثة', call_family: 'الاتصال بالعائلة',
+    medications: 'الأدوية', documents: 'المستندات', upload_doc: 'رفع مستند', translate: 'الترجمة بالذكاء الاصطناعي',
+    im_ok: 'أنا بخير', get_help_now: 'المساعدة الآن', save: 'حفظ', cancel: 'إلغاء', logout: 'تسجيل الخروج', loading: 'جارٍ فك تشفير الهوية…', add: 'إضافة',
+  },
+};

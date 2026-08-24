@@ -1,4 +1,4 @@
-/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+/* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React from 'react';
 import { useRouter } from 'expo-router';
 import PillarHub from '@/src/PillarHub';
@@ -26,6 +26,9 @@ export default function FamilyShield() {
         { testID: 'fs-wellness', icon: 'sparkles-outline', title: 'Denná kontrola', subtitle: 'Ako sa dnes cítite? · Jarvis', route: '/wellness' },
         { testID: 'fs-respect', icon: 'star-outline', title: 'Respect Map', subtitle: 'Lekári s rešpektom · komunita', route: '/respect-map' },
         { testID: 'fs-scam', icon: 'shield-half-outline', title: 'Scam štít', subtitle: 'AI ochrana pred podvodmi', route: '/scam-shield' },
+        { testID: 'fs-medic', icon: 'medkit-outline', title: 'AI Tactical Medic', subtitle: 'Hlasový poľný lekár · KPR · krvácanie · offline', route: '/tactical-medic' },
+        { testID: 'fs-paramedic', icon: 'key-outline', title: 'Paramedic Key', subtitle: 'Núdzový vstupný kód pre záchranárov · NCZI/ÚZIS', route: '/paramedic' },
+        { testID: 'fs-gigs', icon: 'hand-left-outline', title: 'Angel Gig Network', subtitle: 'Susedská pomoc · odmeny GA-T / hotovosť', route: '/gigs' },
         { testID: 'fs-qr', icon: 'qr-code-outline', title: 'Núdzové QR', subtitle: 'Krvná skupina · alergie · kontakt', route: '/emergency-qr' },
         { testID: 'fs-wallpaper', icon: 'image-outline', title: 'Núdzová tapeta', subtitle: 'QR na zamknutej obrazovke', route: '/wallpaper' },
       ]}
