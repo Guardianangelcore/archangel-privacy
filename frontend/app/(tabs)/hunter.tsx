@@ -11,6 +11,9 @@ export default function Hunter() {
       subtitle="Lovec termínov a logistika prežitia — rýchlejšie termíny, pripravená domácnosť."
       items={[
         { testID: 'ht-waitlist', icon: 'calendar-outline', title: 'Waitlist Hunter', subtitle: 'Skorší termín u špecialistu', route: '/(tabs)/waitlist' },
+        { testID: 'ht-arbitrage', icon: 'airplane-outline', title: 'Medical Arbitrage', subtitle: 'Operácie v 🇵🇱 🇭🇺 🇹🇷 · predikcia účtov + S2', route: '/arbitrage' },
+        { testID: 'ht-mesh', icon: 'radio-outline', title: 'Mesh-Messenger', subtitle: 'P2P správy nezávislé od operátorov', route: '/mesh' },
+        { testID: 'ht-ghost', icon: 'eye-off-outline', title: 'Ghost & Power', subtitle: 'Anonymný pacientsky token · Power-Saver', route: '/ghost-mode' },
         { testID: 'ht-pharmacy', icon: 'flask-outline', title: 'Pharmacy Hunter', subtitle: 'Dostupnosť liekov v lekárňach CZ/SK', route: '/pharmacy-hunter' },
         { testID: 'ht-survival', icon: 'cube-outline', title: 'Zásoby prežitia', subtitle: 'Voda · jedlo · dni prežitia', route: '/survival-auditor' },
         { testID: 'ht-compass', icon: 'compass-outline', title: 'Survival Compass', subtitle: 'Offline balík · Bio-Beacon · satelitná núdza', route: '/compass' },

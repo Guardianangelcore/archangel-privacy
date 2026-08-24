@@ -45,7 +45,7 @@ async def produce_block(trigger: str) -> Optional[dict]:
                                          {"_id": 0, "seq": 1, "entry_hash": 1}).sort("seq", 1).to_list(100)
     vault_count = await db.vault.count_documents({})
     did_count = await db.users.count_documents({"did": {"$exists": True}})
-    if not entries and trigger != "manual":
+    if not entries and trigger not in ("manual", "wealth_anchor", "video_legacy"):
         return None
     now = datetime.now(timezone.utc)
     batch_root = hashlib.sha256("".join(e["entry_hash"] for e in entries).encode()).hexdigest()

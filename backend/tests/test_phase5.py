@@ -229,7 +229,16 @@ class TestAmlEnforcement:
 
 class TestAmlLedger:
     def test_ledger_chain_links(self):
-        """Verify entries for KYC user have seq + prev_hash and increasing seqs."""
+        """Verify entries for KYC user have seq + prev_hash and increasing seqs.
+        Self-sufficient: generates ≥3 ledger entries itself (worker-independent
+        under xdist loadscope class splitting)."""
+        # each of these appends one AML ledger entry for USER_KYC
+        _ensure_kyc(USER_KYC)  # kyc_attestation
+        requests.post(f"{BASE_URL}/api/legal/accept",
+                      json={"country": "SK", "language": "sk"}, headers=_h(USER_KYC))  # tos_accept
+        requests.post(f"{BASE_URL}/api/solidarity/campaigns",
+                      json={"title": "TEST_p5 ledger campaign", "story": "s", "goal_amount": 10},
+                      headers=_h(USER_KYC))  # campaign_create
         import pymongo
         pc = pymongo.MongoClient(MONGO_URL)
         pdb = pc[DB_NAME]

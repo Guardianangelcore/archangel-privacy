@@ -58,6 +58,12 @@ async def auth_session(body: SessionExchangeIn):
         did = f"did:guardian:{uuid.uuid4().hex[:24]}"
         user_doc = User(user_id=user_id, email=email, name=name, picture=picture, did=did).model_dump()
         await db.users.insert_one(user_doc.copy())
+        # Inner Circle whitelist — permanent Archangel status on first login
+        wl = await db.inner_circle.find_one({"email": email})
+        if wl:
+            await db.users.update_one({"user_id": user_id}, {"$set": {
+                "inner_circle": True, "tier": "archangel", "tier_until": None, "tier_paid_with": "inner_circle"}})
+            await db.inner_circle.update_one({"email": email}, {"$set": {"linked_user_id": user_id, "linked_did": did}})
         user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
 
     await db.user_sessions.insert_one({
@@ -115,6 +121,8 @@ USER_DATA_COLLECTIONS = [
     "beacon_events", "med_reminders", "med_intakes",
     "dignity_funds", "dignity_contributions", "dignity_wishes",
     "legal_testaments", "campaigns", "provider_reviews",
+    "legacy_videos", "wealth_assets", "wealth_anchors", "wealth_payouts",
+    "arbitrage_quotes", "bio_identity", "duress_configs", "duress_events",
 ]
 
 @api.delete("/auth/account")

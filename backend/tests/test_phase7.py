@@ -146,6 +146,9 @@ class TestDignityDeposit:
 class TestDignityRecurringPlan:
     def test_plan_save_and_recurring_applies_once_per_month(self, users):
         u = users["a"]
+        # Baseline balance (worker-independent — deposits may or may not have run here)
+        f0 = requests.get(f"{BASE_URL}/api/dignity/fund", headers=H(u), timeout=15).json()
+        base = f0["balance"]
         # Save recurring plan
         r = requests.put(f"{BASE_URL}/api/dignity/fund/plan", headers=H(u),
                          json={"monthly_amount": 20, "currency": "EUR", "enabled": True}, timeout=15)
@@ -154,12 +157,12 @@ class TestDignityRecurringPlan:
 
         # GET → should auto-apply once (+20)
         r1 = requests.get(f"{BASE_URL}/api/dignity/fund", headers=H(u), timeout=15).json()
-        assert r1["balance"] == 70, f"expected 50+20=70 got {r1['balance']}"
+        assert r1["balance"] == base + 20, f"expected {base}+20={base + 20} got {r1['balance']}"
         assert r1.get("last_plan_run") is not None
 
         # Second GET → must NOT double-apply
         r2 = requests.get(f"{BASE_URL}/api/dignity/fund", headers=H(u), timeout=15).json()
-        assert r2["balance"] == 70, f"double-applied! now {r2['balance']}"
+        assert r2["balance"] == base + 20, f"double-applied! now {r2['balance']}"
 
         # At least one contribution with method:'recurring'
         methods = [c["method"] for c in r2.get("contributions", [])]
@@ -275,42 +278,64 @@ class TestDignityWishes:
 # =============== AML ledger integrity (per-user chain view) ===============
 
 class TestAmlLedgerDignityChain:
-    def test_ledger_contains_all_dignity_actions_with_intact_chain(self, users):
+    def test_ledger_contains_all_dignity_actions_with_intact_chain(self):
         """Verify per-user ledger contains all dignity_* actions and hash chain is intact.
 
         Chain is global (prev_hash across all users), so we can only verify per-entry
-        integrity by recomputing the hash matches entry_hash. For USER B we saw
-        deposit → verification → release."""
+        integrity by recomputing the hash matches entry_hash. Uses DEDICATED users and
+        performs the full flow itself — deterministic regardless of xdist scheduling."""
         from pymongo import MongoClient
         import hashlib
         import json as _json
-        c = MongoClient(MONGO_URL)
-        db = c[DB_NAME]
-        u_a = users["a"]["user_id"]
-        u_b = users["b"]["user_id"]
+        ua = _mk_user_sync("LEDGA", with_proxy=True)
+        ub = _mk_user_sync("LEDGB", with_proxy=False)
+        try:
+            # user A: deposit + recurring plan (auto-applies on GET) + death verification
+            assert requests.post(f"{BASE_URL}/api/dignity/fund/deposit", headers=H(ua),
+                                 json={"amount": 50, "currency": "EUR", "method": "card"}, timeout=15).status_code == 200
+            assert requests.put(f"{BASE_URL}/api/dignity/fund/plan", headers=H(ua),
+                                json={"monthly_amount": 20, "currency": "EUR", "enabled": True}, timeout=15).status_code == 200
+            assert requests.get(f"{BASE_URL}/api/dignity/fund", headers=H(ua), timeout=15).status_code == 200
+            assert requests.post(f"{BASE_URL}/api/dignity/verify-death", headers=H(ua),
+                                 json={"death_certificate_number": "UL-2026-7777", "registry_country": "SK"}, timeout=15).status_code == 200
+            # user B: deposit + death verification + beneficiary + release
+            assert requests.post(f"{BASE_URL}/api/dignity/fund/deposit", headers=H(ub),
+                                 json={"amount": 100, "currency": "EUR", "method": "card"}, timeout=15).status_code == 200
+            assert requests.post(f"{BASE_URL}/api/dignity/verify-death", headers=H(ub),
+                                 json={"death_certificate_number": "UL-2026-8888", "registry_country": "SK"}, timeout=15).status_code == 200
+            assert requests.put(f"{BASE_URL}/api/dignity/beneficiary", headers=H(ub),
+                                json={"type": "funeral_director", "name": "Pohrebná Bratislava s.r.o."}, timeout=15).status_code == 200
+            assert requests.post(f"{BASE_URL}/api/dignity/release", headers=H(ub), timeout=15).status_code == 200
 
-        entries_a = list(db.aml_ledger.find({"user_id": u_a}).sort("seq", 1))
-        entries_b = list(db.aml_ledger.find({"user_id": u_b}).sort("seq", 1))
-        c.close()
+            c = MongoClient(MONGO_URL)
+            db = c[DB_NAME]
+            u_a = ua["user_id"]
+            u_b = ub["user_id"]
 
-        actions_a = [e["action"] for e in entries_a]
-        actions_b = [e["action"] for e in entries_b]
+            entries_a = list(db.aml_ledger.find({"user_id": u_a}).sort("seq", 1))
+            entries_b = list(db.aml_ledger.find({"user_id": u_b}).sort("seq", 1))
+            c.close()
 
-        # user A: deposit + recurring + death_verification
-        assert "dignity_deposit" in actions_a, actions_a
-        assert "dignity_recurring" in actions_a, actions_a
-        assert "death_verification" in actions_a, actions_a
+            actions_a = [e["action"] for e in entries_a]
+            actions_b = [e["action"] for e in entries_b]
 
-        # user B: deposit + death_verification + dignity_release
-        assert "dignity_deposit" in actions_b, actions_b
-        assert "death_verification" in actions_b, actions_b
-        assert "dignity_release" in actions_b, actions_b
+            # user A: deposit + recurring + death_verification
+            assert "dignity_deposit" in actions_a, actions_a
+            assert "dignity_recurring" in actions_a, actions_a
+            assert "death_verification" in actions_a, actions_a
 
-        # Recompute each entry hash and verify it matches stored entry_hash
-        for e in entries_a + entries_b:
-            body = _json.dumps({
-                "seq": e["seq"], "user_id": e["user_id"], "action": e["action"],
-                "payload": e["payload"], "prev": e["prev_hash"],
-            }, sort_keys=True, default=str)
-            recomputed = hashlib.sha256(body.encode()).hexdigest()
-            assert recomputed == e["entry_hash"], f"tampered entry seq={e['seq']} action={e['action']}"
+            # user B: deposit + death_verification + dignity_release
+            assert "dignity_deposit" in actions_b, actions_b
+            assert "death_verification" in actions_b, actions_b
+            assert "dignity_release" in actions_b, actions_b
+
+            # Recompute each entry hash and verify it matches stored entry_hash
+            for e in entries_a + entries_b:
+                body = _json.dumps({
+                    "seq": e["seq"], "user_id": e["user_id"], "action": e["action"],
+                    "payload": e["payload"], "prev": e["prev_hash"],
+                }, sort_keys=True, default=str)
+                recomputed = hashlib.sha256(body.encode()).hexdigest()
+                assert recomputed == e["entry_hash"], f"tampered entry seq={e['seq']} action={e['action']}"
+        finally:
+            _cleanup_sync([ua["user_id"], ub["user_id"]])

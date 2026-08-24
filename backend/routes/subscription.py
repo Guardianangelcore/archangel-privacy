@@ -60,6 +60,8 @@ TIERS = {
 }
 
 def current_tier(user: dict) -> str:
+    if user.get("inner_circle"):
+        return "archangel"  # Inner Circle — permanent, lifetime, never expires
     tier = user.get("tier") or "sovereign"
     until = user.get("tier_until")
     if tier != "sovereign" and until:
@@ -73,7 +75,7 @@ def current_tier(user: dict) -> str:
     return tier
 
 async def get_active_tier(user_id: str) -> str:
-    fresh = await db.users.find_one({"user_id": user_id}, {"_id": 0, "tier": 1, "tier_until": 1}) or {}
+    fresh = await db.users.find_one({"user_id": user_id}, {"_id": 0, "tier": 1, "tier_until": 1, "inner_circle": 1}) or {}
     return current_tier(fresh)
 
 async def require_tier(user: dict, min_tier: str, feature: str) -> str:
@@ -103,11 +105,12 @@ async def subscription_info(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     fresh = await db.users.find_one({"user_id": user["user_id"]},
                                     {"_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1,
-                                     "tier_billing": 1, "trial_used": 1}) or {}
+                                     "tier_billing": 1, "trial_used": 1, "inner_circle": 1}) or {}
     acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0, "balance": 1})
     tier = current_tier(fresh)
     tu = fresh.get("tier_until")
     return {"tier": tier, "tier_until": tu.isoformat() if hasattr(tu, "isoformat") else tu,
+            "inner_circle": bool(fresh.get("inner_circle")),
             "paid_with": fresh.get("tier_paid_with"), "billing": fresh.get("tier_billing"),
             "trial_available": not fresh.get("trial_used"),
             "gat_balance": (acct or {}).get("balance", 0.0),

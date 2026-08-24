@@ -26,6 +26,7 @@ export default function FamilyShield() {
         { testID: 'fs-wellness', icon: 'sparkles-outline', title: 'Denná kontrola', subtitle: 'Ako sa dnes cítite? · Jarvis', route: '/wellness' },
         { testID: 'fs-respect', icon: 'star-outline', title: 'Respect Map', subtitle: 'Lekári s rešpektom · komunita', route: '/respect-map' },
         { testID: 'fs-scam', icon: 'shield-half-outline', title: 'Scam štít', subtitle: 'AI ochrana pred podvodmi', route: '/scam-shield' },
+        { testID: 'fs-duress', icon: 'hand-left-outline', title: 'Duress Protokol', subtitle: 'Núdzový PIN · falošný trezor · tichý alarm', route: '/duress' },
         { testID: 'fs-onboarding', icon: 'heart-outline', title: 'Sprievodca pre seniorov', subtitle: '3 kroky: strážca · Jarvis · núdzové QR', route: '/onboarding' },
         { testID: 'fs-medic', icon: 'medkit-outline', title: 'AI Tactical Medic', subtitle: 'Hlasový poľný lekár · KPR · krvácanie · offline', route: '/tactical-medic' },
         { testID: 'fs-paramedic', icon: 'key-outline', title: 'Paramedic Key', subtitle: 'Núdzový vstupný kód pre záchranárov · NCZI/ÚZIS', route: '/paramedic' },

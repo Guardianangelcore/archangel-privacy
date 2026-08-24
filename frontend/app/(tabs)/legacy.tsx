@@ -10,6 +10,9 @@ export default function LegacyWealth() {
       title="Legacy & Wealth"
       subtitle="Odkaz a majetok — solidarita, závety, pohrebný fond a priamy príjem."
       items={[
+        { testID: 'lw-video-legacy', icon: 'videocam-outline', title: 'Video Legacy', subtitle: 'Zapečatené video-odkazy rodine · Family Peace Treaty', route: '/video-legacy' },
+        { testID: 'lw-wealth', icon: 'wallet-outline', title: 'Sovereign Wealth Vault', subtitle: 'Krypto + IBAN · Mosaic anchor · Instant Card Payout', route: '/wealth-vault' },
+        { testID: 'lw-inner-circle', icon: 'diamond-outline', title: 'Inner Circle', subtitle: 'Doživotný Archangel pre rodinu zakladateľa', route: '/inner-circle' },
         { testID: 'lw-solidarity', icon: 'heart-circle-outline', title: 'Solidarity Hub', subtitle: 'P2P kampane · AML chránené', route: '/solidarity' },
         { testID: 'lw-insurance', icon: 'umbrella-outline', title: 'Insurance Guard', subtitle: 'Poistky · splatnosť · Jarvis ingest', route: '/insurance' },
         { testID: 'lw-digital', icon: 'cloud-done-outline', title: 'Digital Executor', subtitle: 'Digitálne dedičstvo · likvidátor predplatných', route: '/digital-legacy' },
