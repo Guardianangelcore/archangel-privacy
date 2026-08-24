@@ -14,6 +14,8 @@ export default function HealthHub() {
         { testID: 'hh-vault', icon: 'lock-closed-outline', title: 'Zdravotný trezor', subtitle: 'Dokumenty · OCR · AI preklad', route: '/(tabs)/vault' },
         { testID: 'hh-news', icon: 'flask-outline', title: 'Medical News Sentinel', subtitle: 'Prelomy krížené s tvojím trezorom · Tech-Tracker CZ/SK', route: '/medical-news' },
         { testID: 'hh-drop', icon: 'cloud-download-outline', title: 'Health Drop', subtitle: 'Lekár → trezor · zero-knowledge', route: '/health-drop' },
+        { testID: 'hh-clinic-sync', icon: 'wifi-outline', title: 'Clinic Sync', subtitle: 'Lekár „beamne" nález do trezora · QR + BLE radar', route: '/clinic-sync' },
+        { testID: 'hh-lens', icon: 'aperture-outline', title: 'Guardian Lens', subtitle: 'Odfoť liek či nález · AI okamžite koná', route: '/lens' },
         { testID: 'hh-timeline', icon: 'time-outline', title: 'Health Timeline', subtitle: 'Vyšetrenia · história · vakcíny', route: '/health-timeline' },
         { testID: 'hh-recovery', icon: 'bed-outline', title: 'Moje zotavenie', subtitle: 'ePN · vychádzky · nemocenské', route: '/my-recovery' },
         { testID: 'hh-translate', icon: 'language-outline', title: 'AI Prekladač (Jarvis)', subtitle: 'Lekárčina → ľudská reč · hlas', route: '/translate' },

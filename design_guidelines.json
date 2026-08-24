@@ -1,49 +1,38 @@
 {
-  "app_name": "Guardian Health & Angel - Sovereign Survival OS",
-  "personality": "6 Glass / Luxe DARK (Customized for Premium Minimalist Dark Mode)",
-  "personality_one_liner": "A $100,000 award-winning, cinematic dark-mode ecosystem where deep charcoal spaces and Guardian Gold accents project unshakeable sovereignty and trust.",
+  "app_name": "Guardian Health & Angel — Sovereign Survival OS",
+  "personality": "6 Glass / Luxe DARK with 4 Tactile rounded softness",
+  "personality_one_liner": "A multi-million dollar, ultra-premium glassmorphic safety OS that embraces senior empathy through highly readable luxury, soft shapes, and glowing Guardian Gold.",
   "color": {
-    "surface": "#121212",
-    "onSurface": "#F5F5F5",
-    "surfaceSecondary": "#1C1C1E",
-    "onSurfaceSecondary": "#EBEBEB",
-    "surfaceTertiary": "#2C2C2E",
-    "onSurfaceTertiary": "#D1D1D6",
-    "surfaceInverse": "#F5F5F5",
-    "onSurfaceInverse": "#121212",
+    "surface": "#0A0A0F",
+    "onSurface": "#FFFFFF",
+    "surfaceSecondary": "#16161E",
+    "onSurfaceSecondary": "#E0E0E0",
+    "surfaceTertiary": "#1F1F2A",
+    "onSurfaceTertiary": "#CCCCCC",
+    "surfaceInverse": "#FFFFFF",
+    "onSurfaceInverse": "#000000",
     "brand": "#D4AF37",
     "brandPrimary": "#D4AF37",
-    "onBrandPrimary": "#121212",
-    "brandSecondary": "#B8972E",
-    "onBrandSecondary": "#121212",
-    "brandTertiary": "#3A311D",
-    "onBrandTertiary": "#E5C86C",
-    "success": "#6B8E23",
-    "onSuccess": "#FFFFFF",
-    "warning": "#E6A23C",
-    "onWarning": "#121212",
-    "error": "#C25450",
+    "onBrandPrimary": "#000000",
+    "brandSecondary": "#F2D879",
+    "onBrandSecondary": "#000000",
+    "brandTertiary": "#332A0D",
+    "onBrandTertiary": "#E6C55C",
+    "success": "#32D74B",
+    "onSuccess": "#000000",
+    "warning": "#FF9F0A",
+    "onWarning": "#000000",
+    "error": "#FF453A",
     "onError": "#FFFFFF",
-    "info": "#8E8E93",
+    "info": "#0A84FF",
     "onInfo": "#FFFFFF",
-    "border": "#2C2C2E",
-    "borderStrong": "#48484A",
-    "bg": "#121212",
-    "fg": "#F5F5F5",
-    "surface2": "#1C1C1E",
-    "surface3": "#2C2C2E",
-    "onS3": "#D1D1D6",
-    "inverse": "#F5F5F5",
-    "onInverse": "#121212",
-    "brandPri": "#D4AF37",
-    "brandSec": "#B8972E",
-    "brandTer": "#3A311D",
-    "warn": "#E6A23C",
-    "onWarn": "#121212"
+    "border": "#FFFFFF20",
+    "borderStrong": "#D4AF3750",
+    "divider": "#FFFFFF10"
   },
   "typography": {
-    "displayFontFamily": "Satoshi",
-    "textFontFamily": "Satoshi",
+    "displayFontFamily": "Outfit",
+    "textFontFamily": "Plus Jakarta Sans",
     "scale": {
       "sm": 12,
       "base": 14,
@@ -53,39 +42,40 @@
     }
   },
   "spacing": {
-    "rule": "Generous padding and whitespace are critical for the premium feel. Never crowd elements.",
+    "rule": "Generous spacing to ensure senior readability and luxurious feel. Avoid dense clustering.",
     "xs": 4,
     "sm": 8,
-    "md": 12,
-    "lg": 16,
-    "xl": 24,
-    "2xl": 32,
-    "3xl": 48
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "2xl": 40,
+    "3xl": 56
   },
   "radius_tokens": {
-    "sm": 6,
-    "md": 12,
-    "lg": 24,
+    "sm": 12,
+    "md": 20,
+    "lg": 28,
     "pill": 999
   },
-  "shadow_tier": "1",
+  "shadow_tier": "0",
   "navigation": "bottom_tabs",
-  "icon_set": "Lucide",
+  "icon_set": "Phosphor",
   "glassmorphism": {
     "enabled": "true",
     "do's": [
-      "Use heavy tint + blur over background textures for premium depth.",
-      "Apply to the bottom tab bar and sticky headers.",
-      "Use subtle glass effect on 4-Pillar Dashboard cards if imagery is underneath."
+      "Use backdrop blur combined with a tinted base layer (>=75% opacity) to guarantee text contrast for seniors.",
+      "Apply 1pt to 1.5pt borders with white-to-gold linear gradients (alpha 0.1 to 0.3) on cards to create the premium glass edge.",
+      "Use glowing accents (Guardian Gold shadow/glow) behind central focal points like the Guardian Lens FAB."
     ],
     "dont's": [
-      "Do not use on body text regions or form inputs.",
-      "Do not over-blur without a strong dark tint layer (#121212 at 75% opacity) to preserve readability."
+      "Never use pure black #000000 for backgrounds; use the specified #0A0A0F to maintain depth.",
+      "Do not apply glass effects to small UI elements like badges or body copy containers.",
+      "Do not compromise WCAG AA contrast; if glass reduces contrast, increase the underlying tint."
     ]
   },
   "platform_libraries": {
     "glass": {
-      "ios": "expo-glass-effect",
+      "ios": "expo-blur",
       "android": "expo-blur",
       "low_end_android_fallback": "solid surfaceSecondary"
     },
@@ -97,62 +87,74 @@
   },
   "screens": [
     {
-      "name": "Home (4-Pillar Dashboard)",
-      "purpose": "The commanding entry point offering immediate access to the 4 main interactive pillars.",
+      "name": "Home",
+      "purpose": "The command center featuring the huge One-Lens FAB, daily brief, and 4 pillar tiles.",
       "states": {
-        "loading": "Centered sleek brand-colored spinner.",
-        "empty": "N/A - Core OS navigation.",
-        "error": "Minimalist error state with Guardian Gold 'Retry' pill button."
+        "loading": "Centered glowing Guardian Gold pulse animation.",
+        "empty": "N/A - Dashboard always has core structural elements.",
+        "error": "Glassmorphic modal with simple Retry button."
       },
-      "layout": "Grid of 4 large interactive tiles (2x2 layout). Cards have a 24px border radius, subtle border (`border`), and `surfaceSecondary` background. Each tile contains a high-quality Lucide icon (in Guardian Gold), Pillar Title, and microcopy subtitle in Slovak (e.g., 'Zdravotný Trezor', 'Rodinný Štít'). Use `flex: 1` and `aspectRatio: 1` or a calculated 48% width with `space-between` to ensure a balanced, uncrowded layout with generous `xl` padding around the grid."
+      "layout": "Hero layout with `images.abstract_gold_bg` + top-to-bottom dark gradient scrim. Top: 'Daily Brief' GlassCard. Center: Oversized, floating 'Guardian Lens' FAB with a golden pulse ring. Bottom: 4 large pillar tiles (Health Hub, Family Shield, The Hunter, Legacy & Wealth) wrapped in `flexWrap: 'wrap'` grid using soft `md` or `lg` border-radius."
     },
     {
-      "name": "Pillar Hub (Sub-feature list)",
-      "purpose": "A beautifully uncluttered list of sub-features within a selected pillar.",
+      "name": "Guardian Lens Result",
+      "purpose": "Displays AI interpretation of scanned pills/documents and triggers instant workflows.",
       "states": {
-        "loading": "Skeleton rows fading gracefully.",
-        "empty": "Abstract icon with minimal text.",
-        "error": "Clean text error message."
+        "loading": "Scanning animation over the camera viewport.",
+        "empty": "Prompt to align document or pill bottle in frame.",
+        "error": "Error toast: 'Nerozpoznané. Skúste znova.' (Unrecognized. Try again.)"
       },
-      "layout": "Vertical list. Each row uses `surfaceSecondary`, large touch targets (min 64px height), 24px radius, and a leading tinted icon container (`brandTertiary` background with `brandPrimary` icon). Subtitles in Slovak. 'Authorship' and 'Pseudonym Protection' tucked cleanly at the bottom of the Profile/Legacy pillar."
+      "layout": "Top 40%: The captured image with a heavy dark vertical gradient scrim. Bottom 60%: A persistent Bottom Sheet containing the AI result (e.g., Pill Name) and high-contrast, large touch-target buttons (Translate, Add to Calendar, Interaction Guard)."
     },
     {
-      "name": "Angel Mode (Voice AI Jarvis)",
-      "purpose": "A radical full-screen, distraction-free voice AI interface for immediate sovereign assistance.",
+      "name": "Angel Mode 2.0",
+      "purpose": "Fullscreen senior-first UI for emergency management and flexible medication scheduling.",
       "states": {
-        "loading": "N/A",
-        "empty": "N/A",
-        "error": "Voice disconnect fallback."
+        "loading": "Loading skeleton for medication list.",
+        "empty": "Illustration of a shield + 'Ste v bezpečí' (You are safe).",
+        "error": "Retry connection button."
       },
-      "layout": "Full-screen abstract dark/gold background (`angel_bg`) with a heavy dark vertical scrim (top-to-bottom 30% to 90% opacity). Center: One massive, pulsing Guardian Gold orb/button ('Talk to Jarvis'). Use `react-native-reanimated` for infinite breathing/pulse scaling. Bottom safe-area: 3 large square tiles (SOS, Family, Doctor) containing only large Lucide icons, styled in `surfaceTertiary` with 24px radius. No sub-menus or lists."
+      "layout": "Top: 'Jarvis Voice' button represented by `images.jarvis_orb` with a continuous breathing/pulsing animation. Center: Emergency Loop section showing a large 120s countdown ring and text 'Povedzte: I am OK' (Say: I am OK). Bottom: Flexible Meds list. Large GlassCards with huge high-contrast Sun/Moon Phosphor icons mapping to slots (Ráno/Obed/Večer/Podľa potreby)."
+    },
+    {
+      "name": "Clinic Sync",
+      "purpose": "Proximity data sharing screen simulating Bluetooth/NFC radar and QR handshakes.",
+      "states": {
+        "loading": "Searching for nearby clinics... (Radar pulse).",
+        "empty": "No clinics found in range.",
+        "error": "Bluetooth/NFC connection failed. Use QR Code."
+      },
+      "layout": "Background: `images.clinic_interior` with >=80% dark overlay. Center: Reanimated radar pulse animation radiating outward. A toggle between 'Radar' and 'QR Skener' (QR Scanner). Bottom Sheet: List of received medical reports securely beamed into the Vault."
     }
   ],
   "images": {
-    "angel_bg": {
+    "abstract_gold_bg": {
       "url": "https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-      "dark": "https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-      "alt": "Intricate gold abstract sculpture against a dark background, exuding elegance and modernity."
-    }
-  },
-  "haptics": {
-    "Home": {
-      "tile_press": "impactLight"
+      "alt": "Intricate gold abstract sculpture against dark background"
     },
-    "AngelMode": {
-      "jarvis_activate": "impactHeavy",
-      "emergency_tile": "notificationWarning"
+    "abstract_gold_bg_fallback": {
+      "url": "https://images.unsplash.com/photo-1741356474357-72188f76e801?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjBnb2xkJTIwbHV4dXJ5JTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3ODc2MTMxMzd8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Golden light streaks against a black background"
     },
-    "Global": {
-      "tab_change": "selection"
+    "jarvis_orb": {
+      "url": "https://images.unsplash.com/photo-1634703303793-e9f55865119c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxnbG93aW5nJTIwZ29sZGVuJTIwb3JiJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzg3NjEzMTM3fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Glowing golden AI orb"
+    },
+    "clinic_interior": {
+      "url": "https://images.pexels.com/photos/16571735/pexels-photo-16571735.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Sleek contemporary clinic room with luxurious design"
     }
   },
   "instructions_to_main_agent": [
-    "MANDATORY: Map the exact hex values provided in the `color` block to the existing `C.*` tokens in `src/theme.ts` (bg, fg, surface2, surface3, onS3, inverse, onInverse, brand, brandPri, brandSec, brandTer, warn, onWarn, error, onError, info, border, borderStrong). This ensures the ~25 existing screens seamlessly adopt the premium dark mode.",
-    "Implement the 4-Pillar Dashboard precisely: 2x2 grid, 24px border radius (`lg` mapped to 24), `surfaceSecondary` fill, Guardian Gold (#D4AF37) accent icons, and crisp Slovak microcopy (Health Hub, Family Shield, Legacy & Wealth, The Hunter).",
-    "Angel Mode MUST be a full-screen radical reset. Hide the standard header and tab bar if possible, or build it as a full-screen modal/overlay. The background must use `angel_bg` overlaid with a dark vertical scrim (LinearGradient from top 30% to bottom 90% black/charcoal) so the UI pops. The central 'Talk to Jarvis' button requires a continuous infinite pulse animation using `react-native-reanimated`.",
-    "For the bottom tab bar, use 4 icons representing the pillars. Keep it exceptionally clean with a glassmorphism blur background and safe-area padding.",
-    "Ensure typography uses `Satoshi` (or fallback `Plus Jakarta Sans`) consistently. Restrict font weights to 400 and 500 ONLY. Create visual hierarchy through font size, not weight.",
-    "Eliminate redundant tables or cluttered lists; any sub-feature screen (Pillar Hub) must use spacious list rows with tinted icon containers.",
-    "Do NOT use any blues, indigos, or purples anywhere in the app, sticking strictly to the charcoal, white, and Guardian Gold palette."
+    "LANGUAGE: The app MUST use Slovak language for the UI text (e.g., 'Domov', 'Zdravie', 'Strážca', 'Zoznam Liekov', 'Som OK').",
+    "WOW FACTOR & GLASSMORPHISM: Apply `expo-blur` heavily but tastefully. Cards should have translucent dark backgrounds with white/gold linear-gradient borders (1-1.5pt) to simulate premium glass. Never use flat #000000.",
+    "SENIOR EMPATHY: Touch targets must be huge (min 56pt). Text must contrast sharply against backgrounds (use >=75% opacity tint under any blur). Every icon must be accompanied by text. Use Phosphor filled icons (Sun/Moon for meds).",
+    "HAPTICS: Haptic feedback is mandatory on EVERY click. Do not skip this. Use `expo-haptics` across tabs, buttons, and bottom sheet triggers.",
+    "BOTTOM SHEETS: Use `@gorhom/bottom-sheet` for ALL selection menus and the Lens results. Do not use standard Picker or Alert dialogs.",
+    "DATE PICKERS: Replace any manual text date entries with native Date/Time picker wheels hosted inside a Bottom Sheet.",
+    "ANIMATIONS: The Jarvis Voice orb MUST have a continuous breathing/pulsing animation using `react-native-reanimated`. The Lens FAB should also have a subtle glow or pulse.",
+    "ONE-LENS SYSTEM: Create a massively prominent, floating 'Guardian Lens' button centered on the dashboard. It must feel like the most important action in the app.",
+    "CONTACTS: Use `expo-contacts` to simulate a native Contact Picker for adding Guardians.",
+    "IMAGE SCRIMS: Whenever text sits on top of an image (`abstract_gold_bg` or `clinic_interior`), apply a vertical linear gradient scrim (0% to >=80% surfaceInverse/black) to ensure readability."
   ]
 }

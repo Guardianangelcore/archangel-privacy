@@ -13,9 +13,20 @@ import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
 type TodayItem = { reminder_id: string; name: string; dose: string; time: string; taken: boolean };
-type Reminder = { reminder_id: string; name: string; dose: string; times: string[] };
+type Reminder = { reminder_id: string; name: string; dose: string; times: string[]; slots?: string[] };
 
 const TIME_CHIPS = ['06:00', '08:00', '12:00', '15:00', '18:00', '20:00', '22:00'];
+
+// Angel Mode 2.0 — flexible day-part slots with big Sun/Moon icons
+const SLOTS: { key: string; label: string; icon: any; time: string | null }[] = [
+  { key: 'upon_waking', label: 'PO PREBUDENÍ', icon: 'partly-sunny', time: '07:00' },
+  { key: 'breakfast', label: 'S RAŇAJKAMI', icon: 'sunny-outline', time: '08:00' },
+  { key: 'lunch', label: 'NA OBED', icon: 'sunny', time: '12:00' },
+  { key: 'evening', label: 'VEČER', icon: 'moon-outline', time: '18:00' },
+  { key: 'night', label: 'PRED SPANÍM', icon: 'moon', time: '22:00' },
+  { key: 'as_needed', label: 'PODĽA POTREBY', icon: 'medkit', time: null },
+];
+const SLOT_LABEL: Record<string, string> = Object.fromEntries(SLOTS.map(s => [s.key, s.label]));
 
 async function rescheduleLocal(reminders: Reminder[]) {
   if (Platform.OS === 'web') return;
@@ -43,7 +54,7 @@ export default function Meds() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(false);
-  const [f, setF] = useState({ name: '', dose: '', times: ['08:00'] as string[] });
+  const [f, setF] = useState({ name: '', dose: '', times: [] as string[], slots: [] as string[] });
   const playerRef = useRef<any>(null);
   const spokeRef = useRef(false);
 
@@ -93,16 +104,23 @@ export default function Meds() {
     try { await api('/meds/intake', { method: 'POST', body: JSON.stringify({ reminder_id: item.reminder_id, time: item.time }) }); } catch (e) { console.log(e); load(); }
   };
 
+  const canSave = !!f.name && (f.times.length > 0 || f.slots.length > 0);
   const add = async () => {
-    if (!f.name || f.times.length === 0) return;
-    await api('/meds/reminders', { method: 'POST', body: JSON.stringify(f) });
-    setModal(false); setF({ name: '', dose: '', times: ['08:00'] }); load();
+    if (!canSave) return;
+    const slotTimes = SLOTS.filter(s => f.slots.includes(s.key) && s.time).map(s => s.time as string);
+    const times = [...new Set([...slotTimes, ...f.times])].sort();
+    await api('/meds/reminders', { method: 'POST', body: JSON.stringify({ name: f.name, dose: f.dose, times, slots: f.slots }) });
+    setModal(false); setF({ name: '', dose: '', times: [], slots: [] }); load();
   };
   const del = async (r: Reminder) => {
     await api(`/meds/reminders/${r.reminder_id}`, { method: 'DELETE' });
     load();
   };
   const toggleTime = (tm: string) => setF(v => ({ ...v, times: v.times.includes(tm) ? v.times.filter(x => x !== tm) : [...v.times, tm] }));
+  const toggleSlot = (key: string) => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setF(v => ({ ...v, slots: v.slots.includes(key) ? v.slots.filter(x => x !== key) : [...v.slots, key] }));
+  };
 
   const pending = today.filter(i => !i.taken).length;
 
@@ -166,7 +184,10 @@ export default function Meds() {
                 <Ionicons name="medkit-outline" size={20} color={C.fg} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.remName}>{r.name}{r.dose ? ` · ${r.dose}` : ''}</Text>
-                  <Text style={styles.remTimes}>{r.times.join(' · ')}</Text>
+                  <Text style={styles.remTimes}>
+                    {(r.slots || []).length > 0 ? (r.slots || []).map(sl => SLOT_LABEL[sl] || sl).join(' · ') : r.times.join(' · ')}
+                    {(r.slots || []).length > 0 && r.times.length > 0 ? ` · ${r.times.join(' · ')}` : ''}
+                  </Text>
                 </View>
                 <Pressable testID={`med-del-${r.reminder_id}`} onPress={() => del(r)} hitSlop={12}>
                   <Ionicons name="trash-outline" size={22} color={C.error} />
@@ -190,10 +211,24 @@ export default function Meds() {
               <Text style={styles.modalTitle}>{t('add_reminder', lang).toUpperCase()}</Text>
               <Pressable testID="md-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={24} color={C.onInverse} /></Pressable>
             </View>
-            <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 420 }}>
+            <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 460 }}>
               <TextInput testID="md-name" placeholder="Euthyrox" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
               <TextInput testID="md-dose" placeholder={`${t('dose', lang)} (1 tbl / 50 mg)`} value={f.dose} onChangeText={v => setF({ ...f, dose: v })} style={styles.input} placeholderTextColor="#999" />
-              <Text style={styles.lbl}>ČASY</Text>
+              <Text style={styles.lbl}>KEDY UŽÍVAŤ</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
+                {SLOTS.map(sl => {
+                  const on = f.slots.includes(sl.key);
+                  return (
+                    <Pressable testID={`md-slot-${sl.key}`} key={sl.key} onPress={() => toggleSlot(sl.key)}
+                      style={[styles.slotCard, on && styles.slotCardOn]}>
+                      <Ionicons name={sl.icon} size={34} color={on ? C.onInverse : C.brand} />
+                      <Text style={[styles.slotLabel, on && { color: C.onInverse }]}>{sl.label}</Text>
+                      {sl.time && <Text style={[styles.slotTime, on && { color: C.onInverse }]}>{sl.time}</Text>}
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.lbl}>VLASTNÉ ČASY (VOLITEĽNÉ)</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {TIME_CHIPS.map(tm => (
                   <Pressable testID={`md-time-${tm}`} key={tm} onPress={() => toggleTime(tm)} style={[styles.chip, f.times.includes(tm) && styles.chipActive]}>
@@ -202,7 +237,7 @@ export default function Meds() {
                 ))}
               </View>
             </ScrollView>
-            <Pressable testID="md-save" onPress={add} disabled={!f.name} style={[styles.saveBtn, !f.name && { opacity: 0.4 }]}>
+            <Pressable testID="md-save" onPress={add} disabled={!canSave} style={[styles.saveBtn, !canSave && { opacity: 0.4 }]}>
               {loading ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.saveBtnText}>{t('save', lang).toUpperCase()}</Text>}
             </Pressable>
           </View>
@@ -247,6 +282,10 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: C.inverse },
   chipText: { fontWeight: '900', color: C.fg, fontSize: 15, letterSpacing: 1 },
   chipTextActive: { color: C.onInverse },
+  slotCard: { width: '31%', flexGrow: 1, minHeight: 96, alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 2, borderColor: C.borderStrong, borderRadius: 16, backgroundColor: 'rgba(212,175,55,0.06)', paddingVertical: S.md },
+  slotCardOn: { backgroundColor: C.brand, borderColor: C.brand },
+  slotLabel: { fontWeight: '900', color: C.fg, fontSize: 10, letterSpacing: 0.5, textAlign: 'center' },
+  slotTime: { fontWeight: '800', color: C.info, fontSize: 11 },
   saveBtn: { backgroundColor: C.brand, paddingVertical: 20, alignItems: 'center' },
   saveBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 16 },
 });

@@ -10,6 +10,7 @@ import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
+import { ContactSheet } from '@/src/ui/ContactSheet';
 import { Lang } from '@/src/i18n';
 
 export default function RecoverySuite() {
@@ -21,6 +22,7 @@ export default function RecoverySuite() {
   const [pending2fa, setPending2fa] = useState<any[]>([]);
   const [recRequests, setRecRequests] = useState<any[]>([]);
   const [contact, setContact] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [talisman, setTalisman] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
@@ -119,6 +121,9 @@ export default function RecoverySuite() {
           <TextInput testID="rs-guardian-input" value={contact} onChangeText={setContact}
             placeholder="e-mail alebo DID strážcu" placeholderTextColor="#777"
             autoCapitalize="none" style={[st.input, { flex: 1 }]} />
+          <Pressable testID="rs-guardian-contacts" onPress={() => setPickerOpen(true)} style={st.addBtn}>
+            <Ionicons name="people-circle-outline" size={22} color={C.onInverse} />
+          </Pressable>
           <Pressable testID="rs-guardian-add" onPress={addGuardian} disabled={busy === 'addg'} style={st.addBtn}>
             {busy === 'addg' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Ionicons name="add" size={22} color={C.onInverse} />}
           </Pressable>
@@ -207,6 +212,9 @@ export default function RecoverySuite() {
 
         <Art50 lang={lang} />
       </ScrollView>
+
+      <ContactSheet visible={pickerOpen} onClose={() => setPickerOpen(false)}
+        onPick={c => setContact(c.email || c.phone || '')} />
     </SafeAreaView>
   );
 }

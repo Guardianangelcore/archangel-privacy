@@ -456,6 +456,7 @@ class MedReminderIn(BaseModel):
     name: str
     dose: Optional[str] = ""
     times: List[str] = ["08:00"]
+    slots: Optional[List[str]] = None  # upon_waking|breakfast|lunch|evening|night|as_needed
 
 @api.get("/meds/reminders")
 async def meds_list(authorization: Optional[str] = Header(None)):
@@ -466,11 +467,13 @@ async def meds_list(authorization: Optional[str] = Header(None)):
 async def meds_add(body: MedReminderIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     times = sorted({t for t in body.times if re.match(r"^\d{2}:\d{2}$", t)})
-    if not body.name or not times:
+    as_needed = bool(body.slots and "as_needed" in body.slots)
+    if not body.name or (not times and not as_needed):
         raise HTTPException(400, "Name and at least one valid time (HH:MM) required")
     doc = {
         "reminder_id": uuid.uuid4().hex, "user_id": user["user_id"],
         "name": body.name, "dose": body.dose or "", "times": times,
+        "slots": body.slots or [],
         "created_at": datetime.now(timezone.utc),
     }
     await db.med_reminders.insert_one(doc.copy())

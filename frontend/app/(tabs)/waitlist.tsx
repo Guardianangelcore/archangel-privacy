@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
+import { DateSheet, OptionSheet } from '@/src/ui/sheets';
 import { t, Lang } from '@/src/i18n';
 
 type Item = { item_id: string; specialty: string; clinic: string; city: string; current_date: string; target_before: string; status: string; found_slot?: string; last_check?: string };
@@ -22,6 +23,7 @@ export default function Waitlist() {
   const [filter, setFilter] = useState<string>('ALL');
 
   const [f, setF] = useState({ specialty: 'Kardiológia', clinic: '', city: 'Bratislava', current_date: '', target_before: '' });
+  const [sheet, setSheet] = useState<'spec' | 'current' | 'target' | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,21 +130,27 @@ export default function Waitlist() {
             </View>
             <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ padding: S.lg, gap: S.md }}>
               <Text style={styles.lbl}>{t('specialty', lang).toUpperCase()}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm }}>
-                {SPECIALTIES.map(s => (
-                  <Pressable testID={`spec-${s}`} key={s} onPress={() => setF({ ...f, specialty: s })} style={[styles.chip, f.specialty === s && styles.chipActive]}>
-                    <Text style={[styles.chipText, f.specialty === s && styles.chipTextActive]}>{s}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+              <Pressable testID="wl-spec-open" onPress={() => setSheet('spec')} style={styles.pickerField}>
+                <Ionicons name="medkit-outline" size={18} color={C.brand} />
+                <Text style={styles.pickerValue}>{f.specialty}</Text>
+                <Ionicons name="chevron-down" size={18} color={C.info} />
+              </Pressable>
               <Text style={styles.lbl}>{t('clinic', lang).toUpperCase()}</Text>
               <TextInput testID="wl-clinic" value={f.clinic} onChangeText={v => setF({ ...f, clinic: v })} style={styles.input} placeholder="Univerzitná nemocnica" placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('city', lang).toUpperCase()}</Text>
               <TextInput testID="wl-city" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholder="Bratislava" placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('current_date', lang).toUpperCase()}</Text>
-              <TextInput testID="wl-current" value={f.current_date} onChangeText={v => setF({ ...f, current_date: v })} style={styles.input} placeholder="2027-03-15" placeholderTextColor="#999" />
+              <Pressable testID="wl-current" onPress={() => setSheet('current')} style={styles.pickerField}>
+                <Ionicons name="calendar-outline" size={18} color={C.brand} />
+                <Text style={[styles.pickerValue, !f.current_date && { color: '#999' }]}>{f.current_date || 'Vybrať dátum…'}</Text>
+                <Ionicons name="chevron-down" size={18} color={C.info} />
+              </Pressable>
               <Text style={styles.lbl}>{t('target_before', lang).toUpperCase()}</Text>
-              <TextInput testID="wl-target" value={f.target_before} onChangeText={v => setF({ ...f, target_before: v })} style={styles.input} placeholder="2026-07-01" placeholderTextColor="#999" />
+              <Pressable testID="wl-target" onPress={() => setSheet('target')} style={styles.pickerField}>
+                <Ionicons name="flag-outline" size={18} color={C.brand} />
+                <Text style={[styles.pickerValue, !f.target_before && { color: '#999' }]}>{f.target_before || 'Vybrať dátum…'}</Text>
+                <Ionicons name="chevron-down" size={18} color={C.info} />
+              </Pressable>
             </ScrollView>
             <Pressable testID="wl-save" onPress={add} style={styles.saveBtn}>
               <Text style={styles.saveBtnText}>{t('save', lang).toUpperCase()}</Text>
@@ -150,6 +158,14 @@ export default function Waitlist() {
           </View>
         </View>
       </Modal>
+
+      <OptionSheet testID="wl-spec-sheet" visible={sheet === 'spec'} onClose={() => setSheet(null)} title="ŠPECIALIZÁCIA"
+        options={SPECIALTIES.map(s => ({ label: s, value: s, icon: 'medkit-outline' }))}
+        selected={f.specialty} onSelect={v => setF({ ...f, specialty: v })} />
+      <DateSheet testID="wl-current-sheet" visible={sheet === 'current'} onClose={() => setSheet(null)}
+        title="AKTUÁLNY TERMÍN" initial={f.current_date} onSelect={v => setF({ ...f, current_date: v })} />
+      <DateSheet testID="wl-target-sheet" visible={sheet === 'target'} onClose={() => setSheet(null)}
+        title="CHCEM TERMÍN DO" initial={f.target_before} onSelect={v => setF({ ...f, target_before: v })} />
     </SafeAreaView>
   );
 }
@@ -184,6 +200,8 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: C.bg, borderTopWidth: 2, borderColor: C.borderStrong },
   modalHead: { flexDirection: 'row', justifyContent: 'space-between', padding: S.lg, backgroundColor: C.inverse },
   modalTitle: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 16 },
+  pickerField: { flexDirection: 'row', alignItems: 'center', gap: S.md, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: 14, padding: S.lg, minHeight: 56, backgroundColor: 'rgba(212,175,55,0.05)' },
+  pickerValue: { flex: 1, color: C.fg, fontSize: 15, fontWeight: '700' },
   lbl: { fontSize: 10, letterSpacing: 2, color: C.onS3, fontWeight: '800' },
   input: { borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, fontSize: 15, color: C.fg, backgroundColor: C.bg },
   saveBtn: { backgroundColor: C.inverse, paddingVertical: S.lg, alignItems: 'center' },

@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { C } from '@/src/theme';
+import { tap } from '@/src/ui/glass';
 import { useAuth } from '@/src/auth';
 
 export default function TabsLayout() {
@@ -12,15 +13,16 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      screenListeners={{ tabPress: () => tap('light') }}
       screenOptions={{
         headerShown: false,
         tabBarStyle: angel
           ? { display: 'none' }
           : {
-              backgroundColor: C.surface2,
-              borderTopColor: C.border,
+              backgroundColor: 'rgba(10,10,15,0.96)',
+              borderTopColor: 'rgba(212,175,55,0.28)',
               borderTopWidth: 1,
-              height: Platform.OS === 'ios' ? 84 : 66,
+              height: Platform.OS === 'ios' ? 88 : 70,
               paddingTop: 8,
             },
         tabBarActiveTintColor: C.brand,
@@ -32,32 +34,32 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="health"
         options={{
-          title: 'HEALTH',
-          tabBarIcon: ({ color, size }) => <Ionicons name="heart-outline" size={size} color={color} />,
+          title: 'ZDRAVIE',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-health',
         }}
       />
       <Tabs.Screen
         name="family"
         options={{
-          title: 'FAMILY',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
+          title: 'RODINA',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-family',
         }}
       />
       <Tabs.Screen
         name="legacy"
         options={{
-          title: 'LEGACY',
-          tabBarIcon: ({ color, size }) => <Ionicons name="rose-outline" size={size} color={color} />,
+          title: 'ODKAZ',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'rose' : 'rose-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-legacy',
         }}
       />
       <Tabs.Screen
         name="hunter"
         options={{
-          title: 'HUNTER',
-          tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" size={size} color={color} />,
+          title: 'LOVEC',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'search' : 'search-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-hunter',
         }}
       />

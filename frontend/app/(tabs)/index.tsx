@@ -1,16 +1,19 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
+// HOME 2026 — Glass/Luxe command center: Guardian Lens FAB, glass pillars, breathing Jarvis
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useAuth } from '@/src/auth';
 import { api } from '@/src/api';
 import { useAcousticGuard } from '@/src/acoustic';
-import { C, S, R } from '@/src/theme';
+import { C, S, R, GOLD } from '@/src/theme';
+import { GlassCard, Pulse, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
 
 const ANGEL_BG = 'https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
@@ -73,29 +76,45 @@ export default function Home() {
           <Text style={styles.brandSub}>SOVEREIGN SURVIVAL OS</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
-          <Pressable testID="home-jarvis" onPress={() => router.push('/jarvis')} hitSlop={8}>
+          <Pressable testID="home-jarvis" onPress={() => { tap(); router.push('/jarvis'); }} hitSlop={8}>
             <Ionicons name="sparkles" size={20} color={C.brand} />
           </Pressable>
           <Pressable testID="angel-toggle" onPress={toggleAngel} disabled={busy} hitSlop={8} style={styles.angelToggle}>
             <Ionicons name="accessibility-outline" size={18} color={C.brand} />
           </Pressable>
-          <Pressable testID="home-profile" onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
+          <Pressable testID="home-profile" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={8}>
             <Ionicons name="settings-outline" size={22} color={C.onS3} />
           </Pressable>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.greeting}>Dobrý deň,{'\n'}{(user?.name || 'Guardian').split(' ')[0]}.</Text>
+        <Text style={styles.greeting}>Dobrý deň,{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian').split(' ')[0]}.</Text></Text>
 
-        <Pressable testID="home-daily-brief" onPress={() => router.push('/daily-brief')} style={({ pressed }) => [styles.briefCard, pressed && { opacity: 0.85 }]}>
-          <Ionicons name="sunny" size={22} color="#B8860B" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.briefTitle}>DENNÝ PREHĽAD</Text>
-            <Text style={styles.briefSub}>Lieky · termíny · odkazy od rodiny na jednu obrazovku</Text>
+        <GlassCard testID="home-daily-brief" onPress={() => router.push('/daily-brief')} pad={S.md} style={{ marginTop: S.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+            <View style={styles.briefIcon}><Ionicons name="sunny" size={22} color={C.brand} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.briefTitle}>DENNÝ PREHĽAD</Text>
+              <Text style={styles.briefSub}>Lieky · termíny · odkazy od rodiny na jednu obrazovku</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={C.info} />
           </View>
-          <Ionicons name="chevron-forward" size={18} color={C.info} />
-        </Pressable>
+        </GlassCard>
+
+        {/* ONE-LENS SYSTEM — the most important action in the app */}
+        <View style={styles.lensWrap}>
+          <Pulse maxScale={1.05} duration={1500} style={styles.lensGlow}>
+            <Pressable testID="home-lens" onPress={() => { tap('heavy'); router.push('/lens'); }}
+              style={({ pressed }) => [pressed && { transform: [{ scale: 0.96 }] }]}>
+              <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.lensFab}>
+                <Ionicons name="aperture" size={54} color={C.onInverse} />
+              </LinearGradient>
+            </Pressable>
+          </Pulse>
+          <Text style={styles.lensTitle}>GUARDIAN LENS</Text>
+          <Text style={styles.lensSub}>Odfoťte liek či nález — Jarvis okamžite koná</Text>
+        </View>
 
         <View style={styles.pillarGrid}>
           <PillarTile testID="pillar-health" icon="heart" title="Health Hub" sub="Trezor · AI prekladač · Physio" onPress={() => router.navigate('/(tabs)/health')} />
@@ -105,17 +124,17 @@ export default function Home() {
         </View>
 
         <View style={styles.ecoRow}>
-          <Pressable testID="home-token" onPress={() => router.push('/token')} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
-            <Ionicons name="diamond" size={18} color="#B8860B" />
+          <Pressable testID="home-token" onPress={() => { tap(); router.push('/token'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
+            <Ionicons name="diamond" size={18} color={C.brand} />
             <Text style={styles.ecoText}>GA-T WALLET</Text>
           </Pressable>
-          <Pressable testID="home-fortress" onPress={() => router.push('/fortress')} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
+          <Pressable testID="home-fortress" onPress={() => { tap(); router.push('/fortress'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
             <Ionicons name="shield-half" size={18} color={C.brand} />
             <Text style={styles.ecoText}>CYBER-FORTRESS</Text>
           </Pressable>
         </View>
 
-        <Pressable testID="fab-emergency-qr" onPress={() => router.push('/emergency-qr')} style={styles.sosPill}>
+        <Pressable testID="fab-emergency-qr" onPress={() => { tap('heavy'); router.push('/emergency-qr'); }} style={styles.sosPill}>
           <Ionicons name="qr-code-outline" size={18} color={C.onError} />
           <Text style={styles.sosPillText}>{t('emergency_qr', lang).toUpperCase()}</Text>
         </Pressable>
@@ -126,20 +145,20 @@ export default function Home() {
 }
 
 function PillarTile({ testID, icon, title, sub, onPress }: any) {
-  const press = () => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    onPress();
-  };
   return (
-    <Pressable testID={testID} onPress={press} style={({ pressed }) => [styles.pillar, pressed && { backgroundColor: C.surface3 }]}>
-      <View style={styles.pillarIcon}>
-        <Ionicons name={icon} size={26} color={C.brand} />
-      </View>
-      <View>
-        <Text style={styles.pillarTitle}>{title}</Text>
-        <Text style={styles.pillarSub}>{sub}</Text>
-      </View>
-    </Pressable>
+    <View style={{ width: '48%', flexGrow: 1 }}>
+      <GlassCard testID={testID} onPress={onPress} pad={S.lg} radius={R.md}>
+        <View style={{ minHeight: 118, justifyContent: 'space-between', gap: S.md }}>
+          <View style={styles.pillarIcon}>
+            <Ionicons name={icon} size={24} color={C.brand} />
+          </View>
+          <View>
+            <Text style={styles.pillarTitle}>{title}</Text>
+            <Text style={styles.pillarSub}>{sub}</Text>
+          </View>
+        </View>
+      </GlassCard>
+    </View>
   );
 }
 
@@ -244,10 +263,16 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                 </Pressable>
               </Animated.View>
               <Text style={styles.jarvisLabel}>HOVORIŤ S JARVISOM</Text>
-              <Pressable testID="angel-daily-brief" onPress={() => router.push('/daily-brief')} style={styles.angelBrief}>
-                <Ionicons name="sunny" size={22} color="#B8860B" />
-                <Text style={styles.angelBriefText}>MÔJ DEŇ</Text>
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: S.md }}>
+                <Pressable testID="angel-daily-brief" onPress={() => { tap(); router.push('/daily-brief'); }} style={styles.angelBrief}>
+                  <Ionicons name="sunny" size={22} color={C.brand} />
+                  <Text style={styles.angelBriefText}>MÔJ DEŇ</Text>
+                </Pressable>
+                <Pressable testID="angel-lens" onPress={() => { tap('heavy'); router.push('/lens'); }} style={styles.angelBrief}>
+                  <Ionicons name="aperture" size={22} color={C.brand} />
+                  <Text style={styles.angelBriefText}>ŠOŠOVKA</Text>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.angelBottom}>
@@ -275,21 +300,26 @@ const styles = StyleSheet.create({
   brandSub: { color: C.info, fontSize: 10, letterSpacing: 2, marginTop: 2 },
   angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.sm, paddingHorizontal: S.md, paddingVertical: 8 },
   body: { padding: S.lg, paddingBottom: 120 },
-  greeting: { fontSize: 26, fontWeight: '900', color: C.fg, letterSpacing: 0.5, lineHeight: 34 },
-  pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginTop: S.xl },
-  ecoRow: { flexDirection: 'row', gap: S.md, marginTop: S.md },
-  ecoTile: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.sm, minHeight: 48, backgroundColor: C.surface2 },
-  ecoText: { color: C.fg, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
-  briefCard: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.lg, backgroundColor: C.surface2, borderWidth: 1.5, borderColor: '#B8860B', borderRadius: R.md, padding: S.md, minHeight: 56 },
+  greeting: { fontSize: 28, fontWeight: '900', color: C.fg, letterSpacing: 0.5, lineHeight: 36 },
+  briefIcon: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(212,175,55,0.14)', alignItems: 'center', justifyContent: 'center' },
   briefTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   briefSub: { color: C.info, fontSize: 10.5, marginTop: 2 },
-  angelBrief: { marginTop: S.xl, flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 2, borderColor: '#B8860B', borderRadius: R.pill, paddingHorizontal: S.xl, minHeight: 56, backgroundColor: 'rgba(0,0,0,0.45)' },
-  angelBriefText: { color: '#B8860B', fontWeight: '900', fontSize: 16, letterSpacing: 2 },
-  pillar: { width: '48%', flexGrow: 1, minHeight: 156, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: S.lg, justifyContent: 'space-between', gap: S.lg },
-  pillarIcon: { width: 48, height: 48, borderRadius: R.pill, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center' },
+  lensWrap: { alignItems: 'center', marginTop: S.xl, gap: 6 },
+  lensGlow: Platform.select({
+    web: { boxShadow: '0 0 46px rgba(212,175,55,0.45)', borderRadius: 999 } as any,
+    default: { shadowColor: '#D4AF37', shadowOpacity: 0.55, shadowRadius: 26, shadowOffset: { width: 0, height: 0 }, elevation: 14, borderRadius: 999 },
+  }),
+  lensFab: { width: 128, height: 128, borderRadius: 64, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.35)' },
+  lensTitle: { color: C.brand, fontWeight: '900', fontSize: 15, letterSpacing: 4, marginTop: S.sm },
+  lensSub: { color: C.info, fontSize: 11, letterSpacing: 0.5 },
+  pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginTop: S.xl },
+  ecoRow: { flexDirection: 'row', gap: S.md, marginTop: S.md },
+  ecoTile: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.pill, minHeight: 50, backgroundColor: 'rgba(212,175,55,0.05)' },
+  ecoText: { color: C.fg, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
+  pillarIcon: { width: 46, height: 46, borderRadius: R.pill, backgroundColor: 'rgba(212,175,55,0.14)', alignItems: 'center', justifyContent: 'center' },
   pillarTitle: { color: C.fg, fontWeight: '800', fontSize: 16, letterSpacing: 0.3 },
   pillarSub: { color: C.info, fontSize: 11, marginTop: 4, lineHeight: 15 },
-  sosPill: { marginTop: S.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, backgroundColor: C.error, borderRadius: R.pill, paddingVertical: S.lg, minHeight: 52 },
+  sosPill: { marginTop: S.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, backgroundColor: C.error, borderRadius: R.pill, paddingVertical: S.lg, minHeight: 56 },
   sosPillText: { color: C.onError, fontWeight: '900', letterSpacing: 2, fontSize: 13 },
   beaconDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.error },
   beaconHint: { marginTop: S.md, fontSize: 9, letterSpacing: 1, color: C.onS3, fontWeight: '700', textAlign: 'center' },
@@ -298,21 +328,23 @@ const styles = StyleSheet.create({
   tosBanner: { backgroundColor: C.warn, padding: S.md },
   tosBannerText: { color: C.onWarn, fontWeight: '900', fontSize: 10, letterSpacing: 0.5 },
   tosBody: { fontSize: 12, lineHeight: 18, color: C.fg, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
-  tosAccept: { backgroundColor: C.brand, paddingVertical: S.lg, alignItems: 'center', margin: S.lg, borderRadius: R.sm },
+  tosAccept: { backgroundColor: C.brand, paddingVertical: S.lg, alignItems: 'center', margin: S.lg, borderRadius: R.pill },
   tosAcceptText: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 15 },
-  // Angel Mode (radical reset)
-  angelScrim: { flex: 1, backgroundColor: 'rgba(18,18,18,0.6)' },
+  // Angel Mode 2.0
+  angelScrim: { flex: 1, backgroundColor: 'rgba(10,10,15,0.62)' },
   angelTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: S.lg, paddingTop: S.md },
   angelWordmark: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 14 },
-  angelExit: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(44,44,46,0.85)', alignItems: 'center', justifyContent: 'center' },
+  angelExit: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(32,32,43,0.85)', alignItems: 'center', justifyContent: 'center' },
   acousticRow: { alignItems: 'center', marginTop: S.md },
-  acousticBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.lg, minHeight: 44, backgroundColor: 'rgba(18,18,18,0.55)' },
+  acousticBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.lg, minHeight: 44, backgroundColor: 'rgba(10,10,15,0.55)' },
   acousticBtnOn: { backgroundColor: C.brand },
   acousticText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
   angelCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: S.xl },
   jarvisOrbOuter: { width: 210, height: 210, borderRadius: 105, backgroundColor: 'rgba(212,175,55,0.18)', alignItems: 'center', justifyContent: 'center' },
   jarvisOrb: { width: 164, height: 164, borderRadius: 82, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.brandSec },
   jarvisLabel: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 16 },
+  angelBrief: { flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 2, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.xl, minHeight: 56, backgroundColor: 'rgba(10,10,15,0.5)' },
+  angelBriefText: { color: C.brand, fontWeight: '900', fontSize: 15, letterSpacing: 2 },
   angelBottom: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', paddingBottom: S.xxl, paddingTop: S.lg },
-  angelEmg: { width: 96, height: 96, borderRadius: 48, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong },
+  angelEmg: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(22,22,30,0.9)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong },
 });
