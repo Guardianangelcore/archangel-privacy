@@ -144,3 +144,12 @@ User's final consolidated prompts implemented in one pass:
 10. Swarm agent #7 sovereign_guard orchestrates: handshake/recovery expiry, beacon shutdown, satellite broadcast, enviro escalation, Mosaic block production.
 Tests: test_phase17_masterseal.py + test_phase18_worldclass.py (52 passed); full suite regression green.
 Mocked (user-approved): Stripe card, satellite uplink, NCZI/ÚZIS API, rPPG CV, Mosaic/IPFS/PQC crypto, humanitarian feeds.
+
+## Phase 19: GRAND FINALE — Submission & Onboarding Readiness (June 2026) — DONE
+1. Investor Demo Mode — founder-only toggle (Profile → FOUNDER ADMIN, routes/demo.py): seeds waitlist hunt (Kardiológia slot_found), 150 € Stomatológia refund claim, family pulse from Tomáš; fully reversible (demo:true tags).
+2. Family & Seniors Onboarding (/onboarding) — warm 3-step guide: link Primary Guardian → how to talk to Jarvis (3 examples) → Emergency QR + Talisman; entry from Profile + Family hub; AsyncStorage flag gh_onboarding_done.
+3. Refactor — server.py split complete: indexes moved to /app/backend/db_indexes.py (ensure_indexes()). Load sanity: 300 concurrent authed requests → 300/300 OK.
+4. Final Audit — FULL pytest suite 346/346 green (test_phase19_grand_finale.py added); stability audit 9/9 score 100; Mosaic stress test READY FOR PUBLISH.
+5. Launch Control (/launch, founder-only entry) — live readiness checklist (audit, TPS, swarm 7/7, wealth engine) + DEPLOY TO PRODUCTION handover card with Publish instructions.
+Frontend verified by testing agent: 10/10 (iteration_18.json). Known minor: /launch direct-URL reachable for non-founders but degrades gracefully (no crash).
+STATUS: READY FOR PUBLISH — user to press Publish (top right) → Deploy → Generate iOS/Android builds.

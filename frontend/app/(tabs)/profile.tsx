@@ -17,6 +17,19 @@ export default function Profile() {
   const [profile, setProfile] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [admin, setAdmin] = useState<any>(null);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoMsg, setDemoMsg] = useState('');
+
+  const toggleDemo = async (v: boolean) => {
+    setDemoBusy(true); setDemoMsg('');
+    try {
+      const r: any = await api('/demo/toggle', { method: 'POST', body: JSON.stringify({ enabled: v }) });
+      setAdmin({ ...admin, demo_mode: r.demo_mode });
+      setDemoMsg(v ? 'DEMO MODE AKTÍVNY — dashboard naplnený ukážkovými dátami (lov termínu, 150 € refundácia, rodinný pulz).' : 'Demo dáta odstránené — čistý produkčný stav.');
+    } catch (e: any) { setDemoMsg(String(e.message || e)); }
+    finally { setDemoBusy(false); }
+  };
 
   const deleteAccount = async () => {
     try { await api('/auth/account', { method: 'DELETE' }); } catch (e) { console.log(e); }
@@ -25,6 +38,7 @@ export default function Profile() {
 
   const load = useCallback(async () => {
     try { setProfile(await api('/emergency-profile')); } catch (e) { console.log(e); }
+    try { setAdmin(await api('/demo/status')); } catch { setAdmin(null); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -159,6 +173,11 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{t('emergency_qr', lang).toUpperCase()}</Text>
         </Pressable>
 
+        <Pressable testID="onboarding-btn" onPress={() => router.push('/onboarding')} style={styles.qrBtn}>
+          <Ionicons name="heart-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>SPRIEVODCA PRE RODINU A SENIOROV</Text>
+        </Pressable>
+
         <Pressable testID="recovery-suite-btn" onPress={() => router.push('/recovery-suite')} style={styles.qrBtn}>
           <Ionicons name="key-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>SOVEREIGN RECOVERY & 2FA</Text>
@@ -173,6 +192,27 @@ export default function Profile() {
           <Ionicons name="rose-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>FINAL DIGNITY · POHREBNÝ FOND</Text>
         </Pressable>
+
+        {admin?.is_founder && (
+          <View style={styles.adminBox}>
+            <Text style={styles.adminTitle}>👁 FOUNDER ADMIN</Text>
+            <View style={styles.guardRow}>
+              <Ionicons name="film-outline" size={22} color="#B8860B" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.guardTitle}>INVESTOR DEMO MODE</Text>
+                <Text style={styles.guardSub}>Ukážkové dáta pre porotu: lov termínu · 150 € refundácia · rodinný pulz</Text>
+              </View>
+              {demoBusy ? <ActivityIndicator color="#B8860B" /> : (
+                <Switch testID="demo-toggle" value={!!admin?.demo_mode} onValueChange={toggleDemo} trackColor={{ true: '#B8860B', false: C.surface3 }} />
+              )}
+            </View>
+            {!!demoMsg && <Text testID="demo-msg" style={styles.adminMsg}>{demoMsg}</Text>}
+            <Pressable testID="launch-btn" onPress={() => router.push('/launch')} style={styles.launchBtn}>
+              <Ionicons name="rocket-outline" size={18} color="#0B0B0D" />
+              <Text style={styles.launchText}>LAUNCH CONTROL · DEPLOY TO PRODUCTION</Text>
+            </Pressable>
+          </View>
+        )}
 
         {!confirmDelete ? (
           <Pressable testID="delete-account-btn" onPress={() => setConfirmDelete(true)} style={styles.delBtn}>
@@ -238,6 +278,11 @@ const styles = StyleSheet.create({
   delAction: { flex: 1, alignItems: 'center', paddingVertical: S.md, borderWidth: 2 },
   delActionText: { fontWeight: '900', letterSpacing: 1, fontSize: 12, color: C.fg },
   credit: { marginTop: S.xl, padding: S.md, borderTopWidth: 1.5, borderColor: C.borderStrong },
+  adminBox: { marginTop: S.xl, borderWidth: 2, borderColor: '#B8860B', padding: S.md, backgroundColor: C.surface2 },
+  adminTitle: { color: '#B8860B', fontWeight: '900', fontSize: 10, letterSpacing: 2, marginBottom: S.sm },
+  adminMsg: { color: '#B8860B', fontWeight: '800', fontSize: 11, lineHeight: 16, marginBottom: S.sm },
+  launchBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E5E4E2', paddingVertical: S.md, minHeight: 48 },
+  launchText: { color: '#0B0B0D', fontWeight: '900', letterSpacing: 1, fontSize: 11 },
   creditTitle: { fontWeight: '900', letterSpacing: 2, fontSize: 11, color: C.fg },
   creditText: { marginTop: 6, color: C.onS3, fontSize: 12, lineHeight: 18 },
 });
