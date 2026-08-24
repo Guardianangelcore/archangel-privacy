@@ -148,3 +148,29 @@ NEW (all need testing):
 - FIX: family.tsx enableAngel now router.navigate('/(tabs)') so AngelHome gets focus (was leaving overlapping screens intercepting clicks).
 - Backend curl-verified: pharmacy search 200, bible.pdf 200 37KB, acoustic-event 200, pulse self-ping 400.
 - Smoke user angel_mode reset to false. For pulse opt-in flow testing, a second user may be created in Mongo (users + user_sessions).
+
+## Iteration 9 scope (Production polish: refactor + Health Drop + Auto-Booker + Calendar, June 2026)
+REFACTOR (done, verified): server.py monolith split into core.py (db/auth/storage/push/PDF/AML-ledger helpers + shared `api` router), models.py, content.py (multilingual Mental Fortress + Physio guides), routes/{auth,health,family,hunter,legacy}.py. server.py is now a slim app entry. FULL PYTEST: 139/139 pass (run serially: `python -m pytest tests/ -o addopts=""`; xdist has known cross-worker fixture races in phase7 — NOT a code bug). test_phase2 updated: solidarity campaign now does KYC first (AML design).
+NEW FEATURES (need testing):
+1. HEALTH DROP (zero-knowledge referral bridge):
+   - GET /api/health-drop/me (auth) → {drop_id, public_key, did}; PUT /api/health-drop/pubkey.
+   - PUBLIC: GET /api/health-drop/{drop_id}/info; POST /api/health-drop/{drop_id}/upload (multipart: file=ciphertext, eph_pub, nonce, guardian_id [full DID or last-6, e.g. 'smoke1'], sender_name, doc_title, orig_type). 403 wrong GID, 404 bad drop_id, 409 if no pubkey. Referral keyword detection → is_referral + specialty_guess.
+   - GET /api/health-drop/inbox, GET /api/health-drop/items/{id}/file, DELETE item.
+   - Crypto: tweetnacl box, encrypt in provider browser (src/dropcrypto.ts), decrypt on device (secret in SecureStore/localStorage 'gh_drop_sk'). Node roundtrip verified.
+   - Screens: /health-drop (hd-copy, hd-share, hd-open-{id}, hd-autobook-{id}, QR of link) — entry hh-drop in Health hub. PUBLIC portal /drop/{dropId} (dp-pick, dp-guardian-id, dp-sender, dp-title, dp-send) — accessible WITHOUT login (_layout allows 'drop' segment). On web DocumentPicker renders hidden <input type=file> — playwright can set_input_files.
+2. AUTO-BOOKER: POST /api/autobook {specialty, city?, source, source_id} → simulated booking (status booked, found_slot) + calendar event + push attempt; POST /api/waitlist/{item_id}/autobook for existing items. Jarvis prompt card on /health-drop for is_referral items → ÁNO REZERVUJ button.
+3. LIFE-HEALTH CALENDAR: POST /api/calendar/events {category exam|history|vaccine, title, date YYYY-MM-DD, booster_due?}; GET /api/calendar/timeline?category= → events + upcoming_exams + booster_alerts (within 90d); DELETE event. Screen /health-timeline (ht-add, ht-cat-*, ht-title, ht-date, ht-booster, ht-save, ht-filter-*, ht-del-{id}) — entry hh-timeline in Health hub.
+4. MULTILINGUAL CONTENT: GET /api/mental/techniques?language=sk|cs|en|de and NEW GET /api/physio/guides?language= (3 founder guides: knee, panic-acupressure, ergonomics). UI: mental-fortress language chips mf-lang-{sk,cs,en,de}; physio.tsx guides section (guide-{id}, guide-play-{id} TTS).
+5. WALLPAPER ONE-TAP SHARE: wp-share button on /wallpaper (web: navigator.share/copy; native share sheet).
+- Backend curl-verified: pubkey PUT, portal upload 200 + 403 wrong GID, inbox referral detection, autobook → calendar sync, timeline, mental de/en, physio guides en.
+- Smoke user pubkey currently set to a node-test key; app regenerates its own on /health-drop open (expected: old seeded ciphertext then fails decrypt with friendly error — re-upload via portal for decrypt tests).
+
+## Iteration 10 scope (Sick Leave & Recovery Module — Hustle Recovery Guard, June 2026)
+NEW (needs testing), all in routes/health.py + /app/frontend/app/my-recovery.tsx (entry hh-recovery in Health hub):
+- PUT /api/recovery/epn {start_date YYYY-MM-DD (req), end_date?, note?, contract_type fulltime|dpp|dpc, monthly_gross, outings:[{from_time HH:MM, to_time HH:MM}]} → upsert db.recovery; 400 on bad dates/times/contract. GET /api/recovery/epn.
+- POST /api/recovery/extract-outings {text} → Claude extracts outing windows from SK/CZ ePN text → {outings:[], found} (verified working: extracted 10:00-12:00 + 16:00-18:00 from Slovak sample).
+- POST /api/recovery/sickpay {contract_type, monthly_gross, days} → simplified SK 2026 estimate: DVZ=gross*12/365; day1-3 25%, day4-10 55% (employer), day11+ 55% (Sociálna poisťovňa); shortfall vs normal income; solidarity_suggested if shortfall>=30%; DPP/DPČ warning; 400 on invalid input. Marked simulated with disclaimer.
+- GET /api/recovery/report.pdf?kind=employer|social (&token=) → one-tap PDF status report; 404 if no ePN record.
+- UI testIDs: mr-start, mr-end, mr-contract-{fulltime,dpp,dpc}, mr-gross, mr-note, mr-out-from/to/add, mr-out-del-{i}, mr-ai-toggle, mr-ai-text, mr-ai-run, mr-save, mr-alerts (local notifications — native only, web shows info), mr-days, mr-calc, mr-solidarity (link to /solidarity when shortfall>=30%), mr-pdf-employer, mr-pdf-social. Live outing status card with countdown + 15-min warning highlight.
+- Smoke user has seeded ePN (2026-06-20→2026-07-15, DPP 850€, outings 10-12 & 16-18).
+- Backend curl-verified: epn PUT/GET, sickpay math, report.pdf 200, AI extraction 200.

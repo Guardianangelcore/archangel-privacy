@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -67,6 +67,20 @@ export default function Wallpaper() {
             </>
           )}
         </Pressable>
+        <Pressable
+          testID="wp-share"
+          onPress={async () => {
+            try {
+              if (Platform.OS === 'web' && (navigator as any).share) await (navigator as any).share({ title: 'Guardian núdzová tapeta', url });
+              else await shareFile('/family/wallpaper.png', 'guardian_emergency_wallpaper.png', 'image/png');
+            } catch {}
+          }}
+          disabled={!url}
+          style={styles.ctaOutline}
+        >
+          <Ionicons name="people-outline" size={18} color={C.brand} />
+          <Text style={styles.ctaOutlineText}>POSLAŤ RODINE JEDNÝM ŤUKOM</Text>
+        </Pressable>
 
         <View style={styles.steps}>
           <Text style={styles.stepTitle}>AKO NASTAVIŤ</Text>
@@ -89,6 +103,8 @@ const styles = StyleSheet.create({
   preview: { width: '100%', height: '100%' },
   cta: { marginTop: S.xl, alignSelf: 'stretch', flexDirection: 'row', gap: S.sm, backgroundColor: C.brand, borderRadius: R.sm, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
+  ctaOutline: { marginTop: S.md, alignSelf: 'stretch', flexDirection: 'row', gap: S.sm, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.sm, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  ctaOutlineText: { color: C.brand, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   steps: { marginTop: S.xl, alignSelf: 'stretch', backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: S.lg, gap: 6 },
   stepTitle: { fontSize: 10, letterSpacing: 2, color: C.info, fontWeight: '800', marginBottom: 4 },
   step: { color: C.fg, fontSize: 13, lineHeight: 19 },

@@ -11,6 +11,9 @@ export default function HealthHub() {
       subtitle="Váš zdravotný trezor, AI prekladač a rehabilitácia — všetko na jednom mieste."
       items={[
         { testID: 'hh-vault', icon: 'lock-closed-outline', title: 'Zdravotný trezor', subtitle: 'Dokumenty · OCR · AI preklad', route: '/(tabs)/vault' },
+        { testID: 'hh-drop', icon: 'cloud-download-outline', title: 'Health Drop', subtitle: 'Lekár → trezor · zero-knowledge', route: '/health-drop' },
+        { testID: 'hh-timeline', icon: 'time-outline', title: 'Health Timeline', subtitle: 'Vyšetrenia · história · vakcíny', route: '/health-timeline' },
+        { testID: 'hh-recovery', icon: 'bed-outline', title: 'Moje zotavenie', subtitle: 'ePN · vychádzky · nemocenské', route: '/my-recovery' },
         { testID: 'hh-translate', icon: 'language-outline', title: 'AI Prekladač (Jarvis)', subtitle: 'Lekárčina → ľudská reč · hlas', route: '/translate' },
         { testID: 'hh-physio', icon: 'body-outline', title: 'Physio-AI', subtitle: 'Rehabilitačné rutiny na mieru', route: '/physio' },
         { testID: 'hh-mental', icon: 'shield-outline', title: 'Mental Fortress', subtitle: 'Krízový audio sprievodca · akupresúra', route: '/mental-fortress' },

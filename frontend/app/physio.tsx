@@ -28,9 +28,17 @@ export default function Physio() {
   const [routine, setRoutine] = useState('');
   const [busy, setBusy] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [guides, setGuides] = useState<any[]>([]);
+  const [openGuide, setOpenGuide] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
 
   useEffect(() => () => { try { playerRef.current?.remove?.(); } catch {} }, []);
+
+  useEffect(() => {
+    (async () => {
+      try { const res: any = await api(`/physio/guides?language=${lang}`); setGuides(res.guides || []); } catch {}
+    })();
+  }, [lang]);
 
   const run = async () => {
     setBusy(true); setRoutine('');
@@ -41,11 +49,11 @@ export default function Physio() {
     setBusy(false);
   };
 
-  const speak = async () => {
-    if (!routine) return;
+  const speakText = async (text: string) => {
+    if (!text) return;
     setSpeaking(true);
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: routine, voice: 'coral', language: lang }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text, voice: 'coral', language: lang }) });
       const token = await getToken();
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       try { playerRef.current?.remove?.(); } catch {}
@@ -54,6 +62,8 @@ export default function Physio() {
     } catch (e) {}
     setTimeout(() => setSpeaking(false), 400);
   };
+
+  const speak = () => speakText(routine);
 
   return (
     <SafeAreaView testID="physio-screen" style={styles.root} edges={['top']}>
@@ -103,6 +113,36 @@ export default function Physio() {
             </Pressable>
           </View>
         )}
+
+        {guides.length > 0 && (
+          <>
+            <Text style={styles.lbl}>EXPERTNÉ SPRIEVODCOVIA (FOUNDER)</Text>
+            {guides.map(g => {
+              const open = openGuide === g.id;
+              return (
+                <View key={g.id} style={styles.guideCard}>
+                  <Pressable testID={`guide-${g.id}`} onPress={() => setOpenGuide(open ? null : g.id)} style={styles.guideHead}>
+                    <Ionicons name={g.icon} size={20} color={C.brand} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.guideTitle}>{g.title}</Text>
+                      <Text style={styles.guideSub}>{g.subtitle}</Text>
+                    </View>
+                    <Pressable testID={`guide-play-${g.id}`} onPress={() => speakText(g.tts_text)} hitSlop={8} style={styles.guidePlay}>
+                      <Ionicons name="play" size={16} color={C.onInverse} />
+                    </Pressable>
+                  </Pressable>
+                  {open && (
+                    <View style={styles.guideSteps}>
+                      {g.steps.map((s: string, i: number) => (
+                        <Text key={i} style={styles.guideStep}>{i + 1}. {s}</Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -131,4 +171,11 @@ const styles = StyleSheet.create({
   outText: { color: C.fg, fontSize: 15, lineHeight: 22 },
   speakBtn: { marginTop: S.md, flexDirection: 'row', gap: 8, alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1.5, borderColor: C.brand, paddingHorizontal: S.md, paddingVertical: 10, backgroundColor: C.bg },
   speakBtnText: { color: C.brand, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
+  guideCard: { borderWidth: 1.5, borderColor: C.borderStrong, marginBottom: S.sm, backgroundColor: C.bg },
+  guideHead: { flexDirection: 'row', alignItems: 'center', gap: S.md, padding: S.md },
+  guideTitle: { color: C.fg, fontWeight: '800', fontSize: 13 },
+  guideSub: { color: C.info, fontSize: 10.5, marginTop: 2 },
+  guidePlay: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
+  guideSteps: { borderTopWidth: 1, borderTopColor: C.borderStrong, padding: S.md, gap: 6 },
+  guideStep: { color: C.fg, fontSize: 12.5, lineHeight: 18 },
 });

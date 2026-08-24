@@ -102,3 +102,22 @@ Guardian Angel — sole original Visionary and Author. AGPL-v3.
   8. Guardian Pulse Check (Family): STRICTLY OPT-IN silent ping (/api/pulse/*, 403 without target opt-in). Privacy toggles in Profile (prof-pulse-optin) and /pulse-check screen.
 - Test users: smoketest-user-1 (smoketok-fresh-2026), smoketest-user-2 (smoketok-fresh-2026-u2) — see memory/test_credentials.md.
 - Deferred (unchanged): real IPFS, ZK-proofs, PDF-OCR pipeline, RTL, real Stripe/crypto, real BLE mesh, real pharmacy stock API integration, server.py modular refactor.
+
+## Iteration 9 (June 2026) — Production Polish, PUBLISH-READY ✅
+- REFACTOR: server.py monolith (2600 lines) split into production modules: core.py (db/auth/storage/push/PDF/AML helpers, shared api router), models.py, content.py (SK/CS/EN/DE content), routes/{auth,health,family,hunter,legacy}.py. Slim server.py entry. Full pytest 173/173 (run serially: pytest -o addopts=""). server_monolith.bak kept as reference.
+- HEALTH DROP (Referral Bridge): zero-knowledge provider→vault upload. Public browser portal /drop/{drop_id} encrypts with patient's public key (tweetnacl X25519, src/dropcrypto.ts, secret key in SecureStore/localStorage) — server stores ONLY ciphertext. Guardian-ID verification (full DID or last-6). Push notification on receipt. Screen /health-drop with QR/link share + encrypted inbox + on-device decrypt.
+- AUTO-BOOKER: referral ingestion → Jarvis prompt ("Mám rezervovať najskorší termín?") → POST /api/autobook (SIMULATED clinic APIs, flagged simulated:true) → waitlist status booked + Guardian Calendar sync + push. Also /api/waitlist/{id}/autobook.
+- LIFE-HEALTH CALENDAR + HEALTH TIMELINE: categories exam/history/vaccine, booster_due proactive alerts (90d horizon), vertical timeline UI with filters at /health-timeline.
+- CONTENT: Mental Fortress + NEW Physio-AI founder guides (knee recovery, panic acupressure, ergonomics) in SK/CS/EN/DE with Jarvis TTS. Language chips in UI.
+- Wallpaper one-tap family share (wp-share). Pharmacy Hunter stays DEMO (PHARMACY_API_URL/KEY env placeholders ready for real integration).
+- Testing: iteration_9.json — backend 34/34 new tests (test_phase10.py), frontend E2E 100% incl. public portal upload→decrypt→autobook→calendar. Nav stress clean. Legal disclaimers intact.
+- Known non-blocking: pointerEvents deprecation warning; expo-notifications web warning; acoustic guard web MediaRecorder warning (native-only feature).
+- STATUS: Ready for Publish → native builds. Push notifications require real google-services.json at build time.
+
+## Iteration 10 (June 2026) — Sick Leave & Recovery Module (Hustle Recovery Guard) ✅
+- ePN record (start/end, contract TPP/DPP/DPČ, gross, note) + outing windows management at /my-recovery (Health hub → hh-recovery).
+- Vychádzky: live status card (active/home, minute countdown, red 15-min warning), local notifications 15 min before window ends (native only), AI extraction of hours from pasted ePN text (Claude — verified).
+- Sick Pay Calculator (simplified SK 2026: DVZ, 25 %/55 %/55 % tiers, DPP/DPČ eligibility warning, disclaimer). Shortfall ≥30 % → Solidarity Hub suggestion with direct link.
+- One-tap PDF hlásenia: zamestnávateľ + Sociálna poisťovňa/ČSSZ (share sheet → email).
+- Endpoints: PUT/GET /api/recovery/epn, POST /api/recovery/extract-outings, POST /api/recovery/sickpay, GET /api/recovery/report.pdf?kind=.
+- Testing: iteration_10.json — 22/22 new backend tests (test_phase11_recovery.py), full frontend E2E green, stability regression clean. CUMULATIVE: 195/195 tests. NO BUGS. Publish-ready.

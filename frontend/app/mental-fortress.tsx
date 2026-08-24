@@ -4,11 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { useAuth } from '@/src/auth';
 import { api, API_BASE, getToken } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 
+const LANGS = [['sk', 'SK'], ['cs', 'CZ'], ['en', 'EN'], ['de', 'DE']];
+
 export default function MentalFortress() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [lang, setLang] = useState<string>(['sk', 'cs', 'en', 'de'].includes(user?.language || '') ? (user?.language as string) : 'sk');
   const [data, setData] = useState<any>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState<string | null>(null);
@@ -17,15 +22,16 @@ export default function MentalFortress() {
 
   useEffect(() => {
     (async () => {
-      try { setData(await api('/mental/techniques')); } catch (e: any) { setErr(String(e.message || e)); }
+      try { setData(await api(`/mental/techniques?language=${lang}`)); } catch (e: any) { setErr(String(e.message || e)); }
     })();
-    return () => { try { playerRef.current?.remove?.(); } catch {} };
-  }, []);
+  }, [lang]);
+
+  useEffect(() => () => { try { playerRef.current?.remove?.(); } catch {} }, []);
 
   const speak = async (t: any) => {
     setSpeaking(t.id); setErr('');
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: t.tts_text, voice: 'nova', language: 'sk' }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: t.tts_text, voice: 'nova', language: lang }) });
       const token = await getToken();
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       try { playerRef.current?.remove?.(); } catch {}
@@ -54,6 +60,13 @@ export default function MentalFortress() {
           z expertízy zakladateľa. Stlačte ▶ a Jarvis vás prevedie krok za krokom.
         </Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
+        <View style={styles.langRow}>
+          {LANGS.map(([code, label]) => (
+            <Pressable key={code} testID={`mf-lang-${code}`} onPress={() => setLang(code)} style={[styles.langChip, lang === code && { backgroundColor: C.brand, borderColor: C.brand }]}>
+              <Text style={[styles.langChipText, lang === code && { color: C.onInverse }]}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
         {!data && !err && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
 
         <View style={{ marginTop: S.xl, gap: S.md }}>
@@ -119,4 +132,7 @@ const styles = StyleSheet.create({
   stepText: { flex: 1, color: C.fg, fontSize: 13, lineHeight: 19 },
   disclaimer: { marginTop: S.xl, color: C.info, fontSize: 10, lineHeight: 15, textAlign: 'center' },
   err: { color: C.error, marginTop: S.md, fontSize: 12 },
+  langRow: { flexDirection: 'row', gap: S.sm, marginTop: S.lg },
+  langChip: { borderWidth: 1, borderColor: C.borderStrong, borderRadius: R.pill, paddingHorizontal: S.lg, paddingVertical: 8 },
+  langChipText: { color: C.fg, fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
 });

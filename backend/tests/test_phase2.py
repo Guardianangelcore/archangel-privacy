@@ -91,6 +91,11 @@ def test_physio_session(h):
 
 # --- Solidarity ---
 def test_solidarity_flow(h):
+    # AML (iteration 4+): campaign creation requires KYC attestation first
+    r = requests.post(f"{BASE_URL}/api/aml/kyc", headers=h,
+                      json={"full_name": "Test User", "birth_year": 1980,
+                            "country": "SK", "declaration": True})
+    assert r.status_code == 200, r.text
     r = requests.post(f"{BASE_URL}/api/solidarity/campaigns", headers=h,
                       json={"title": "TEST Solidarity", "story": "help",
                             "goal_amount": 100.0, "currency": "EUR"})

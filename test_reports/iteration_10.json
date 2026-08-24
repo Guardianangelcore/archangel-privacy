@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 10 STABILITY CHECK — Hustle Recovery Guard (My Recovery / ePN) FULLY VERIFIED. BACKEND (22/22 pytest — 100% via test_phase11_recovery.py, ran serially in 5.17s): PUT /api/recovery/epn happy path (start 2026-06-20, dpp, 850€, outings 10-12 & 16-18) → 200 with correct persistence; GET returns saved record; validation 400s all clean — bad date '20-06-2026' 400, bad HH:MM '25:00' 400, invalid contract_type 'bogus' 400. POST /api/recovery/sickpay {dpp,850,30d}: dvz=27.95 (spec ≈27.95 ✓), breakdown 3+7+20 days → total ≈435.95 ✓, shortfall_pct present (~48% > 30% ✓), solidarity_suggested=true, DPP warning present. Days=5: day11+ amount=0 ✓. Invalid gross=0 → 400 ✓, invalid days=0 → 400 ✓. POST /api/recovery/extract-outings with Slovak 'Vychádzky povolené od 10:00 do 12:00 a od 16:00 do 18:00' → found:true, 2 windows with 10:00 & 16:00 (Claude call ~5s). Gibberish text → found:false, outings=[]. GET /api/recovery/report.pdf?kind=employer & kind=social → 200 application/pdf (%PDF header); with ?token= only → 200; without any auth → 401/403 (properly gated). Stability sanity: /auth/me returns tos_accepted_version=2026-06.1 for smoketest-user-1, /health-drop/me returns drop_id, /calendar/timeline returns events+upcoming_exams+booster_alerts, /autobook Kardiológia → booked with calendar_event, /mental/techniques?language=en returns 6 techniques. FRONTEND E2E (390x844 mobile viewport, gh_session_token=smoketok-fresh-2026): login+reload → tab-health → hh-recovery → /my-recovery renders with mr-start=2026-06-20, mr-end=2026-07-15, mr-gross=850, DPP chip active, outings 10-12 & 16-18 listed. LIVE OUTING STATUS CARD visible showing 'VYCHÁDZKA AKTÍVNA · zostáva 97 min' with 'Okno 10:00–12:00' (correct — test ran at 10:23 UTC / 12:23 CEST). Sick pay: mr-days=30 + mr-calc → breakdown renders with 'ODHAD SPOLU', mr-solidarity banner appears (shortfall ~48%). Outing add mr-out-from=20:00 + mr-out-to=21:00 + mr-out-add → 3rd row appears in DOM. mr-save + full page reload → 20:00-21:00 still present (persistence confirmed). mr-out-del-{i} deleted the added row. Jarvis AI: mr-ai-toggle expands, mr-ai-text filled with Slovak sample, mr-ai-run → after ~30s outings replaced with 10-12 & 16-18 (Claude extraction verified end-to-end). mr-save persisted restored state. mr-pdf-employer clicked without crash (opens new tab on web), mr-alerts clicked without crash (web info message expected). Nav regression: /health-drop + /health-timeline both load cleanly. FINAL STATE (verified via curl): outings restored to 10-12 & 16-18, angel_mode=false — smoke user tidy as instructed. Zero crashes, zero red screens, zero unexpected 5xx. Pre-existing non-blocking noise unchanged: pointerEvents deprecation, expo-notifications web-not-supported. NO NEW BUGS FOUND — module is publish-ready.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/my-recovery", "issues": ["Minor UX: when /my-recovery is opened via deep-link/reload and the browser history is empty, mr-back triggers a dev-only 'GO_BACK not handled by any navigator' console warning. Not user-facing (dev warning only). Consider router.replace('/(tabs)/health') as fallback if router.canGoBack() is false."]}
+    ],
+    "react_native_issues": [
+      {"component": "pointerEvents prop", "issue": "Pre-existing RN Web deprecation warning 'props.pointerEvents is deprecated. Use style.pointerEvents' — carried over from iterations 7-9. Non-blocking, not introduced by this iteration."},
+      {"component": "expo-notifications", "issue": "'Listening to push token changes is not yet fully supported on web' warnings — expected on web preview; disappears on native build."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase11_recovery.py",
+    "/app/test_reports/pytest/pytest_phase11.xml"
+  ],
+  "action_items": [
+    "NONE required for Publish. Module is production-ready.",
+    "OPTIONAL polish: On /my-recovery, guard mr-back with router.canGoBack() and fallback to router.replace('/(tabs)/health') to silence dev-only GO_BACK warning when the screen is opened via deep-link.",
+    "OPTIONAL (carry-over from iter 7-9): expo-av → expo-audio migration (Angel Mode acoustic), codebase-wide pointerEvents prop → style.pointerEvents sweep. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "routes/health.py:793 _valid_hhmm regex '([01]\\d|2[0-3]):[0-5]\\d' correctly rejects 24:00 / 25:00 / bad minutes — verified via 400 test.",
+    "routes/health.py:864 DVZ formula gross*12/365 is the standard SK Sociálna poisťovňa denný vymeriavací základ approximation — matches spec 27.95 for 850€ gross. Percentages 25%/55%/55% match 2026 SK rules. shortfall_pct threshold at 30% for solidarity_suggested is a reasonable heuristic.",
+    "routes/health.py:867 DPP/DPČ warning correctly appended without blocking — user still gets an estimate but is informed about optional insurance requirement. Honest UX.",
+    "routes/health.py:894 recovery_report_pdf uses _auth_pdf(authorization, token) — allows Bearer header OR ?token= query param (same pattern as testament/tos/proxy PDFs in iteration 5). 404 on missing record instead of empty PDF — correct.",
+    "frontend/app/my-recovery.tsx:140 uses SafeAreaView with edges=['top'] only — good for bottom-fixed CTA. All 20+ testIDs match iteration 10 spec verbatim. Live outing card computed client-side from outings + current wall clock — no server round-trip needed for the countdown.",
+    "AI outing extraction at routes/health.py:846 correctly filters returned JSON by _valid_hhmm — bulletproof against LLM hallucinations of '25:00' etc. Falls back to found:false gracefully."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase11_recovery.py (NEW — 22 pytest cases: 5 EPN + 5 SickPay + 2 AI extract + 4 PDF + 5 stability sanity + 1 restore-state)"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 test_phase11_recovery in 5.17s serially; cumulative 173+22 = 195 tests across 11 phase files, ALL green)",
+    "frontend": "100% (login + hh-recovery → my-recovery renders with seeded ePN + live outing status card 'VYCHÁDZKA AKTÍVNA · zostáva 97 min' + sick pay calc with ODHAD SPOLU + mr-solidarity banner + outing add/delete/save/reload persistence + Jarvis AI extraction restored 10-12 & 16-18 + mr-pdf-employer/social + mr-alerts + /health-drop + /health-timeline). Zero crashes."
+  },
+  "seed_data_creation": "No new users. Used existing smoketest-user-1 (token=smoketok-fresh-2026). ePN record cycled through several states during test then RESTORED to the original: start=2026-06-20, end=2026-07-15, contract_type=dpp, monthly_gross=850, outings=[10:00-12:00, 16:00-18:00]. One autobook Kardiológia calendar_event added during stability sanity (harmless demo residue, matches iter-9 behavior). angel_mode confirmed false.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "ELEVEN phase test files in /app/backend/tests/: backend_test.py + test_phase2..10.py + test_phase11_recovery.py (22 tests, latest). Run all serially: `pytest backend/tests/ -o addopts='' -v` (never parallelize). All 173 iter1-9 tests + 22 iter10 tests = 195 green. My Recovery testIDs are stable — see iteration_10.json action_items or /app/test_result.md Iteration-10 section. Smoke user1 token smoketok-fresh-2026 valid till ~2026-08-31; smoke user2 token smoketok-fresh-2026-u2. Frontend base URL: https://angel-os-1.preview.emergentagent.com. Auth via localStorage.setItem('gh_session_token','<token>')+reload. Known non-bugs: /api/register-push 500 (placeholder key), sickpay/autobook/pharmacy simulated with disclaimers, mr-alerts native-only, pointerEvents + expo-notifications web warnings. Recovery module state left tidy (outings 10-12 & 16-18, angel_mode false).",
+  "rca_of_issue": "N/A — no product bugs. All 22 backend endpoints pass first try; frontend E2E passed all 14 steps for the new recovery module including Claude AI extraction and full persistence roundtrip. Only cosmetic notes are the pre-existing web warnings (documented in iter 7-9) and a minor dev-only 'GO_BACK not handled' warning when /my-recovery is entered via reload (no history). App is publish-ready as declared in the review request."
+}
