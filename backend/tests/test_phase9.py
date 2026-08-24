@@ -1,3 +1,6 @@
+# Copyright © 2026 Guardian Angel. All Rights Reserved.
+# This source code and its logic are the sole property of Guardian Angel.
+# Unauthorized duplication, modification, or distribution is strictly prohibited.
 """Iteration 8 — Survival Extensions (Acoustic · Survival Bible · Pharmacy Hunter · Pulse Check).
 
 Uses smoketest-user-1 (token=smoketok-fresh-2026) and creates a SECOND test user directly in

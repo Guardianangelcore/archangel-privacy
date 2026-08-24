@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Image } from 'expo-image';
@@ -69,7 +70,7 @@ export default function Login() {
           >
             <Text style={styles.signBtnText}>{busy ? '...' : t('sign_in_google', lang).toUpperCase()}</Text>
           </Pressable>
-          <Text style={styles.footer}>AGPL-v3 · ZERO-KNOWLEDGE · DECENTRALIZED</Text>
+          <Text style={styles.footer}>© 2026 GUARDIAN ANGEL · PROPRIETARY · ZERO-KNOWLEDGE</Text>
         </View>
       </SafeAreaView>
     </View>

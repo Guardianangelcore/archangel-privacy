@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } from 'expo-audio';
@@ -70,7 +71,11 @@ export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
     return () => clearInterval(t);
   }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => { try { recorder.stop(); } catch {} }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => {
+    // Best-effort cleanup: recorder may never have started; stop() returns a Promise
+    // whose rejection must be swallowed to avoid dev red-screen on Angel Mode exit.
+    try { Promise.resolve(recorder.stop()).catch(() => {}); } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = () => (active ? stop() : start());
   return { active, toggle };

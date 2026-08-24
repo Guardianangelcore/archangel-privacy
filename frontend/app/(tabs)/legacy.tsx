@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React from 'react';
 import PillarHub from '@/src/PillarHub';
 
@@ -13,6 +14,7 @@ export default function LegacyWealth() {
         { testID: 'lw-dignity', icon: 'rose-outline', title: 'Final Dignity', subtitle: 'Pohrebný fond · posledné priania', route: '/dignity' },
         { testID: 'lw-legal', icon: 'shield-checkmark-outline', title: 'Právo a súlad', subtitle: 'Závet · TOS · KYC · 2026', route: '/legal' },
         { testID: 'lw-biometric', icon: 'finger-print-outline', title: 'Biometrický závet', subtitle: 'Hlas/video dôkaz · blockchain hash', route: '/biometric-will' },
+        { testID: 'lw-protocol', icon: 'globe-outline', title: 'Guardian Protocol', subtitle: 'API brána · data marketplace · Sentinel sieť', route: '/protocol' },
         { testID: 'lw-proxy', icon: 'document-lock-outline', title: 'Splnomocnenec', subtitle: 'Právna ochrana partnera', route: '/healthcare-proxy' },
         { testID: 'lw-market', icon: 'briefcase-outline', title: 'Služby expertov', subtitle: 'Cash / crypto · bez provízií', route: '/marketplace' },
         { testID: 'lw-barter', icon: 'swap-horizontal-outline', title: 'Barter Engine', subtitle: 'Kredity dôvery · služba za službu', route: '/barter' },

@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Icon font loader for Expo apps. Fonts are loaded from a CDN only under
 // Expo Go (StoreClient) — that's where @expo/vector-icons' .ttf files come
 // back as 0 bytes from Metro's asset resolver on Android. Native dev/prod

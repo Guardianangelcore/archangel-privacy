@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Web storage (Metro picks index.ts on native).
 // Helpers never throw: reads return `fallback`, writes return `false`.
 // Values supported: string | number | boolean | null (JSON-serialized on disk).

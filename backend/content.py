@@ -1,3 +1,6 @@
+# Copyright © 2026 Guardian Angel. All Rights Reserved.
+# This source code and its logic are the sole property of Guardian Angel.
+# Unauthorized duplication, modification, or distribution is strictly prohibited.
 # Guardian Health & Angel — Founder expert content (Mental Fortress + Physio-AI guides)
 # Languages: sk / cs / en / de. Informational content only (EU AI Act Art. 50).
 

@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 14 — final verification pass of (A) iteration-13 Gateway/Stripe DB collection bug fix AND (B) new IP Protection Layer (Proof of Origin, watermark middleware, DID, copyright headers, proprietary license). BACKEND (20/20 phase14 pytest in 1.9s serially): (A) FIXED — POST /api/solidarity/campaigns/{cid}/checkout with test key now returns HTTP 503 with detail 'stripe_key_missing: Reálne platby vyžadujú platný Stripe kľúč…' (previously 404 collection mismatch). Verified end-to-end: created a fresh campaign via /solidarity/campaigns → checkout returned 503 with correct Slovak message and NO 500. /donate on same campaign still works — proves both endpoints share db.campaigns. Grep confirmed routes/gateway.py:219,270 and routes/neural.py:38,147,281 all read/write db.campaigns. (B) IP PROTECTION LAYER — /api/origin returns full proof_of_origin record (codebase_sha256 c69321d7…, did did:guardian:pex:sha256:…, build GA-ORIGINAL-C69321D7, anchored:true, kind:proof_of_origin, blockchain_anchor with OpenTimestamps calendars) with NO auth — as required. Every response carries watermark headers X-Guardian-Origin: GA-ORIGINAL-C69321D7 and X-Origin-DID: did:guardian:pex:sha256:c693… — verified on /api/ (public), /api/auth/me (authed), /api/origin, and on 401 error responses (raw ASGI middleware stamps every code path, no perf regression). Regression smoke (auth/me, calendar/timeline, sentinel/aggregate, jarvis/context, chains/supply, gateway/grants, marketplace/offers, marketplace/me, gateway grant create+revoke) all 200. FRONTEND E2E (mobile 390×844): (1) /login renders with correct proprietary footer '© 2026 GUARDIAN ANGEL · PROPRIETARY · ZERO-KNOWLEDGE' — AGPL text removed ✓. (2) Hidden watermark GA-ORIGIN::GA-ORIGINAL-C69321D7::did:guardian:pex:sha256:… present in served DOM (grep-able for provenance) but rendered with opacity:0 and off-screen (left:-9999) — invisible to end user ✓. (3) After injecting gh_session_token='smoketok-fresh-2026' in localStorage, /profile Authorship block shows: 'Sole Visionary & Legal Owner: Guardian Angel' text ✓, testID='origin-did' displays the full DID ✓, and the build/anchored line 'Build GA-ORIGINAL-C69321D7 · anchored 2026-08-24' renders ✓. WATERMARK import from src/watermark.ts works, no crash. (4) /protocol loads all three sections with required testIDs pr-partner, pr-grant, pr-market-optin all present, no visible 404/error banner (iteration 13 fix confirmed at UI). (5) /solidarity renders 3 campaigns cleanly; opening the donate modal (PRISPIEŤ button) exposes both testID='donate-card' (Stripe path) and testID='donate-confirm' (community path); tapping donate-card triggers the fixed backend 503 and the UI now shows the friendly Slovak banner 'Platby kartou budú aktívne po doplnení reálneho Stripe kľúča — zatiaľ použite komunitný príspevok…' — NO MORE raw JSON leak (previous iteration 13 UI bug is also gone). Zero page-errors, zero red screens across the 4 routes tested.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "expo-notifications", "issue": "Pre-existing warning 'Listening to push token changes is not yet fully supported on web' — expected on web preview only, not a regression. Requires a native build to test push tokens."},
+      {"component": "props.pointerEvents (react-native-web)", "issue": "Pre-existing deprecation warning 'props.pointerEvents is deprecated. Use style.pointerEvents' — non-blocking, carried from previous iterations."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase14_ip_protection.py",
+    "/app/test_reports/pytest/pytest_phase14.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/gateway.py:219,270 — CONFIRMED FIXED: both reads and writes now use db.campaigns (matches routes/legacy.py:50 persistence). Stripe checkout can now reach the _stripe_ready() guard and returns the intended 503 stripe_key_missing with the test key. Once a real STRIPE_API_KEY is deployed, checkout will proceed against the actual campaign and Stripe-callback update will correctly $inc raised_amount on the same collection.",
+    "routes/neural.py:38,147,281 — all three campaigns queries use db.campaigns consistently with legacy.py. Jarvis context and chains/supply verified end-to-end (200).",
+    "server.py GuardianWatermarkASGI — clean raw-ASGI middleware; injects headers via message['headers'].append inside send_wrapped only on http.response.start. Zero extra async round-trips vs. BaseHTTPMiddleware (per team note the old middleware pushed p95 above 2000ms; raw ASGI restores headroom). Headers correctly attach on 200s, 401s, and 4xx paths.",
+    "routes/origin.py — Public route (no auth), reads latest anchored record from db.ip_protection sorted by anchored_at DESC, falls back to origin.json + anchored:false when DB is empty. Idempotent anchoring on startup via $setOnInsert on {kind, codebase_sha256} — safe across restarts.",
+    "frontend/src/watermark.ts — GA_ORIGIN_MARK uses zero-width joiners (\\u200b) around a grep-able 'GA-ORIGIN::...' signature. Rendered in _layout.tsx inside a Text with opacity:0, position:absolute, left:-9999, size 1x1, accessibilityElementsHidden, importantForAccessibility='no-hide-descendants' — invisible to sighted users AND screen readers. Persistent in the JS bundle for provenance.",
+    "frontend/app/(tabs)/profile.tsx About block — clean, monospaced DID + build line, uses testID='origin-did' as spec'd. Author credit line explicitly reads 'Sole Visionary & Legal Owner: Guardian Angel'.",
+    "frontend/app/login.tsx footer — AGPL text fully removed, footer reads '© 2026 GUARDIAN ANGEL · PROPRIETARY · ZERO-KNOWLEDGE' as required.",
+    "frontend/app/solidarity.tsx donate-card handler — verified in-UI that any non-2xx (503 in this case) maps to the Slovak Stripe-not-configured banner; no raw JSON leaks."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase14_ip_protection.py (NEW — 20 tests: 3 proof-of-origin + 4 watermark-header + 3 regression + 4 gateway + 4 solidarity-stripe + 2 neural-wealth)"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 phase14 tests pass serially in 1.9s; iteration 13 bug fully fixed; watermark middleware stable)",
+    "frontend": "100% (login footer proprietary + hidden watermark invisible in DOM + profile authorship complete + protocol testIDs present + solidarity donate-card modal now returns friendly Slovak 503 banner)"
+  },
+  "seed_data_creation": "Created 1 grant TEST_IP_<hex> and revoked it. Created 2 campaigns TEST_IP_verify + TEST_IP_camp_<hex> in db.campaigns (via legacy /solidarity/campaigns) — small residue for future regression, all clearly TEST_-prefixed. No sentinel signals written this iteration. No marketplace state changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "FOURTEEN phase test files now: test_phase2..12 + test_phase13_gateway.py + test_phase14_ip_protection.py. Run serially: `python -m pytest tests/ -o addopts='' -v`. Iteration 13 Stripe collection bug is GREEN. New test_phase14 covers: /api/origin public, watermark headers on every response (public/authed/error), regression smoke, gateway lifecycle, solidarity-checkout returns 503 (not 500/404), and neural wealth path reads db.campaigns. Frontend session token key is `gh_session_token` in localStorage (NOT 'session_token' — that was wrong in earlier iteration notes). Base URL: https://angel-os-1.preview.emergentagent.com. Smoke user token smoketok-fresh-2026 still valid.",
+  "rca_of_issue": "Iteration 13 bug — db.solidarity_campaigns vs db.campaigns collection mismatch — is fully resolved. Verification: (1) code grep on routes/gateway.py and routes/neural.py returns only db.campaigns references (no lingering db.solidarity_campaigns). (2) Live checkout of a freshly-created campaign returns 503 stripe_key_missing (previously 404). (3) Frontend donate-card UI now renders the friendly Slovak Stripe-not-configured banner instead of a raw '404: {\"detail\":...}' JSON flash. (4) /donate on the same campaign still succeeds (both endpoints share db.campaigns). No further action required for either A or B; app is ready for production Stripe key configuration."
+}

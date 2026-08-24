@@ -174,3 +174,24 @@ NEW (needs testing), all in routes/health.py + /app/frontend/app/my-recovery.tsx
 - UI testIDs: mr-start, mr-end, mr-contract-{fulltime,dpp,dpc}, mr-gross, mr-note, mr-out-from/to/add, mr-out-del-{i}, mr-ai-toggle, mr-ai-text, mr-ai-run, mr-save, mr-alerts (local notifications — native only, web shows info), mr-days, mr-calc, mr-solidarity (link to /solidarity when shortfall>=30%), mr-pdf-employer, mr-pdf-social. Live outing status card with countdown + 15-min warning highlight.
 - Smoke user has seeded ePN (2026-06-20→2026-07-15, DPP 850€, outings 10-12 & 16-18).
 - Backend curl-verified: epn PUT/GET, sickpay math, report.pdf 200, AI extraction 200.
+
+## Iteration 11 scope (NEURAL LINK — Jarvis orchestrator, June 2026)
+NEW backend module /app/backend/routes/neural.py (registered in server.py):
+- GET /api/jarvis/context — unified cross-module snapshot (health/wealth/safety from all collections).
+- POST /api/jarvis/ask {question, language} — Claude answers with FULL cross-module context injected (verified: combines recovery + calendar + waitlist data in one Slovak answer). 400 empty question; allow 60s timeout.
+- POST /api/chains/healing {specialty | drop_doc_id} — referral→hunter→solidarity check→autobook (simulated)→calendar→employer notice. Loop-safe: already-autobooked drop → skipped step + no rebooking. Returns {chain, steps[{step,status,detail}], summary, simulated}.
+- POST /api/chains/safety {trigger} — beacon event insert + legacy check (donor/testament/proxy) + wallpaper info release.
+- POST /api/chains/recovery {} — wellness activity check → physio guide proposal → outing-hours check (walk now vs wait vs no PN).
+- POST /api/chains/supply {med_name, region} — pharmacy scan (DEMO) → solidarity+dignity cash check → barter suggestion when cash low → logistics note. 400 empty med_name.
+- GET /api/reports/weekly.pdf (?token=) — Guardian Pulse Report PDF (Health/Wealth/Safety sections). Verified 200 34KB.
+Frontend /app/frontend/app/jarvis.tsx (testIDs: jv-back, jv-quick-{0,1,2}, jv-input, jv-ask, jv-speak, jv-chain-{healing,safety,recovery,supply}, jv-weekly). Entry points: home header sparkles button testID home-jarvis; Angel Mode orb angel-jarvis now routes to /jarvis (was /wellness).
+All backend endpoints curl-verified. Chains are one-shot request/response — no recursion possible.
+
+## Iteration 12 scope (GLOBAL INFRASTRUCTURE — Gateway · Marketplace · Sentinel · Stripe, June 2026)
+NEW backend module /app/backend/routes/gateway.py (registered in server.py) + performance indexes at startup:
+1. PARTNER API GATEWAY (fully functional): POST /api/gateway/grants {partner_name, scopes subset of [emergency_profile, vault_list, recovery_status], expires_days 1-365} → returns one-time token gwk_*; GET /api/gateway/grants (token_preview only); DELETE /api/gateway/grants/{id} (revoke); GET /api/gateway/audit. Partner endpoints authed via X-Partner-Key header: GET /api/partner/v1/profile, /vault (metadata only), /recovery — 401 no key, 403 invalid/revoked/expired/scope-not-granted; every access audit-logged. Verified: profile 200 with granted scope, vault 403 without scope.
+2. DATA MARKETPLACE (payouts SIMULATED, badged): PUT /api/marketplace/optin {enabled, categories}; GET /api/marketplace/me (earnings + sales); GET /api/marketplace/offers (3 demo research offers); POST /api/marketplace/offers/{id}/accept → 403 optin_required without opt-in, 409 duplicate, else earnings_eur incremented.
+3. SENTINEL NETWORK: PUT /api/sentinel/node {enabled}; POST /api/sentinel/report {kind in supply_shortage|grid_down|pharmacy_out|water_issue, region} → anonymized (salted hash only), 429 after 5 same-kind/hour, 400 bad kind; GET /api/sentinel/aggregate → 7d counts by kind+region + active_nodes.
+4. STRIPE ONRAMP (code-complete, awaiting real key): POST /api/solidarity/campaigns/{cid}/checkout {amount_eur 1-10000} → 503 stripe_key_missing with current placeholder key (EXPECTED — env STRIPE_API_KEY=sk_test_emergent is invalid); GET /api/solidarity/checkout/status/{session_id} idempotently records paid donations after server-side Stripe verification. UI: donate-card button in solidarity donate modal shows friendly message on 503.
+5. PERFORMANCE: 12 new Mongo indexes; load test done by main agent: 200 concurrent requests 0.58s, 0 errors, p50 451ms / p95 536ms / p99 551ms.
+Frontend: /app/frontend/app/protocol.tsx (testIDs: pr-partner, pr-scope-*, pr-grant, pr-token, pr-revoke-{id}, pr-market-optin, pr-offer-{id}, pr-signal-{kind}) — entry lw-protocol in Legacy hub. solidarity.tsx gained donateCard (donate-card).

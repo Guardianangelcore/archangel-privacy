@@ -1,0 +1,23 @@
+{
+  "owner": "Guardian Angel",
+  "role": "Sole Visionary and Legal Owner",
+  "license": "Proprietary — All Rights Reserved (AGPL-v3 rescinded)",
+  "build": "GA-ORIGINAL-DD64D4A0",
+  "codebase_sha256": "dd64d4a0b046d03d1495cca21a2e4a37a56ca4896336129a60a6856b85dfd5ac",
+  "did": "did:guardian:pex:sha256:dd64d4a0b046d03d1495cca21a2e4a37a56ca4896336129a60a6856b85dfd5ac",
+  "anchored_at": "2026-08-24T16:22:58.810431+00:00",
+  "files_in_manifest": 91,
+  "method": "sha256(relpath + NUL + bytes + NUL, sorted manifest)",
+  "blockchain_anchor": {
+    "protocol": "OpenTimestamps (Bitcoin)",
+    "stamped_digest_file": "PROOF_OF_ORIGIN.sha256",
+    "ots_proof_file": "PROOF_OF_ORIGIN.sha256.ots",
+    "calendars": [
+      "https://a.pool.opentimestamps.org",
+      "https://b.pool.opentimestamps.org",
+      "https://a.pool.eternitywall.com",
+      "https://ots.btc.catallaxy.com"
+    ],
+    "status": "submitted — Bitcoin attestation finalizes within hours; verify with `ots verify`"
+  }
+}

@@ -1,5 +1,7 @@
 {
   "name": "frontend",
+  "license": "UNLICENSED",
+  "author": "Guardian Angel (Sole Visionary and Legal Owner)",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {

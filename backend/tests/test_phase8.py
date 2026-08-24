@@ -1,3 +1,6 @@
+# Copyright © 2026 Guardian Angel. All Rights Reserved.
+# This source code and its logic are the sole property of Guardian Angel.
+# Unauthorized duplication, modification, or distribution is strictly prohibited.
 """Iteration 7 — Survival & Trust module (Border/Wallpaper/Mental/Biometric-Will) + regression sanity.
 
 Uses the pre-provisioned smoke user (token=smoketok-fresh-2026, valid 7 days, TOS accepted).

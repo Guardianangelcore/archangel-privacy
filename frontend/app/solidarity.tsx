@@ -1,5 +1,6 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, ScrollView, Modal, ActivityIndicator, Platform, RefreshControl } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, ScrollView, Modal, ActivityIndicator, Platform, RefreshControl, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -44,6 +45,20 @@ export default function Solidarity() {
     } catch (e: any) {
       setModal(false);
       setErr(String(e.message || e).includes('kyc_required') ? 'KAMPAŇ VYŽADUJE KYC OVERENIE — DOKONČITE HO V „PRÁVO A SÚLAD"' : String(e.message || e));
+    }
+  };
+
+  const donateCard = async () => {
+    if (!donateFor) return;
+    setErr('');
+    try {
+      const res: any = await api(`/solidarity/campaigns/${donateFor.campaign_id}/checkout`, { method: 'POST', body: JSON.stringify({ amount_eur: parseFloat(amount) || 0 }) });
+      setDonateFor(null);
+      if (Platform.OS === 'web') window.open(res.checkout_url, '_blank');
+      else Linking.openURL(res.checkout_url);
+    } catch (e: any) {
+      const msg = String(e.message || e);
+      setErr(msg.includes('stripe_key_missing') ? 'Platby kartou budú aktívne po doplnení reálneho Stripe kľúča — zatiaľ použite komunitný príspevok.' : msg);
     }
   };
 
@@ -148,6 +163,7 @@ export default function Solidarity() {
               </View>
             </View>
             <Pressable testID="donate-confirm" onPress={donate} style={styles.saveBtn}><Text style={styles.saveBtnText}>DONATE {amount} {donateFor?.currency}</Text></Pressable>
+            <Pressable testID="donate-card" onPress={donateCard} style={[styles.saveBtn, { backgroundColor: C.surface3, marginTop: 8 }]}><Text style={[styles.saveBtnText, { color: C.brand }]}>💳 ZAPLATIŤ KARTOU (STRIPE)</Text></Pressable>
           </View>
         </View>
       </Modal>

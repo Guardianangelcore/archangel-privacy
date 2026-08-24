@@ -87,7 +87,7 @@ A sovereign, AI-driven mobile OS for medical dignity, senior safety, and communi
 Brutalist Mobile Light — sharp corners (radius 0), 1.5–2 pt borders, monochrome + signal red (#D90429). Green brand (#1B4332). See `/app/design_guidelines.json`.
 
 ## Author
-Guardian Angel — sole original Visionary and Author. AGPL-v3.
+Guardian Angel — Sole Visionary and Legal Owner. PROPRIETARY LICENSE (AGPL-v3 rescinded June 2026 — see /app/LICENSE and /app/PROOF_OF_ORIGIN.md). Codebase SHA-256 fingerprint anchored via DID-link; hidden watermark in UI (`src/watermark.ts`, GA_ORIGIN_MARK in root layout) and backend (X-Guardian-Origin response header, /api/origin endpoint, db.ip_protection).
 
 ## Iteration 7-8 (June 2026, fork) — Premium OS validated + Survival & Trust + Survival Extensions
 - VALIDATED & FIXED Premium Guardian OS overhaul: added 17 missing StyleSheet keys in (tabs)/index.tsx (pillar grid + Angel Mode were rendering unstyled); auth.tsx refresh() no longer clears session on transient network errors (fixes reported splash /auth/me failure); family.tsx enableAngel now navigates to (tabs) index (fixed click interception).
@@ -121,3 +121,11 @@ Guardian Angel — sole original Visionary and Author. AGPL-v3.
 - One-tap PDF hlásenia: zamestnávateľ + Sociálna poisťovňa/ČSSZ (share sheet → email).
 - Endpoints: PUT/GET /api/recovery/epn, POST /api/recovery/extract-outings, POST /api/recovery/sickpay, GET /api/recovery/report.pdf?kind=.
 - Testing: iteration_10.json — 22/22 new backend tests (test_phase11_recovery.py), full frontend E2E green, stability regression clean. CUMULATIVE: 195/195 tests. NO BUGS. Publish-ready.
+
+## Iteration 14 (August 2026, fork) — IP PROTECTION LAYER + finálna verifikácia Gateway/Stripe fixu
+- LEGAL PIVOT: AGPL-v3 zrušená → proprietárna licencia (/app/LICENSE, README.md). Copyright hlavičky "© 2026 Guardian Angel" vo všetkých 86+ zdrojových súboroch (scripts/inject_headers.sh, idempotentné).
+- PROOF OF ORIGIN: deterministický SHA-256 celej codebase + DID-link (did:guardian:pex:sha256:...), ukotvený na Bitcoin blockchain cez OpenTimestamps (PROOF_OF_ORIGIN.sha256.ots = dôkaz). Generátor: scripts/generate_proof_of_origin.py (--verify na kontrolu). Artefakty origin.json (backend + frontend/src) sú generované — pri zmene kódu re-anchorovať.
+- WATERMARKY: (1) skrytý GA_ORIGIN_MARK v UI bundli (src/watermark.ts, neviditeľný Text v _layout.tsx), (2) raw ASGI middleware podpisuje KAŽDÚ API odpoveď hlavičkami X-Guardian-Origin + X-Origin-DID (BaseHTTPMiddleware zavrhnutý — kazil p95 pod záťažou), (3) GET /api/origin (verejný) vracia ukotvený záznam z db.ip_protection, (4) About v Profile: "Sole Visionary & Legal Owner: Guardian Angel" + DID (testID origin-did).
+- FIXY: po forku bol EMERGENT_LLM_KEY neplatný (storage/LLM/push 401) → obnovený v backend/.env. Iteration-13 db.campaigns fix POTVRDENÝ testing agentom (žiadne 500, Stripe checkout vracia 503 stripe_key_missing s priateľským SK bannerom v solidarity.tsx — pridal testing agent). test_phase14_ip_protection.py (20 testov) číta build dynamicky z origin.json.
+- TESTY: 238 backend testov — 235 pass paralelne + 3 známe xdist/load flaky (phase7 dignity ×2, phase3 ai_translate) overené sériovo ako PASS. Frontend: login/profile/protocol/solidarity render OK.
+- ZRUŠENÉ POUŽÍVATEĽOM: "Autonomous Agentic Swarm" a "Quantum-Secure Tokenized Swarm" prompty — používateľ požiadal o rollback pred implementáciou; NEBOL napísaný žiadny swarm/token kód.

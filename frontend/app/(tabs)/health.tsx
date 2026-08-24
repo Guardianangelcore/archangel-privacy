@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React from 'react';
 import PillarHub from '@/src/PillarHub';
 import { sharePdf } from '@/src/pdf';

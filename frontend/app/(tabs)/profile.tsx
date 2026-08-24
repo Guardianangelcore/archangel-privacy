@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +8,7 @@ import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
+import { WATERMARK } from '@/src/watermark';
 
 export default function Profile() {
   const { user, signOut, setUser } = useAuth();
@@ -188,7 +190,10 @@ export default function Profile() {
 
         <View style={styles.credit}>
           <Text style={styles.creditTitle}>ABOUT</Text>
-          <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Vision & original design: <Text style={{ fontWeight: '900' }}>Guardian Angel</Text>.{'\n'}Open Source · AGPL-v3 · Zero-Knowledge.</Text>
+          <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Sole Visionary & Legal Owner: <Text style={{ fontWeight: '900' }}>Guardian Angel</Text>.{'\n'}© 2026 Guardian Angel. All Rights Reserved. Proprietary · Zero-Knowledge.</Text>
+          <Text style={styles.creditText}>{'\n'}Proof of Origin (DID):{'\n'}</Text>
+          <Text testID="origin-did" style={[styles.creditText, { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 10 }]}>{WATERMARK.did}</Text>
+          <Text style={[styles.creditText, { fontSize: 10, marginTop: 4 }]}>Build {WATERMARK.build} · anchored {WATERMARK.anchored_at?.slice(0, 10)}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

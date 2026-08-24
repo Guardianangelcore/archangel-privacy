@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,6 +73,9 @@ export default function Home() {
           <Text style={styles.brandSub}>SOVEREIGN SURVIVAL OS</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
+          <Pressable testID="home-jarvis" onPress={() => router.push('/jarvis')} hitSlop={8}>
+            <Ionicons name="sparkles" size={20} color={C.brand} />
+          </Pressable>
           <Pressable testID="angel-toggle" onPress={toggleAngel} disabled={busy} hitSlop={8} style={styles.angelToggle}>
             <Ionicons name="accessibility-outline" size={18} color={C.brand} />
           </Pressable>
@@ -212,7 +216,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                   testID="angel-jarvis"
                   onPress={() => {
                     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-                    router.push('/wellness');
+                    router.push('/jarvis');
                   }}
                   style={styles.jarvisOrb}
                 >

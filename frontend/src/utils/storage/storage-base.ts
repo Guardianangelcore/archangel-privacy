@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Abstract base for the storage wrapper — shared types + helpers.
 // Concrete implementations live in index.ts (native) and index.web.ts (web).
 

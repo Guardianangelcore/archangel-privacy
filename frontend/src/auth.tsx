@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Platform, Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';

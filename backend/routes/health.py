@@ -1,3 +1,6 @@
+# Copyright © 2026 Guardian Angel. All Rights Reserved.
+# This source code and its logic are the sole property of Guardian Angel.
+# Unauthorized duplication, modification, or distribution is strictly prohibited.
 from fastapi import HTTPException, Header, UploadFile, File, Form
 from fastapi.responses import Response, StreamingResponse
 from fastapi.concurrency import run_in_threadpool

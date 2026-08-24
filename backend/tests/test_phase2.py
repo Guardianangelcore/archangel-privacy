@@ -1,3 +1,6 @@
+# Copyright © 2026 Guardian Angel. All Rights Reserved.
+# This source code and its logic are the sole property of Guardian Angel.
+# Unauthorized duplication, modification, or distribution is strictly prohibited.
 """Phase 2 tests: TTS, Physio, Solidarity, Respect Map, Blackout."""
 import os, uuid, asyncio
 from datetime import datetime, timezone, timedelta

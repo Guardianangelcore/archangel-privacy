@@ -1,3 +1,4 @@
+/* Copyright © 2026 Guardian Angel. All Rights Reserved. This source code and its logic are the sole property of Guardian Angel. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -13,6 +14,7 @@ import { AuthProvider, useAuth } from "@/src/auth";
 import { registerForPush } from "@/src/push";
 import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
+import { GA_ORIGIN_MARK } from "@/src/watermark";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
@@ -119,6 +121,14 @@ function RootNav() {
     <>
       <GuardianMonitor />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }} />
+      {/* Hidden digital watermark — original Guardian Angel build fingerprint */}
+      <Text
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ position: "absolute", opacity: 0, width: 1, height: 1, left: -9999 }}
+      >
+        {GA_ORIGIN_MARK}
+      </Text>
     </>
   );
 }
