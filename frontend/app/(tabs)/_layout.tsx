@@ -4,12 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { C } from '@/src/theme';
 import { useAuth } from '@/src/auth';
-import { t } from '@/src/i18n';
 
 export default function TabsLayout() {
   const { user } = useAuth();
   const angel = !!user?.angel_mode;
-  const lang = (user?.language as any) || 'sk';
 
   return (
     <Tabs
@@ -18,49 +16,53 @@ export default function TabsLayout() {
         tabBarStyle: angel
           ? { display: 'none' }
           : {
-              backgroundColor: C.inverse,
-              borderTopColor: C.inverse,
-              borderTopWidth: 0,
-              height: Platform.OS === 'ios' ? 84 : 64,
-              paddingTop: 6,
+              backgroundColor: C.surface2,
+              borderTopColor: C.border,
+              borderTopWidth: 1,
+              height: Platform.OS === 'ios' ? 84 : 66,
+              paddingTop: 8,
             },
-        tabBarActiveTintColor: C.onInverse,
-        tabBarInactiveTintColor: '#8a8a8a',
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+        tabBarActiveTintColor: C.brand,
+        tabBarInactiveTintColor: C.info,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
       }}
     >
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen
-        name="index"
+        name="health"
         options={{
-          title: t('home', lang).toUpperCase(),
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
-          tabBarButtonTestID: 'tab-home',
+          title: 'HEALTH',
+          tabBarIcon: ({ color, size }) => <Ionicons name="heart-outline" size={size} color={color} />,
+          tabBarButtonTestID: 'tab-health',
         }}
       />
       <Tabs.Screen
-        name="vault"
+        name="family"
         options={{
-          title: t('vault', lang).toUpperCase(),
-          tabBarIcon: ({ color, size }) => <Ionicons name="lock-closed-outline" size={size} color={color} />,
-          tabBarButtonTestID: 'tab-vault',
+          title: 'FAMILY',
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
+          tabBarButtonTestID: 'tab-family',
         }}
       />
       <Tabs.Screen
-        name="waitlist"
+        name="legacy"
         options={{
-          title: t('waitlist', lang).toUpperCase(),
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
-          tabBarButtonTestID: 'tab-waitlist',
+          title: 'LEGACY',
+          tabBarIcon: ({ color, size }) => <Ionicons name="rose-outline" size={size} color={color} />,
+          tabBarButtonTestID: 'tab-legacy',
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="hunter"
         options={{
-          title: t('profile', lang).toUpperCase(),
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
-          tabBarButtonTestID: 'tab-profile',
+          title: 'HUNTER',
+          tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" size={size} color={color} />,
+          tabBarButtonTestID: 'tab-hunter',
         }}
       />
+      <Tabs.Screen name="vault" options={{ href: null }} />
+      <Tabs.Screen name="waitlist" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

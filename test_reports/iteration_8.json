@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 8 (Survival Extensions — Acoustic Threat · Survival Bible PDF · Pharmacy Hunter CZ/SK · Guardian Pulse Check opt-in) validated end-to-end. BACKEND (21/21 pytest — test_phase9.py): POST /api/acoustic-event {kind:'loud_noise',db_level:-5} → 200 with event_id, kind & db_level echoed; GET /api/acoustic-events lists the created event. GET /api/survival/bible.pdf?token= → 200 application/pdf, %PDF magic, ~10KB+ body; no token → 403. GET /api/pharmacy/search?med=Euthyrox&region=SK → 200 with simulated=true, 6 results sorted in_stock first; region=CZ returns CZ pharmacies (Praha/Brno/Ostrava/Plzeň/Olomouc); empty/whitespace med → 400. Watch lifecycle: POST /api/pharmacy/watch (status='watching'), GET /api/pharmacy/watches contains it, POST /api/pharmacy/watches/{id}/scan returns {scanned:true,simulated:true,hit,results[6]}, DELETE 200, DELETE-again 404. Pulse-check privacy: seeded SECOND user directly in Mongo (user_id=smoketest-user-2, did=did:guardian:smoke2, token=smoketok-fresh-2026-u2, pulse_check_optin unset). Sequence — POST /api/pulse/request to user2 → 403 with 'opt_in_required' in body; PATCH /api/me/prefs {pulse_check_optin:true} on user2 → 200 (persisted); POST /api/pulse/request → 200 pending with req_id; user2 GET /api/pulse/requests contains it; user2 POST /respond {status:'ok'} → 200; user1 GET /api/pulse/sent shows status='ok'; unknown DID → 404; own DID → 400. Regression: user1 pulse_check_optin cleanup preserved OFF. FRONTEND (mobile 390x844, gh_session_token='smoketok-fresh-2026' injected): SPLASH-LOGOUT — no token → login screen visible, standard-home=0 (no infinite splash). After token inject + reload → standard-home + pillar-health/family/legacy/hunter + tab-health/family/legacy/hunter + fab-emergency-qr all rendered (no ERR_ABORTED). Health hub → hh-bible present; click fires without crash (Web sharePdf opens new tab silently). Hunter hub → ht-pharmacy → /pharmacy-hunter screen loads with 'DEMO DÁTA' badge; search 'Euthyrox' SK returns 6 rows with 2 SKLADOM + 2 VYPREDANÉ pills visible; SLEDOVAŤ button adds watch row; SKEN button updates status without crash; trash icon deletes → 0 watches remaining. Family hub → fs-pulsecheck → /pulse-check screen loads with pc-optin switch; toggling ON confirmed via /api/auth/me → pulse_check_optin=true, toggling OFF → false (persistence verified). Profile → prof-pulse-optin switch present. Angel Mode: family hub fs-angel click → navigate to angel-home (fix confirmed working — navigation happens without stuck state); angel-acoustic button label toggles 'AKUSTICKÝ STRÁŽCA' → 'STRÁŽIM ZVUK — LOKÁLNE' without crash (Web mic permission not blocking); angel-toggle-back exits cleanly to standard-home (no click interception, angel-home unmounts, standard-home=1). Regression sanity: border-pass-screen loads, mental-fortress-screen loads, fab-emergency-qr renders on home. FINAL state confirmed via /api/auth/me: angel_mode=false, pulse_check_optin=false for smoketest-user-1 (left as found). Only console noise: expo-notifications 'listener not supported on web' (expected) + props.pointerEvents deprecation warning (pre-existing from iteration 7 — non-blocking).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "pointerEvents prop", "issue": "Pre-existing RN Web deprecation warning 'props.pointerEvents is deprecated. Use style.pointerEvents' — still emitted in this iteration (unchanged from iteration 7). Non-blocking."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase9.py",
+    "/app/test_reports/pytest/pytest_phase9.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: audit codebase for JSX pointerEvents= prop → migrate to style={{pointerEvents:...}} (RN Web ≥0.20 compatibility). Non-blocking, carried over from iteration 7.",
+    "OPTIONAL: server.py now ~2634 lines with SURVIVAL EXTENSIONS block at bottom. Recommend extracting acoustic/pharmacy/pulse/survival into separate route modules before Publish."
+  ],
+  "critical_code_review_comments": [
+    "Pulse Check opt-in gate at server.py:2561 correctly rejects with 403 'opt_in_required: …' BEFORE creating a pulse_requests record — good privacy hygiene (no silent record creation for un-opted targets). Frontend pulse-check.tsx maps 'opt_in_required' substring to Slovak friendly message on send failure.",
+    "Pharmacy simulator uses deterministic SHA-256(med|chain|city) hashing so results are STABLE across polls (same med+region → same status) — this makes SKEN semantically meaningful (only real change is if user watches long enough for hash-slot to cycle). Documented DEMO badge in UI is correct.",
+    "Acoustic event endpoint currently accepts any user (no angel_mode gate) — this is fine but means non-Angel users could POST events. Consider `if not user.get('angel_mode'): raise 403` if strict Angel-Mode-only enforcement is desired. Current behavior is permissive by design (family monitor can also log events).",
+    "Second user seeding via test_phase9.py fixture correctly $unsets pulse_check_optin so the initial 403 test is deterministic across re-runs. Session token TOKEN2='smoketok-fresh-2026-u2' persists 7 days.",
+    "Survival Bible PDF pulls from 7 collections (emergency_profiles, proxy_directives, legal_testaments, med_reminders, cabinet, waitlist, biometric_wills) + hardcoded MENTAL_TECHNIQUES_SK. Uses _auth_pdf helper for dual-auth (header OR ?token=). PDF size ~10-15KB even with sparse data — verified by test."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase9.py (NEW — 21 pytest cases: acoustic 2 + survival-bible 2 + pharmacy-search 3 + pharmacy-watch lifecycle 5 + pulse-check 9)",
+    "/app/memory/test_credentials.md (appended iteration-8 fork note with smoketest-user-2 credentials)"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 test_phase9; cumulative: phase1 16 + phase2 12 + phase3 13 + phase4 11 + phase5 14 + phase6 19 + phase7 16 + phase8 17 + phase9 21 = 139 tests across 9 iterations)",
+    "frontend": "100% (splash-logout gate + auth injection + 4-pillar dashboard + hh-bible click safe + /pharmacy-hunter DEMO badge + Euthyrox search + SKLADOM/VYPREDANÉ pills + SLEDOVAŤ+SKEN+delete lifecycle + /pulse-check pc-optin toggle persistence via /api/auth/me + prof-pulse-optin present + Angel Mode fs-angel→angel-home navigation FIX confirmed + angel-acoustic label toggle + angel-toggle-back clean exit + border-pass/mental-fortress/emergency-QR regression pass + final angel_mode=false state preserved)"
+  ],
+  "seed_data_creation": "Created smoketest-user-2 via Mongo direct-insert fixture (test_phase9.py::seed_second_user): user_id=smoketest-user-2, did=did:guardian:smoke2, email=smoke2@example.com, session_token=smoketok-fresh-2026-u2 (7-day expiry). pulse_check_optin=true after test run (was toggled true during test flow, not reset — appended note in /app/memory/test_credentials.md). Additionally cleaned any legacy pulse_requests targeting user2 before test run. smoketest-user-1 pulse_check_optin verified OFF at test end (unchanged from start).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "NINE pytest files under /app/backend/tests/: backend_test.py (16) + test_phase2.py (12) + test_phase3.py (13) + test_phase4.py (11) + test_phase5.py (14) + test_phase6.py (19) + test_phase7.py (16) + test_phase8.py (17) + test_phase9.py (21 — survival extensions). Run test_phase9.py standalone with `pytest backend/tests/test_phase9.py -o addopts='' -v` — TestPharmacyWatchLifecycle and TestPulseCheck classes are ORDERED (numeric prefixes); do NOT parallelize with xdist. Smoke user1 token=smoketok-fresh-2026 (valid until ~2026-08-31). New smoke user2 token=smoketok-fresh-2026-u2 for pulse tests (valid ~7d from 2026-01 test run). Pharmacy results are deterministic per SHA-256(med|chain|city) — same query yields identical stock. Angel Mode toggle now navigates via router.navigate('/(tabs)') instead of pathname state (verified fix). Frontend has 'opt_in_required'-substring based friendly error mapping in pulse-check.tsx.",
+  "rca_of_issue": "N/A — no product bugs found. Iteration-8 splash-screen /api/auth/me regression fix (auth token retention on transient network errors) confirmed working: logged-out user sees login screen; localStorage token injection + reload reaches the 4-pillar dashboard without infinite splash or ERR_ABORTED. Angel-mode click-interception bug fix (router.navigate('/(tabs)')) confirmed via UI test — angel-toggle-back cleanly exits to standard-home with angel-home unmounted."
+}

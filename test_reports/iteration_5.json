@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 5 (final MVP batch) validated end-to-end. BACKEND (19/19 pytest — test_phase6.py): TOS PDF (SK via ?token=, EN via Authorization header, 401 without either — all >10 KB application/pdf with attachment Content-Disposition, %PDF- signature verified), Testament PDF (404 for fresh user then POST /api/legal/testament SK civil_law_holograph → GET /api/legal/testament.pdf 200 valid PDF), Proxy PDF (404 for fresh user then PUT /api/proxy-directive → GET /api/legal/proxy.pdf 200 valid PDF), Meds (POST reminders — 400 when all times invalid ['8am','morning'], 200 filters invalid keeping only HH:MM ['08:00','20:00'] sorted+unique; GET /api/meds/reminders returns created; GET /api/meds/today returns 2 items with pending>=2 and taken:false; POST /api/meds/intake marks 08:00 taken and reduces pending to 1; intake IS idempotent — 2 POSTs collapse to a single mongo record via upsert on unique key (user_id,reminder_id,date,time); POST /api/meds/intake with unknown reminder_id → 404; POST intake on foreign user's reminder_id → 404; DELETE reminder removes it from /meds/today), Regression (/legal/accept returns updated user with tos_accepted_version, /vault/documents list, /wellness/checkin LLM). FRONTEND (mobile 390x844, gh_session_token injected via add_init_script): standard-home renders, /meds screen (meds-screen), md-add-btn opens modal with md-name/md-dose/md-time-08:00/md-time-20:00 chips, md-save creates XL cards with time box + med-take-{id}-{time}, tap → 'HOTOVO ✓' state + '1× DNES EŠTE UŽIŤ' banner updates, md-speak present, med-del-{id} deletes and item disappears; angel-toggle switches to angel-home with angel-meds tile → navigates to /meds; medicine-cabinet mc-meds-link (alarm icon) → /meds; /legal lg-tos-pdf visible + clickable, tw-generate → tw-pdf button appears; /healthcare-proxy hp-generate → hp-pdf button appears. No React Native / Expo deprecated packages detected on this iteration's surface (meds.tsx uses expo-audio createAudioPlayer/setAudioModeAsync, expo-notifications DAILY trigger web-guarded via Platform.OS check).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase6.py",
+    "/app/test_reports/pytest/pytest_phase6.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: /api/meds/reminders POST returns clean(doc) but doc has already been mutated by insert_one via doc.copy() — the reminder_id set at build time is fine, but consider excluding _id explicitly if the copy() pattern ever changes.",
+    "OPTIONAL: /api/meds/today computes 'day' with datetime.now(timezone.utc).strftime('%Y-%m-%d') — this is a UTC calendar day. A user in UTC+2 taking a 22:00 CEST med will file it against the NEXT UTC day. Consider passing user tz or letting client pass local date.",
+    "OPTIONAL: _make_pdf hard-codes Liberation Sans font paths; on non-Debian bases this would fail. Wrap the FPDF font registration in a try/except with a fallback to core PDF font.",
+    "OPTIONAL: /api/legal/tos.pdf, /legal/testament.pdf, /legal/proxy.pdf accept auth via ?token= query — this is required for browser <a href> download but the token WILL land in server access logs. Consider redacting the token param in the FastAPI/uvicorn access log formatter.",
+    "OPTIONAL: server.py is now 1959 lines — /legal, /meds, /aml, /solidarity should each be extracted into routes modules (already flagged in iteration 4)."
+  ],
+  "critical_code_review_comments": [
+    "meds_add validates times via re.match(r'^\\d{2}:\\d{2}$', t) — accepts '99:99' as valid HH:MM. Consider strict 00-23:00-59 range check. Not blocking — expo-notifications DAILY trigger would throw at schedule time, but backend accepts it.",
+    "meds_intake uses upsert on the (user_id, reminder_id, date, time) tuple with $set of taken_at — this gives idempotency for free (verified) AND updates taken_at on repeat which slightly changes semantics. If audit requires original taken_at, use $setOnInsert for taken_at + $set for a separate updated_at.",
+    "PDF endpoints return 401 without auth (verified) and _auth_pdf gracefully lifts ?token= to a Bearer header before delegating to get_current_user — correct.",
+    "meds delete cascades intakes via db.med_intakes.delete_many({reminder_id}) — good, prevents orphan intake records.",
+    "meds.tsx take() optimistically sets taken:true then calls /api/meds/intake, and on error reloads — good UX pattern for XL-touch senior UI.",
+    "meds.tsx rescheduleLocal() is Platform.OS==='web' guarded — expo-notifications DAILY trigger correctly skipped on web preview (per iteration-5 note)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase6.py (created — 19 pytest cases: TOS/Testament/Proxy PDF + Meds CRUD/intake/idempotency + regression)"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 test_phase6; cumulative: phase1 16 + phase2 12 + phase3 13 + phase4 11 + phase5 14 + phase6 19 = 85 tests across 6 iterations)",
+    "frontend": "100% (meds screen add/take/HOTOVO/delete + md-speak + angel-meds tile nav + mc-meds-link nav + lg-tos-pdf + tw-pdf + hp-pdf all verified on 390x844 mobile viewport)"
+  },
+  "seed_data_creation": "test_phase6.py seeds TWO users via pymongo (sync) — USER_A (TEST_i5_A_*) with angel_mode=true used for happy paths + testament + proxy + meds, USER_B (TEST_i5_B_*) fresh — used for 404 paths and foreign-reminder intake check. Module-scoped fixture teardown deletes both users + user_sessions + legal_testaments + proxy_directives + legal_acceptances + med_reminders + med_intakes + wellness_checkins + documents filtered by TEST_i5_ user_ids. Frontend test used the pre-existing smoke user (user_id=smoketest-user-1, token=smoketok-81bbae6c) which already has TOS accepted — cleaned up its med_reminders/legal_testaments/proxy_directives after test to keep DB pristine for main agent.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "SIX pytest files now live under /app/backend/tests/: backend_test.py (phase1 — 16), test_phase2.py (12), test_phase3.py (13), test_phase4.py (11), test_phase5.py (14 — legal/AML/testament), test_phase6.py (19 — PDF export + meds). Run test_phase6.py with `-o addopts=''` to disable xdist (TestMeds has serial ordering via class-level TestMeds.reminder_id). BASE_URL comes from EXPO_PUBLIC_BACKEND_URL — this key is in /app/frontend/.env, NOT /app/backend/.env, so test files load both dotenv files. FE testing pattern for auth-gated apps: use page.add_init_script(\"window.localStorage.setItem('gh_session_token', TOKEN)\") BEFORE page.goto — plain localStorage.setItem + page.reload() proved unreliable because the initial about:blank origin doesn't persist. Existing smoke user still valid until 2026-08-24 (token smoketok-81bbae6c). /api/register-push 500 with placeholder EMERGENT_PUSH_KEY still EXPECTED. LLM endpoints 5-90s. PDF endpoints ~2-5s each (fpdf + Liberation Sans font).",
+  "rca_of_issue": "N/A — no product bugs. Two test-scaffolding issues encountered and self-corrected: (1) EXPO_PUBLIC_BACKEND_URL missing from backend/.env — added a second load_dotenv() call pointing at /app/frontend/.env; (2) initial FE test failed because localStorage.setItem + page.reload() did not persist the token (about:blank origin) — switched to page.add_init_script() which injects the token on every subsequent navigation and works reliably. The (1) TestRegression assertion originally expected {accepted:true} but /api/legal/accept returns the full updated user object — corrected assertion to accept user_id / tos_accepted_version / version presence."
+}

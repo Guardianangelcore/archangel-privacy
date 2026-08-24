@@ -65,9 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!tok) { setUser(null); return; }
       const res: any = await api('/auth/me');
       setUser(res.user);
-    } catch {
-      await clearToken();
-      setUser(null);
+    } catch (e: any) {
+      // Only clear the session on a real auth rejection — never on transient
+      // network failures (offline, aborted request, server restart).
+      const msg = String(e?.message || '');
+      if (msg.startsWith('401') || msg.startsWith('403')) {
+        await clearToken();
+        setUser(null);
+      }
     }
   }, []);
 

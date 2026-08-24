@@ -118,3 +118,33 @@ New since iteration 2 (all need testing):
 - AI prompts now append compliance note (Art. 50); frontend AI disclosure footers
 - New screen /legal (country chips, disclaimers, TOS view/accept, KYC form, testament generator); Profile → legal link; Solidarity AML banner + error msgs
 - NOTE: existing test users likely lack tos_accepted_version → frontend home shows TOS gate first; accept via testID tos-gate-accept or set field in Mongo.
+
+## Iteration 5 scope (PDF export + med reminders, June 2026)
+- PDF export: GET /api/legal/tos.pdf?language=, /api/legal/testament.pdf, /api/legal/proxy.pdf — auth via Bearer header OR ?token= query. fpdf2 + Liberation fonts (Slovak diacritics OK). Frontend share via src/pdf.ts (web window.open, native FileSystem legacy + expo-sharing) — buttons: lg-tos-pdf, tw-pdf (legal.tsx), hp-pdf (healthcare-proxy.tsx).
+- Medication reminders: /api/meds/reminders CRUD, /api/meds/today (items + pending count), /api/meds/intake. Screen /meds: senior XL UI, big take buttons, TTS read-aloud + auto voice alert, daily LOCAL notifications via expo-notifications (native only). Angel tile "LIEKY" → /meds; alarm icon in medicine-cabinet header.
+- Push logic complete (Option A) — user provides google-services.json at deploy.
+- DB EMPTY after fork — smoke user recreated (see test_credentials.md). Backend verified by curl: tos.pdf 200 36KB, testament.pdf 200 33KB, meds CRUD/today OK.
+
+## Iteration 7 scope (Premium Guardian OS UI overhaul + Survival & Trust features, June 2026)
+UI OVERHAUL (untested until now):
+- New 4-pillar architecture: (tabs)/index.tsx home with pillar grid (testIDs pillar-health/family/legacy/hunter), tab bar (tab-health/family/legacy/hunter), hub screens via PillarHub (hub-health/hub-family/hub-legacy/hub-hunter with hh-*/fs-*/lw-* item rows).
+- Angel Mode radical reset: angel-toggle on home header → angel-home full-screen (angel-jarvis orb, angel-sos, angel-family, angel-doctor, angel-toggle-back exit). Tab bar hidden in angel mode.
+- FIXED by main agent: (tabs)/index.tsx StyleSheet was missing 17 style keys (pillar*, sosPill*, angel*, jarvis*) — added premium dark/gold styles. Also fixed auth refresh(): token no longer cleared on transient network errors (only 401/403).
+NEW FEATURES (all need testing):
+- Border Crosser: GET /api/border/certificate (JSON: holder, meds from cabinet prescription items, did_signature, 14 languages), GET /api/border/certificate.pdf (?token= supported). Screen /border-pass (bp-pdf button), entry hh-border in Health hub.
+- Emergency Wallpaper: GET /api/family/wallpaper.png (?token=) — 1080x1920 PNG with QR (offline JSON payload: blood/allergies/ICE from emergency_profiles). Screen /wallpaper (wp-preview img, wp-download), entry fs-wallpaper in Family hub.
+- Mental Fortress: GET /api/mental/techniques — 6 SK techniques (box, grounding, li4, pc6, yintang, pmr) each with tts_text + disclaimer. Screen /mental-fortress (mf-item-{id} expand, mf-play-{id} TTS via existing /api/voice/tts), entry hh-mental in Health hub.
+- Biometric Will: POST /api/legal/testament/biometric (multipart audio/video only, 50MB max) → sha256 + aml_ledger 'biometric_will' entry + updates legal_testaments.biometric_hash; GET same path → record; GET .../file (?token=) streams; DELETE removes. Screen /biometric-will (bw-record audio via expo-audio, bw-video picker, proof card, bw-delete), entry lw-biometric in Legacy hub.
+- Backend verified by curl: border cert JSON+PDF 200, wallpaper.png 200 (49KB), biometric upload/file/delete OK, mental techniques OK.
+- Auth for tests: user smoketest-user-1, Bearer smoketok-fresh-2026 (TOS accepted). Web login: localStorage.setItem('gh_session_token','smoketok-fresh-2026') then reload.
+
+## Iteration 8 scope (Survival Extensions, June 2026)
+User-reported /api/auth/me ERR_ABORTED splash bug: backend verified healthy (200 local+external); root cause was auth token being cleared on transient network errors — already fixed in iteration 7 (auth.tsx refresh only clears on 401/403). Verified: dashboard loads after token inject.
+NEW (all need testing):
+- Acoustic Threat Detection: POST /api/acoustic-event {kind, db_level} → logs db.acoustic_events + push attempt; GET /api/acoustic-events. Frontend: Angel Mode button testID angel-acoustic (src/acoustic.ts — local mic metering via expo-audio, threshold -8dBFS, on threat POST + route to /fall-verify). Web: metering limited, just verify button toggles without crash.
+- Analog Recovery Kit: GET /api/survival/bible.pdf?token= — 8-section printable PDF (identity/meds/cabinet/waitlist/proxy/legacy/analog crisis techniques/emergency numbers). Frontend: Health hub item hh-bible (one-tap sharePdf, opens PDF in new tab on web).
+- Pharmacy Stock Hunter: GET /api/pharmacy/search?med=&region=SK|CZ (simulated:true, deterministic per med+pharmacy, 6 pharmacies, statuses in/low/out sorted); POST /api/pharmacy/watch; GET /api/pharmacy/watches; POST /api/pharmacy/watches/{id}/scan (hit→status found + push attempt); DELETE watch. Screen /pharmacy-hunter (ph-input, ph-region-SK/CZ, ph-search, ph-watch, ph-scan-{id}, ph-del-{id}), entry ht-pharmacy in Hunter hub. DEMO DÁTA badge shown (no public real-time pharmacy stock API exists for SK/CZ).
+- Guardian Pulse Check (STRICTLY OPT-IN): PrefIn + pulse_check_optin & acoustic_guard; POST /api/pulse/request {target_did} → 403 opt_in_required if target not opted in, 404 unknown DID, 400 self-ping; GET /api/pulse/requests (inbox); POST /api/pulse/requests/{id}/respond {status: ok|need_help} → push to sender; GET /api/pulse/sent. Screen /pulse-check (pc-optin switch, pc-did-input, pc-send, pc-ok-{id}, pc-help-{id}), entry fs-pulsecheck in Family hub, privacy toggle prof-pulse-optin in Profile.
+- FIX: family.tsx enableAngel now router.navigate('/(tabs)') so AngelHome gets focus (was leaving overlapping screens intercepting clicks).
+- Backend curl-verified: pharmacy search 200, bible.pdf 200 37KB, acoustic-event 200, pulse self-ping 400.
+- Smoke user angel_mode reset to false. For pulse opt-in flow testing, a second user may be created in Mongo (users + user_sessions).

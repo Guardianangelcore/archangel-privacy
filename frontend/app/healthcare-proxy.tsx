@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
+import { sharePdf } from '@/src/pdf';
 import { useAuth } from '@/src/auth';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
@@ -114,6 +115,10 @@ export default function HealthcareProxy() {
               <Text style={styles.docHeadText}>DOKUMENT · SHA-256 UKOTVENÝ</Text>
             </View>
             <Text style={styles.docText}>{doc.document_text}</Text>
+            <Pressable testID="hp-pdf" onPress={() => sharePdf('/legal/proxy.pdf', 'guardian_healthcare_proxy.pdf')} style={styles.pdfBtn}>
+              <Ionicons name="share-outline" size={18} color={C.onInverse} />
+              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTÁR / NEMOCNICA</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -141,4 +146,6 @@ const styles = StyleSheet.create({
   docHead: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: S.md, backgroundColor: C.brandTer },
   docHeadText: { color: C.brand, fontWeight: '900', letterSpacing: 1, fontSize: 11 },
   docText: { padding: S.md, fontSize: 12, lineHeight: 18, color: C.fg, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
+  pdfBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.inverse, paddingVertical: S.md, margin: S.md },
+  pdfBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
 });

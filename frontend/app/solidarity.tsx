@@ -77,6 +77,11 @@ export default function Solidarity() {
         </Text>
       </Pressable>
       {err ? <Text style={styles.errText}>{err}</Text> : null}
+      <Pressable testID="sol-dignity-link" onPress={() => router.push('/dignity')} style={styles.dignityLink}>
+        <Ionicons name="rose-outline" size={16} color={C.brand} />
+        <Text style={styles.dignityLinkText}>FINAL DIGNITY · POHREBNÝ FOND (SUB-ÚČET)</Text>
+        <Ionicons name="chevron-forward" size={16} color={C.brand} />
+      </Pressable>
       <FlatList
         data={items}
         keyExtractor={i => i.campaign_id}
@@ -157,6 +162,8 @@ const styles = StyleSheet.create({
   banner: { backgroundColor: C.warn, paddingVertical: 6, alignItems: 'center', paddingHorizontal: S.md },
   bannerText: { color: C.onWarn, fontWeight: '900', letterSpacing: 1, fontSize: 10, textAlign: 'center' },
   errText: { color: C.error, fontWeight: '900', fontSize: 11, letterSpacing: 0.5, paddingHorizontal: S.lg, paddingTop: S.sm },
+  dignityLink: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: S.lg, marginTop: S.sm, borderWidth: 1.5, borderColor: C.brand, backgroundColor: C.brandTer, paddingHorizontal: S.md, paddingVertical: 10 },
+  dignityLinkText: { flex: 1, color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   empty: { textAlign: 'center', color: C.onS3, marginTop: 60, letterSpacing: 2, fontWeight: '800' },
   card: { borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, marginBottom: S.md },
   cardTitle: { fontSize: 17, fontWeight: '900', color: C.fg, letterSpacing: 1 },

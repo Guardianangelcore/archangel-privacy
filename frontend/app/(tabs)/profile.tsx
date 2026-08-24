@@ -14,6 +14,12 @@ export default function Profile() {
   const lang: Lang = (user?.language as Lang) || 'sk';
   const [profile, setProfile] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const deleteAccount = async () => {
+    try { await api('/auth/account', { method: 'DELETE' }); } catch (e) { console.log(e); }
+    await signOut();
+  };
 
   const load = useCallback(async () => {
     try { setProfile(await api('/emergency-profile')); } catch (e) { console.log(e); }
@@ -80,6 +86,14 @@ export default function Profile() {
             <Text style={styles.guardSub}>08:00–21:00 · alarm rodine</Text>
           </View>
           <Switch testID="prof-inactivity-guard" value={!!(user as any)?.inactivity_guard} onValueChange={v => setPref({ inactivity_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
+        </View>
+        <View style={styles.guardRow}>
+          <Ionicons name="heart-half-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>GUARDIAN PULSE CHECK</Text>
+            <Text style={styles.guardSub}>Tichý ping od rodiny · prísne opt-in, kedykoľvek vypnete</Text>
+          </View>
+          <Switch testID="prof-pulse-optin" value={!!(user as any)?.pulse_check_optin} onValueChange={v => setPref({ pulse_check_optin: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
         {!!(user as any)?.inactivity_guard && (
           <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
@@ -148,6 +162,30 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{t('legal_hub', lang).toUpperCase()} · 2026</Text>
         </Pressable>
 
+        <Pressable testID="dignity-btn" onPress={() => router.push('/dignity')} style={styles.qrBtn}>
+          <Ionicons name="rose-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>FINAL DIGNITY · POHREBNÝ FOND</Text>
+        </Pressable>
+
+        {!confirmDelete ? (
+          <Pressable testID="delete-account-btn" onPress={() => setConfirmDelete(true)} style={styles.delBtn}>
+            <Ionicons name="trash-outline" size={18} color={C.error} />
+            <Text style={styles.delBtnText}>VYMAZAŤ ÚČET A VŠETKY DÁTA</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.delConfirm}>
+            <Text style={styles.delConfirmText}>NAOZAJ VYMAZAŤ ÚČET? TÁTO AKCIA JE NEVRATNÁ — ODSTRÁNIA SA VŠETKY VAŠE DÁTA.</Text>
+            <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
+              <Pressable testID="delete-account-cancel" onPress={() => setConfirmDelete(false)} style={[styles.delAction, { borderColor: C.borderStrong }]}>
+                <Text style={styles.delActionText}>ZRUŠIŤ</Text>
+              </Pressable>
+              <Pressable testID="delete-account-confirm" onPress={deleteAccount} style={[styles.delAction, { backgroundColor: C.error, borderColor: C.error }]}>
+                <Text style={[styles.delActionText, { color: C.onError }]}>ÁNO, VYMAZAŤ</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         <View style={styles.credit}>
           <Text style={styles.creditTitle}>ABOUT</Text>
           <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Vision & original design: <Text style={{ fontWeight: '900' }}>Guardian Angel</Text>.{'\n'}Open Source · AGPL-v3 · Zero-Knowledge.</Text>
@@ -183,6 +221,12 @@ const styles = StyleSheet.create({
   saveBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 15 },
   qrBtn: { marginTop: S.md, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong, paddingVertical: S.md, backgroundColor: C.bg },
   qrBtnText: { color: C.fg, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
+  delBtn: { marginTop: S.xl, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.error, paddingVertical: S.md },
+  delBtnText: { color: C.error, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
+  delConfirm: { marginTop: S.xl, borderWidth: 2, borderColor: C.error, padding: S.md },
+  delConfirmText: { color: C.error, fontWeight: '900', fontSize: 12, lineHeight: 18 },
+  delAction: { flex: 1, alignItems: 'center', paddingVertical: S.md, borderWidth: 2 },
+  delActionText: { fontWeight: '900', letterSpacing: 1, fontSize: 12, color: C.fg },
   credit: { marginTop: S.xl, padding: S.md, borderTopWidth: 1.5, borderColor: C.borderStrong },
   creditTitle: { fontWeight: '900', letterSpacing: 2, fontSize: 11, color: C.fg },
   creditText: { marginTop: 6, color: C.onS3, fontSize: 12, lineHeight: 18 },

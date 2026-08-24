@@ -32,6 +32,9 @@ A sovereign, AI-driven mobile OS for medical dignity, senior safety, and communi
 26. **Decentralized AML** — DID-anchored KYC attestation (`POST /api/aml/kyc`), tamper-evident hash-chain ledger (`aml_ledger`, smart-contract simulation), enforced in Solidarity Hub: €150/day unverified, €5000/day verified, max 10 tx/day, campaigns require KYC.
 27. **International Testament Engine** — `POST /api/legal/testament`: civil_law_holograph (SK § 476 OZ, handwritten), common_law_uk (Wills Act 1837 s.9, 2 witnesses, holograph invalid in E&W), common_law (US, 2 witnesses); SHA-256 anchored.
 28. **AI Compliance (2026)** — Art. 50 compliance note appended to all LLM system prompts (translator, physio, wellness, advice); AI disclosure footers in UI.
+29. **PDF Export** — `GET /api/legal/{tos,testament,proxy}.pdf` (fpdf2 + Liberation fonts, SK diacritics; auth via header or ?token=); share buttons in Legal & Healthcare Proxy screens (expo-sharing native, new tab web).
+30. **Medication Reminders (Angel)** — `/meds`: senior XL UI, big "Užil(a) som" buttons, TTS voice alerts + auto read-aloud, daily local notifications (expo-notifications DAILY trigger, native); APIs `/api/meds/reminders|today|intake`. Angel tile LIEKY → /meds.
+31. **Final Dignity & Funeral Fund** — `/dignity`: funeral savings sub-account (mocked rails EUR/CZK/Crypto + real AML ledger), automated monthly recurring transfers, funds LOCKED until death verification (SIMULATED state registry via certificate number — production hook), release to funeral director or primary proxy (auto-default from proxy-directive), Final Wishes Vault (burial type, music, guests) with SHA-256. Links from Profile, Solidarity, Legal.
 
 ## Integrations
 - **Auth**: Emergent Google Auth (`/api/auth/session`, `/api/auth/me`, `/api/auth/logout`)
@@ -76,9 +79,26 @@ A sovereign, AI-driven mobile OS for medical dignity, senior safety, and communi
 | POST | `/api/legal/accept` | TOS acceptance (gate) |
 | POST/GET | `/api/aml/kyc`, `/api/aml/status` | DID KYC attestation + AML status |
 | POST/GET | `/api/legal/testament` | International will generator |
+| GET | `/api/legal/{tos,testament,proxy}.pdf` | PDF export (header or ?token auth) |
+| CRUD | `/api/meds/reminders`, `/api/meds/today`, `/api/meds/intake` | Medication reminders |
+| GET/POST/PUT | `/api/dignity/*` | Funeral fund, plan, beneficiary, wishes, verify-death, release |
 
 ## Design
 Brutalist Mobile Light — sharp corners (radius 0), 1.5–2 pt borders, monochrome + signal red (#D90429). Green brand (#1B4332). See `/app/design_guidelines.json`.
 
 ## Author
 Guardian Angel — sole original Visionary and Author. AGPL-v3.
+
+## Iteration 7-8 (June 2026, fork) — Premium OS validated + Survival & Trust + Survival Extensions
+- VALIDATED & FIXED Premium Guardian OS overhaul: added 17 missing StyleSheet keys in (tabs)/index.tsx (pillar grid + Angel Mode were rendering unstyled); auth.tsx refresh() no longer clears session on transient network errors (fixes reported splash /auth/me failure); family.tsx enableAngel now navigates to (tabs) index (fixed click interception).
+- NEW FEATURES (all tested, 17/17 + 21/21 backend tests pass, all UI flows pass):
+  1. Border Crosser (Health): /api/border/certificate(.pdf) — 14-language medication certificate signed with DID. Screen /border-pass.
+  2. Emergency Wallpaper (Family): /api/family/wallpaper.png — 1080x1920 lockscreen PNG with offline QR (blood/allergies/ICE). Screen /wallpaper.
+  3. Mental Fortress (Health/Physio): /api/mental/techniques — 6 crisis techniques (breathing, grounding, acupressure LI4/PC6/Yintang, PMR) with TTS playback. Screen /mental-fortress.
+  4. Biometric Will (Legacy): /api/legal/testament/biometric — audio/video statement → SHA-256 + tamper-evident ledger notarization. Screen /biometric-will (expo-audio recording + video picker, permission contract).
+  5. Acoustic Threat Detection (Angel Mode): src/acoustic.ts local mic metering (no audio leaves device) → /api/acoustic-event + Fall-Verify flow. Button angel-acoustic in Angel home.
+  6. Analog Recovery Kit: /api/survival/bible.pdf — 8-section printable Survival Bible. One-tap hh-bible in Health hub.
+  7. Pharmacy Stock Hunter (Hunter): /api/pharmacy/search + watch/scan lifecycle — SIMULATED inventory (no public SK/CZ stock API exists; badged DEMO DÁTA in UI). Screen /pharmacy-hunter.
+  8. Guardian Pulse Check (Family): STRICTLY OPT-IN silent ping (/api/pulse/*, 403 without target opt-in). Privacy toggles in Profile (prof-pulse-optin) and /pulse-check screen.
+- Test users: smoketest-user-1 (smoketok-fresh-2026), smoketest-user-2 (smoketok-fresh-2026-u2) — see memory/test_credentials.md.
+- Deferred (unchanged): real IPFS, ZK-proofs, PDF-OCR pipeline, RTL, real Stripe/crypto, real BLE mesh, real pharmacy stock API integration, server.py modular refactor.

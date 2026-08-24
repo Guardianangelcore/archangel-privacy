@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { api } from '@/src/api';
+import { sharePdf } from '@/src/pdf';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -142,6 +143,10 @@ export default function Legal() {
           <Ionicons name={showTos ? 'chevron-up' : 'document-text-outline'} size={16} color={C.fg} />
           <Text style={styles.secBtnText}>{showTos ? 'SKRYŤ' : 'ZOBRAZIŤ CELÉ PODMIENKY'}</Text>
         </Pressable>
+        <Pressable testID="lg-tos-pdf" onPress={() => sharePdf(`/legal/tos.pdf?language=${lang}`, 'guardian_tos.pdf')} style={[styles.secBtn, { marginTop: S.sm }]}>
+          <Ionicons name="share-outline" size={16} color={C.fg} />
+          <Text style={styles.secBtnText}>{t('share_pdf', lang).toUpperCase()}</Text>
+        </Pressable>
         {showTos && tosText ? <Text style={styles.tosText}>{tosText}</Text> : null}
         {!tosOk && (
           <Pressable testID="lg-tos-accept" onPress={acceptTos} style={styles.priBtn}>
@@ -197,8 +202,17 @@ export default function Legal() {
               <Text style={styles.docHeadText}>{String(testDoc.format).toUpperCase()} · SHA-256 UKOTVENÉ</Text>
             </View>
             <Text style={styles.docText}>{testDoc.document_text}</Text>
+            <Pressable testID="tw-pdf" onPress={() => sharePdf('/legal/testament.pdf', 'guardian_testament.pdf')} style={styles.pdfBtn}>
+              <Ionicons name="share-outline" size={18} color={C.onInverse} />
+              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTÁR / RODINA</Text>
+            </Pressable>
           </View>
         ) : null}
+
+        <Pressable testID="lg-dignity-link" onPress={() => router.push('/dignity')} style={[styles.secBtn, { marginTop: S.lg }]}>
+          <Ionicons name="rose-outline" size={16} color={C.fg} />
+          <Text style={styles.secBtnText}>FINAL DIGNITY · POHREBNÝ FOND A POSLEDNÉ PRIANIA</Text>
+        </Pressable>
 
         <Text style={styles.footer}>⚠ {t('ai_disclosure', lang)}</Text>
       </ScrollView>
@@ -237,5 +251,7 @@ const styles = StyleSheet.create({
   docHead: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: S.md, backgroundColor: C.brandTer },
   docHeadText: { color: C.brand, fontWeight: '900', letterSpacing: 1, fontSize: 11 },
   docText: { padding: S.md, fontSize: 12, lineHeight: 18, color: C.fg, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
+  pdfBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.inverse, paddingVertical: S.md, margin: S.md },
+  pdfBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
   footer: { marginTop: S.xl, fontSize: 9, letterSpacing: 1, color: C.onS3, fontWeight: '800', textAlign: 'center' },
 });

@@ -131,6 +131,14 @@ export const T: Dict = {
   testament: { sk: 'Závet / Posledná vôľa', cs: 'Závěť / Poslední vůle', en: 'Will / Testament', de: 'Testament' },
   jurisdiction: { sk: 'Jurisdikcia', cs: 'Jurisdikce', en: 'Jurisdiction', de: 'Gerichtsbarkeit' },
   ai_disclosure: { sk: 'AI OBSAH · LEN INFORMAČNÉ · NIE JE ODBORNÁ RADA', cs: 'AI OBSAH · POUZE INFORMAČNÍ · NENÍ ODBORNÁ RADA', en: 'AI CONTENT · INFORMATIONAL ONLY · NOT PROFESSIONAL ADVICE', de: 'KI-INHALT · NUR INFORMATIV · KEINE FACHBERATUNG' },
+  meds_reminders: { sk: 'Lieky dnes', cs: 'Léky dnes', en: 'Meds today', de: 'Medikamente heute' },
+  taken_btn: { sk: 'Užil(a) som', cs: 'Užil(a) jsem', en: 'I took it', de: 'Eingenommen' },
+  done_taken: { sk: 'Hotovo', cs: 'Hotovo', en: 'Done', de: 'Erledigt' },
+  read_aloud: { sk: 'Prečítať nahlas', cs: 'Přečíst nahlas', en: 'Read aloud', de: 'Vorlesen' },
+  add_reminder: { sk: 'Pridať liek', cs: 'Přidat lék', en: 'Add medication', de: 'Medikament hinzufügen' },
+  dose: { sk: 'Dávka', cs: 'Dávka', en: 'Dose', de: 'Dosis' },
+  share_pdf: { sk: 'Zdieľať PDF', cs: 'Sdílet PDF', en: 'Share PDF', de: 'PDF teilen' },
+  all_taken: { sk: 'Všetko užité', cs: 'Vše užito', en: 'All taken', de: 'Alles eingenommen' },
   colors: { sk: '', cs: '', en: '', de: '' },
 };
 

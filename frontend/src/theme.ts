@@ -1,24 +1,26 @@
-// Guardian Health & Angel — design tokens (Brutalist Mobile Light)
+// Guardian Health & Angel — design tokens (Premium Minimalist Dark · Guardian Gold)
 export const C = {
-  bg: '#FFFFFF',
-  fg: '#111111',
-  surface2: '#F2F2F2',
-  surface3: '#E5E5E5',
-  onS3: '#333333',
-  inverse: '#111111',
-  onInverse: '#FFFFFF',
-  brand: '#1B4332',
-  brandPri: '#2D6A4F',
-  brandSec: '#40916C',
-  brandTer: '#D8F3DC',
-  warn: '#E9C46A',
-  onWarn: '#111111',
-  error: '#D90429',
+  bg: '#121212',
+  fg: '#F5F5F5',
+  surface2: '#1C1C1E',
+  surface3: '#2C2C2E',
+  onS3: '#D1D1D6',
+  inverse: '#F5F5F5',
+  onInverse: '#121212',
+  brand: '#D4AF37',
+  brandPri: '#D4AF37',
+  brandSec: '#B8972E',
+  brandTer: '#3A311D',
+  warn: '#E6A23C',
+  onWarn: '#121212',
+  error: '#C25450',
   onError: '#FFFFFF',
-  info: '#4A4E69',
-  border: '#E5E5E5',
-  borderStrong: '#111111',
+  info: '#8E8E93',
+  border: '#2C2C2E',
+  borderStrong: '#48484A',
 };
+
+export const R = { sm: 6, md: 12, lg: 24, pill: 999 };
 
 export const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 };
 

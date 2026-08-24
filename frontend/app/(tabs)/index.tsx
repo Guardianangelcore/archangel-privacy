@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useAuth } from '@/src/auth';
 import { api } from '@/src/api';
-import { C, S } from '@/src/theme';
+import { useAcousticGuard } from '@/src/acoustic';
+import { C, S, R } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+
+const ANGEL_BG = 'https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
 
 async function fireBeacon() {
   let lat: number | null = null, lng: number | null = null;
@@ -65,67 +69,53 @@ export default function Home() {
             <Text style={styles.brand}>GUARDIAN</Text>
             {beaconSent && <View testID="beacon-dot" style={styles.beaconDot} />}
           </View>
-          <Text style={styles.brandSub}>{t('standard_mode', lang).toUpperCase()}</Text>
+          <Text style={styles.brandSub}>SOVEREIGN SURVIVAL OS</Text>
         </Pressable>
-        <Pressable testID="angel-toggle" onPress={toggleAngel} disabled={busy} style={styles.angelToggle}>
-          <Ionicons name="accessibility-outline" size={18} color={C.onInverse} />
-          <Text style={styles.angelToggleText}>{t('angel_mode', lang).toUpperCase()}</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
+          <Pressable testID="angel-toggle" onPress={toggleAngel} disabled={busy} hitSlop={8} style={styles.angelToggle}>
+            <Ionicons name="accessibility-outline" size={18} color={C.brand} />
+          </Pressable>
+          <Pressable testID="home-profile" onPress={() => router.push('/(tabs)/profile')} hitSlop={8}>
+            <Ionicons name="settings-outline" size={22} color={C.onS3} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.greeting}>HELLO, {(user?.name || user?.email || 'GUARDIAN').toUpperCase()}</Text>
-        <Text style={styles.did}>DID: {user?.did}</Text>
+        <Text style={styles.greeting}>Dobrý deň,{'\n'}{(user?.name || 'Guardian').split(' ')[0]}.</Text>
 
-        <Text style={styles.section}>{t('sec_health', lang).toUpperCase()}</Text>
-        <View style={styles.cardGrid}>
-          <ActionCard testID="action-vault" label={t('vault', lang)} icon="lock-closed-outline" onPress={() => router.push('/(tabs)/vault')} />
-          <ActionCard testID="action-translate" label={t('translate', lang)} icon="language-outline" onPress={() => router.push('/translate')} />
-          <ActionCard testID="action-waitlist" label={t('waitlist', lang)} icon="calendar-outline" onPress={() => router.push('/(tabs)/waitlist')} />
-          <ActionCard testID="action-donor" label={t('donor_card', lang)} icon="heart-outline" onPress={() => router.push('/emergency-qr')} />
+        <View style={styles.pillarGrid}>
+          <PillarTile testID="pillar-health" icon="heart" title="Health Hub" sub="Trezor · AI prekladač · Physio" onPress={() => router.navigate('/(tabs)/health')} />
+          <PillarTile testID="pillar-family" icon="people" title="Family Shield" sub="Angel Mode · Family Pulse" onPress={() => router.navigate('/(tabs)/family')} />
+          <PillarTile testID="pillar-legacy" icon="rose" title="Legacy & Wealth" sub="Solidarita · Závet · Fond" onPress={() => router.navigate('/(tabs)/legacy')} />
+          <PillarTile testID="pillar-hunter" icon="search" title="The Hunter" sub="Termíny · Zásoby · Blackout" onPress={() => router.navigate('/(tabs)/hunter')} />
         </View>
 
-        <Text style={styles.section}>{t('sec_angel', lang).toUpperCase()}</Text>
-        <View style={styles.cardGrid}>
-          <ActionCard testID="action-wellness" label={t('wellness_check', lang)} icon="sparkles-outline" onPress={() => router.push('/wellness')} />
-          <ActionCard testID="action-family-dash" label={t('family_dashboard', lang)} icon="pulse-outline" onPress={() => router.push('/family-dashboard')} />
-          <ActionCard testID="action-scam" label={t('scam_shield', lang)} icon="shield-half-outline" onPress={() => router.push('/scam-shield')} />
-          <ActionCard testID="action-proxy" label={t('healthcare_proxy', lang)} icon="document-lock-outline" onPress={() => router.push('/healthcare-proxy')} />
-        </View>
-
-        <Text style={styles.section}>{t('sec_community', lang).toUpperCase()}</Text>
-        <View style={styles.cardGrid}>
-          <ActionCard testID="action-solidarity" label={t('solidarity', lang)} icon="people-outline" onPress={() => router.push('/solidarity')} />
-          <ActionCard testID="action-respect" label={t('respect_map', lang)} icon="star-outline" onPress={() => router.push('/respect-map')} />
-          <ActionCard testID="action-marketplace" label={t('marketplace', lang)} icon="briefcase-outline" onPress={() => router.push('/marketplace')} />
-          <ActionCard testID="action-barter" label={t('barter', lang)} icon="swap-horizontal-outline" onPress={() => router.push('/barter')} />
-        </View>
-
-        <Text style={styles.section}>{t('sec_survival', lang).toUpperCase()}</Text>
-        <View style={styles.cardGrid}>
-          <ActionCard testID="action-cabinet" label={t('medicine_cabinet', lang)} icon="medkit-outline" onPress={() => router.push('/medicine-cabinet')} />
-          <ActionCard testID="action-survival" label={t('survival_auditor', lang)} icon="cube-outline" onPress={() => router.push('/survival-auditor')} />
-          <ActionCard testID="action-physio" label={t('physio', lang)} icon="body-outline" onPress={() => router.push('/physio')} />
-          <ActionCard testID="action-blackout" label={t('blackout', lang)} icon="flash-off-outline" onPress={() => router.push('/blackout')} />
-        </View>
-
-        <Text style={styles.section}>SAFETY</Text>
-        <Pressable testID="simulate-fall" onPress={() => router.push('/fall-verify')} style={styles.fallBtn}>
-          <Ionicons name="warning-outline" size={22} color={C.onError} />
-          <Text style={styles.fallBtnText}>{t('simulate_fall', lang).toUpperCase()}</Text>
+        <Pressable testID="fab-emergency-qr" onPress={() => router.push('/emergency-qr')} style={styles.sosPill}>
+          <Ionicons name="qr-code-outline" size={18} color={C.onError} />
+          <Text style={styles.sosPillText}>{t('emergency_qr', lang).toUpperCase()}</Text>
         </Pressable>
-        <Text style={styles.beaconHint}>◉ TICHÝ MAJÁK: PODRŽTE LOGO GUARDIAN 1 SEK.</Text>
+        <Text style={styles.beaconHint}>◉ Tichý maják: podržte logo GUARDIAN 1 sekundu</Text>
       </ScrollView>
-
-      <Pressable
-        testID="fab-emergency-qr"
-        onPress={() => router.push('/emergency-qr')}
-        style={styles.fab}
-      >
-        <Ionicons name="qr-code-outline" size={22} color={C.onError} />
-        <Text style={styles.fabText}>{t('emergency_qr', lang).toUpperCase()}</Text>
-      </Pressable>
     </SafeAreaView>
+  );
+}
+
+function PillarTile({ testID, icon, title, sub, onPress }: any) {
+  const press = () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onPress();
+  };
+  return (
+    <Pressable testID={testID} onPress={press} style={({ pressed }) => [styles.pillar, pressed && { backgroundColor: C.surface3 }]}>
+      <View style={styles.pillarIcon}>
+        <Ionicons name={icon} size={26} color={C.brand} />
+      </View>
+      <View>
+        <Text style={styles.pillarTitle}>{title}</Text>
+        <Text style={styles.pillarSub}>{sub}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -163,88 +153,130 @@ function TosGate({ lang, setUser }: any) {
   );
 }
 
-function ActionCard({ label, icon, onPress, testID }: any) {
-  return (
-    <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.card, pressed && { backgroundColor: C.surface3 }]}>
-      <Ionicons name={icon} size={28} color={C.fg} />
-      <Text style={styles.cardLabel}>{label.toUpperCase()}</Text>
-    </Pressable>
-  );
-}
-
 function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
-  return (
-    <SafeAreaView testID="angel-home" style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
-      <View style={styles.angelHeader}>
-        <Pressable testID="angel-beacon" onLongPress={onBeacon} delayLongPress={700}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={styles.angelHeaderText}>{t('angel_mode', lang).toUpperCase()}</Text>
-            {beaconSent && <View style={styles.beaconDot} />}
-          </View>
-        </Pressable>
-        <Pressable testID="angel-toggle-back" onPress={onToggle} style={styles.angelToggleBack}>
-          <Text style={styles.angelToggleBackText}>{t('standard_mode', lang).toUpperCase()}</Text>
-        </Pressable>
-      </View>
-      <Pressable testID="angel-wellness-banner" onPress={() => router.push('/wellness')} style={styles.angelWellness}>
-        <Ionicons name="sparkles" size={26} color={C.brand} />
-        <Text style={styles.angelWellnessText}>{t('how_feel_today', lang).toUpperCase()}</Text>
-        <Ionicons name="chevron-forward" size={22} color={C.brand} />
-      </Pressable>
-      <View style={styles.angelGrid}>
-        <AngelTile testID="angel-sos" label={t('sos', lang)} icon="alert" bg={C.error} fg={C.onError} onPress={() => router.push('/fall-verify')} />
-        <AngelTile testID="angel-family" label={t('call_family', lang)} icon="call" bg={C.brand} fg={C.onInverse} onPress={() => router.push('/emergency-qr')} />
-        <AngelTile testID="angel-meds" label={t('medications', lang)} icon="medkit" bg={C.inverse} fg={C.onInverse} onPress={() => router.push('/(tabs)/profile')} />
-        <AngelTile testID="angel-docs" label={t('documents', lang)} icon="document" bg={C.warn} fg={C.onWarn} onPress={() => router.push('/(tabs)/vault')} />
-      </View>
-    </SafeAreaView>
-  );
-}
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    scale.value = withRepeat(withSequence(withTiming(1.07, { duration: 1200 }), withTiming(1, { duration: 1200 })), -1);
+  }, [scale]);
+  const pulse = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-function AngelTile({ label, icon, bg, fg, onPress, testID }: any) {
+  // Acoustic Threat Detection — local-only mic metering; on threat: log + Fall-Verify flow
+  const acoustic = useAcousticGuard(async (dbLevel: number) => {
+    try { await api('/acoustic-event', { method: 'POST', body: JSON.stringify({ kind: 'loud_noise', db_level: dbLevel }) }); } catch {}
+    router.push('/fall-verify');
+  });
+
+  const callFamily = async () => {
+    try {
+      const prof: any = await api('/emergency-profile');
+      if (prof?.emergency_contact_phone) {
+        Linking.openURL(`tel:${prof.emergency_contact_phone}`);
+        return;
+      }
+    } catch {}
+    router.push('/emergency-qr');
+  };
+
   return (
-    <Pressable testID={testID} onPress={onPress} style={[styles.angelTile, { backgroundColor: bg }]}>
-      <Ionicons name={icon} size={56} color={fg} />
-      <Text style={[styles.angelTileText, { color: fg }]}>{label.toUpperCase()}</Text>
-    </Pressable>
+    <View testID="angel-home" style={{ flex: 1, backgroundColor: C.bg }}>
+      <ImageBackground source={{ uri: ANGEL_BG }} style={{ flex: 1 }} imageStyle={{ opacity: 0.55 }}>
+        <View style={styles.angelScrim}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+            <View style={styles.angelTop}>
+              <Pressable testID="angel-beacon" onLongPress={onBeacon} delayLongPress={700} hitSlop={10}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.angelWordmark}>GUARDIAN ANGEL</Text>
+                  {beaconSent && <View style={styles.beaconDot} />}
+                </View>
+              </Pressable>
+              <Pressable testID="angel-toggle-back" onPress={onToggle} hitSlop={10} style={styles.angelExit}>
+                <Ionicons name="close" size={22} color={C.fg} />
+              </Pressable>
+            </View>
+            <View style={styles.acousticRow}>
+              <Pressable
+                testID="angel-acoustic"
+                onPress={acoustic.toggle}
+                style={[styles.acousticBtn, acoustic.active && styles.acousticBtnOn]}
+              >
+                <Ionicons name={acoustic.active ? 'ear' : 'ear-outline'} size={16} color={acoustic.active ? C.onInverse : C.brand} />
+                <Text style={[styles.acousticText, acoustic.active && { color: C.onInverse }]}>
+                  {acoustic.active ? 'STRÁŽIM ZVUK — LOKÁLNE' : 'AKUSTICKÝ STRÁŽCA'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.angelCenter}>
+              <Animated.View style={[styles.jarvisOrbOuter, pulse]}>
+                <Pressable
+                  testID="angel-jarvis"
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+                    router.push('/wellness');
+                  }}
+                  style={styles.jarvisOrb}
+                >
+                  <Ionicons name="mic" size={64} color={C.onInverse} />
+                </Pressable>
+              </Animated.View>
+              <Text style={styles.jarvisLabel}>HOVORIŤ S JARVISOM</Text>
+            </View>
+
+            <View style={styles.angelBottom}>
+              <Pressable testID="angel-sos" onPress={() => router.push('/fall-verify')} style={[styles.angelEmg, { backgroundColor: C.error }]}>
+                <Ionicons name="alert" size={44} color={C.onError} />
+              </Pressable>
+              <Pressable testID="angel-family" onPress={callFamily} style={styles.angelEmg}>
+                <Ionicons name="call" size={44} color={C.brand} />
+              </Pressable>
+              <Pressable testID="angel-doctor" onPress={() => router.navigate('/(tabs)/hunter')} style={styles.angelEmg}>
+                <Ionicons name="medkit" size={44} color={C.brand} />
+              </Pressable>
+            </View>
+          </SafeAreaView>
+        </View>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse, borderBottomWidth: 2, borderBottomColor: C.inverse },
-  brand: { color: C.onInverse, fontSize: 22, fontWeight: '900', letterSpacing: 2 },
-  brandSub: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, marginTop: 2 },
-  angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.onInverse, paddingHorizontal: S.md, paddingVertical: 8 },
-  angelToggleText: { color: C.onInverse, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
+  brand: { color: C.fg, fontSize: 22, fontWeight: '900', letterSpacing: 2 },
+  brandSub: { color: C.info, fontSize: 10, letterSpacing: 2, marginTop: 2 },
+  angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.sm, paddingHorizontal: S.md, paddingVertical: 8 },
   body: { padding: S.lg, paddingBottom: 120 },
-  greeting: { fontSize: 20, fontWeight: '900', color: C.fg, letterSpacing: 1 },
-  did: { fontSize: 10, color: C.onS3, marginTop: 4, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), letterSpacing: 0.5 },
-  section: { marginTop: S.xl, marginBottom: S.md, fontSize: 11, letterSpacing: 2, color: C.fg, fontWeight: '800' },
-  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md },
-  card: { width: '48%', aspectRatio: 1.2, padding: S.md, borderWidth: 1.5, borderColor: C.borderStrong, backgroundColor: C.bg, justifyContent: 'space-between' },
-  cardLabel: { fontWeight: '900', letterSpacing: 1.5, fontSize: 13, color: C.fg },
-  fallBtn: { flexDirection: 'row', alignItems: 'center', gap: S.sm, backgroundColor: C.error, paddingHorizontal: S.lg, paddingVertical: S.lg, borderWidth: 2, borderColor: C.borderStrong },
-  fallBtnText: { color: C.onError, fontWeight: '900', letterSpacing: 1.5, fontSize: 14 },
-  fab: { position: 'absolute', bottom: 88, right: S.lg, backgroundColor: C.error, paddingHorizontal: S.lg, paddingVertical: S.md, flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 2, borderColor: C.borderStrong },
-  fabText: { color: C.onError, fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  greeting: { fontSize: 26, fontWeight: '900', color: C.fg, letterSpacing: 0.5, lineHeight: 34 },
+  pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginTop: S.xl },
+  pillar: { width: '48%', flexGrow: 1, minHeight: 156, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: S.lg, justifyContent: 'space-between', gap: S.lg },
+  pillarIcon: { width: 48, height: 48, borderRadius: R.pill, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center' },
+  pillarTitle: { color: C.fg, fontWeight: '800', fontSize: 16, letterSpacing: 0.3 },
+  pillarSub: { color: C.info, fontSize: 11, marginTop: 4, lineHeight: 15 },
+  sosPill: { marginTop: S.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, backgroundColor: C.error, borderRadius: R.pill, paddingVertical: S.lg, minHeight: 52 },
+  sosPillText: { color: C.onError, fontWeight: '900', letterSpacing: 2, fontSize: 13 },
   beaconDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.error },
-  beaconHint: { marginTop: S.md, fontSize: 9, letterSpacing: 1, color: C.onS3, fontWeight: '700' },
+  beaconHint: { marginTop: S.md, fontSize: 9, letterSpacing: 1, color: C.onS3, fontWeight: '700', textAlign: 'center' },
   tosHead: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse },
   tosHeadText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1, fontSize: 14 },
   tosBanner: { backgroundColor: C.warn, padding: S.md },
   tosBannerText: { color: C.onWarn, fontWeight: '900', fontSize: 10, letterSpacing: 0.5 },
   tosBody: { fontSize: 12, lineHeight: 18, color: C.fg, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
-  tosAccept: { backgroundColor: C.brand, paddingVertical: S.lg, alignItems: 'center', margin: S.lg, borderWidth: 2, borderColor: C.borderStrong },
+  tosAccept: { backgroundColor: C.brand, paddingVertical: S.lg, alignItems: 'center', margin: S.lg, borderRadius: R.sm },
   tosAcceptText: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 15 },
-  // Angel
-  angelHeader: { paddingHorizontal: S.lg, paddingVertical: S.lg, backgroundColor: C.inverse, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  angelHeaderText: { color: C.onInverse, fontWeight: '900', fontSize: 20, letterSpacing: 2 },
-  angelToggleBack: { borderWidth: 2, borderColor: C.onInverse, paddingHorizontal: S.md, paddingVertical: 10 },
-  angelToggleBackText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
-  angelGrid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
-  angelWellness: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.brandTer, borderWidth: 2, borderColor: C.brand, paddingHorizontal: S.lg, paddingVertical: S.lg, margin: S.md },
-  angelWellnessText: { flex: 1, fontWeight: '900', letterSpacing: 1, color: C.brand, fontSize: 16 },
-  angelTile: { width: '50%', height: '50%', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong, gap: S.md, padding: S.md },
-  angelTileText: { fontSize: 24, fontWeight: '900', letterSpacing: 2, textAlign: 'center' },
+  // Angel Mode (radical reset)
+  angelScrim: { flex: 1, backgroundColor: 'rgba(18,18,18,0.6)' },
+  angelTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: S.lg, paddingTop: S.md },
+  angelWordmark: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 14 },
+  angelExit: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(44,44,46,0.85)', alignItems: 'center', justifyContent: 'center' },
+  acousticRow: { alignItems: 'center', marginTop: S.md },
+  acousticBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.lg, minHeight: 44, backgroundColor: 'rgba(18,18,18,0.55)' },
+  acousticBtnOn: { backgroundColor: C.brand },
+  acousticText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
+  angelCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: S.xl },
+  jarvisOrbOuter: { width: 210, height: 210, borderRadius: 105, backgroundColor: 'rgba(212,175,55,0.18)', alignItems: 'center', justifyContent: 'center' },
+  jarvisOrb: { width: 164, height: 164, borderRadius: 82, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.brandSec },
+  jarvisLabel: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 16 },
+  angelBottom: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', paddingBottom: S.xxl, paddingTop: S.lg },
+  angelEmg: { width: 96, height: 96, borderRadius: 48, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong },
 });

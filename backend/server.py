@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-import os, uuid, logging, hashlib, httpx, requests, asyncio, json
+import os, uuid, logging, hashlib, httpx, requests, asyncio, json, io
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 from emergentintegrations.llm.openai import OpenAITextToSpeech
@@ -21,6 +21,9 @@ load_dotenv(ROOT_DIR / '.env')
 MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ['DB_NAME']
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+
+# Emergent managed Google Auth session-exchange endpoint (env-configurable)
+AUTH_SESSION_URL = os.environ.get('AUTH_SESSION_URL', 'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data')
 
 # Emergent managed push (SuprSend relay) — key injected by deployment pipeline
 PUSH_BASE_URL = "https://integrations.emergentagent.com"
@@ -175,7 +178,7 @@ class SessionExchangeIn(BaseModel):
 async def auth_session(body: SessionExchangeIn):
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+            AUTH_SESSION_URL,
             headers={"X-Session-ID": body.session_id},
         )
     if r.status_code != 200:
@@ -229,6 +232,8 @@ class PrefIn(BaseModel):
     inactivity_guard: Optional[bool] = None
     inactivity_hours: Optional[int] = None
     family_size: Optional[int] = None
+    pulse_check_optin: Optional[bool] = None
+    acoustic_guard: Optional[bool] = None
 
 @api.patch("/me/prefs")
 async def update_prefs(body: PrefIn, authorization: Optional[str] = Header(None)):
@@ -1782,10 +1787,821 @@ async def get_testament(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     return await db.legal_testaments.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
+# --------- PDF EXPORT (Testament / Proxy / TOS) ---------
+_FONT_R = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+_FONT_B = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+
+def _make_pdf(title: str, body: str, footer: str) -> bytes:
+    from fpdf import FPDF
+    pdf = FPDF()
+    pdf.add_font("Lib", "", _FONT_R)
+    pdf.add_font("Lib", "B", _FONT_B)
+    pdf.set_auto_page_break(auto=True, margin=18)
+    pdf.add_page()
+    pdf.set_font("Lib", "B", 15)
+    pdf.multi_cell(0, 8, title)
+    pdf.ln(2)
+    pdf.set_draw_color(0)
+    pdf.line(pdf.l_margin, pdf.get_y(), 210 - pdf.r_margin, pdf.get_y())
+    pdf.ln(4)
+    pdf.set_font("Lib", "", 10.5)
+    pdf.multi_cell(0, 5.5, body)
+    pdf.ln(6)
+    pdf.set_font("Lib", "", 7.5)
+    pdf.set_text_color(110)
+    pdf.multi_cell(0, 4, footer)
+    return bytes(pdf.output())
+
+async def _auth_pdf(authorization: Optional[str], token: Optional[str]) -> dict:
+    if not authorization and token:
+        authorization = f"Bearer {token}"
+    return await get_current_user(authorization)
+
+def _pdf_footer(doc_hash: Optional[str] = None) -> str:
+    base = (
+        f"Guardian Health & Angel · Vygenerované / Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+        "Dokument je šablóna — pre plnú právnu záväznosť sa vyžaduje vlastnoručný podpis a náležitosti podľa vašej jurisdikcie. "
+        "This document is a template — full legal validity requires a handwritten signature and the formalities of your jurisdiction.\n"
+        "AI obsah je len informačný / AI content is informational only (EU AI Act Art. 50)."
+    )
+    if doc_hash:
+        base = f"SHA-256: {doc_hash}\n" + base
+    return base
+
+def _pdf_response(content: bytes, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+@api.get("/legal/testament.pdf")
+async def testament_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    doc = await db.legal_testaments.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "No testament generated yet")
+    pdf = await run_in_threadpool(_make_pdf, "ZÁVET / LAST WILL AND TESTAMENT", doc["document_text"], _pdf_footer(doc.get("doc_hash")))
+    return _pdf_response(pdf, "guardian_testament.pdf")
+
+@api.get("/legal/proxy.pdf")
+async def proxy_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    doc = await db.proxy_directives.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not doc or not doc.get("document_text"):
+        raise HTTPException(404, "No proxy directive generated yet")
+    pdf = await run_in_threadpool(_make_pdf, "SPLNOMOCNENIE / HEALTHCARE PROXY", doc["document_text"], _pdf_footer(doc.get("doc_hash")))
+    return _pdf_response(pdf, "guardian_healthcare_proxy.pdf")
+
+@api.get("/legal/tos.pdf")
+async def tos_pdf(language: str = "sk", token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    await _auth_pdf(authorization, token)
+    text = TOS_TEXT[_lang_key(language)].format(ver=TOS_VERSION)
+    pdf = await run_in_threadpool(_make_pdf, f"PODMIENKY POUŽÍVANIA / TERMS OF SERVICE v{TOS_VERSION}", text, _pdf_footer())
+    return _pdf_response(pdf, "guardian_tos.pdf")
+
+# --------- MEDICATION REMINDERS (Angel Mode) ---------
+class MedReminderIn(BaseModel):
+    name: str
+    dose: Optional[str] = ""
+    times: List[str] = ["08:00"]
+
+@api.get("/meds/reminders")
+async def meds_list(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.med_reminders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", 1).to_list(100)
+
+@api.post("/meds/reminders")
+async def meds_add(body: MedReminderIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    times = sorted({t for t in body.times if re.match(r"^\d{2}:\d{2}$", t)})
+    if not body.name or not times:
+        raise HTTPException(400, "Name and at least one valid time (HH:MM) required")
+    doc = {
+        "reminder_id": uuid.uuid4().hex, "user_id": user["user_id"],
+        "name": body.name, "dose": body.dose or "", "times": times,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.med_reminders.insert_one(doc.copy())
+    return clean(doc)
+
+@api.delete("/meds/reminders/{reminder_id}")
+async def meds_del(reminder_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    res = await db.med_reminders.delete_one({"reminder_id": reminder_id, "user_id": user["user_id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    await db.med_intakes.delete_many({"reminder_id": reminder_id})
+    return {"ok": True}
+
+@api.get("/meds/today")
+async def meds_today(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    reminders = await db.med_reminders.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(100)
+    intakes = await db.med_intakes.find({"user_id": user["user_id"], "date": day}, {"_id": 0}).to_list(300)
+    taken = {(i["reminder_id"], i["time"]) for i in intakes}
+    out = []
+    for r in reminders:
+        for tm in r["times"]:
+            out.append({
+                "reminder_id": r["reminder_id"], "name": r["name"], "dose": r["dose"],
+                "time": tm, "taken": (r["reminder_id"], tm) in taken,
+            })
+    out.sort(key=lambda x: x["time"])
+    return {"date": day, "items": out, "pending": sum(1 for x in out if not x["taken"])}
+
+class IntakeIn(BaseModel):
+    reminder_id: str
+    time: str
+
+@api.post("/meds/intake")
+async def meds_intake(body: IntakeIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    rem = await db.med_reminders.find_one({"reminder_id": body.reminder_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not rem:
+        raise HTTPException(404, "Not found")
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    await db.med_intakes.update_one(
+        {"user_id": user["user_id"], "reminder_id": body.reminder_id, "date": day, "time": body.time},
+        {"$set": {"taken_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    return {"ok": True, "taken": True}
+
+# --------- FINAL DIGNITY & FUNERAL FUND (Legacy module) ---------
+class DignityDepositIn(BaseModel):
+    amount: float = Field(gt=0)
+    currency: str = "EUR"  # EUR | CZK | CRYPTO
+    method: str = "card"   # card | crypto
+
+class DignityPlanIn(BaseModel):
+    monthly_amount: float = Field(ge=0)
+    currency: str = "EUR"
+    enabled: bool = True
+
+class DignityBeneficiaryIn(BaseModel):
+    type: str = "proxy"  # proxy | funeral_director
+    name: Optional[str] = ""
+    contact: Optional[str] = ""
+    iban: Optional[str] = ""
+
+class DignityWishesIn(BaseModel):
+    burial_type: str = "cremation"  # burial | cremation | natural
+    ceremony_music: Optional[str] = ""
+    guest_list: Optional[str] = ""
+    notes: Optional[str] = ""
+
+async def _dignity_fund(user_id: str) -> dict:
+    fund = await db.dignity_funds.find_one({"user_id": user_id}, {"_id": 0})
+    if not fund:
+        fund = {
+            "user_id": user_id, "balance": 0.0, "currency": "EUR", "status": "locked",
+            "death_verified": False, "plan": None, "beneficiary": None,
+            "last_plan_run": None, "created_at": datetime.now(timezone.utc),
+        }
+        await db.dignity_funds.insert_one(fund.copy())
+    return fund
+
+async def _apply_recurring(user_id: str, fund: dict) -> dict:
+    """Simulated automated recurring transfers — applies missed monthly deposits."""
+    plan = fund.get("plan")
+    if not plan or not plan.get("enabled") or plan.get("monthly_amount", 0) <= 0 or fund.get("status") == "released":
+        return fund
+    now = datetime.now(timezone.utc)
+    cur = now.strftime("%Y-%m")
+    last = fund.get("last_plan_run")
+    if last == cur:
+        return fund
+    # apply one automated deposit for the current month
+    amt = float(plan["monthly_amount"])
+    await db.dignity_contributions.insert_one({
+        "contribution_id": uuid.uuid4().hex, "user_id": user_id, "amount": amt,
+        "currency": plan.get("currency", "EUR"), "method": "recurring",
+        "mocked": True, "created_at": now,
+    })
+    await db.dignity_funds.update_one({"user_id": user_id}, {"$inc": {"balance": amt}, "$set": {"last_plan_run": cur}})
+    await _aml_ledger_append(user_id, "dignity_recurring", {"amount": amt, "month": cur})
+    return await db.dignity_funds.find_one({"user_id": user_id}, {"_id": 0})
+
+@api.get("/dignity/fund")
+async def dignity_fund(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    fund = await _dignity_fund(user["user_id"])
+    fund = await _apply_recurring(user["user_id"], fund)
+    contributions = await db.dignity_contributions.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    wishes = await db.dignity_wishes.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    # default beneficiary = primary healthcare proxy
+    if not fund.get("beneficiary"):
+        proxy = await db.proxy_directives.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if proxy and proxy.get("proxy_full_name"):
+            fund["beneficiary"] = {"type": "proxy", "name": proxy["proxy_full_name"], "contact": proxy.get("proxy_phone") or proxy.get("proxy_email") or "", "iban": "", "auto": True}
+    return {**clean(fund), "contributions": contributions, "wishes": clean(wishes) if wishes else None}
+
+@api.post("/dignity/fund/deposit")
+async def dignity_deposit(body: DignityDepositIn, authorization: Optional[str] = Header(None)):
+    """MOCKED payment rails — real ledger + AML audit."""
+    user = await get_current_user(authorization)
+    fund = await _dignity_fund(user["user_id"])
+    if fund.get("status") == "released":
+        raise HTTPException(400, "Fund already released")
+    await db.dignity_contributions.insert_one({
+        "contribution_id": uuid.uuid4().hex, "user_id": user["user_id"],
+        "amount": body.amount, "currency": body.currency, "method": body.method,
+        "mocked": True, "created_at": datetime.now(timezone.utc),
+    })
+    await db.dignity_funds.update_one({"user_id": user["user_id"]}, {"$inc": {"balance": body.amount}, "$set": {"currency": body.currency}})
+    ledger = await _aml_ledger_append(user["user_id"], "dignity_deposit", {"amount": body.amount, "currency": body.currency, "method": body.method})
+    fund = await db.dignity_funds.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    return {**clean(fund), "ledger_hash": ledger, "mocked": True}
+
+@api.put("/dignity/fund/plan")
+async def dignity_plan(body: DignityPlanIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await _dignity_fund(user["user_id"])
+    await db.dignity_funds.update_one({"user_id": user["user_id"]}, {"$set": {"plan": body.model_dump()}})
+    return clean(await db.dignity_funds.find_one({"user_id": user["user_id"]}, {"_id": 0}))
+
+@api.put("/dignity/beneficiary")
+async def dignity_beneficiary(body: DignityBeneficiaryIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await _dignity_fund(user["user_id"])
+    ben = body.model_dump()
+    if body.type == "proxy" and not body.name:
+        proxy = await db.proxy_directives.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if proxy and proxy.get("proxy_full_name"):
+            ben["name"] = proxy["proxy_full_name"]
+            ben["contact"] = ben.get("contact") or proxy.get("proxy_phone") or proxy.get("proxy_email") or ""
+    await db.dignity_funds.update_one({"user_id": user["user_id"]}, {"$set": {"beneficiary": ben}})
+    return clean(await db.dignity_funds.find_one({"user_id": user["user_id"]}, {"_id": 0}))
+
+@api.put("/dignity/wishes")
+async def dignity_wishes(body: DignityWishesIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    now = datetime.now(timezone.utc)
+    doc = {**body.model_dump(), "user_id": user["user_id"], "updated_at": now}
+    doc["doc_hash"] = hashlib.sha256(f"{user['did']}|{body.burial_type}|{body.ceremony_music}|{now.date()}".encode()).hexdigest()
+    await db.dignity_wishes.update_one({"user_id": user["user_id"]}, {"$set": doc}, upsert=True)
+    return clean(await db.dignity_wishes.find_one({"user_id": user["user_id"]}, {"_id": 0}))
+
+class DeathVerifyIn(BaseModel):
+    death_certificate_number: str
+    registry_country: str = "SK"
+
+@api.post("/dignity/verify-death")
+async def dignity_verify_death(body: DeathVerifyIn, authorization: Optional[str] = Header(None)):
+    """SIMULATED state registry check — production hook point for official registry API.
+    Would be called by the proxy/family with the official death certificate number."""
+    user = await get_current_user(authorization)
+    cert = body.death_certificate_number.strip()
+    if len(cert) < 6:
+        raise HTTPException(400, "Invalid death certificate number format")
+    await _dignity_fund(user["user_id"])
+    verification = {
+        "verified": True,
+        "simulated": True,
+        "certificate_number": cert,
+        "registry_country": body.registry_country.upper(),
+        "verified_at": datetime.now(timezone.utc),
+    }
+    await db.dignity_funds.update_one({"user_id": user["user_id"]}, {"$set": {"death_verified": True, "verification": verification}})
+    await _aml_ledger_append(user["user_id"], "death_verification", {"cert": cert, "country": body.registry_country.upper(), "simulated": True})
+    return clean({**verification})
+
+@api.post("/dignity/release")
+async def dignity_release(authorization: Optional[str] = Header(None)):
+    """Conditional release — funds stay locked until official death verification."""
+    user = await get_current_user(authorization)
+    fund = await _dignity_fund(user["user_id"])
+    if fund.get("status") == "released":
+        raise HTTPException(400, "Already released")
+    if not fund.get("death_verified"):
+        raise HTTPException(403, "locked: Funds are locked until official death verification is confirmed")
+    ben = fund.get("beneficiary")
+    if not ben or not ben.get("name"):
+        proxy = await db.proxy_directives.find_one({"user_id": user["user_id"]}, {"_id": 0})
+        if proxy and proxy.get("proxy_full_name"):
+            ben = {"type": "proxy", "name": proxy["proxy_full_name"], "contact": proxy.get("proxy_phone", "")}
+    if not ben or not ben.get("name"):
+        raise HTTPException(400, "No beneficiary designated (set a proxy or funeral director)")
+    amount = float(fund.get("balance") or 0)
+    now = datetime.now(timezone.utc)
+    await db.dignity_funds.update_one({"user_id": user["user_id"]}, {"$set": {
+        "status": "released", "released_at": now, "released_to": ben, "released_amount": amount, "balance": 0.0,
+    }})
+    ledger = await _aml_ledger_append(user["user_id"], "dignity_release", {"amount": amount, "to": ben.get("name"), "type": ben.get("type")})
+    try:
+        await send_push(recipients=[user["user_id"]], data={
+            "title": "🕊 FINAL DIGNITY", "message": f"Fond {amount:.0f} {fund.get('currency','EUR')} uvoľnený pre: {ben.get('name')}", "action_url": "/dignity",
+        })
+    except Exception as e:
+        logger.warning(f"push failed: {e}")
+    return {"released": True, "amount": amount, "to": ben, "ledger_hash": ledger, "mocked": True}
+
+# --------- ACCOUNT DELETION (App Store requirement) ---------
+USER_DATA_COLLECTIONS = [
+    "documents", "waitlist", "emergency_profiles", "fall_events",
+    "wellness_checkins", "wellness_vitals", "inactivity_alerts",
+    "cabinet_items", "cabinet_exchange", "proxy_directives",
+    "market_services", "scam_checks", "survival_items", "barter_offers",
+    "beacon_events", "med_reminders", "med_intakes",
+    "dignity_funds", "dignity_contributions", "dignity_wishes",
+    "legal_testaments", "campaigns", "provider_reviews",
+]
+
+@api.delete("/auth/account")
+async def delete_account(authorization: Optional[str] = Header(None)):
+    """Deletes the user's account and personal data. AML ledger entries are
+    retained (hashes only) for regulatory audit; donations/trades/bookings keep
+    counterparty records with the user_id but no personal payloads."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    removed = 0
+    for col in USER_DATA_COLLECTIONS:
+        res = await db[col].delete_many({"user_id": uid})
+        removed += res.deleted_count
+    await db.market_bookings.delete_many({"client_user_id": uid})
+    await db.donations.delete_many({"donor_user_id": uid})
+    await db.user_sessions.delete_many({"user_id": uid})
+    await db.users.delete_one({"user_id": uid})
+    await _aml_ledger_append(uid, "account_deleted", {"records_removed": removed})
+    return {"deleted": True, "records_removed": removed}
+
 # --------- ROOT ---------
 @api.get("/")
 async def root():
     return {"app": "Guardian Health & Angel", "author": "Guardian Angel", "status": "ok"}
+
+# =========================================================================
+# SURVIVAL & TRUST FEATURES (Border Crosser · Wallpaper · Mental Fortress · Biometric Will)
+# =========================================================================
+
+BORDER_LANGS = [
+    ("en", "English", "The holder of this certificate carries personal prescription medication necessary for their health and survival. Please allow the transport of the listed medication across borders in accordance with medical and humanitarian necessity."),
+    ("sk", "Slovenčina", "Držiteľ tohto certifikátu prepravuje osobné lieky na predpis, nevyhnutné pre jeho zdravie a prežitie. Prosíme, umožnite prevoz uvedených liekov cez hranice v súlade so zdravotnou a humanitárnou nevyhnutnosťou."),
+    ("cs", "Čeština", "Držitel tohoto certifikátu převáží osobní léky na předpis, nezbytné pro jeho zdraví a přežití. Umožněte prosím převoz uvedených léků přes hranice v souladu se zdravotní a humanitární nezbytností."),
+    ("de", "Deutsch", "Der Inhaber dieses Zertifikats führt persönliche verschreibungspflichtige Medikamente mit sich, die für seine Gesundheit und sein Überleben notwendig sind. Bitte gestatten Sie den Grenztransport der aufgeführten Medikamente gemäß medizinischer und humanitärer Notwendigkeit."),
+    ("fr", "Français", "Le titulaire de ce certificat transporte des médicaments personnels sur ordonnance nécessaires à sa santé et à sa survie. Veuillez autoriser le transport transfrontalier des médicaments listés conformément à la nécessité médicale et humanitaire."),
+    ("es", "Español", "El titular de este certificado transporta medicamentos personales recetados, necesarios para su salud y supervivencia. Por favor, permita el transporte transfronterizo de los medicamentos indicados conforme a la necesidad médica y humanitaria."),
+    ("it", "Italiano", "Il titolare di questo certificato trasporta farmaci personali su prescrizione, necessari per la sua salute e sopravvivenza. Si prega di consentire il trasporto transfrontaliero dei farmaci elencati in conformità alla necessità medica e umanitaria."),
+    ("pl", "Polski", "Posiadacz tego certyfikatu przewozi osobiste leki na receptę, niezbędne dla jego zdrowia i przetrwania. Prosimy o umożliwienie przewozu wymienionych leków przez granice zgodnie z koniecznością medyczną i humanitarną."),
+    ("hu", "Magyar", "E tanúsítvány birtokosa személyes, vényköteles gyógyszereket szállít, amelyek egészségéhez és túléléséhez szükségesek. Kérjük, engedélyezze a felsorolt gyógyszerek határon átnyúló szállítását az orvosi és humanitárius szükségességnek megfelelően."),
+    ("uk", "Українська", "Власник цього сертифіката перевозить особисті рецептурні ліки, необхідні для його здоров'я та виживання. Будь ласка, дозвольте перевезення зазначених ліків через кордон відповідно до медичної та гуманітарної необхідності."),
+    ("ru", "Русский", "Владелец этого сертификата перевозит личные рецептурные лекарства, необходимые для его здоровья и выживания. Пожалуйста, разрешите провоз указанных лекарств через границу в соответствии с медицинской и гуманитарной необходимостью."),
+    ("pt", "Português", "O titular deste certificado transporta medicamentos pessoais sujeitos a receita médica, necessários para a sua saúde e sobrevivência. Por favor, permita o transporte transfronteiriço dos medicamentos listados em conformidade com a necessidade médica e humanitária."),
+    ("nl", "Nederlands", "De houder van dit certificaat vervoert persoonlijke receptgeneesmiddelen die noodzakelijk zijn voor zijn gezondheid en overleving. Sta het grensoverschrijdend vervoer van de vermelde medicatie toe in overeenstemming met medische en humanitaire noodzaak."),
+    ("ro", "Română", "Titularul acestui certificat transportă medicamente personale eliberate pe bază de rețetă, necesare pentru sănătatea și supraviețuirea sa. Vă rugăm să permiteți transportul transfrontalier al medicamentelor enumerate în conformitate cu necesitatea medicală și umanitară."),
+]
+
+async def _border_payload(user: dict) -> dict:
+    prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    items = await db.cabinet.find({"user_id": user["user_id"], "prescription": True}, {"_id": 0}).to_list(100)
+    if not items:
+        items = await db.cabinet.find({"user_id": user["user_id"], "category": "medication"}, {"_id": 0}).to_list(100)
+    meds = [{"name": i.get("name"), "quantity": i.get("quantity"), "unit": i.get("unit"), "prescription": bool(i.get("prescription"))} for i in items]
+    issued = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    core = {
+        "did": user["did"],
+        "holder": prof.get("full_name") or user.get("name") or "",
+        "blood_type": prof.get("blood_type") or "",
+        "allergies": prof.get("allergies") or "",
+        "conditions": prof.get("conditions") or "",
+        "medications_free_text": prof.get("medications") or "",
+        "medications": meds,
+        "issued_at": issued,
+    }
+    signature = hashlib.sha256((user["did"] + json.dumps(core, sort_keys=True, ensure_ascii=False)).encode()).hexdigest()
+    core["did_signature"] = signature
+    core["languages"] = [{"code": c, "name": n} for c, n, _ in BORDER_LANGS]
+    return core
+
+@api.get("/border/certificate")
+async def border_certificate(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await _border_payload(user)
+
+@api.get("/border/certificate.pdf")
+async def border_certificate_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    data = await _border_payload(user)
+    med_lines = "\n".join([f"  • {m['name']} — {m['quantity']} {m['unit']}" + ("  [Rx]" if m["prescription"] else "") for m in data["medications"]]) or "  —"
+    body = (
+        f"Holder / Držiteľ: {data['holder']}\n"
+        f"DID (Decentralized ID): {data['did']}\n"
+        f"Blood type / Krvná skupina: {data['blood_type'] or '—'}\n"
+        f"Allergies / Alergie: {data['allergies'] or '—'}\n"
+        f"Conditions / Diagnózy: {data['conditions'] or '—'}\n"
+        f"Issued / Vydané: {data['issued_at']}\n\n"
+        f"MEDICATION LIST / ZOZNAM LIEKOV:\n{med_lines}\n"
+        + (f"\nOther medication / Ďalšie lieky: {data['medications_free_text']}\n" if data["medications_free_text"] else "")
+        + "\n" + "=" * 60 + "\n\n"
+        + "\n\n".join([f"[{name} · {code.upper()}]\n{text}" for code, name, text in BORDER_LANGS])
+    )
+    footer = f"DID SIGNATURE (SHA-256): {data['did_signature']}\n" + _pdf_footer()
+    pdf = await run_in_threadpool(_make_pdf, "INTERNATIONAL MEDICATION CERTIFICATE\nMEDZINÁRODNÝ CERTIFIKÁT O LIEKOCH", body, footer)
+    return _pdf_response(pdf, "guardian_border_certificate.pdf")
+
+# --------- EMERGENCY LOCKSCREEN WALLPAPER ---------
+
+def _make_wallpaper(user: dict, prof: dict) -> bytes:
+    from PIL import Image as PILImage, ImageDraw, ImageFont
+    import qrcode
+    W, H = 1080, 1920
+    img = PILImage.new("RGB", (W, H), "#121212")
+    draw = ImageDraw.Draw(img)
+    f_big = ImageFont.truetype(_FONT_B, 54)
+    f_med = ImageFont.truetype(_FONT_B, 44)
+    f_sm = ImageFont.truetype(_FONT_R, 36)
+    f_tiny = ImageFont.truetype(_FONT_R, 26)
+    gold = "#D4AF37"
+
+    def center(text, y, font, fill):
+        w = draw.textlength(text, font=font)
+        draw.text(((W - w) / 2, y), text, font=font, fill=fill)
+
+    # Lockscreen clock occupies top ~30% — keep it clear
+    y = 640
+    center("＋ MEDICAL ID · V PRÍPADE NÚDZE ＋", y, f_med, gold); y += 90
+    name = prof.get("full_name") or user.get("name") or ""
+    if name:
+        center(name, y, f_big, "#F5F5F5"); y += 100
+    rows = [
+        ("KRVNÁ SKUPINA / BLOOD", prof.get("blood_type")),
+        ("ALERGIE / ALLERGIES", prof.get("allergies")),
+        ("ICE KONTAKT", f"{prof.get('emergency_contact_name') or ''} {prof.get('emergency_contact_phone') or ''}".strip()),
+    ]
+    for label, val in rows:
+        if not val:
+            continue
+        center(label, y, f_tiny, "#8E8E93"); y += 42
+        center(str(val)[:44], y, f_med, "#F5F5F5"); y += 84
+
+    # QR — offline payload, readable by any scanner without unlocking the phone
+    payload = json.dumps({
+        "did": user.get("did"),
+        "name": name,
+        "blood": prof.get("blood_type"),
+        "allergies": prof.get("allergies"),
+        "ice": f"{prof.get('emergency_contact_name') or ''} {prof.get('emergency_contact_phone') or ''}".strip(),
+    }, ensure_ascii=False)
+    qr = qrcode.QRCode(border=2, box_size=10)
+    qr.add_data(payload)
+    qr.make(fit=True)
+    qimg = qr.make_image(fill_color="#121212", back_color="#FFFFFF").get_image().convert("RGB")
+    qsize = 420
+    qimg = qimg.resize((qsize, qsize))
+    qy = max(y + 30, 1280)
+    img.paste(qimg, ((W - qsize) // 2, qy))
+    center("GUARDIAN HEALTH & ANGEL · SCAN FOR SURVIVAL INFO", qy + qsize + 36, f_tiny, "#8E8E93")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+@api.get("/family/wallpaper.png")
+async def family_wallpaper(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    png = await run_in_threadpool(_make_wallpaper, user, prof)
+    return Response(content=png, media_type="image/png",
+                    headers={"Content-Disposition": 'attachment; filename="guardian_emergency_wallpaper.png"'})
+
+# --------- MENTAL FORTRESS (Crisis Audio Guide) ---------
+
+MENTAL_TECHNIQUES_SK = [
+    {"id": "box", "icon": "square-outline", "title": "Dychový štvorec (Box Breathing)", "subtitle": "60 sekúnd · okamžité upokojenie nervového systému",
+     "steps": ["Sadnite si rovno, uvoľnite ramená.", "Nádych nosom — počítajte do 4.", "Zadržte dych — počítajte do 4.", "Výdych ústami — počítajte do 4.", "Zadržte prázdne pľúca — počítajte do 4.", "Opakujte 4 až 6 kôl."]},
+    {"id": "grounding", "icon": "earth-outline", "title": "Ukotvenie 5-4-3-2-1", "subtitle": "2 minúty · zastavenie panickej špirály",
+     "steps": ["Pomenujte 5 vecí, ktoré vidíte.", "Pomenujte 4 veci, ktoré cítite dotykom.", "Pomenujte 3 zvuky, ktoré počujete.", "Pomenujte 2 vône, ktoré cítite.", "Pomenujte 1 chuť v ústach.", "Dýchajte pomaly a vnímajte, že ste tu a teraz v bezpečí."]},
+    {"id": "li4", "icon": "hand-left-outline", "title": "Akupresúra LI4 (Hegu)", "subtitle": "Bod medzi palcom a ukazovákom · úzkosť a napätie",
+     "steps": ["Nájdite mäkké miesto medzi palcom a ukazovákom druhej ruky.", "Stlačte palcom pevne, ale nie bolestivo.", "Masírujte krúživými pohybmi 60 sekúnd.", "Dýchajte pomaly a zhlboka.", "Vymeňte ruky a opakujte.", "Pozor: nepoužívajte počas tehotenstva."]},
+    {"id": "pc6", "icon": "watch-outline", "title": "Akupresúra PC6 (Neiguan)", "subtitle": "Vnútro zápästia · panika, nevoľnosť, búšenie srdca",
+     "steps": ["Otočte dlaň nahor.", "Priložte tri prsty druhej ruky pod zápästné ohyby.", "Bod je pod ukazovákom, medzi dvoma šľachami.", "Tlačte palcom jemne 60 až 90 sekúnd.", "Pri tlaku pomaly vydychujte.", "Vymeňte ruky a opakujte."]},
+    {"id": "yintang", "icon": "eye-outline", "title": "Akupresúra Yintang (Tretie oko)", "subtitle": "Bod medzi obočím · okamžité upokojenie mysle",
+     "steps": ["Zatvorte oči.", "Priložte ukazovák medzi obočie.", "Jemne masírujte malými krúžkami.", "Pokračujte 1 až 2 minúty.", "Sústreďte sa iba na dotyk a dych."]},
+    {"id": "pmr", "icon": "body-outline", "title": "Progresívna svalová relaxácia", "subtitle": "5 minút · uvoľnenie tela pri strese a nespavosti",
+     "steps": ["Zatnite päste na 5 sekúnd — potom úplne uvoľnite.", "Zatnite ramená k ušiam na 5 sekúnd — uvoľnite.", "Zatnite brucho na 5 sekúnd — uvoľnite.", "Zatnite stehná na 5 sekúnd — uvoľnite.", "Zatnite lýtka a chodidlá na 5 sekúnd — uvoľnite.", "Vnímajte teplo a ťažobu v celom tele."]},
+]
+
+@api.get("/mental/techniques")
+async def mental_techniques(language: str = "sk", authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    techniques = []
+    for t in MENTAL_TECHNIQUES_SK:
+        tts = f"{t['title']}. " + " ".join([f"Krok {i+1}: {s}" for i, s in enumerate(t["steps"])])
+        techniques.append({**t, "tts_text": tts})
+    return {
+        "techniques": techniques,
+        "disclaimer": "Toto nie je zdravotná starostlivosť ani krízová linka. Pri ohrození života volajte 112. Linka dôvery Nezábudka: 0800 800 566. (EU AI Act Art. 50 — informačný obsah)",
+    }
+
+# --------- BIOMETRIC WILL CONFIRMATION (Legacy) ---------
+
+@api.post("/legal/testament/biometric")
+async def biometric_will_upload(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    data = await file.read()
+    if len(data) == 0:
+        raise HTTPException(400, "Empty file")
+    if len(data) > 50 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 50MB)")
+    ctype = file.content_type or "application/octet-stream"
+    if not (ctype.startswith("audio/") or ctype.startswith("video/")):
+        raise HTTPException(400, "Only audio or video statements are accepted")
+    file_hash = hashlib.sha256(data).hexdigest()
+    rec_id = uuid.uuid4().hex
+    ext = (file.filename or "").split(".")[-1].lower() if "." in (file.filename or "") else ("mp4" if ctype.startswith("video/") else "m4a")
+    path = f"{APP_NAME}/biometric/{user['user_id']}/{rec_id}.{ext}"
+    try:
+        await run_in_threadpool(put_object_sync, path, data, ctype)
+    except Exception as e:
+        logger.error(f"biometric upload failed: {e}")
+        raise HTTPException(502, "Storage upload failed")
+    # Tamper-evident notarization on the hash-chain ledger (blockchain simulation)
+    ledger_hash = await _aml_ledger_append(user["user_id"], "biometric_will", {"sha256": file_hash, "media": ctype, "size": len(data), "did": user["did"]})
+    now = datetime.now(timezone.utc)
+    rec = {
+        "user_id": user["user_id"], "rec_id": rec_id, "media_type": ctype,
+        "file_name": file.filename or f"{rec_id}.{ext}", "size": len(data),
+        "sha256": file_hash, "storage_path": path, "ledger_hash": ledger_hash,
+        "did": user["did"], "recorded_at": now.isoformat(),
+    }
+    await db.biometric_wills.update_one({"user_id": user["user_id"]}, {"$set": rec}, upsert=True)
+    await db.legal_testaments.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"biometric_hash": file_hash, "biometric_ledger_hash": ledger_hash, "biometric_at": now.isoformat()}},
+    )
+    return clean(rec)
+
+@api.get("/legal/testament/biometric")
+async def biometric_will_get(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.biometric_wills.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+@api.get("/legal/testament/biometric/file")
+async def biometric_will_file(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    rec = await db.biometric_wills.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not rec:
+        raise HTTPException(404, "No biometric statement recorded")
+    try:
+        content, ctype = await run_in_threadpool(get_object_sync, rec["storage_path"])
+    except Exception as e:
+        raise HTTPException(502, f"Storage read failed: {e}")
+    return Response(content=content, media_type=ctype)
+
+@api.delete("/legal/testament/biometric")
+async def biometric_will_delete(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    res = await db.biometric_wills.delete_one({"user_id": user["user_id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    await db.legal_testaments.update_one({"user_id": user["user_id"]}, {"$unset": {"biometric_hash": "", "biometric_ledger_hash": "", "biometric_at": ""}})
+    return {"ok": True}
+
+# =========================================================================
+# SURVIVAL EXTENSIONS (Acoustic Guard · Survival Bible · Pharmacy Hunter · Pulse Check)
+# =========================================================================
+
+# --------- ACOUSTIC THREAT DETECTION (Angel Mode) ---------
+class AcousticIn(BaseModel):
+    kind: str = "loud_noise"  # loud_noise | glass | scream | gunshot
+    db_level: Optional[float] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+@api.post("/acoustic-event")
+async def acoustic_event(body: AcousticIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    doc = {
+        "event_id": uuid.uuid4().hex, "user_id": user["user_id"],
+        "kind": body.kind, "db_level": body.db_level,
+        "lat": body.lat, "lng": body.lng,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.acoustic_events.insert_one(doc.copy())
+    try:
+        await send_push(
+            recipients=[user["user_id"]],
+            data={"title": "🔊 AKUSTICKÁ HROZBA DETEGOVANÁ", "message": f"Hlasný zvuk ({body.kind}) — overte stav seniora.", "action_url": "/family-dashboard"},
+        )
+    except Exception as e:
+        logger.warning(f"acoustic push failed: {e}")
+    return clean(doc)
+
+@api.get("/acoustic-events")
+async def acoustic_events(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.acoustic_events.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(30)
+
+# --------- ANALOG RECOVERY KIT (Survival Bible PDF) ---------
+@api.get("/survival/bible.pdf")
+async def survival_bible_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    uid = user["user_id"]
+    prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
+    proxy = await db.proxy_directives.find_one({"user_id": uid}, {"_id": 0}) or {}
+    testament = await db.legal_testaments.find_one({"user_id": uid}, {"_id": 0}) or {}
+    meds = await db.med_reminders.find({"user_id": uid}, {"_id": 0}).to_list(50)
+    cabinet = await db.cabinet.find({"user_id": uid}, {"_id": 0}).to_list(100)
+    waitlist = await db.waitlist.find({"user_id": uid}, {"_id": 0}).to_list(50)
+    bio = await db.biometric_wills.find_one({"user_id": uid}, {"_id": 0}) or {}
+
+    parts = []
+    parts.append("1. IDENTITA A NÚDZOVÉ INFO / IDENTITY & EMERGENCY")
+    parts.append(f"Meno: {prof.get('full_name') or user.get('name') or '—'}")
+    parts.append(f"DID: {user['did']}")
+    parts.append(f"Krvná skupina: {prof.get('blood_type') or '—'}  ·  Alergie: {prof.get('allergies') or '—'}")
+    parts.append(f"Diagnózy: {prof.get('conditions') or '—'}")
+    parts.append(f"Lieky (voľný text): {prof.get('medications') or '—'}")
+    parts.append(f"ICE kontakt: {prof.get('emergency_contact_name') or '—'} · {prof.get('emergency_contact_phone') or '—'}")
+    parts.append(f"Darca orgánov: {'ÁNO — ' + str(prof.get('donor_organs') or 'všetky') if prof.get('is_donor') else 'NIE'}")
+
+    parts.append("\n2. DENNÉ LIEKY / DAILY MEDICATION")
+    if meds:
+        for m in meds:
+            parts.append(f"  • {m.get('name')} {m.get('dose') or ''} — časy: {', '.join(m.get('times') or [])}")
+    else:
+        parts.append("  — žiadne pripomienky liekov")
+
+    parts.append("\n3. LEKÁRNIČKA A ZÁSOBY / MEDICINE CABINET")
+    if cabinet:
+        for c in cabinet[:40]:
+            parts.append(f"  • {c.get('name')} — {c.get('quantity')} {c.get('unit')}" + (f" · exp. {c.get('expires_on')}" if c.get('expires_on') else ""))
+    else:
+        parts.append("  — lekárnička je prázdna")
+
+    parts.append("\n4. ČAKACIE LISTINY / WAITLIST HUNTER")
+    if waitlist:
+        for w in waitlist[:20]:
+            parts.append(f"  • {w.get('specialty') or w.get('title') or '—'} · {w.get('city') or ''} · stav: {w.get('status') or 'hunting'}")
+    else:
+        parts.append("  — žiadne aktívne čakacie listiny")
+
+    parts.append("\n5. SPLNOMOCNENEC / HEALTHCARE PROXY")
+    if proxy.get("proxy_full_name"):
+        parts.append(f"  {proxy.get('proxy_full_name')} ({proxy.get('proxy_relationship') or '—'}) · {proxy.get('proxy_phone') or '—'}")
+        parts.append(f"  Rozsah: {proxy.get('scope') or '—'}  ·  SHA-256: {proxy.get('doc_hash') or '—'}")
+    else:
+        parts.append("  — splnomocnenec nie je určený")
+
+    parts.append("\n6. ODKAZ A ZÁVET / LEGACY")
+    if testament.get("document_text"):
+        t = testament["document_text"]
+        parts.append(t[:1200] + ("…" if len(t) > 1200 else ""))
+        parts.append(f"  SHA-256 závetu: {testament.get('doc_hash') or '—'}")
+    else:
+        parts.append("  — závet zatiaľ nevygenerovaný")
+    if bio.get("sha256"):
+        parts.append(f"  Biometrické potvrdenie: {bio.get('media_type')} · {bio.get('recorded_at', '')[:16]} · SHA-256 {bio.get('sha256')}")
+
+    parts.append("\n7. KRÍZOVÉ TECHNIKY BEZ TECHNOLÓGIÍ / ANALOG CRISIS TECHNIQUES")
+    for t in MENTAL_TECHNIQUES_SK:
+        parts.append(f"  ▶ {t['title']} — {t['subtitle']}")
+        for i, s in enumerate(t["steps"]):
+            parts.append(f"     {i+1}. {s}")
+
+    parts.append("\n8. NÚDZOVÉ ČÍSLA / EMERGENCY NUMBERS")
+    parts.append("  112 — tieseň EÚ · 155 — záchranka (SK/CZ) · 158 — polícia CZ · 0800 800 566 — Linka dôvery Nezábudka")
+
+    body = "\n".join(parts)
+    pdf = await run_in_threadpool(_make_pdf, "SURVIVAL BIBLE — ANALOG RECOVERY KIT\nVYTLAČTE A ULOŽTE NA BEZPEČNÉ MIESTO", body, _pdf_footer())
+    return _pdf_response(pdf, "guardian_survival_bible.pdf")
+
+# --------- PHARMACY STOCK HUNTER (CZ/SK) ---------
+# NOTE: No public real-time stock API exists for SK/CZ pharmacy chains — results are a
+# DETERMINISTIC SIMULATION of the aggregator engine (clearly flagged simulated=True).
+_PHARMACIES = {
+    "SK": [("Dr. Max", "Bratislava"), ("BENU", "Bratislava"), ("Schneider", "Košice"), ("Dr. Max", "Žilina"), ("BENU", "Nitra"), ("Plus Lekáreň", "Prešov")],
+    "CZ": [("Dr. Max", "Praha"), ("BENU", "Praha"), ("Pilulka", "Brno"), ("Dr. Max", "Ostrava"), ("BENU", "Plzeň"), ("Magistra", "Olomouc")],
+}
+
+def _simulate_stock(med: str, region: str) -> list:
+    region = region.upper() if region.upper() in _PHARMACIES else "SK"
+    out = []
+    for i, (chain, city) in enumerate(_PHARMACIES[region]):
+        h = int(hashlib.sha256(f"{med.lower()}|{chain}|{city}".encode()).hexdigest(), 16)
+        status = ["in_stock", "low_stock", "out_of_stock"][h % 3]
+        price = round(3.5 + (h % 4200) / 100, 2)
+        out.append({
+            "pharmacy": chain, "city": city, "region": region,
+            "status": status, "price_eur": price if status != "out_of_stock" else None,
+            "pieces": (h % 14) + 1 if status == "in_stock" else ((h % 3) + 1 if status == "low_stock" else 0),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+    out.sort(key=lambda x: {"in_stock": 0, "low_stock": 1, "out_of_stock": 2}[x["status"]])
+    return out
+
+@api.get("/pharmacy/search")
+async def pharmacy_search(med: str, region: str = "SK", authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    if not med.strip():
+        raise HTTPException(400, "med required")
+    return {"med": med.strip(), "region": region.upper(), "simulated": True, "results": _simulate_stock(med.strip(), region)}
+
+class PharmacyWatchIn(BaseModel):
+    med_name: str
+    region: str = "SK"
+
+@api.post("/pharmacy/watch")
+async def pharmacy_watch_add(body: PharmacyWatchIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    doc = {
+        "watch_id": uuid.uuid4().hex, "user_id": user["user_id"],
+        "med_name": body.med_name.strip(), "region": body.region.upper(),
+        "status": "watching", "last_scan": None, "found_at": None,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.pharmacy_watches.insert_one(doc.copy())
+    return clean(doc)
+
+@api.get("/pharmacy/watches")
+async def pharmacy_watches(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.pharmacy_watches.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+
+@api.post("/pharmacy/watches/{watch_id}/scan")
+async def pharmacy_watch_scan(watch_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    w = await db.pharmacy_watches.find_one({"watch_id": watch_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not w:
+        raise HTTPException(404, "Not found")
+    results = _simulate_stock(w["med_name"], w["region"])
+    hit = next((r for r in results if r["status"] == "in_stock"), None)
+    now = datetime.now(timezone.utc)
+    upd = {"last_scan": now}
+    if hit:
+        upd.update({"status": "found", "found_at": now, "found_pharmacy": f"{hit['pharmacy']} {hit['city']}"})
+        try:
+            await send_push(recipients=[user["user_id"]], data={"title": "💊 LIEK NÁJDENÝ", "message": f"{w['med_name']} skladom: {hit['pharmacy']} {hit['city']}", "action_url": "/pharmacy-hunter"})
+        except Exception as e:
+            logger.warning(f"pharmacy push failed: {e}")
+    await db.pharmacy_watches.update_one({"watch_id": watch_id}, {"$set": upd})
+    return {"scanned": True, "simulated": True, "hit": hit, "results": results}
+
+@api.delete("/pharmacy/watches/{watch_id}")
+async def pharmacy_watch_del(watch_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    res = await db.pharmacy_watches.delete_one({"watch_id": watch_id, "user_id": user["user_id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+# --------- GUARDIAN PULSE CHECK (Silent Ping — STRICTLY OPT-IN) ---------
+class PulseRequestIn(BaseModel):
+    target_did: str
+
+@api.post("/pulse/request")
+async def pulse_request(body: PulseRequestIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    target = await db.users.find_one({"did": body.target_did.strip()}, {"_id": 0})
+    if not target:
+        raise HTTPException(404, "DID not found")
+    if target["user_id"] == user["user_id"]:
+        raise HTTPException(400, "Cannot ping yourself")
+    if not target.get("pulse_check_optin"):
+        raise HTTPException(403, "opt_in_required: Používateľ nepovolil Guardian Pulse Check (súkromie je opt-in).")
+    doc = {
+        "req_id": uuid.uuid4().hex,
+        "from_user": user["user_id"], "from_name": user.get("name") or "Rodina",
+        "target_user": target["user_id"], "target_did": target["did"],
+        "status": "pending", "responded_at": None,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.pulse_requests.insert_one(doc.copy())
+    try:
+        await send_push(recipients=[target["user_id"]], data={"title": "💛 TICHÝ PING OD RODINY", "message": f"{doc['from_name']} sa pýta, či ste v poriadku. Odpovedzte jedným ťukom.", "action_url": "/pulse-check"})
+    except Exception as e:
+        logger.warning(f"pulse push failed: {e}")
+    return clean(doc)
+
+@api.get("/pulse/requests")
+async def pulse_requests_inbox(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.pulse_requests.find({"target_user": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(30)
+
+class PulseRespondIn(BaseModel):
+    status: str  # ok | need_help
+
+@api.post("/pulse/requests/{req_id}/respond")
+async def pulse_respond(req_id: str, body: PulseRespondIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    if body.status not in ("ok", "need_help"):
+        raise HTTPException(400, "status must be ok|need_help")
+    req = await db.pulse_requests.find_one({"req_id": req_id, "target_user": user["user_id"]}, {"_id": 0})
+    if not req:
+        raise HTTPException(404, "Not found")
+    await db.pulse_requests.update_one({"req_id": req_id}, {"$set": {"status": body.status, "responded_at": datetime.now(timezone.utc)}})
+    title = "💚 V PORIADKU" if body.status == "ok" else "🔴 POTREBUJE POMOC"
+    try:
+        await send_push(recipients=[req["from_user"]], data={"title": title, "message": f"Odpoveď na tichý ping: {body.status}", "action_url": "/pulse-check"})
+    except Exception as e:
+        logger.warning(f"pulse respond push failed: {e}")
+    return {"ok": True, "status": body.status}
+
+@api.get("/pulse/sent")
+async def pulse_sent(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await db.pulse_requests.find({"from_user": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(30)
 
 app.include_router(api)
 

@@ -73,7 +73,9 @@ export default function MedicineCabinet() {
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
         <Text style={styles.title}>{t('medicine_cabinet', lang).toUpperCase()}</Text>
-        <View style={{ width: 26 }} />
+        <Pressable testID="mc-meds-link" onPress={() => router.push('/meds')} hitSlop={12}>
+          <Ionicons name="alarm-outline" size={24} color={C.onInverse} />
+        </Pressable>
       </View>
 
       <View style={styles.tabRow}>
