@@ -332,7 +332,13 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     reply, mood = str(resp or ""), "calm"
     try:
         raw = re.sub(r"^```(json)?|```$", "", reply.strip(), flags=re.M).strip()
-        parsed = json.loads(raw)
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            start = raw.find("{")
+            if start < 0:
+                raise
+            parsed, _end = json.JSONDecoder().raw_decode(raw[start:])
         reply = str(parsed.get("reply", reply))
         mood = parsed.get("mood", "calm")
         if mood not in ("calm", "thinking", "alert", "energetic", "concerned"):

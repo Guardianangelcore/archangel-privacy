@@ -21,6 +21,7 @@ export default function FamilyShield() {
       subtitle="Rodinný štít — ochrana seniorov, wellness monitoring a bezpečná komunita."
       items={[
         { testID: 'fs-angel', icon: 'accessibility-outline', title: 'Angel Mode', subtitle: 'Jarvis hlas + SOS · pre seniorov', onPress: enableAngel },
+        { testID: 'fs-monolith', icon: 'planet-outline', title: 'Sovereign OS · Command Deck', subtitle: 'UHP brána · Arbitráž · Banka · Dvojča · Blueprint', route: '/monolith' },
         { testID: 'fs-pulse', icon: 'pulse-outline', title: 'Family Pulse', subtitle: 'Nálada · kroky · alarmy rodiny', route: '/family-dashboard' },
         { testID: 'fs-pulsecheck', icon: 'heart-half-outline', title: 'Guardian Pulse Check', subtitle: 'Tichý ping „si OK?" · prísne opt-in', route: '/pulse-check' },
         { testID: 'fs-wellness', icon: 'sparkles-outline', title: 'Denná kontrola', subtitle: 'Ako sa dnes cítite? · Jarvis', route: '/wellness' },

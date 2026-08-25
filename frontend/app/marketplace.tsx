@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { WheelField } from '@/src/ui/fields';
+import { EmptyState } from '@/src/ui/EmptyState';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -83,7 +84,7 @@ export default function Marketplace() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
           contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
           ListHeaderComponent={<JarvisAdvice module="marketplace" lang={lang} buildContext={() => `Direct service marketplace. Available: ${items.map(i => `${i.title} ${i.price}${i.currency} in ${i.city}`).join('; ') || 'none yet'}. User may be a service provider (masseur) wanting income tips.`} />}
-          ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text> : null}
+          ListEmptyComponent={!loading ? <EmptyState testID="mk-empty" icon="storefront-outline" title={t('empty_market_title', lang)} sub={t('empty_market_sub', lang)} /> : null}
           renderItem={({ item }) => (
             <View testID={`svc-${item.service_id}`} style={styles.card}>
               <View style={styles.rowSpread}>
@@ -125,7 +126,7 @@ export default function Marketplace() {
           keyExtractor={i => i.booking_id}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
           contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
-          ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text> : null}
+          ListEmptyComponent={!loading ? <EmptyState testID="bk-empty" icon="calendar-clear-outline" title={t('empty_bookings_title', lang)} sub={t('empty_bookings_sub', lang)} /> : null}
           renderItem={({ item }) => (
             <View testID={`bk-${item.booking_id}`} style={styles.card}>
               <View style={styles.rowSpread}>

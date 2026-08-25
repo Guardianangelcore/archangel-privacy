@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 22 — Phase 24 ARCHANGEL MONOLITH + ASCENSION PROTOCOL verified end-to-end on https://angel-os-1.preview.emergentagent.com (mobile 390x844, session=test-token-abc). BACKEND live-LLM 3/3 GREEN (test_phase24_llm_live.py): /api/twin/simulate {Ibuprofen 400 mg} → compatibility_pct in [0-100], verdict in simulate_pass|caution|simulate_fail, risks[] + interactions[] populated (real gpt-5.4); /api/legacy/blueprint/train → JSON blueprint with tone/values[]/decision_rules[]/catchphrases[], sources counters, version increment; /api/legacy/blueprint/ask (Ako mám rozhodnúť o oprave strechy? / Tomáš) → Slovak answer opening 'Som digitálna ozvena Jaroslava, nie on osobne…' with framing='digital_echo'; swarm/status regression exposes both data_broker and gbi_distributor agents alongside 7 existing agents (all last_status='ok'). FRONTEND /monolith Command Deck fully functional: header 'SOVEREIGN OS · COMMAND DECK' renders; UHP section auto-opens and shows '1.02 B súbežných streamov' + '12 regiónov × 4096 shardov × 32 uzlov' + 11 partneri + Raft/CRDT consensus; ARB → mono-analyze returns NAJLEPŠIA HODNOTA / NAJLACNEJŠIA / NAJRÝCHLEJŠIA cards; BANK → mono-payout completes full state machine INITIATED→AUTHORIZED→SETTLED with trace, mono-credit-score renders credit limit card, mono-draw-btn tops up balance; TWIN → mono-traj renders trajectories (systolic/glucose bands); SENTINEL section auto-loads risk score '4 /100'; EDGE → mono-edge-run runs real ~3s JS compute and shows GA-T reward card; TRUTH → mono-testimony + mono-truth-add persists record and integrity stays 'NEPORUŠENÁ' (chain valid); BLUEPRINT → mono-bp-train (LLM ~30-45s) renders TÓN/HODNOTY/ROZHODOVACIE PRAVIDLÁ card (v3), then mono-bp-q + mono-bp-ask returns full Slovak digital-echo answer. Family tab shows new fs-monolith tile 'Sovereign OS · Command Deck — UHP brána · Arbitráž · Banka · Dvojča · Blueprint' that navigates to /monolith. Regression clean: /jarvis (jv-orb + RANNÝ BRÍFING), /bioscan (bs-sys → bs-sys-sheet wheel opens), /marketplace (mk-empty 'Trhovisko je zatiaľ prázdne' — no crash). ONE MINOR FLAKINESS BUG SURFACED: blueprint train intermittently returns 502 ('Blueprint engine unavailable') due to json.loads failing on LLM output containing trailing text — see rca_of_issue.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/legacy/blueprint/train",
+        "issue": "Intermittent 502 'Blueprint engine unavailable' when gpt-5.4 appends prose after the JSON object. Backend log: 'blueprint train error: Extra data: line 1 column 688 (char 687)'. The ```-fence stripping regex (ascension.py:373) does not handle trailing commentary. Retry usually succeeds. Same fragility likely exists in /api/twin/simulate (ascension.py:95). Suggested fix: use json.JSONDecoder().raw_decode(raw) or extract the first {...} block via regex before json.loads."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_22.json",
+    "/app/backend/tests/test_phase24_llm_live.py",
+    "/app/test_reports/pytest/iter22_llm.xml"
+  ],
+  "action_items": [
+    "Harden JSON parsing in /api/legacy/blueprint/train and /api/twin/simulate: replace naive json.loads(re.sub fences...) with JSONDecoder().raw_decode or a first-{...} extractor so trailing LLM prose no longer causes 502s. Currently retries succeed but users can see a transient error banner."
+  ],
+  "critical_code_review_comments": [
+    "ascension.py:95 and :373 use identical brittle JSON-extraction pattern. When gpt-5.4 adds explanation after the JSON object, json.loads() raises 'Extra data' and the endpoint returns 502. Consolidate into a helper like _extract_json(raw) using raw_decode.",
+    "monolith.tsx: Section default state open='uhp' is correct — /uhp/capacity call is fired on mount so first-paint may briefly show ActivityIndicator before '1.02 B' arrives (~1-3s). Non-blocking; user-visible behaviour is fine.",
+    "No deprecated Expo packages detected in monolith.tsx / guardian.tsx / family.tsx. testIDs are comprehensive and consistent (mono-sec-{id}, mono-{action}). All text wrapped in <Text>. No SafeAreaView issues.",
+    "Note: monolith.tsx has 428 lines — approaching but under the 700-line file-size guideline. No refactor needed yet."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase24_llm_live.py (new — 3 live-LLM regression tests, all passing)"
+  ],
+  "success_rate": {
+    "backend": "100% (3/3 new live LLM+regression tests). Note: 1st train attempt in this run returned 502 due to LLM trailing-data bug; retry succeeded — flagged in minor issues.",
+    "frontend": "100% (all requested /monolith flows + fs-monolith tile + /jarvis + /bioscan + /marketplace regressions)"
+  },
+  "seed_data_creation": "No new users. Left artefacts on test-token-abc: 1 twin simulation (Ibuprofen 400 mg), 1 personality blueprint (now v3), 1 blueprint dialogue (Tomáš / oprava strechy), 1 truth-chain record ('Test svedectva iter22'), 1 payout, 1 credit draw. All expected/production-shaped.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Frontend session: page.add_init_script(\"localStorage.setItem('gh_session_token','test-token-abc')\") then goto /monolith directly. UHP section is OPEN by default (open='uhp'); do NOT click mono-sec-uhp before checking '1.02 B' — clicking will collapse it. All other sections start collapsed and need mono-sec-{arb|bank|twin|sentinel|edge|truth|bp} click first. Section IDs: uhp, arb, bank, twin, sentinel, edge, truth, bp. Payout may report insufficient_funds after multiple runs — click mono-credit-score then mono-draw-btn to top up. mono-edge-run intentionally blocks ~3s (real SHA compute). Blueprint train LLM takes 20-45s. Twin simulate ~5-15s. Truth 'Záznamov' count label may have a NBSP so anchor on integrity string 'NEPORUŠENÁ' instead.",
+  "rca_of_issue": "MINOR FLAKINESS — POST /api/legacy/blueprint/train (and potentially /api/twin/simulate) intermittently 502s. Reproduction: call endpoint 5-10× in a row; roughly 1 in 5 returns 502. Backend log: ERROR:guardian:blueprint train error: Extra data: line 1 column 688 (char 687). Root cause: ascension.py:372-374 uses `raw = re.sub(r\"^```(json)?|```$\", \"\", str(resp).strip(), flags=re.M).strip(); bp = json.loads(raw)`. The regex only strips backtick fences; when gpt-5.4 appends a disclaimer or short prose after the closing brace, json.loads raises JSONDecodeError('Extra data') and the except-branch converts it to HTTPException 502. Mitigation implemented client-side (retry works), but a robust fix is: `bp, _ = json.JSONDecoder().raw_decode(raw)` or `m = re.search(r'\\{.*\\}', raw, flags=re.DOTALL); json.loads(m.group(0))`. Apply the same pattern to twin_simulate (ascension.py:95) for consistency."
+}

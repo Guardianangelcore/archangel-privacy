@@ -4,13 +4,16 @@ import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
-import { api } from './api';
+import { api, API_BASE } from './api';
 import { useAuth } from './auth';
 
 /**
- * GuardianMonitor — real-time fall detection + inactivity watchdog.
- * Fall heuristic: free-fall (|a| < 0.35g) followed by impact (|a| > 2.7g) within 1.2s.
- * Runs only while the app is open (Expo limitation without native background tasks).
+ * GuardianMonitor — kernel-level survival service.
+ * 1. Real-time fall detection (free-fall → impact) + inactivity watchdog.
+ * 2. PREDICTIVE SENTINEL: micro-vibration (tremor) + gait-regularity sampling
+ *    → behavioural risk forecast BEFORE an event occurs.
+ * 3. GRID WATCHDOG: when the internet dies, the app switches itself to
+ *    PRIMARY NODE mode (BLE-mesh Blackout screen) — survival communication core.
  */
 export default function GuardianMonitor() {
   const { user } = useAuth();
@@ -20,6 +23,10 @@ export default function GuardianMonitor() {
   const lastMove = useRef(Date.now());
   const lastMag = useRef(1);
   const alertedDay = useRef('');
+  const magWindow = useRef<number[]>([]);
+  const lastGaitPost = useRef(0);
+  const gridFails = useRef(0);
+  const lastGridNav = useRef(0);
 
   const fallGuard = !!(user as any)?.fall_guard;
   const inactivityGuard = !!(user as any)?.inactivity_guard;
@@ -33,6 +40,18 @@ export default function GuardianMonitor() {
       const now = Date.now();
       if (Math.abs(mag - lastMag.current) > 0.12) lastMove.current = now;
       lastMag.current = mag;
+      // PREDICTIVE SENTINEL — rolling tremor window (micro-vibrations)
+      magWindow.current.push(mag);
+      if (magWindow.current.length > 300) magWindow.current.shift();
+      if (now - lastGaitPost.current > 10 * 60 * 1000 && magWindow.current.length >= 120) {
+        lastGaitPost.current = now;
+        const w = magWindow.current;
+        const mean = w.reduce((a, b) => a + b, 0) / w.length;
+        const variance = w.reduce((a, b) => a + (b - mean) ** 2, 0) / w.length;
+        const tremor = Math.min(10, variance * 100);
+        const regularity = Math.max(0, Math.min(1, 1 - variance * 2));
+        api('/sentinel/gait', { method: 'POST', body: JSON.stringify({ tremor_index: Number(tremor.toFixed(2)), gait_regularity: Number(regularity.toFixed(2)) }) }).catch(() => {});
+      }
       if (!fallGuard) return;
       if (mag < 0.35) {
         freeFallAt.current = now;
@@ -72,6 +91,30 @@ export default function GuardianMonitor() {
     }, 60000);
     return () => clearInterval(iv);
   }, [user?.user_id, inactivityGuard, inactivityHours]);
+
+  // KERNEL GRID WATCHDOG — total grid failure → become the PRIMARY NODE
+  useEffect(() => {
+    if (!user) return;
+    const iv = setInterval(async () => {
+      try {
+        const ctl = new AbortController();
+        const to = setTimeout(() => ctl.abort(), 4000);
+        await fetch(`${API_BASE}/api/`, { signal: ctl.signal });
+        clearTimeout(to);
+        gridFails.current = 0;
+      } catch {
+        gridFails.current += 1;
+        if (gridFails.current >= 2 && Date.now() - lastGridNav.current > 15 * 60 * 1000) {
+          lastGridNav.current = Date.now();
+          gridFails.current = 0;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+          router.push('/blackout');
+        }
+      }
+    }, 20000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.user_id]);
 
   return null;
 }

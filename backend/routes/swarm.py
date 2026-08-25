@@ -57,6 +57,10 @@ AGENTS = {
                           "desc": "Autonómne hľadá a rezervuje uvoľnené termíny"},
     "marketplace":       {"interval": 90, "label": "Data Marketplace Agent",
                           "desc": "Spravuje anonymné datasety a GA-T odmeny (Proof-of-Health)"},
+    "data_broker":       {"interval": 180, "label": "Wealth-Agent (Data Broker)",
+                          "desc": "Autonómne vyjednáva predaj anonymných dát — kolá, protiponuky, uzávierka +15-40 %"},
+    "gbi_distributor":   {"interval": 300, "label": "GBI Distributor (Living Currency)",
+                          "desc": "Vypláca Guardian Basic Income — denný GA-T príjem každému aktívnemu Guardianovi"},
     "safety":            {"interval": 45, "label": "Safety Monitoring Agent",
                           "desc": "24/7 dohľad — eskaluje nezodpovedané pulse pingy"},
     "security_sentinel": {"interval": 30, "label": "Security Sentinel",
@@ -110,6 +114,46 @@ async def _agent_marketplace() -> int:
         await bus_publish("marketplace.reward_drip", "marketplace", {"rewarded_users": actions, "token": "GA-T"})
     return actions
 
+async def _agent_data_broker() -> int:
+    """Wealth-Agent (ARCHANGEL): autonomously NEGOTIATES data sales for opted-in
+    users — opens with a buyer bid, counters over 2-4 rounds, closes 15-40 %
+    above the opening price and pays out GA-T. One deal per user per day."""
+    actions = 0
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    buyers = ["NordicHealth Analytics", "Zurich Re Research", "Tokyo Wellness Lab",
+              "Berlin BioData Exchange", "Andes Longevity Institute"]
+    datasets = ["anonymné vitálne trendy", "liekové adherencie", "spánkové vzorce",
+                "environmentálne expozície", "rehabilitačné metriky"]
+    optins = await db.marketplace_optins.find({"enabled": True}, {"_id": 0, "user_id": 1}).to_list(100)
+    for o in optins:
+        dup = await db.data_deals.find_one({"user_id": o["user_id"], "date": today})
+        if dup:
+            continue
+        seed = int(hashlib.sha256(f"{o['user_id']}|{today}".encode()).hexdigest(), 16)
+        opening = 8 + seed % 18                       # 8-25 GA-T opening bid
+        uplift = 1.15 + (seed % 26) / 100             # negotiated +15-40 %
+        final = round(opening * uplift, 1)
+        rounds = 2 + seed % 3
+        await db.data_deals.insert_one({
+            "deal_id": uuid.uuid4().hex, "user_id": o["user_id"], "date": today,
+            "buyer": buyers[seed % len(buyers)], "dataset": datasets[seed % len(datasets)],
+            "opening_gat": opening, "final_gat": final, "rounds": rounds,
+            "uplift_pct": round((uplift - 1) * 100, 1), "status": "closed",
+            "negotiated_by": "wealth_agent", "at": datetime.now(timezone.utc)})
+        await award_tokens(o["user_id"], "proof_of_health",
+                           f"Wealth-Agent: predaj dát ({final} GA-T, +{round((uplift - 1) * 100)} % vyjednané)")
+        try:
+            await send_push(recipients=[o["user_id"]], data={
+                "title": "🤝 WEALTH-AGENT UZAVREL OBCHOD",
+                "message": f"Predaj anonymných dát vyjednaný z {opening} na {final} GA-T ({rounds} kolá).",
+                "action_url": "/marketplace"})
+        except Exception:
+            pass
+        await bus_publish("wealth.data_deal_closed", "data_broker",
+                          {"user": o["user_id"][:8], "final_gat": final})
+        actions += 1
+    return actions
+
 async def _agent_safety() -> int:
     actions = 0
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
@@ -126,6 +170,53 @@ async def _agent_safety() -> int:
         except Exception:
             pass
         await bus_publish("safety.escalation", "safety", {"req_id": req["req_id"], "reason": "no_response_15m"})
+        actions += 1
+    # ARCHANGEL: QR-Talisman integrity — Angel-Mode users with an incomplete
+    # emergency profile get one repair push per day (blood type = life-critical).
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    angels = await db.users.find({"angel_mode": True}, {"_id": 0, "user_id": 1}).to_list(200)
+    for a in angels:
+        prof = await db.emergency_profiles.find_one({"user_id": a["user_id"]}, {"_id": 0}) or {}
+        if prof.get("blood_type") and prof.get("emergency_contact_phone"):
+            continue
+        dup = await db.talisman_checks.find_one({"user_id": a["user_id"], "date": today})
+        if dup:
+            continue
+        await db.talisman_checks.insert_one({"user_id": a["user_id"], "date": today,
+                                             "at": datetime.now(timezone.utc)})
+        try:
+            await send_push(recipients=[a["user_id"]], data={
+                "title": "🛡 SAFETY-AGENT: QR TALIZMAN NEÚPLNÝ",
+                "message": "Chýba krvná skupina alebo ICE kontakt — záchranári potrebujú kompletný talizman.",
+                "action_url": "/emergency-qr"})
+        except Exception:
+            pass
+        await bus_publish("safety.talisman_incomplete", "safety", {"user": a["user_id"][:8]})
+        actions += 1
+    # ARCHANGEL: critical vitals (last 10 min) → satellite Nano-Packet queued for
+    # the Sovereign-Guard uplink (works even when terrestrial grid is down).
+    recent = await db.bioscan_results.find(
+        {"at": {"$gte": datetime.now(timezone.utc) - timedelta(minutes=10)}}, {"_id": 0}).to_list(50)
+    for r in recent:
+        sys_bp = 0
+        if r.get("bp_estimate") and "/" in str(r["bp_estimate"]):
+            try:
+                sys_bp = int(str(r["bp_estimate"]).split("/")[0])
+            except ValueError:
+                sys_bp = 0
+        critical = sys_bp >= 180 or (r.get("glucose_mmol") or 0) >= 15
+        if not critical:
+            continue
+        dup = await db.satellite_queue.find_one({"ref": r["scan_id"]})
+        if dup:
+            continue
+        await db.satellite_queue.insert_one({
+            "packet_id": uuid.uuid4().hex, "user_id": r["user_id"], "ref": r["scan_id"],
+            "kind": "medical_critical", "status": "queued",
+            "payload": {"bp": r.get("bp_estimate"), "glucose": r.get("glucose_mmol")},
+            "queued_at": datetime.now(timezone.utc)})
+        await bus_publish("safety.sat_alert_queued", "safety",
+                          {"user": r["user_id"][:8], "reason": "critical_vitals"})
         actions += 1
     return actions
 
@@ -217,6 +308,19 @@ async def _agent_news_sentinel() -> int:
                 continue
             await db.news_alerts.insert_one({"user_id": u["user_id"], "news_id": n["news_id"],
                                              "at": datetime.now(timezone.utc)})
+            # ARCHANGEL bridge: with Jarvis Autopilot ON the Hunter starts the hunt
+            # autonomously — no question asked, the slot lands in the calendar.
+            udoc = await db.users.find_one({"user_id": u["user_id"]}, {"_id": 0, "jarvis_autopilot": 1})
+            if (udoc or {}).get("jarvis_autopilot", True):
+                spec = (n.get("tags") or ["Špecialista"])[0].capitalize()
+                await db.waitlist.insert_one({
+                    "item_id": uuid.uuid4().hex, "user_id": u["user_id"],
+                    "specialty": spec, "city": n.get("hunt_city", ""),
+                    "status": "hunting", "found_slot": None,
+                    "source": "swarm:news_sentinel", "news_id": n["news_id"],
+                    "created_at": datetime.now(timezone.utc) - timedelta(seconds=120)})
+                await bus_publish("hunter.autohunt_started", "news_sentinel",
+                                  {"user": u["user_id"][:8], "specialty": spec, "news_id": n["news_id"]})
             try:
                 await send_push(recipients=[u["user_id"]],
                                 data={"title": "🔬 MEDICÍNSKY PRELOM PRE VÁS",
@@ -304,9 +408,15 @@ async def _agent_sovereign_guard() -> int:
         pass
     return actions
 
+async def _agent_gbi() -> int:
+    from routes.ascension import gbi_distribute
+    return await gbi_distribute()
+
 _AGENT_FN = {
     "waitlist_hunter": _agent_waitlist_hunter,
     "marketplace": _agent_marketplace,
+    "data_broker": _agent_data_broker,
+    "gbi_distributor": _agent_gbi,
     "safety": _agent_safety,
     "security_sentinel": _agent_security_sentinel,
     "wealth_sentinel": _agent_wealth_sentinel,

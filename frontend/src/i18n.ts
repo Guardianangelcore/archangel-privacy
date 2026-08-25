@@ -169,6 +169,10 @@ export const T: Dict = {
   empty_pn_title: { sk: 'PN pod plnou kontrolou', cs: 'Neschopenka pod plnou kontrolou', en: 'Sick leave, fully covered', de: 'Krankschreibung voll im Griff' },
   empty_pn_sub: { sk: 'Vyberte dátumy valčekom, nastavte vychádzky a Jarvis postráži kontroly zo Sociálnej poisťovne aj výpočet nemocenského — bez papierovačiek.', cs: 'Vyberte data kolečkem, nastavte vycházky a Jarvis pohlídá kontroly i výpočet nemocenské — bez papírování.', en: 'Pick your dates with the wheel, set outing windows and Jarvis guards inspections and sick-pay maths — zero paperwork.', de: 'Wählen Sie Daten per Rad, legen Sie Ausgangszeiten fest — Jarvis überwacht Kontrollen und berechnet das Krankengeld. Ohne Papierkram.' },
   pick_from_contacts: { sk: 'VYBRAŤ Z KONTAKTOV', cs: 'VYBRAT Z KONTAKTŮ', en: 'PICK FROM CONTACTS', de: 'AUS KONTAKTEN WÄHLEN' },
+  empty_market_title: { sk: 'Trhovisko je zatiaľ prázdne', cs: 'Tržiště je zatím prázdné', en: 'Marketplace is quiet for now', de: 'Der Marktplatz ist noch leer' },
+  empty_market_sub: { sk: 'Ponúknite susedom službu — masáž, odvoz, opateru — alebo si počkajte na prvé ponuky v okolí.', cs: 'Nabídněte sousedům službu — masáž, odvoz, péči — nebo počkejte na první nabídky v okolí.', en: 'Offer a service to your neighbours — massage, rides, care — or wait for the first nearby listings.', de: 'Bieten Sie Nachbarn einen Dienst an — Massage, Fahrt, Pflege — oder warten Sie auf erste Angebote.' },
+  empty_bookings_title: { sk: 'Žiadne rezervácie', cs: 'Žádné rezervace', en: 'No bookings yet', de: 'Noch keine Buchungen' },
+  empty_bookings_sub: { sk: 'Keď si objednáte službu z trhoviska, objaví sa tu s termínom aj stavom platby.', cs: 'Když si objednáte službu z tržiště, objeví se zde s termínem i stavem platby.', en: 'When you book a marketplace service it will appear here with time and payment status.', de: 'Gebuchte Dienste erscheinen hier mit Termin und Zahlungsstatus.' },
   colors: { sk: '', cs: '', en: '', de: '' },
 };
 
