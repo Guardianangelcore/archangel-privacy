@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { WheelField } from '@/src/ui/fields';
+import { ContactSheet } from '@/src/ui/ContactSheet';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -29,6 +30,7 @@ export default function Dignity() {
   const [method, setMethod] = useState('card');
   const [plan, setPlan] = useState({ monthly_amount: '20', enabled: false });
   const [ben, setBen] = useState({ type: 'proxy', name: '', contact: '', iban: '' });
+  const [benPick, setBenPick] = useState(false);
   const [wishes, setWishes] = useState({ burial_type: 'cremation', ceremony_music: '', guest_list: '', notes: '' });
   const [cert, setCert] = useState('');
   const [msg, setMsg] = useState('');
@@ -161,6 +163,12 @@ export default function Dignity() {
         </View>
         <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? 'Tomáš Novák (auto zo splnomocnenia)' : 'Pohrebná služba, s.r.o.'} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
         <TextInput testID="dg-ben-contact" placeholder="Kontakt / IBAN" value={ben.contact} onChangeText={v => setBen({ ...ben, contact: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <Pressable testID="dg-ben-pick" onPress={() => setBenPick(true)} style={[styles.secBtn, { marginTop: S.sm, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }]}>
+          <Ionicons name="people-outline" size={16} color={C.brand} />
+          <Text style={styles.secBtnText}>{t('pick_from_contacts', lang)}</Text>
+        </Pressable>
+        <ContactSheet visible={benPick} onClose={() => setBenPick(false)}
+          onPick={c => setBen(prev => ({ ...prev, name: c.name || prev.name, contact: c.phone || c.email || prev.contact }))} />
         <Pressable testID="dg-ben-save" onPress={saveBen} style={[styles.secBtn, { marginTop: S.sm }]}>
           <Text style={styles.secBtnText}>{t('save', lang).toUpperCase()}</Text>
         </Pressable>

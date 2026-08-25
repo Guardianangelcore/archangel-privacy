@@ -120,7 +120,15 @@ function RootNav() {
   return (
     <>
       <GuardianMonitor />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }} />
+      <Stack screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: C.bg },
+        // 60FPS native-driver transitions (react-native-screens) + memory freeze off-screen
+        animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
+        animationDuration: 240,
+        freezeOnBlur: true,
+        gestureEnabled: true,
+      }} />
       {/* Hidden digital watermark — original Guardian Angel build fingerprint */}
       <Text
         accessibilityElementsHidden

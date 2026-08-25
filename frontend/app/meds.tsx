@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { api, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { EmptyState } from '@/src/ui/EmptyState';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
@@ -150,7 +151,8 @@ export default function Meds() {
         )}
 
         {today.length === 0 && !loading ? (
-          <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text>
+          <EmptyState testID="md-empty" icon="medkit-outline" title={t('empty_meds_title', lang)} sub={t('empty_meds_sub', lang)}
+            ctaLabel={t('empty_meds_cta', lang)} onCta={() => setModal(true)} />
         ) : today.map(item => (
           <View key={`${item.reminder_id}-${item.time}`} testID={`med-${item.reminder_id}-${item.time}`} style={[styles.medCard, item.taken && styles.medCardDone]}>
             <View style={styles.medRow}>

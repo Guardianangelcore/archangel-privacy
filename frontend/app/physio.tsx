@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { api } from '@/src/api';
-import { cachedAudioUri } from '@/src/media';
+import { cachedAudioUri, cachedVideo, prefetchVideo } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
@@ -28,14 +28,17 @@ const REGIONS = [
 ];
 const INTENSITY = ['light', 'medium', 'firm'];
 
-/** Zero-stutter guide video — buffered player, poster-free instant layout. */
+/** Zero-stutter guide video — hardware-accelerated player, local FS cache + native caching. */
 function GuideVideo({ url, testID }: { url: string; testID: string }) {
-  const player = useVideoPlayer(url, p => {
-    p.loop = true;
-    p.muted = true; // demonstration loop — narration comes from Jarvis TTS
-    p.bufferOptions = { preferredForwardBufferDuration: 8 } as any;
-    p.play();
-  });
+  const src = cachedVideo(url);
+  const player = useVideoPlayer(
+    src.startsWith('file') ? src : ({ uri: src, useCaching: true } as any),
+    p => {
+      p.loop = true;
+      p.muted = true; // demonstration loop — narration comes from Jarvis TTS
+      p.bufferOptions = { preferredForwardBufferDuration: 10, waitsToMinimizeStalling: true } as any;
+      p.play();
+    });
   return (
     <View style={styles.videoWrap}>
       <VideoView testID={testID} player={player} style={styles.video} contentFit="cover"
@@ -67,6 +70,8 @@ export default function Physio() {
         const res: any = await api(`/physio/guides?language=${lang}`);
         setGuides(res.guides || []);
         setCatLabels(res.category_labels || {});
+        // Zero-Stutter: warm the video cache in background so playback starts instantly
+        (res.guides || []).forEach((g: any) => { if (g.video_url) prefetchVideo(g.video_url); });
       } catch {}
     })();
   }, [lang]);

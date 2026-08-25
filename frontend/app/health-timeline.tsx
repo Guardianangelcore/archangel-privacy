@@ -34,7 +34,7 @@ export default function HealthTimeline() {
   const setF = (f: string) => { setFilter(f); load(f); };
 
   const add = async () => {
-    if (!title.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { setErr('Zadajte názov a dátum vo formáte RRRR-MM-DD.'); return; }
+    if (!title.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { setErr('Zadajte názov a vyberte dátum v kalendári.'); return; }
     setBusy(true); setErr('');
     try {
       await api('/calendar/events', { method: 'POST', body: JSON.stringify({ category: cat, title: title.trim(), date, booster_due: cat === 'vaccine' && booster ? booster : null }) });

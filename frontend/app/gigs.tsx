@@ -8,9 +8,10 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { WheelField } from '@/src/ui/fields';
+import { EmptyState } from '@/src/ui/EmptyState';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
-import { Lang } from '@/src/i18n';
+import { t, Lang } from '@/src/i18n';
 
 const KIND_ICON: Record<string, any> = {
   transport: 'car-outline', grocery: 'cart-outline', pharmacy: 'medkit-outline',
@@ -97,7 +98,11 @@ export default function Gigs() {
             {!!err && <Text testID="gg-err" style={st.err}>{err}</Text>}
           </View>
         }
-        ListEmptyComponent={!loading ? <Text style={st.empty}>{tab === 'open' ? 'ŽIADNE OTVORENÉ POŽIADAVKY V OKOLÍ' : 'ZATIAĽ ŽIADNE VLASTNÉ GIGY'}</Text> : null}
+        ListEmptyComponent={!loading ? (
+          <EmptyState testID="gg-empty" icon={tab === 'open' ? 'people-circle-outline' : 'hand-left-outline'}
+            title={t(tab === 'open' ? 'empty_gigs_open_title' : 'empty_gigs_mine_title', lang)}
+            sub={t(tab === 'open' ? 'empty_gigs_open_sub' : 'empty_gigs_mine_sub', lang)} />
+        ) : null}
         renderItem={({ item }) => {
           const isMineReq = item.user_id === user?.user_id;
           return (

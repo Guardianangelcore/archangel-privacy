@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { ContactSheet } from '@/src/ui/ContactSheet';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { WATERMARK } from '@/src/watermark';
@@ -16,6 +17,7 @@ export default function Profile() {
   const lang: Lang = (user?.language as Lang) || 'sk';
   const [profile, setProfile] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [ecPick, setEcPick] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [admin, setAdmin] = useState<any>(null);
   const [demoBusy, setDemoBusy] = useState(false);
@@ -149,6 +151,12 @@ export default function Profile() {
         <Text style={styles.lbl}>{t('emergency_contact', lang).toUpperCase()}</Text>
         <TextInput testID="prof-ec-name" value={profile.emergency_contact_name || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_name: v })} style={styles.input} placeholder="Meno" placeholderTextColor="#999" />
         <TextInput testID="prof-ec-phone" value={profile.emergency_contact_phone || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_phone: v })} style={styles.input} placeholder="+421…" keyboardType="phone-pad" placeholderTextColor="#999" />
+        <Pressable testID="prof-ec-pick" onPress={() => setEcPick(true)} style={styles.pickBtn}>
+          <Ionicons name="people-outline" size={16} color={C.brand} />
+          <Text style={styles.pickBtnText}>{t('pick_from_contacts', lang)}</Text>
+        </Pressable>
+        <ContactSheet visible={ecPick} onClose={() => setEcPick(false)}
+          onPick={c => setProfile((prev: any) => ({ ...prev, emergency_contact_name: c.name || prev.emergency_contact_name, emergency_contact_phone: c.phone || prev.emergency_contact_phone }))} />
 
         <View style={styles.donorRow}>
           <View style={{ flex: 1 }}>
@@ -264,6 +272,8 @@ const styles = StyleSheet.create({
   chipTextActive: { color: C.onInverse },
   lbl: { fontSize: 10, letterSpacing: 2, color: C.onS3, fontWeight: '800', marginTop: S.md, marginBottom: 6 },
   input: { borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, fontSize: 15, color: C.fg, backgroundColor: C.bg, marginBottom: S.sm },
+  pickBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.brand, minHeight: 48, marginBottom: S.sm },
+  pickBtnText: { color: C.brand, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   donorRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.lg, borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, backgroundColor: C.brandTer },
   donorTitle: { fontWeight: '900', letterSpacing: 1.5, color: C.brand, fontSize: 13 },
   donorSub: { color: C.brand, fontSize: 11, marginTop: 2 },

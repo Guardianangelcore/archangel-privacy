@@ -6,8 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api';
+import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
 import { WheelField, DateField, TimeField } from '@/src/ui/fields';
+import { EmptyState } from '@/src/ui/EmptyState';
+import { t, Lang } from '@/src/i18n';
 import { C, S, R } from '@/src/theme';
 
 const CONTRACTS = [['fulltime', 'TPP'], ['dpp', 'DPP'], ['dpc', 'DPČ']];
@@ -32,6 +35,8 @@ function outingStatus(outings: any[]) {
 
 export default function MyRecovery() {
   const router = useRouter();
+  const { user } = useAuth();
+  const lang: Lang = (user?.language as Lang) || 'sk';
   const [rec, setRec] = useState<any>(null);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -68,7 +73,7 @@ export default function MyRecovery() {
   const status = useMemo(() => outingStatus(outings), [outings, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) { setErr('Začiatok PN musí byť RRRR-MM-DD.'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) { setErr('Vyberte začiatok PN v kalendári.'); return; }
     setBusy('save'); setErr(''); setInfo('');
     try {
       const r: any = await api('/recovery/epn', {
@@ -81,7 +86,7 @@ export default function MyRecovery() {
   };
 
   const addOuting = () => {
-    if (!/^\d{2}:\d{2}$/.test(oFrom) || !/^\d{2}:\d{2}$/.test(oTo)) { setErr('Čas vychádzky vo formáte HH:MM.'); return; }
+    if (!/^\d{2}:\d{2}$/.test(oFrom) || !/^\d{2}:\d{2}$/.test(oTo)) { setErr('Vyberte čas vychádzky Od a Do.'); return; }
     setOutings([...outings, { from_time: oFrom, to_time: oTo }]);
     setOFrom(''); setOTo(''); setErr('');
   };
@@ -152,6 +157,10 @@ export default function MyRecovery() {
         <Text style={styles.sub}>PN/ePN pod kontrolou: vychádzky, nemocenské a hlásenia úradom — bez papierovačiek.</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         {!!info && <Text style={styles.info}>{info}</Text>}
+
+        {outings.length === 0 && !calc && !start && (
+          <EmptyState testID="mr-empty" icon="shield-checkmark-outline" title={t('empty_pn_title', lang)} sub={t('empty_pn_sub', lang)} />
+        )}
 
         {outings.length > 0 && (
           <View style={[styles.statusCard, status.active && (status as any).left <= 15 && { borderColor: C.error }]}>

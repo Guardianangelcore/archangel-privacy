@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { sharePdf } from '@/src/pdf';
 import { useAuth } from '@/src/auth';
+import { ContactSheet } from '@/src/ui/ContactSheet';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -25,6 +26,7 @@ export default function HealthcareProxy() {
   const [f, setF] = useState<any>({ proxy_full_name: '', proxy_relationship: 'partner', proxy_phone: '', proxy_email: '', scope: 'full', effective_immediately: true, alternate_name: '', notes: '' });
   const [doc, setDoc] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -66,6 +68,12 @@ export default function HealthcareProxy() {
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <Text style={styles.lbl}>MENO SPLNOMOCNENCA (napr. Tomáš)</Text>
         <TextInput testID="hp-name" value={f.proxy_full_name} onChangeText={(v: string) => setF({ ...f, proxy_full_name: v })} style={styles.input} placeholder="Tomáš Novák" placeholderTextColor="#999" />
+        <Pressable testID="hp-pick-contact" onPress={() => setPickOpen(true)} style={styles.pickBtn}>
+          <Ionicons name="people-outline" size={16} color={C.brand} />
+          <Text style={styles.pickBtnText}>{t('pick_from_contacts', lang)}</Text>
+        </Pressable>
+        <ContactSheet visible={pickOpen} onClose={() => setPickOpen(false)}
+          onPick={c => setF((prev: any) => ({ ...prev, proxy_full_name: c.name || prev.proxy_full_name, proxy_phone: c.phone || prev.proxy_phone, proxy_email: c.email || prev.proxy_email }))} />
 
         <Text style={styles.lbl}>VZŤAH</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
@@ -135,6 +143,8 @@ const styles = StyleSheet.create({
   subText: { color: C.brand, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   lbl: { fontSize: 10, letterSpacing: 2, color: C.onS3, fontWeight: '800', marginTop: S.md, marginBottom: 6 },
   input: { borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, fontSize: 15, color: C.fg },
+  pickBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.brand, minHeight: 48, marginTop: S.sm },
+  pickBtnText: { color: C.brand, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   chip: { paddingHorizontal: S.md, paddingVertical: 10, borderWidth: 1.5, borderColor: C.borderStrong },
   chipActive: { backgroundColor: C.inverse },
   chipText: { fontWeight: '800', color: C.fg, fontSize: 11, letterSpacing: 1 },
