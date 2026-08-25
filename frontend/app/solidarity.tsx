@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
@@ -138,7 +139,7 @@ export default function Solidarity() {
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }}>
               <TextInput testID="sol-title" placeholder="TITLE" value={form.title} onChangeText={v => setForm({ ...form, title: v })} style={styles.input} placeholderTextColor="#999" />
               <TextInput testID="sol-story" placeholder="STORY" value={form.story} onChangeText={v => setForm({ ...form, story: v })} style={[styles.input, { minHeight: 100 }]} multiline placeholderTextColor="#999" />
-              <TextInput testID="sol-goal" placeholder="GOAL AMOUNT" keyboardType="numeric" value={form.goal_amount} onChangeText={v => setForm({ ...form, goal_amount: v })} style={styles.input} placeholderTextColor="#999" />
+              <WheelField testID="sol-goal" title="CIEĽOVÁ SUMA €" min={100} max={20000} step={100} unit="€" value={form.goal_amount} onChange={v => setForm({ ...form, goal_amount: v })} placeholder="GOAL AMOUNT" style={styles.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {['EUR','CZK','USD'].map(c => (
                   <Pressable testID={`cur-${c}`} key={c} onPress={() => setForm({ ...form, currency: c })} style={[styles.chip, form.currency === c && styles.chipActive]}><Text style={[styles.chipText, form.currency === c && styles.chipTextActive]}>{c}</Text></Pressable>
@@ -157,7 +158,7 @@ export default function Solidarity() {
               <Pressable onPress={() => setDonateFor(null)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable></View>
             <View style={{ padding: S.lg, gap: S.md }}>
               <Text style={styles.cardTitle}>{donateFor?.title}</Text>
-              <TextInput testID="donate-amount" placeholder="Amount" keyboardType="numeric" value={amount} onChangeText={setAmount} style={styles.input} placeholderTextColor="#999" />
+              <WheelField testID="donate-amount" title="SUMA DARU €" min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder="Amount" style={styles.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {['5','10','25','50'].map(a => <Pressable testID={`amt-${a}`} key={a} onPress={() => setAmount(a)} style={styles.chip}><Text style={styles.chipText}>{a} {donateFor?.currency}</Text></Pressable>)}
               </View>

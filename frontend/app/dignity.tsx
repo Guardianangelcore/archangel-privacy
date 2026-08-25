@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -132,7 +133,7 @@ export default function Dignity() {
               ))}
             </View>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <TextInput testID="dg-amount" value={amount} onChangeText={setAmount} keyboardType="numeric" style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+              <WheelField testID="dg-amount" title="SUMA €" min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder="Suma €" style={[styles.input, { flex: 1 }]} />
               <Pressable testID="dg-deposit" onPress={deposit} disabled={busy} style={styles.priBtn}>
                 {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>VLOŽIŤ</Text>}
               </Pressable>
@@ -141,7 +142,7 @@ export default function Dignity() {
             {/* Recurring plan */}
             <Text style={styles.section}>AUTOMATICKÉ MESAČNÉ SPORENIE</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, alignItems: 'center' }}>
-              <TextInput testID="dg-plan-amount" value={plan.monthly_amount} onChangeText={v => setPlan({ ...plan, monthly_amount: v })} keyboardType="numeric" style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+              <WheelField testID="dg-plan-amount" title="MESAČNE €" min={5} max={500} step={5} unit="€" value={plan.monthly_amount} onChange={v => setPlan({ ...plan, monthly_amount: v })} placeholder="€/mes." style={[styles.input, { flex: 1 }]} />
               <Switch testID="dg-plan-enabled" value={plan.enabled} onValueChange={v => setPlan({ ...plan, enabled: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
               <Pressable testID="dg-plan-save" onPress={savePlan} style={styles.priBtn}><Text style={styles.priBtnText}>{t('save', lang).toUpperCase()}</Text></Pressable>
             </View>

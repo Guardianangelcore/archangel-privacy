@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api';
 import { sharePdf } from '@/src/pdf';
+import { WheelField, DateField, TimeField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
 
 const CONTRACTS = [['fulltime', 'TPP'], ['dpp', 'DPP'], ['dpc', 'DPČ']];
@@ -170,8 +171,8 @@ export default function MyRecovery() {
 
         <Text style={styles.section}>ePN ZÁZNAM</Text>
         <View style={styles.row2}>
-          <TextInput testID="mr-start" style={[styles.input, { flex: 1 }]} placeholder="Začiatok RRRR-MM-DD" placeholderTextColor={C.info} value={start} onChangeText={setStart} />
-          <TextInput testID="mr-end" style={[styles.input, { flex: 1 }]} placeholder="Koniec (odhad)" placeholderTextColor={C.info} value={end} onChangeText={setEnd} />
+          <DateField testID="mr-start" title="ZAČIATOK PN" value={start} onChange={setStart} placeholder="Začiatok PN" style={[styles.input, { flex: 1 }]} />
+          <DateField testID="mr-end" title="KONIEC PN (ODHAD)" value={end} onChange={setEnd} placeholder="Koniec (odhad)" style={[styles.input, { flex: 1 }]} />
         </View>
         <View style={styles.row2}>
           {CONTRACTS.map(([k, l]) => (
@@ -179,7 +180,7 @@ export default function MyRecovery() {
               <Text style={[styles.chipText, contract === k && { color: C.onInverse }]}>{l}</Text>
             </Pressable>
           ))}
-          <TextInput testID="mr-gross" style={[styles.input, { flex: 1 }]} placeholder="Hrubá mzda €" placeholderTextColor={C.info} value={gross} onChangeText={setGross} keyboardType="numeric" />
+          <WheelField testID="mr-gross" title="HRUBÁ MZDA €" min={300} max={5000} step={10} unit="€" value={gross} onChange={setGross} placeholder="Hrubá mzda €" style={[styles.input, { flex: 1 }]} />
         </View>
         <TextInput testID="mr-note" style={styles.input} placeholder="Poznámka o zotavení (napr. koleno po artroskopii)" placeholderTextColor={C.info} value={note} onChangeText={setNote} />
 
@@ -195,8 +196,8 @@ export default function MyRecovery() {
           </View>
         ))}
         <View style={styles.row2}>
-          <TextInput testID="mr-out-from" style={[styles.input, { flex: 1 }]} placeholder="Od HH:MM" placeholderTextColor={C.info} value={oFrom} onChangeText={setOFrom} />
-          <TextInput testID="mr-out-to" style={[styles.input, { flex: 1 }]} placeholder="Do HH:MM" placeholderTextColor={C.info} value={oTo} onChangeText={setOTo} />
+          <TimeField testID="mr-out-from" title="VYCHÁDZKA OD" value={oFrom} onChange={setOFrom} placeholder="Od" style={[styles.input, { flex: 1 }]} />
+          <TimeField testID="mr-out-to" title="VYCHÁDZKA DO" value={oTo} onChange={setOTo} placeholder="Do" style={[styles.input, { flex: 1 }]} />
           <Pressable testID="mr-out-add" onPress={addOuting} style={styles.addBtn}><Ionicons name="add" size={20} color={C.onInverse} /></Pressable>
         </View>
         <Pressable testID="mr-ai-toggle" onPress={() => setShowAi(!showAi)} style={styles.aiToggle}>
@@ -224,7 +225,7 @@ export default function MyRecovery() {
 
         <Text style={styles.section}>KALKULAČKA NEMOCENSKÉHO</Text>
         <View style={styles.row2}>
-          <TextInput testID="mr-days" style={[styles.input, { flex: 1 }]} placeholder="Počet dní PN" placeholderTextColor={C.info} value={days} onChangeText={setDays} keyboardType="numeric" />
+          <WheelField testID="mr-days" title="POČET DNÍ PN" min={1} max={365} unit="dní" value={days} onChange={setDays} placeholder="Počet dní PN" style={[styles.input, { flex: 1 }]} />
           <Pressable testID="mr-calc" onPress={runCalc} disabled={busy === 'calc'} style={[styles.cta, { flex: 1 }]}>
             {busy === 'calc' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>VYPOČÍTAŤ</Text>}
           </Pressable>

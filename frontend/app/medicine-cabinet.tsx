@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField, DateField } from '@/src/ui/fields';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -199,10 +200,10 @@ export default function MedicineCabinet() {
                 <>
                   <TextInput testID="cab-name" placeholder="Ibuprofen 400mg" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
-                    <TextInput testID="cab-qty" placeholder="20" value={f.quantity} onChangeText={v => setF({ ...f, quantity: v })} keyboardType="numeric" style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+                    <WheelField testID="cab-qty" title="MNOŽSTVO" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="20" style={[styles.input, { flex: 1 }]} />
                     <TextInput testID="cab-unit" placeholder="ks" value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
                   </View>
-                  <TextInput testID="cab-exp" placeholder="EXP: 2027-06-30" value={f.expires_on} onChangeText={v => setF({ ...f, expires_on: v })} style={styles.input} placeholderTextColor="#999" />
+                  <DateField testID="cab-exp" title="EXPIRÁCIA" value={f.expires_on} onChange={v => setF({ ...f, expires_on: v })} placeholder="Expirácia (EXP)" style={styles.input} />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                     {CATS.map(c => (
                       <Pressable testID={`cab-cat-${c}`} key={c} onPress={() => setF({ ...f, category: c })} style={[styles.chip, f.category === c && styles.chipActive]}>
@@ -226,7 +227,7 @@ export default function MedicineCabinet() {
                   </View>
                   <TextInput testID="ex-name" placeholder="Paralen, obväzy…" value={ef.item_name} onChangeText={v => setEf({ ...ef, item_name: v })} style={styles.input} placeholderTextColor="#999" />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
-                    <TextInput testID="ex-qty" placeholder="1" value={ef.quantity} onChangeText={v => setEf({ ...ef, quantity: v })} keyboardType="numeric" style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+                    <WheelField testID="ex-qty" title="MNOŽSTVO" min={1} max={50} value={ef.quantity} onChange={v => setEf({ ...ef, quantity: v })} placeholder="1" style={[styles.input, { flex: 1 }]} />
                     <TextInput testID="ex-city" placeholder="Bratislava" value={ef.city} onChangeText={v => setEf({ ...ef, city: v })} style={[styles.input, { flex: 2 }]} placeholderTextColor="#999" />
                   </View>
                   <TextInput testID="ex-note" placeholder="Poznámka" value={ef.note} onChangeText={v => setEf({ ...ef, note: v })} style={styles.input} placeholderTextColor="#999" />

@@ -1,12 +1,13 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. */
 // Longevity Engine — Bio-Age Dashboard + AI Bio-Hacks (Sentinel tier)
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import Paywall from '@/src/Paywall';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
@@ -73,15 +74,15 @@ export default function Longevity() {
           <View>
             <Text style={st.intro}>Jarvis vypočíta váš biologický vek z dát (kroky, tep, stres, diagnózy). Najprv základné údaje:</Text>
             <Text style={st.lbl}>ROK NARODENIA</Text>
-            <TextInput testID="lg-birth" value={f.birth_year} onChangeText={v => setF({ ...f, birth_year: v })} keyboardType="numeric" placeholder="1971" placeholderTextColor="#777" style={st.input} />
+            <WheelField testID="lg-birth" title="ROK NARODENIA" min={1920} max={2012} value={f.birth_year} onChange={v => setF({ ...f, birth_year: v })} placeholder="1971" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               <View style={{ flex: 1 }}>
                 <Text style={st.lbl}>VÝŠKA (cm)</Text>
-                <TextInput testID="lg-height" value={f.height_cm} onChangeText={v => setF({ ...f, height_cm: v })} keyboardType="numeric" placeholder="178" placeholderTextColor="#777" style={st.input} />
+                <WheelField testID="lg-height" title="VÝŠKA" min={120} max={220} unit="cm" value={f.height_cm} onChange={v => setF({ ...f, height_cm: v })} placeholder="178" style={st.input} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={st.lbl}>VÁHA (kg)</Text>
-                <TextInput testID="lg-weight" value={f.weight_kg} onChangeText={v => setF({ ...f, weight_kg: v })} keyboardType="numeric" placeholder="85" placeholderTextColor="#777" style={st.input} />
+                <WheelField testID="lg-weight" title="VÁHA" min={35} max={200} unit="kg" value={f.weight_kg} onChange={v => setF({ ...f, weight_kg: v })} placeholder="85" style={st.input} />
               </View>
             </View>
             <View style={st.switchRow}>

@@ -1,12 +1,13 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, ActivityIndicator, Platform, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pedometer } from 'expo-sensors';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
@@ -148,7 +149,7 @@ export default function FamilyDashboard() {
             <Text style={styles.bigStatLbl}>Ø {dash?.avg_heart_rate || '—'} BPM</Text>
           </View>
           <View style={{ flex: 1, flexDirection: 'row', gap: S.sm }}>
-            <TextInput testID="fd-hr-input" value={hr} onChangeText={setHr} keyboardType="number-pad" style={styles.hrInput} placeholder="72" placeholderTextColor="#999" />
+            <WheelField testID="fd-hr-input" title="TEP (BPM)" min={30} max={220} unit="bpm" value={hr} onChange={setHr} placeholder="72" style={styles.hrInput} />
             <Pressable testID="fd-hr-save" onPress={saveHr} style={styles.hrBtn}>
               <Ionicons name="checkmark" size={20} color={C.onInverse} />
             </Pressable>

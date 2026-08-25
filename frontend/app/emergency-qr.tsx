@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -28,6 +28,25 @@ export default function EmergencyQR() {
     ec: `${prof.emergency_contact_name || ''} ${prof.emergency_contact_phone || ''}`.trim(),
     donor: prof.is_donor ? (prof.donor_organs || 'yes') : 'no',
   });
+
+  const shareProfile = async () => {
+    const msg = [
+      '🛡 GUARDIAN ANGEL — NÚDZOVÝ PROFIL',
+      `Meno: ${prof.full_name || user?.name || '—'}`,
+      `Krvná skupina: ${prof.blood_type || '—'}`,
+      `Alergie: ${prof.allergies || '—'}`,
+      `Diagnózy: ${prof.conditions || '—'}`,
+      `Lieky: ${prof.medications || '—'}`,
+      `ICE kontakt: ${`${prof.emergency_contact_name || ''} ${prof.emergency_contact_phone || ''}`.trim() || '—'}`,
+    ].join('\n');
+    try {
+      if (Platform.OS === 'web') {
+        if ((navigator as any).share) await (navigator as any).share({ title: 'Guardian núdzový profil', text: msg });
+      } else {
+        await Share.share({ message: msg, title: 'Guardian núdzový profil' });
+      }
+    } catch {}
+  };
 
   return (
     <SafeAreaView testID="emergency-qr-screen" style={styles.root} edges={['top', 'bottom']}>
@@ -64,6 +83,11 @@ export default function EmergencyQR() {
           {!!prof.life_testament && <Row label="LIFE TESTAMENT" value={prof.life_testament} />}
         </View>
 
+        <Pressable testID="qr-share" onPress={shareProfile} style={styles.shareBtn}>
+          <Ionicons name="share-outline" size={18} color="#FFF" />
+          <Text style={styles.shareText}>ZDIEĽAŤ NÚDZOVÝ PROFIL</Text>
+        </Pressable>
+
         <Text style={styles.footer}>OFFLINE-CAPABLE · SCANNABLE BY FIRST RESPONDERS</Text>
       </ScrollView>
     </SafeAreaView>
@@ -94,4 +118,6 @@ const styles = StyleSheet.create({
   rowVal: { fontSize: 15, color: '#000', marginTop: 4 },
   rowBig: { fontSize: 28, fontWeight: '900', letterSpacing: 2 },
   footer: { textAlign: 'center', marginTop: S.lg, fontSize: 10, letterSpacing: 2, color: '#000' },
+  shareBtn: { marginTop: S.xl, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', paddingVertical: S.lg, minHeight: 52 },
+  shareText: { color: '#FFF', fontWeight: '900', letterSpacing: 2, fontSize: 13 },
 });

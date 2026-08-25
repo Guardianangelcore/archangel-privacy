@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import Paywall from '@/src/Paywall';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
@@ -22,6 +23,12 @@ export default function BioScan() {
   const [history, setHistory] = useState<any[]>([]);
   const [locked, setLocked] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [sys, setSys] = useState('');
+  const [dia, setDia] = useState('');
+  const [glu, setGlu] = useState('');
+  const [hrM, setHrM] = useState('');
+  const [calMsg, setCalMsg] = useState('');
+  const [calBusy, setCalBusy] = useState(false);
   const samplesRef = useRef<number[]>([]);
   const timerRef = useRef<any>(null);
 
@@ -56,6 +63,22 @@ export default function BioScan() {
         return p + 4;
       });
     }, 400);
+  };
+
+  const canCalibrate = (!!sys && !!dia) || !!glu || !!hrM;
+  const saveCalibration = async () => {
+    setCalMsg(''); setCalBusy(true);
+    try {
+      const body: any = {};
+      if (sys && dia) { body.systolic = parseInt(sys, 10); body.diastolic = parseInt(dia, 10); }
+      if (glu) body.glucose_mmol = parseFloat(glu);
+      if (hrM) body.heart_rate = parseInt(hrM, 10);
+      await api('/bioscan/calibrate', { method: 'POST', body: JSON.stringify(body) });
+      setCalMsg('✓ MERANIE ULOŽENÉ DO HISTÓRIE');
+      setSys(''); setDia(''); setGlu(''); setHrM('');
+      loadHistory();
+    } catch (e: any) { setCalMsg(String(e.message || e)); }
+    setCalBusy(false);
   };
 
   return (
@@ -104,12 +127,37 @@ export default function BioScan() {
           </View>
         )}
 
+        <Text style={st.section}>MANUÁLNA KALIBRÁCIA · VALČEK — ŽIADNE PÍSANIE</Text>
+        <Text style={st.intro}>Odmerali ste sa vlastným tlakomerom alebo glukomerom? Nastavte hodnoty valčekom a uložte ich do zdravotnej histórie.</Text>
+        <View style={st.calRow}>
+          <WheelField testID="bs-sys" title="SYSTOLICKÝ TLAK" min={70} max={250} unit="mmHg" placeholder="SYS (horný)" value={sys} onChange={setSys} style={st.calField} />
+          <WheelField testID="bs-dia" title="DIASTOLICKÝ TLAK" min={40} max={150} unit="mmHg" placeholder="DIA (dolný)" value={dia} onChange={setDia} style={st.calField} />
+        </View>
+        <View style={st.calRow}>
+          <WheelField testID="bs-glu" title="GLUKÓZA" min={2} max={30} step={0.1} decimals={1} unit="mmol/l" placeholder="Glukóza" value={glu} onChange={setGlu} style={st.calField} />
+          <WheelField testID="bs-hr" title="TEP" min={30} max={220} unit="bpm" placeholder="Tep" value={hrM} onChange={setHrM} style={st.calField} />
+        </View>
+        <Pressable testID="bs-calibrate" onPress={saveCalibration} disabled={!canCalibrate || calBusy} style={[st.calBtn, (!canCalibrate || calBusy) && { opacity: 0.4 }]}>
+          {calBusy ? <ActivityIndicator color={C.onInverse} /> : (
+            <>
+              <Ionicons name="save-outline" size={18} color={C.onInverse} />
+              <Text style={st.startText}>ULOŽIŤ MERANIE</Text>
+            </>
+          )}
+        </Pressable>
+        {!!calMsg && <Text testID="bs-cal-msg" style={st.calMsg}>{calMsg}</Text>}
+
         {history.length > 0 && (
           <>
             <Text style={st.section}>HISTÓRIA MERANÍ</Text>
             {history.slice(0, 6).map(h => (
               <View key={h.scan_id} style={st.histRow}>
-                <Text style={st.histText}>{String(h.at).slice(5, 16).replace('T', ' ')} · ♥ {h.heart_rate} · SpO2 {h.spo2}% · stres {h.stress_level}</Text>
+                <Text style={st.histText}>
+                  {String(h.at).slice(5, 16).replace('T', ' ')}
+                  {String(h.method || '').startsWith('manual')
+                    ? ` · 📏 MANUÁL${h.bp_estimate ? ` · TK ${h.bp_estimate}` : ''}${h.glucose_mmol ? ` · GLU ${h.glucose_mmol} mmol/l` : ''}${h.heart_rate ? ` · ♥ ${h.heart_rate}` : ''}`
+                    : ` · ♥ ${h.heart_rate} · SpO2 ${h.spo2}% · stres ${h.stress_level}`}
+                </Text>
               </View>
             ))}
           </>
@@ -155,4 +203,8 @@ const st = StyleSheet.create({
   section: { marginTop: S.xl, marginBottom: S.sm, fontSize: 11, letterSpacing: 2, color: C.fg, fontWeight: '900' },
   histRow: { borderWidth: 1, borderColor: C.border, padding: S.md, marginBottom: 6, backgroundColor: C.surface2 },
   histText: { color: C.onS3, fontSize: 11, letterSpacing: 0.3 },
+  calRow: { flexDirection: 'row', gap: S.sm, marginTop: S.sm },
+  calField: { flex: 1, borderWidth: 1.5, borderColor: C.borderStrong, paddingHorizontal: S.md, minHeight: 54, backgroundColor: C.surface2 },
+  calBtn: { marginTop: S.md, flexDirection: 'row', gap: S.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, paddingVertical: S.md, minHeight: 52 },
+  calMsg: { color: C.brand, fontWeight: '800', fontSize: 12, marginTop: S.sm, letterSpacing: 1 },
 });

@@ -53,7 +53,8 @@
         {
           "motionPermission": "Detect falls and inactivity to keep you safe"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

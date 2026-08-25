@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -141,11 +142,11 @@ export default function SurvivalAuditor() {
                 ))}
               </View>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
-                <TextInput testID="sv-qty" placeholder="12" value={f.quantity} onChangeText={v => setF({ ...f, quantity: v })} keyboardType="numeric" style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+                <WheelField testID="sv-qty" title="MNOŽSTVO" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="12" style={[styles.input, { flex: 1 }]} />
                 <TextInput testID="sv-unit" placeholder="l / ks / kg" value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
               </View>
               <Text style={styles.lbl}>SPOTREBA / OSOBA / DEŇ</Text>
-              <TextInput testID="sv-need" placeholder="3" value={f.daily_need_per_person} onChangeText={v => setF({ ...f, daily_need_per_person: v })} keyboardType="numeric" style={styles.input} placeholderTextColor="#999" />
+              <WheelField testID="sv-need" title="DENNÁ POTREBA / OSOBA" min={1} max={20} value={f.daily_need_per_person} onChange={v => setF({ ...f, daily_need_per_person: v })} placeholder="3" style={styles.input} />
             </ScrollView>
             <Pressable testID="sa-save" onPress={add} style={styles.saveBtn}>
               <Text style={styles.saveBtnText}>{t('save', lang).toUpperCase()}</Text>

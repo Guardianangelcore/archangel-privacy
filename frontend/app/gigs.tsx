@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
@@ -156,11 +157,11 @@ export default function Gigs() {
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 <View style={{ flex: 1 }}>
                   <Text style={st.lbl}>ODMENA GA-T (max 50)</Text>
-                  <TextInput testID="gg-gat" value={f.reward_gat} onChangeText={v => setF({ ...f, reward_gat: v })} keyboardType="numeric" style={st.input} placeholderTextColor="#777" />
+                  <WheelField testID="gg-gat" title="ODMENA GA-T" min={0} max={500} step={5} unit="GA-T" value={f.reward_gat} onChange={v => setF({ ...f, reward_gat: v })} placeholder="0" style={st.input} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={st.lbl}>HOTOVOSŤ € (nepovinné)</Text>
-                  <TextInput testID="gg-eur" value={f.reward_eur} onChangeText={v => setF({ ...f, reward_eur: v })} keyboardType="numeric" style={st.input} placeholderTextColor="#777" />
+                  <WheelField testID="gg-eur" title="ODMENA €" min={0} max={500} step={5} unit="€" value={f.reward_eur} onChange={v => setF({ ...f, reward_eur: v })} placeholder="0" style={st.input} />
                 </View>
               </View>
             </ScrollView>

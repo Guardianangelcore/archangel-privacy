@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -162,7 +163,7 @@ export default function Marketplace() {
                 ))}
               </View>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
-                <TextInput testID="mk-price" placeholder="30" value={f.price} onChangeText={v => setF({ ...f, price: v })} keyboardType="numeric" style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+                <WheelField testID="mk-price" title="CENA €" min={0} max={500} unit="€" value={f.price} onChange={v => setF({ ...f, price: v })} placeholder="30" style={[styles.input, { flex: 1 }]} />
                 <TextInput testID="mk-city" placeholder="Bratislava" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={[styles.input, { flex: 2 }]} placeholderTextColor="#999" />
               </View>
               <TextInput testID="mk-contact" placeholder="Kontakt (tel./telegram)" value={f.contact} onChangeText={v => setF({ ...f, contact: v })} style={styles.input} placeholderTextColor="#999" />

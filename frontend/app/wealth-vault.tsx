@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
+import { WheelField } from '@/src/ui/fields';
 import { C, S } from '@/src/theme';
 
 export default function WealthVault() {
@@ -123,8 +124,7 @@ export default function WealthVault() {
               placeholderTextColor="#777" style={st.input} />
           </>
         )}
-        <TextInput testID="wv-value" value={value} onChangeText={setValue} keyboardType="numeric" placeholder="Odhadovaná hodnota v €"
-          placeholderTextColor="#777" style={st.input} />
+        <WheelField testID="wv-value" title="ODHADOVANÁ HODNOTA €" min={0} max={500000} step={1000} unit="€" value={value} onChange={setValue} placeholder="Odhadovaná hodnota v €" style={st.input} />
         <Pressable testID="wv-add" onPress={addAsset} disabled={busy === 'add' || !label.trim()} style={st.mainBtn}>
           {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>ZAPEČATIŤ DO TREZORA</Text>}
         </Pressable>
@@ -157,8 +157,7 @@ export default function WealthVault() {
         <Text style={st.section}>⚡ INSTANT CARD PAYOUT</Text>
         <Text style={st.policy}>Okamžitá výplata na kartu (Visa Direct / Mastercard Send) — pripísanie do 30 minút. Simulované do pripojenia reálneho payment railu.</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
-          <TextInput testID="wv-pay-amount" value={payAmount} onChangeText={setPayAmount} keyboardType="numeric" placeholder="Suma €"
-            placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
+          <WheelField testID="wv-pay-amount" title="SUMA €" min={10} max={5000} step={10} unit="€" value={payAmount} onChange={setPayAmount} placeholder="Suma €" style={[st.input, { flex: 1 }]} />
           <TextInput testID="wv-pay-card" value={payCard} onChangeText={setPayCard} keyboardType="numeric" maxLength={4} placeholder="Karta ****"
             placeholderTextColor="#777" style={[st.input, { width: 110 }]} />
         </View>

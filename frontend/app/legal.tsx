@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { api } from '@/src/api';
 import { sharePdf } from '@/src/pdf';
+import { WheelField } from '@/src/ui/fields';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -170,7 +171,7 @@ export default function Legal() {
           <View>
             <Text style={styles.hint}>Bez KYC: limit €{aml?.daily_limit?.toFixed(0) ?? 150}/deň v Solidarity Hub. Kampane vyžadujú KYC. Atestácia sa ukotví na váš DID (decentralizované ID) do AML reťazca.</Text>
             <TextInput testID="kyc-name" placeholder="Celé meno" value={kycForm.full_name} onChangeText={v => setKycForm({ ...kycForm, full_name: v })} style={styles.input} placeholderTextColor="#999" />
-            <TextInput testID="kyc-year" placeholder="Rok narodenia (1975)" value={kycForm.birth_year} onChangeText={v => setKycForm({ ...kycForm, birth_year: v })} keyboardType="numeric" style={styles.input} placeholderTextColor="#999" />
+            <WheelField testID="kyc-year" title="ROK NARODENIA" min={1920} max={2012} value={kycForm.birth_year} onChange={v => setKycForm({ ...kycForm, birth_year: v })} placeholder="Rok narodenia" style={styles.input} />
             <View style={styles.switchRow}>
               <Text style={styles.switchLbl}>VYHLASUJEM: NIE SOM NA SANKČNOM ZOZNAME A PROSTRIEDKY SÚ LEGÁLNE</Text>
               <Switch testID="kyc-declaration" value={kycForm.declaration} onValueChange={v => setKycForm({ ...kycForm, declaration: v })} trackColor={{ true: C.brand, false: C.surface3 }} />

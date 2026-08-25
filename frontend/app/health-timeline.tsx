@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
+import { DateField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
 
 const CATS: any = {
@@ -87,9 +88,9 @@ export default function HealthTimeline() {
               ))}
             </View>
             <TextInput testID="ht-title" style={styles.input} placeholder={cat === 'vaccine' ? 'Vakcína (napr. Tetanus)' : cat === 'history' ? 'Choroba / úraz (napr. Zlomenina)' : 'Vyšetrenie (napr. Kardiológia)'} placeholderTextColor={C.info} value={title} onChangeText={setTitle} />
-            <TextInput testID="ht-date" style={styles.input} placeholder="Dátum RRRR-MM-DD" placeholderTextColor={C.info} value={date} onChangeText={setDate} />
+            <DateField testID="ht-date" title="DÁTUM" value={date} onChange={setDate} placeholder="Dátum" style={styles.input} />
             {cat === 'vaccine' && (
-              <TextInput testID="ht-booster" style={styles.input} placeholder="Booster do (RRRR-MM-DD, voliteľné)" placeholderTextColor={C.info} value={booster} onChangeText={setBooster} />
+              <DateField testID="ht-booster" title="BOOSTER DO" value={booster} onChange={setBooster} placeholder="Booster do (voliteľné)" style={styles.input} />
             )}
             <Pressable testID="ht-save" onPress={add} disabled={busy} style={styles.cta}>
               {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ULOŽIŤ ZÁZNAM</Text>}

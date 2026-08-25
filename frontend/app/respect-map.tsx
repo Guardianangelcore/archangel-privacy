@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
+import { WheelField } from '@/src/ui/fields';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
@@ -135,7 +136,7 @@ export default function RespectMap() {
                 ))}
               </View>
               <Text style={styles.lbl}>{t('real_wait', lang).toUpperCase()}</Text>
-              <TextInput testID="rm-wait" placeholder="8" value={f.waiting_weeks} onChangeText={v => setF({ ...f, waiting_weeks: v })} keyboardType="numeric" style={styles.input} placeholderTextColor="#999" />
+              <WheelField testID="rm-wait" title="ČAKANIE (TÝŽDNE)" min={0} max={104} unit="týž." value={f.waiting_weeks} onChange={v => setF({ ...f, waiting_weeks: v })} placeholder="8" style={styles.input} />
               <Text style={styles.lbl}>{t('fin_transparency', lang).toUpperCase()}</Text>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {[1,2,3,4,5].map(n => (

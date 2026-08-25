@@ -261,6 +261,7 @@ class TTSIn(BaseModel):
     text: str
     voice: str = "nova"
     language: str = "sk"
+    speed: float = 1.0  # emotional pacing: 0.9 calm/soothing · 1.05 energetic
 
 @api.post("/voice/tts")
 async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None)):
@@ -270,10 +271,11 @@ async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None))
     text = clean_for_tts(body.text)
     if not text:
         raise HTTPException(400, "Empty text")
-    key = hashlib.sha256(f"{text}|{body.voice}|1.0|tts-1|mp3".encode()).hexdigest()
+    speed = min(1.3, max(0.7, body.speed or 1.0))
+    key = hashlib.sha256(f"{text}|{body.voice}|{speed}|tts-1|mp3".encode()).hexdigest()
     if key not in _tts_cache:
         try:
-            audio = await get_tts().generate_speech(text=text, model="tts-1", voice=body.voice)
+            audio = await get_tts().generate_speech(text=text, model="tts-1", voice=body.voice, speed=speed)
             _tts_cache[key] = audio
         except Exception as e:
             logger.error(f"tts err {e}")
@@ -321,6 +323,11 @@ async def physio(body: PhysioIn, authorization: Optional[str] = Header(None)):
     ).with_model("anthropic", "claude-sonnet-5")
     try:
         resp = await chat.send_message(UserMessage(text=f"Region: {body.region}. Intensity: {body.intensity}."))
+        try:
+            from routes.agent import award_xp
+            await award_xp(user["user_id"], 10, "physio_session")
+        except Exception:
+            pass
         return {"routine": resp}
     except Exception as e:
         logger.error(f"physio err {e}")
@@ -521,6 +528,11 @@ async def meds_intake(body: IntakeIn, authorization: Optional[str] = Header(None
         {"$set": {"taken_at": datetime.now(timezone.utc)}},
         upsert=True,
     )
+    try:
+        from routes.agent import award_xp
+        await award_xp(user["user_id"], 10, "med_taken")
+    except Exception:
+        pass
     return {"ok": True, "taken": True}
 
 
@@ -610,6 +622,39 @@ async def mental_techniques(language: str = "sk", authorization: Optional[str] =
     return {"language": lk, "techniques": techniques, "disclaimer": MENTAL_DISCLAIMERS[lk]}
 
 # --------- PHYSIO-AI GLOBAL ENCYCLOPEDIA (Founder content — SK/CS/EN/DE) ---------
+# Premium educational video demonstrations (Mixkit free license, direct MP4 · HD + SD for adaptive start)
+PHYSIO_VIDEOS = {
+    "knee": ("https://assets.mixkit.co/videos/36710/36710-720.mp4", "https://assets.mixkit.co/videos/36710/36710-360.mp4"),
+    "cervical": ("https://assets.mixkit.co/videos/49539/49539-720.mp4", "https://assets.mixkit.co/videos/49539/49539-360.mp4"),
+    "panic-acupressure": ("https://assets.mixkit.co/videos/47583/47583-720.mp4", "https://assets.mixkit.co/videos/47583/47583-360.mp4"),
+    "spine": ("https://assets.mixkit.co/videos/13041/13041-720.mp4", "https://assets.mixkit.co/videos/13041/13041-360.mp4"),
+    "shoulders": ("https://assets.mixkit.co/videos/13039/13039-720.mp4", "https://assets.mixkit.co/videos/13039/13039-360.mp4"),
+    "wrists": ("https://assets.mixkit.co/videos/52168/52168-720.mp4", "https://assets.mixkit.co/videos/52168/52168-360.mp4"),
+    "lymph": ("https://assets.mixkit.co/videos/13062/13062-720.mp4", "https://assets.mixkit.co/videos/13062/13062-360.mp4"),
+}
+# Cervical Spine Relief — video-native guide (per-language)
+CERVICAL_GUIDE = {
+    "sk": {"id": "cervical", "category": "body", "icon": "body-outline", "title": "Krčná chrbtica — úľava (Cervical Relief)",
+           "subtitle": "Video-návod · 5 minút · stuhnutý krk a hlava",
+           "steps": ["Sadnite si vzpriamene, ramená stiahnite dole od uší.", "Pomaly ukloňte hlavu k pravému ramenu, 20 sekúnd — potom k ľavému.", "Bradu jemne zasuňte dozadu (double chin), podržte 5 sekúnd — 8 opakovaní.", "Prstami masírujte svaly pozdĺž krku od vlasov k ramenám, 60 sekúnd každá strana.", "Zakončite pomalými polkruhmi hlavy (nie plný kruh) — 5 opakovaní.", "Ostrá bolesť vystreľujúca do ruky = stop a konzultácia s lekárom."]},
+    "cs": {"id": "cervical", "category": "body", "icon": "body-outline", "title": "Krční páteř — úleva (Cervical Relief)",
+           "subtitle": "Video-návod · 5 minut · ztuhlý krk a hlava",
+           "steps": ["Seďte vzpřímeně, ramena stáhněte dolů od uší.", "Pomalu ukloňte hlavu k pravému rameni, 20 sekund — pak k levému.", "Bradu jemně zasuňte dozadu (double chin), držte 5 sekund — 8 opakování.", "Prsty masírujte svaly podél krku od vlasů k ramenům, 60 sekund každá strana.", "Zakončete pomalými půlkruhy hlavy (ne plný kruh) — 5 opakování.", "Ostrá bolest vystřelující do ruky = stop a konzultace s lékařem."]},
+    "en": {"id": "cervical", "category": "body", "icon": "body-outline", "title": "Cervical Spine Relief",
+           "subtitle": "Video guide · 5 minutes · stiff neck & head",
+           "steps": ["Sit tall, pull shoulders down away from the ears.", "Slowly tilt your head to the right shoulder for 20 seconds — then left.", "Gently tuck the chin back (double chin), hold 5 seconds — 8 reps.", "Massage the muscles along the neck from hairline to shoulders, 60 seconds each side.", "Finish with slow half-circles of the head (never a full circle) — 5 reps.", "Sharp pain radiating into the arm = stop and consult a doctor."]},
+    "de": {"id": "cervical", "category": "body", "icon": "body-outline", "title": "Halswirbelsäule — Entlastung",
+           "subtitle": "Video-Anleitung · 5 Minuten · steifer Nacken",
+           "steps": ["Aufrecht sitzen, Schultern von den Ohren wegziehen.", "Kopf langsam zur rechten Schulter neigen, 20 Sekunden — dann links.", "Kinn sanft zurückziehen (Doppelkinn), 5 Sekunden halten — 8 Wiederholungen.", "Muskeln entlang des Nackens vom Haaransatz zu den Schultern massieren, 60 Sekunden pro Seite.", "Mit langsamen Halbkreisen des Kopfes abschließen (nie Vollkreis) — 5 Wiederholungen.", "Stechender Schmerz in den Arm = Stopp und Arztkonsultation."]},
+}
+
+def _attach_video(g: dict) -> dict:
+    vid = PHYSIO_VIDEOS.get(g["id"])
+    if vid:
+        g["video_url"], g["video_url_sd"] = vid
+        g["video_note"] = "Video: Mixkit free license · demonštračný záber"
+    return g
+
 @api.get("/physio/guides")
 async def physio_guides(language: str = "sk", authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
@@ -619,10 +664,13 @@ async def physio_guides(language: str = "sk", authorization: Optional[str] = Hea
     guides = []
     for g in PHYSIO_GUIDES[lk]:
         tts = f"{g['title']}. " + " ".join([f"{step_word} {i+1}: {s}" for i, s in enumerate(g["steps"])])
-        guides.append({**g, "category": PHYSIO_CATEGORY.get(g["id"], "body"), "tts_text": tts})
+        guides.append(_attach_video({**g, "category": PHYSIO_CATEGORY.get(g["id"], "body"), "tts_text": tts}))
+    cg = CERVICAL_GUIDE.get(lk, CERVICAL_GUIDE["en"])
+    tts = f"{cg['title']}. " + " ".join([f"{step_word} {i+1}: {s}" for i, s in enumerate(cg["steps"])])
+    guides.append(_attach_video({**cg, "tts_text": tts}))
     for g in PHYSIO_EXTRA[lk]:
         tts = f"{g['title']}. " + " ".join([f"{step_word} {i+1}: {s}" for i, s in enumerate(g["steps"])])
-        guides.append({**g, "tts_text": tts})
+        guides.append(_attach_video({**g, "tts_text": tts}))
     return {"language": lk, "guides": guides, "category_labels": CATEGORY_LABELS[lk],
             "disclaimer": MENTAL_DISCLAIMERS[lk]}
 

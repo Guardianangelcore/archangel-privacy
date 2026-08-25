@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { api } from '@/src/api';
+import { WheelField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
 
 const CAT_ICON: Record<string, string> = { financial: 'card', social: 'share-social', property: 'home', digital: 'cloud' };
@@ -106,7 +107,7 @@ export default function DigitalLegacy() {
         ))}
         <View style={styles.row2}>
           <TextInput testID="dl-sub-name" style={[styles.input, { flex: 2 }]} placeholder="Netflix, Spotify, iCloud…" placeholderTextColor={C.info} value={name} onChangeText={setName} />
-          <TextInput testID="dl-sub-cost" style={[styles.input, { flex: 1 }]} placeholder="€/mes." placeholderTextColor={C.info} value={cost} onChangeText={setCost} keyboardType="numeric" />
+          <WheelField testID="dl-sub-cost" title="CENA €/MESIAC" min={0} max={100} step={0.5} decimals={1} unit="€" value={cost} onChange={setCost} placeholder="€/mes." style={[styles.input, { flex: 1 }]} />
         </View>
         <View style={styles.row2}>
           {SUB_ACTIONS.map(([k, l]) => (

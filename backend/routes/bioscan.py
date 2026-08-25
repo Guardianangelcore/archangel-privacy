@@ -62,6 +62,11 @@ async def bioscan_measure(body: ScanIn, authorization: Optional[str] = Header(No
                           {"hr": vitals["heart_rate"], "spo2": vitals["spo2"], "stress": vitals["stress_level"]})
     except Exception:
         pass
+    try:
+        from routes.agent import award_xp
+        await award_xp(uid, 15, "bioscan")
+    except Exception:
+        pass
     return clean(rec)
 
 @api.get("/bioscan/history")
@@ -70,3 +75,42 @@ async def bioscan_history(authorization: Optional[str] = Header(None)):
     rows = await db.bioscan_results.find({"user_id": user["user_id"]}, {"_id": 0}).sort("at", -1).to_list(20)
     return {"scans": rows,
             "note": "SIMULÁCIA — rPPG signál z kamery sa aktivuje v natívnom CV builde (Phase 3). Hodnoty sú orientačné, nie diagnóza."}
+
+# --------- MANUAL CALIBRATION (Wheel-Picker) — BP / glucose / HR ---------
+class CalibrateIn(BaseModel):
+    systolic: Optional[int] = None      # mmHg 70-250
+    diastolic: Optional[int] = None     # mmHg 40-150
+    glucose_mmol: Optional[float] = None  # 2.0-30.0
+    heart_rate: Optional[int] = None    # 30-220
+
+@api.post("/bioscan/calibrate")
+async def bioscan_calibrate(body: CalibrateIn, authorization: Optional[str] = Header(None)):
+    """Manual reading calibration from the premium wheel-picker (no typing)."""
+    user = await get_current_user(authorization)
+    if body.systolic is not None and not (70 <= body.systolic <= 250):
+        raise HTTPException(400, "systolic out of range (70-250)")
+    if body.diastolic is not None and not (40 <= body.diastolic <= 150):
+        raise HTTPException(400, "diastolic out of range (40-150)")
+    if body.glucose_mmol is not None and not (2.0 <= body.glucose_mmol <= 30.0):
+        raise HTTPException(400, "glucose out of range (2.0-30.0)")
+    if body.heart_rate is not None and not (30 <= body.heart_rate <= 220):
+        raise HTTPException(400, "heart_rate out of range (30-220)")
+    if body.systolic is None and body.glucose_mmol is None and body.heart_rate is None:
+        raise HTTPException(400, "Provide at least one reading")
+    rec = {"scan_id": uuid.uuid4().hex, "user_id": user["user_id"],
+           "method": "manual_calibration (wheel-picker)", "access": "free", "simulated": False,
+           "at": datetime.now(timezone.utc)}
+    if body.systolic is not None and body.diastolic is not None:
+        rec["bp_estimate"] = f"{body.systolic}/{body.diastolic}"
+        rec["bp_manual"] = True
+    if body.glucose_mmol is not None:
+        rec["glucose_mmol"] = round(body.glucose_mmol, 1)
+    if body.heart_rate is not None:
+        rec["heart_rate"] = body.heart_rate
+    await db.bioscan_results.insert_one(rec.copy())
+    try:
+        from routes.agent import award_xp
+        await award_xp(user["user_id"], 10, "calibration")
+    except Exception:
+        pass
+    return clean(rec)

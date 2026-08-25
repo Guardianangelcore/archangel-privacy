@@ -174,3 +174,24 @@ User directive: Apple-level quality + Wow factor. Implemented:
 4. NATIVE INTEGRATION — ContactSheet wired into recovery-suite guardians (rs-guardian-contacts); waitlist dates → DateSheet calendar bottom sheets (wl-current/wl-target), specialty → OptionSheet (wl-spec-open). Tab bar: Slovak labels (ZDRAVIE/RODINA/ODKAZ/LOVEC), filled icons on focus, haptics on tabPress, gold-tinted glass bar.
 5. CLINIC SYNC — backend routes/clinic_sync.py: POST/GET /api/clinic-sync/session (one-time 6-char QR code, 10min TTL), PUBLIC POST /api/clinic-sync/beam/{code} (doctor beams report → vault document + push), GET /api/clinic-sync/radar (SIMULATED BLE/NFC nearby clinics), POST /api/clinic-sync/simulate-beam (demo). Frontend /clinic-sync: reanimated radar rings, Radar/QR toggle, QR + code display, received docs → vault. hh-clinic-sync hub tile.
 Tests: test_phase21_ultra.py (14) — FULL suite 390/390 green. Mocked: BLE/NFC radar (native build needed for real radio).
+
+## Phase 22: SUPREME FINALE + JARVIS 2.0 SOUL ENGINE (June 2026) — DONE
+A) SMART-PICKERS (Zero-Typing policy — NO manual typing for numbers/dates/times):
+- New src/ui/fields.tsx: WheelField / DateField / TimeField (pressable fields opening bottom-sheet pickers).
+- sheets.tsx += TimeSheet (two HH:MM snap wheels) + DateSheet year-nav (« » buttons).
+- Rolled out to 16 screens: longevity (rok/výška/váha), family-dashboard (tep), my-recovery (dátumy PN, mzda, vychádzky HH:MM, dni PN), insurance (poistné, zaplatené do), health-timeline (dátum, booster), respect-map (čakanie), digital-legacy (€/mes), solidarity (goal, dar), survival-auditor (qty, need), gigs (GA-T, €), marketplace (cena), legal (rok narodenia), medicine-cabinet (qty, expirácia DateField), wealth-vault (hodnota, payout suma), dignity (sumy), bioscan.
+- bioscan.tsx += MANUÁLNA KALIBRÁCIA section (bs-sys/bs-dia/bs-glu/bs-hr WheelFields + bs-calibrate → POST /api/bioscan/calibrate, history shows 📏 MANUÁL rows). PIN inputs (duress) and card-last-4 intentionally remain keyboard (secrets/identifiers).
+B) NATIVE SHARING: emergency-qr.tsx += qr-share button (Share.share native sheet, web navigator.share fallback). Wallpaper + IPS already use expo-sharing native sheet (verified).
+C) PHYSIO VIDEOS: all 7 Mixkit HD URLs verified 200 OK; expo-video renders in guides (VIDEO-NÁVOD · HD badge).
+D) JARVIS 2.0 — SOUL ENGINE (backend routes/agent.py, registered in server.py):
+- Levels 1→10 (ISKRA…ARCHANJEL), XP thresholds [0,100,250,450,700,1000,1400,1900,2500,3200], abilities unlock per level, streak days. award_xp() hooks: chat +5, briefing +10/day, deep analysis +15/day, med intake +10, bioscan +15, calibration +10, physio +10. Level-up push notification.
+- Self-teaching memory: agent_memories (LLM extraction gpt-5.4 after each chat, dedup, topics health/family/habit/preference/event, importance 1-5). GET/DELETE /api/agent/memories.
+- POST /api/agent/chat (gpt-5.4, persona tone grows with level, strict JSON {reply,mood}, context = neural._gather_context + memories + last 6 turns + anomalies). Moods: calm|thinking|alert|energetic|concerned.
+- GET /api/agent/briefing (cached per day, force=true to regen): weather (open-meteo keyless, Bratislava, graceful fallback), meds today, upcoming exams, memory follow-ups ("Včera si spomínal, že Tomáša boleli žily — ako mu je dnes?" — VERIFIED live), anomaly warnings.
+- GET /api/agent/anomalies: BP >=160 critical / >=140 elevated / 3-rising trend, glucose >=13 / >=11 / <=3.5, high stress; HIGH severity → immediate push (12h dedup in agent_alarms).
+- POST /api/agent/analyze: visual-thinking steps (real data counts) + gpt-5.4 insight.
+- POST /api/agent/transcribe: generic Whisper STT (sk).
+- /api/voice/tts += speed param (0.7-1.3) for emotional pacing; frontend maps mood→voice/speed (calm coral 0.95, concerned sage 0.9, energetic nova 1.08, alert onyx).
+E) JARVIS 2.0 UI (jarvis.tsx REWRITTEN): breathing Orb (reanimated, mood colors gold/violet/blue/red, speed by mood) + SVG XP ring + LVL badge; tap Orb = full voice conversation (record → Whisper → chat → emotional TTS auto-reply); morning briefing card w/ weather + play; chat bubbles + text input; HĹBKOVÁ ANALÝZA visual thinking (animated steps + rays + insight); abilities list; memories list w/ delete; level-up gold burst modal; XP toast; mic permission contract w/ openSettings. Autopilot + chains + weekly PDF preserved.
+Tests: test_phase22_soul.py (14) — suite 404 tests green (phase13 stress passes solo; xdist contention noise only). Live-verified: chat (concerned mood + BP alert), memory extraction, briefing follow-up question, weather, analyze insight, wheel-picker e2e, TTS speed.
+Collections added: agent_state, agent_xp_events, agent_xp_days, agent_memories, agent_conversations, agent_briefings, agent_alarms.

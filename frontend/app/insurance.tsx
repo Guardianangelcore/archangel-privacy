@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { api } from '@/src/api';
+import { WheelField, DateField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
 
 const TYPES: [string, string][] = [['health', 'Zdravotné'], ['life', 'Životné'], ['disability', 'Invalidita'], ['property', 'Majetok']];
@@ -128,8 +129,8 @@ export default function Insurance() {
         </View>
         <TextInput testID="ins-provider" style={styles.input} placeholder="Poisťovňa (napr. Dôvera)" placeholderTextColor={C.info} value={provider} onChangeText={setProvider} />
         <View style={styles.row2}>
-          <TextInput testID="ins-premium" style={[styles.input, { flex: 1 }]} placeholder="Poistné €/mes." placeholderTextColor={C.info} value={premium} onChangeText={setPremium} keyboardType="numeric" />
-          <TextInput testID="ins-paid-until" style={[styles.input, { flex: 1 }]} placeholder="Zaplatené do RRRR-MM-DD" placeholderTextColor={C.info} value={paidUntil} onChangeText={setPaidUntil} />
+          <WheelField testID="ins-premium" title="POISTNÉ €/MES." min={0} max={500} unit="€" value={premium} onChange={setPremium} placeholder="Poistné €/mes." style={[styles.input, { flex: 1 }]} />
+          <DateField testID="ins-paid-until" title="ZAPLATENÉ DO" value={paidUntil} onChange={setPaidUntil} placeholder="Zaplatené do" style={[styles.input, { flex: 1 }]} />
         </View>
         <Pressable testID="ins-add" onPress={add} disabled={busy === 'add'} style={styles.cta}>
           {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ULOŽIŤ POISTKU</Text>}
