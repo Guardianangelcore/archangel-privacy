@@ -16,12 +16,13 @@ CZK_RATE = 25.0
 ANNUAL_DISCOUNT = 0.20
 TIER_RANK = {"sovereign": 0, "guardian": 1, "sentinel": 2, "archangel": 3}
 
-def _prices(eur_month: float) -> dict:
+def _prices(eur_month: float, gat_month: float = 0.0) -> dict:
     eur_year = round(eur_month * 12 * (1 - ANNUAL_DISCOUNT), 0)
+    gat_year = round(gat_month * 12 * (1 - ANNUAL_DISCOUNT), 0)
     return {"price_eur": eur_month, "price_czk": round(eur_month * CZK_RATE, 0),
-            "price_gat": round(eur_month * 10, 0),
+            "price_gat": gat_month,
             "price_eur_year": eur_year, "price_czk_year": round(eur_year * CZK_RATE, 0),
-            "price_gat_year": round(eur_year * 10, 0)}
+            "price_gat_year": gat_year}
 
 TIERS = {
     "sovereign": {
@@ -32,7 +33,7 @@ TIERS = {
                      "Základný Health Timeline", "Verejný Solidarity Hub"],
     },
     "guardian": {
-        "name": "Guardian", "order": 1, **_prices(29),
+        "name": "Guardian", "order": 1, **_prices(29, 50),
         "tagline": "Proaktívna ochrana pre teba aj rodinu",
         "accent": "#B8860B",
         "features": ["Všetko zo Sovereign", "Waitlist Hunter upozornenia",
@@ -40,7 +41,7 @@ TIERS = {
                      "Kompletná Physio-AI encyklopédia"],
     },
     "sentinel": {
-        "name": "Sentinel", "order": 2, **_prices(149),
+        "name": "Sentinel", "order": 2, **_prices(149, 250),
         "tagline": "VIP prežitie — nemocnica vo vrecku",
         "accent": "#E5E4E2",
         "features": ["Všetko z Guardian", "🛰️ Satellite Emergency Handshake",
@@ -49,7 +50,7 @@ TIERS = {
                      "Insurance Claim Recovery"],
     },
     "archangel": {
-        "name": "Archangel", "order": 3, **_prices(499),
+        "name": "Archangel", "order": 3, **_prices(499, 800),
         "tagline": "Elitná suverenita — Zero-latency Swarm",
         "accent": "#8A2BE2",
         "features": ["Všetko zo Sentinel", "⚡ Prioritná orchestrácia Swarmu (Zero-latency)",
@@ -117,7 +118,7 @@ async def subscription_info(authorization: Optional[str] = Header(None)):
             "tiers": TIERS, "annual_discount_pct": int(ANNUAL_DISCOUNT * 100),
             "currencies": ["EUR", "CZK", "GA-T"], "czk_rate": CZK_RATE,
             "payperuse": {"bioscan_single": 5, "ips_export_single": 10},
-            "billing_note": "Platba kartou sa aktivuje po vložení reálneho Stripe kľúča (placeholder). GA-T platby fungujú naplno."}
+            "billing_note": "Platby kartou: Stripe TEST režim — použite testovaciu kartu 4242 4242 4242 4242. GA-T platby fungujú naplno."}
 
 
 class UpgradeIn(BaseModel):
@@ -133,7 +134,7 @@ async def subscription_upgrade(body: UpgradeIn, authorization: Optional[str] = H
     if body.billing not in ("monthly", "annual"):
         raise HTTPException(400, "billing must be monthly|annual")
     if body.method == "card":
-        raise HTTPException(503, "stripe_key_missing: Platby kartou sa spustia po doplnení reálneho Stripe kľúča. Zatiaľ použite GA-T tokeny.")
+        raise HTTPException(400, "use_billing_checkout: Platby kartou idú cez POST /api/billing/checkout (Stripe).")
     # GA-T payment via the internal token engine (burn applies automatically)
     from routes.token import token_spend, SpendIn
     item = f"tier_{body.tier}_{'365d' if body.billing == 'annual' else '30d'}"

@@ -236,3 +236,11 @@ User halted infra work to fix core UX; all delivered and verified (iteration_24.
 6. SMART CHOICE MODALS — PillarHub supports choices[] (bottom-sheet modal, testID {tile}-choice-{i}); applied to hh-meds (Skenovať obal / Manuálne / Interakcie / Lekárne) and hh-vault (Trezor / Nahrať+AI / Časová os). Native date/time pickers already global (Phase 22).
 7. DEAD BUTTON AUDIT — all 53 hub tiles clicked and verified working (no blanks/errors).
 Known non-blocking: RN Web shadow*/pointerEvents deprecation warnings.
+
+## Phase 28: PREMIUM UNLOCK — STRIPE PAYMENTS + GA-T REPRICING + FOUNDER ENTITLEMENT (June 2026) — DONE ✅
+User reported "premium features don't work" — root cause: no working payment path (card placeholder 503, GA-T prices unreachable). Fixes (iteration_25.json ALL GREEN, 15/15 backend + full E2E payment loop):
+1. STRIPE CHECKOUT LIVE (TEST mode) — routes/billing.py via emergentintegrations StripeCheckout (STRIPE_API_KEY=sk_test_emergent in backend/.env, emergent proxy): POST /billing/checkout (server-fixed EUR prices from TIERS, metadata user/tier/billing, payment_transactions collection), GET /billing/status/{sid} (poll → idempotent _activate_tier: sets tier+tier_until 30/365d, tier_paid_with=card, record_revenue), POST /webhook/stripe, GET /billing/transactions. E2E verified with test card 4242…: pay → redirect /subscription?session_id= → auto-poll → 'GUARDIAN aktívny' + no double activation.
+2. GA-T REPRICING — Guardian 50 / Sentinel 250 / Archangel 800 mesačne (ročne −20 %: 480/2400/7680) in subscription._prices + token.SPEND_ITEMS. 402 messages now cite new prices.
+3. FOUNDER ENTITLEMENT — System Janitor repair #3: first-created user auto-gets inner_circle:true + is_founder + lifetime archangel (in prod DB = the real founder after deploy).
+4. FRONTEND subscription.tsx — 'KARTOU {€}' buttons (web same-tab Stripe redirect + return polling via useLocalSearchParams; native openAuthSessionAsync + poll), cancelled banner, updated copy (Stripe TEST 4242 note).
+subscription/upgrade card branch now 400 use_billing_checkout (GA-T path unchanged). Trial regression OK (one-time 409).

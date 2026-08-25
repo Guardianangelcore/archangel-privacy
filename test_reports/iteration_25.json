@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 25 — PREMIUM FEATURES (Stripe card payments + lowered GA-T prices + founder entitlement) fully GREEN. Backend: 15/15 tests passing in test_iter25_premium.py (subscription prices guardian/sentinel/archangel = 50/250/800 GA-T monthly and 480/2400/7680 annual; billing_note mentions Stripe TEST; founder smoketest-user-1 has inner_circle:true + tier=archangel; /api/billing/checkout returns real checkout.stripe.com URL + amount fixed server-side [sentinel/monthly=149€, guardian/annual=278€], client-supplied 'amount' field ignored; invalid tier/billing → 400; /api/billing/status returns unpaid pre-payment, 404 for unknown or foreign session; GA-T upgrade insufficient_balance mentions 50 GA-T; fresh sovereign user gets 402 on /api/longevity/bioage, activates POST /api/subscription/trial once, then no more 402; second trial call → 409). FRONTEND E2E on mobile 390×844 with seeded gh_session_token=smoketok-fresh-handover: (1) /subscription loads with subscription-screen + sb-current AKTUÁLNY TIER: SOVEREIGN; (2) monthly GA-T prices 50/250/800 present and annual toggle correctly swaps to 480/2400/7680 + KARTOU EUR annual amounts (278/1430/4790); (3) KARTOU buttons show 'KARTOU 29 €' / 'KARTOU 149 €' / 'KARTOU 499 €' (NOT ČOSKORO); (4) Stripe billing note visible; (5) CRITICAL E2E payment: tapped sb-upgrade-guardian-card → same-tab navigation to checkout.stripe.com/c/pay/cs_test_a1gLWV… → filled test card 4242 4242 4242 4242 exp 12/34 CVC 123 → Pay → redirect back to /subscription?session_id=cs_test_a1gLWV… → auto-poll message '✓ Platba prijatá — GUARDIAN je aktívny! Prémiové funkcie sú odomknuté.' → sb-current updated to AKTUÁLNY TIER: GUARDIAN · do 2026-09-24 (~30d). (6) DB verified: payment_transactions row has payment_status='paid' + processed=true; repeated GET /api/billing/status returns activated:true idempotently (find_one_and_update with processed:{$ne:true} guard prevents double activation); users.tier_paid_with='card'. (7) /api/billing/transactions correctly lists user's own sessions. TEST_ARTIFACT: reset user_smoke2026 tier back to sovereign after E2E so future runs start clean. Only known non-blocking RN-Web deprecation warnings remain (shadow*, expo-notifications web listener).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "N/A — request-doc inaccuracy", "issue": "Review-request stated 'user_smoke2026 is the FIRST user and janitor granted it inner_circle/archangel', but the actual first user by created_at is smoketest-user-1 (2026-08-23) — user_smoke2026 (2026-08-25) is sovereign. Founder entitlement works correctly on smoketest-user-1. No app bug — only the handover note is stale."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "RN-Web deprecation warning: 'shadow* style props are deprecated. Use boxShadow'. Non-blocking — carried over from prior iterations."},
+      {"component": "expo-notifications web", "issue": "Warning: '[expo-notifications] Listening to push token changes is not yet fully supported on web' — expected web limitation, safe."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter25_premium.py",
+    "/app/test_reports/pytest/pytest_iter25.xml",
+    "/app/test_reports/iteration_25.json"
+  ],
+  "action_items": [
+    "OPTIONAL: update /app/memory/test_credentials.md — clarify that smoketest-user-1 (token smoketok-fresh-2026) is the founder/archangel/inner_circle (first user in DB), while user_smoke2026 (token smoketok-fresh-handover) is a later smoke user that starts as SOVEREIGN. The review-request note said otherwise; the app is correct.",
+    "OPTIONAL polish: migrate shadow* → boxShadow across subscription.tsx & shared card styles to silence RN-Web warnings before a future breaking version.",
+    "OPTIONAL: consider adding an on-screen 'Nedostatok GA-T — použite platbu kartou' hint next to the sb-upgrade-*-gat button when balance < required (current inline error message already suggests card payment on 402, which is sufficient)."
+  ],
+  "critical_code_review_comments": [
+    "routes/billing.py (148 lines): prices are FIXED server-side via _packages() derived from TIERS — client cannot inject amount ✓; activation is idempotent via find_one_and_update({processed:{$ne:True}}) — repeated /billing/status calls return activated:true without double revenue events ✓; ownership check on GET /billing/status returns 404 for foreign session_id ✓; webhook endpoint present as authoritative source with polling as fallback (fine in dev where the webhook cannot reach the sandbox) ✓. Small nit: /webhook/stripe returns 400 for unsigned/invalid payloads which is correct, but Stripe may retry — consider logging and returning 200 on unknown/duplicate events (idempotency already ensured, so 200 would just quiet Stripe's retries).",
+    "routes/subscription.py: _prices() now yields 50/250/800 monthly and 480/2400/7680 annual — verified via /api/subscription tiers.*.price_gat[_year]. billing_note updated to Slovak Stripe TEST hint. require_tier error message now shows the new low GA-T price (e.g. '50 GA-T') — matches upsell copy on frontend.",
+    "routes/subscription.py:_is_founder + swarm._agent_system_janitor: janitor sets first user by created_at to {inner_circle:True, is_founder:True, tier:archangel, tier_until:None, tier_paid_with:'founder'} idempotently (skips if already set). current_tier() short-circuits inner_circle → archangel regardless of tier_until — correct lifetime semantics.",
+    "routes/token.py SPEND_ITEMS: new tier_guardian_30d=50 / tier_sentinel_30d=250 / tier_archangel_30d=800 (and 480/2400/7680 for _365d) match TIERS.price_gat[_year] — no drift.",
+    "app/subscription.tsx (260 lines): cardCheckout uses window.location.assign on web (same-tab → Stripe → return with ?session_id) and WebBrowser.openAuthSessionAsync on native — both call pollPayment after return. Origin_url = window.location.origin on web, EXPO_PUBLIC_BACKEND_URL on native. pollPayment loops 12×2s calling /billing/status until payment_status==='paid' — matches the fulfillment path (webhook not required in this env). polledRef guard prevents double-polling on re-render. Slovak copy 'Platby kartou: Stripe TEST režim — použite testovaciu kartu 4242…' properly displayed via billing_note.",
+    "Stripe emergent proxy: real cs_test_a1… session URLs generated, hosted UI at checkout.stripe.com functions, redirect + polling closes the loop end-to-end. STRIPE_API_KEY=sk_test_emergent in backend/.env is correctly wired."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter25_premium.py (new — 15 tests, all passing)"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 in test_iter25_premium.py, includes real Stripe checkout-session creation)",
+    "frontend": "100% (subscription screen render, price toggle, KARTOU buttons, end-to-end Stripe test-card payment + tier activation)"
+  },
+  "seed_data_creation": "Created a fresh sovereign test user in Mongo (user_iter25_<uuid>, session token iter25tok-<uuid>) inside test fixture — automatically torn down after the module runs (users, user_sessions, payment_transactions, token_accounts cleaned). Also completed 1 real Stripe TEST card payment for user_smoke2026 (session cs_test_a1gLWV…, guardian 29€ monthly) → payment_transactions row + revenue_events row remain in DB for founder-dashboard verification; user_smoke2026 tier was RESET to sovereign after E2E so subsequent tests start clean.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend URL: process.env.EXPO_PUBLIC_BACKEND_URL (with PUBLIC prefix). Founder token = smoketok-fresh-2026 → smoketest-user-1 (first in DB, inner_circle/archangel via janitor). Generic smoke token = smoketok-fresh-handover → user_smoke2026 (currently sovereign after this iteration's reset — treat as sovereign for paywall tests). For paywall/trial tests always CREATE A NEW USER via Mongo insert into users+user_sessions (pattern in test_iter25_premium.py conftest). Stripe test card: 4242 4242 4242 4242 exp 12/34 CVC 123, country Slovakia — Stripe hosted page auto-fills billing name from email. After payment success, expect same-tab redirect to /subscription?session_id=cs_test_… and pollPayment loop of up to 24s. To verify idempotency, call GET /api/billing/status/{sid} twice — second call must still return activated:true but NOT create a second revenue_events row (check db.revenue_events count before/after). Pytest note: use -o addopts='' to disable xdist for tests that share pytest.<attr> globals across classes (billing checkout→status flow).",
+  "rca_of_issue": "Original user complaint 'premium features don't work' — RCA confirmed by review-request: no working card path (STRIPE_API_KEY was empty → /billing/checkout returned 503 stripe_key_missing) AND GA-T tier prices were unreachable (previous 290/1490 GA-T monthly vs typical Proof-of-Help earn rates of 10 GA-T/day capped 5×). Fixes applied by main agent and now VERIFIED by this iteration: (a) STRIPE_API_KEY=sk_test_emergent wired to emergentintegrations.payments.stripe.checkout — real cs_test_… sessions created via Stripe proxy, hosted checkout page renders EUR amount, 4242-card payment completes, redirect + poll activates tier idempotently; (b) new GA-T ladder 50/250/800 monthly (480/2400/7680 annual) — a Guardian tier is now achievable in ≤5d via Proof-of-Help; (c) founder auto-grant inner_circle/archangel on first-created user by janitor (smoketest-user-1 confirmed). No further action required from main agent; premium features are functional end-to-end."
+}

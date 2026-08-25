@@ -1,10 +1,12 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 
@@ -14,12 +16,14 @@ const PLATINUM = '#E5E4E2';
 
 export default function Subscription() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ session_id?: string; payment?: string }>();
   const [data, setData] = useState<any>(null);
   const [annual, setAnnual] = useState(false);
   const [founder, setFounder] = useState<any>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const polledRef = useRef(false);
 
   const load = useCallback(async () => {
     try {
@@ -29,7 +33,54 @@ export default function Subscription() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // Poll Stripe payment status until paid (also used after web redirect back)
+  const pollPayment = useCallback(async (sid: string) => {
+    setMsg('⏳ Overujem platbu kartou…'); setErr('');
+    for (let i = 0; i < 12; i++) {
+      try {
+        const s: any = await api(`/billing/status/${sid}`);
+        if (s.payment_status === 'paid') {
+          setMsg(`✓ Platba prijatá — ${String(s.tier).toUpperCase()} je aktívny! Prémiové funkcie sú odomknuté.`);
+          await load();
+          return;
+        }
+        if (s.status === 'expired') { setErr('Platobná relácia expirovala — skúste znova.'); setMsg(''); return; }
+      } catch {}
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    setMsg(''); setErr('Platba sa ešte spracováva — o chvíľu obnovte túto obrazovku.');
+  }, [load]);
+
+  // Web redirect back from Stripe Checkout: /subscription?session_id=...
+  useEffect(() => {
+    if (polledRef.current) return;
+    if (params.session_id) { polledRef.current = true; pollPayment(String(params.session_id)); }
+    else if (params.payment === 'cancelled') { polledRef.current = true; setErr('Platba bola zrušená — nič nebolo účtované.'); }
+  }, [params.session_id, params.payment, pollPayment]);
+
+  const cardCheckout = async (tier: string) => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setBusy(`${tier}-card`); setErr(''); setMsg('');
+    try {
+      const origin = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : (process.env.EXPO_PUBLIC_BACKEND_URL || '');
+      const r: any = await api('/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ tier, billing: annual ? 'annual' : 'monthly', origin_url: origin }),
+      });
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.assign(r.checkout_url); // same-tab → Stripe → redirect back with session_id
+        return;
+      }
+      await WebBrowser.openAuthSessionAsync(r.checkout_url, Linking.createURL('/subscription'));
+      await pollPayment(r.session_id);
+    } catch (e: any) { setErr(String(e.message || e)); }
+    finally { setBusy(null); }
+  };
+
   const upgrade = async (tier: string, method: 'gat' | 'card') => {
+    if (method === 'card') { await cardCheckout(tier); return; }
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setBusy(`${tier}-${method}`); setErr(''); setMsg('');
     try {
@@ -38,8 +89,7 @@ export default function Subscription() {
       await load();
     } catch (e: any) {
       const m = String(e.message || e);
-      if (m.includes('stripe_key_missing')) setErr('Platby kartou sa spustia po vložení reálneho Stripe kľúča. Zatiaľ zaplaťte GA-T tokenmi zarobenými pomocou komunite.');
-      else if (m.includes('insufficient_balance')) setErr('Nedostatok GA-T — zarobte tokeny cez Proof-of-Help (Family Shield / Angel Gigs) alebo skúste 7-dňový Sentinel trial.');
+      if (m.includes('insufficient_balance')) setErr('Nedostatok GA-T — zarobte tokeny cez Proof-of-Help (Family Shield / Angel Gigs), zaplaťte kartou alebo skúste 7-dňový Sentinel trial.');
       else setErr(m);
     } finally { setBusy(null); }
   };
@@ -68,7 +118,7 @@ export default function Subscription() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <Text style={styles.h1}>Štyri úrovne suverenity</Text>
-        <Text style={styles.sub}>EUR · CZK · GA-T. Mesačne alebo ročne so zľavou −20 % („Secure Your Future“). Karta sa aktivuje po vložení Stripe kľúča.</Text>
+        <Text style={styles.sub}>EUR · CZK · GA-T. Mesačne alebo ročne so zľavou −20 % („Secure Your Future“). Platba kartou (Stripe) alebo GA-T tokenmi.</Text>
         {data && (
           <View style={styles.currentBox}>
             <Ionicons name={(TIER_ICON[data.tier] || 'earth') as any} size={18} color={(data.tiers[data.tier] || {}).accent || '#5FA779'} />
@@ -128,8 +178,13 @@ export default function Subscription() {
                   <Pressable testID={`sb-upgrade-${k}-gat`} onPress={() => upgrade(k, 'gat')} disabled={!!busy} style={[styles.payBtn, { backgroundColor: accent }]}>
                     {busy === `${k}-gat` ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, premium(k) && { color: OBSIDIAN }]}>ZAPLATIŤ {gat} GA-T</Text>}
                   </Pressable>
-                  <Pressable testID={`sb-upgrade-${k}-card`} onPress={() => upgrade(k, 'card')} disabled={!!busy} style={styles.cardBtn}>
-                    <Text style={styles.cardText}>KARTOU (ČOSKORO)</Text>
+                  <Pressable testID={`sb-upgrade-${k}-card`} onPress={() => upgrade(k, 'card')} disabled={!!busy} style={[styles.cardBtn, { borderColor: accent }]}>
+                    {busy === `${k}-card` ? <ActivityIndicator size="small" color={accent} /> : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="card-outline" size={14} color={accent} />
+                        <Text style={[styles.cardText, { color: accent }]}>KARTOU {eur} €</Text>
+                      </View>
+                    )}
                   </Pressable>
                 </View>
               )}
