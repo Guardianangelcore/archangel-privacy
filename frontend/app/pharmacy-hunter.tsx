@@ -16,12 +16,22 @@ const STATUS_UI: any = {
 export default function PharmacyHunter() {
   const router = useRouter();
   const [med, setMed] = useState('');
-  const [region, setRegion] = useState<'SK' | 'CZ'>('SK');
+  const [region, setRegion] = useState<'SK' | 'CZ'>('CZ');
   const [results, setResults] = useState<any[]>([]);
   const [watches, setWatches] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [scanBusy, setScanBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
+
+  // Geographic Fluidity — region follows the user's geo context (Prague/CZ default)
+  useEffect(() => {
+    (async () => {
+      try {
+        const g: any = await api('/geo/context');
+        if (g?.geo?.country === 'CZ' || g?.geo?.country === 'SK') setRegion(g.geo.country);
+      } catch {}
+    })();
+  }, []);
 
   const loadWatches = async () => {
     try { setWatches(await api('/pharmacy/watches')); } catch {}

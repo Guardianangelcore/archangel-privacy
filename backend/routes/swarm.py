@@ -71,6 +71,8 @@ AGENTS = {
                           "desc": "Krížuje svetové medicínske prelomy s tvojím Trezorom → prioritné alerty"},
     "sovereign_guard":   {"interval": 45, "label": "Sovereign Guard (Recovery · 2FA · SAT-uplink)",
                           "desc": "Spravuje obnovu účtov, 2FA handshaky, Bio-Beacony a satelitné Nano-Packety"},
+    "system_janitor":    {"interval": 120, "label": "System Janitor (Self-Repair)",
+                          "desc": "Autonómne skenuje a opravuje nekonzistencie — chýbajúce záznamy časovej osi, geo kontext, integritu dát"},
 }
 
 async def _agent_waitlist_hunter() -> int:
@@ -412,6 +414,42 @@ async def _agent_gbi() -> int:
     from routes.ascension import gbi_distribute
     return await gbi_distribute()
 
+async def _agent_system_janitor() -> int:
+    """SELF-REPAIR: scans data inconsistencies and autonomously fixes them.
+    1. Vault documents missing their Health Timeline index → backfill entries.
+    2. Users without a geo context → set the Prague, CZ default.
+    Every repair is logged to db.janitor_runs and broadcast on the swarm bus."""
+    actions = 0
+    repaired_timeline = 0
+    # 1. Timeline backfill — heal the "black hole" for documents uploaded before indexing existed
+    docs = await db.documents.find(
+        {}, {"_id": 0, "doc_id": 1, "user_id": 1, "title": 1, "uploaded_at": 1}).to_list(500)
+    for d in docs:
+        exists = await db.calendar_events.find_one({"doc_id": d["doc_id"]}, {"_id": 1})
+        if exists:
+            continue
+        up = d.get("uploaded_at")
+        date = up.date().isoformat() if hasattr(up, "date") else (str(up)[:10] if up else datetime.now(timezone.utc).date().isoformat())
+        await db.calendar_events.insert_one({
+            "event_id": uuid.uuid4().hex, "user_id": d["user_id"], "category": "history",
+            "title": f"📄 {d.get('title', 'Dokument')}"[:140], "date": date,
+            "notes": "Doplnené System Janitorom (self-repair)", "booster_due": None,
+            "source": "janitor:backfill", "doc_id": d["doc_id"],
+            "created_at": datetime.now(timezone.utc)})
+        repaired_timeline += 1
+        actions += 1
+    # 2. Geo context default (Prague, CZ)
+    from routes.geo import DEFAULT_GEO
+    res = await db.users.update_many({"geo": {"$exists": False}}, {"$set": {"geo": DEFAULT_GEO}})
+    actions += res.modified_count
+    if actions:
+        await db.janitor_runs.insert_one({
+            "at": datetime.now(timezone.utc), "repaired_total": actions,
+            "timeline_backfills": repaired_timeline, "geo_defaults": res.modified_count})
+        await bus_publish("janitor.self_repair", "system_janitor",
+                          {"repaired": actions, "timeline_backfills": repaired_timeline})
+    return actions
+
 _AGENT_FN = {
     "waitlist_hunter": _agent_waitlist_hunter,
     "marketplace": _agent_marketplace,
@@ -422,6 +460,7 @@ _AGENT_FN = {
     "wealth_sentinel": _agent_wealth_sentinel,
     "news_sentinel": _agent_news_sentinel,
     "sovereign_guard": _agent_sovereign_guard,
+    "system_janitor": _agent_system_janitor,
 }
 
 async def run_agent(agent_id: str) -> dict:
@@ -470,7 +509,7 @@ async def swarm_loop():
 @api.get("/swarm/status")
 async def swarm_status(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
-    agents = await db.swarm_agents.find({}, {"_id": 0}).to_list(10)
+    agents = await db.swarm_agents.find({}, {"_id": 0}).to_list(20)
     bus = await db.neural_bus.find({}, {"_id": 0}).sort("at", -1).to_list(15)
     nodes = await db.depin_nodes.find({}, {"_id": 0}).to_list(20)
     healthy = sum(1 for n in nodes if n["health"] >= 70)
@@ -483,6 +522,15 @@ async def swarm_run(agent_id: str, authorization: Optional[str] = Header(None)):
     if agent_id not in AGENTS:
         raise HTTPException(404, f"agent must be one of {list(AGENTS)}")
     return await run_agent(agent_id)
+
+@api.get("/janitor/status")
+async def janitor_status(authorization: Optional[str] = Header(None)):
+    """System Janitor — self-repair history and totals."""
+    await get_current_user(authorization)
+    runs = await db.janitor_runs.find({}, {"_id": 0}).sort("at", -1).to_list(10)
+    agent = await db.swarm_agents.find_one({"agent_id": "system_janitor"}, {"_id": 0})
+    return {"agent": agent, "recent_repairs": runs,
+            "total_repaired": sum(r.get("repaired_total", 0) for r in runs)}
 
 @api.get("/depin/status")
 async def depin_status(authorization: Optional[str] = Header(None)):

@@ -269,11 +269,23 @@ def _simulate_stock(med: str, region: str) -> list:
     return out
 
 @api.get("/pharmacy/search")
-async def pharmacy_search(med: str, region: str = "SK", authorization: Optional[str] = Header(None)):
-    await get_current_user(authorization)
+async def pharmacy_search(med: str, region: str = "", authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
     if not med.strip():
         raise HTTPException(400, "med required")
-    return {"med": med.strip(), "region": region.upper(), "simulated": True, "results": _simulate_stock(med.strip(), region)}
+    if not region:
+        # Geographic Fluidity — default region follows the user's geo context (Prague/CZ by default)
+        from routes.geo import geo_of
+        g = geo_of(user)
+        region = g["country"] if g["country"] in _PHARMACIES else "CZ"
+        results = _simulate_stock(med.strip(), region)
+        # prioritize the user's own city first
+        city = (g.get("city") or "").lower()
+        results.sort(key=lambda r: (0 if r["city"].lower() == city else 1,
+                                    {"in_stock": 0, "low_stock": 1, "out_of_stock": 2}[r["status"]]))
+    else:
+        results = _simulate_stock(med.strip(), region)
+    return {"med": med.strip(), "region": region.upper(), "simulated": True, "results": results}
 
 class PharmacyWatchIn(BaseModel):
     med_name: str
@@ -326,14 +338,23 @@ async def pharmacy_watch_del(watch_id: str, authorization: Optional[str] = Heade
 
 # --------- AUTONOMOUS AUTO-BOOKER (Waitlist Hunter → booking + Guardian Calendar sync) ---------
 # NOTE: clinic booking APIs are SIMULATED (deterministic) until real integrations are provided.
+# Geographic Fluidity: clinics are indexed per city — Prague, CZ is the primary default context.
 
-_CLINICS = ["Poliklinika Ružinov", "Nemocnica Bory", "ProCare Central", "Klinika Kramáre", "MedPark Košice"]
+_CLINICS_BY_CITY = {
+    "praha": ["FN Motol", "VFN Praha", "Nemocnice Na Homolce", "IKEM Praha", "Canadian Medical Praha"],
+    "brno": ["FN Brno", "Úrazová nemocnice Brno", "SurGal Clinic Brno"],
+    "ostrava": ["FN Ostrava", "Vítkovická nemocnica"],
+    "bratislava": ["Poliklinika Ružinov", "Nemocnica Bory", "ProCare Central", "Klinika Kramáre"],
+    "košice": ["MedPark Košice", "UNLP Košice"],
+}
 
 def _simulate_slot(specialty: str, city: str) -> dict:
-    h = int(hashlib.sha256(f"{specialty.lower()}|{city.lower()}".encode()).hexdigest(), 16)
+    c = (city or "").strip() or "Praha"
+    clinics = _CLINICS_BY_CITY.get(c.lower()) or [f"Poliklinika {c}", f"MedCentrum {c}", f"Nemocnica {c} Central"]
+    h = int(hashlib.sha256(f"{specialty.lower()}|{c.lower()}".encode()).hexdigest(), 16)
     slot_date = (datetime.now(timezone.utc) + timedelta(days=(h % 12) + 3)).date().isoformat()
     slot_time = f"{8 + (h % 9):02d}:{['00','15','30','45'][h % 4]}"
-    return {"clinic": _CLINICS[h % len(_CLINICS)], "date": slot_date, "time": slot_time}
+    return {"clinic": clinics[h % len(clinics)], "date": slot_date, "time": slot_time, "city": c}
 
 class AutobookIn(BaseModel):
     specialty: str

@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
 import { api, API_BASE } from './api';
 import { useAuth } from './auth';
 
@@ -16,7 +17,7 @@ import { useAuth } from './auth';
  *    PRIMARY NODE mode (BLE-mesh Blackout screen) — survival communication core.
  */
 export default function GuardianMonitor() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const router = useRouter();
   const freeFallAt = useRef(0);
   const lastFallNav = useRef(0);
@@ -91,6 +92,33 @@ export default function GuardianMonitor() {
     }, 60000);
     return () => clearInterval(iv);
   }, [user?.user_id, inactivityGuard, inactivityHours]);
+
+  // GEOGRAPHIC FLUIDITY — Travel Mode: GPS → nearest city → re-index providers,
+  // switch UI/voice language. Never prompts for permission here (asked in Profile).
+  const travelMode = !!(user as any)?.travel_mode;
+  useEffect(() => {
+    if (Platform.OS === 'web' || !user || !travelMode) return;
+    let cancelled = false;
+    const locate = async () => {
+      try {
+        const p = await Location.getForegroundPermissionsAsync();
+        if (!p.granted) return;
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const res: any = await api('/geo/locate', {
+          method: 'POST',
+          body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        });
+        if (!cancelled && res?.language_switched) {
+          const me: any = await api('/auth/me');
+          if (me?.user) setUser(me.user);
+        }
+      } catch {}
+    };
+    locate();
+    const iv = setInterval(locate, 15 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(iv); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.user_id, travelMode]);
 
   // KERNEL GRID WATCHDOG — total grid failure → become the PRIMARY NODE
   useEffect(() => {

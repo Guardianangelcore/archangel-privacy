@@ -1,11 +1,12 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Platform, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { api, apiUpload } from '@/src/api';
+import { api, apiUpload, API_BASE, getToken } from '@/src/api';
+import { shareFile } from '@/src/pdf';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
@@ -20,6 +21,8 @@ export default function Vault() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [busyDoc, setBusyDoc] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ title: string; uri: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,11 +79,29 @@ export default function Vault() {
     setDocs(prev => prev.filter(d => d.doc_id !== doc.doc_id));
   };
 
+  const isImage = (doc: Doc) =>
+    /\.(jpe?g|png|webp|gif)$/i.test(doc.file_name || '') ||
+    ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((doc.content_type || '').toLowerCase());
+
+  // View/Open — images open in a full-screen preview, PDFs & other files open natively
+  const view = async (doc: Doc) => {
+    if (isImage(doc)) {
+      const token = await getToken();
+      setPreview({ title: doc.title, uri: `${API_BASE}/api/vault/documents/${doc.doc_id}/file?token=${token}` });
+      return;
+    }
+    setOpening(doc.doc_id);
+    try {
+      await shareFile(`/vault/documents/${doc.doc_id}/file`, doc.file_name || 'dokument.pdf', doc.content_type || 'application/octet-stream');
+    } catch (e) { console.log('open err', e); }
+    finally { setOpening(null); }
+  };
+
   return (
     <SafeAreaView testID="vault-screen" style={styles.root} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('vault', lang).toUpperCase()}</Text>
-        <Text style={styles.sub}>ZERO-KNOWLEDGE STORAGE</Text>
+        <Text style={styles.sub}>ŠIFROVANÉ ÚLOŽISKO — LEN VY MÁTE KĽÚČ</Text>
       </View>
 
       <FlatList
@@ -107,9 +128,13 @@ export default function Vault() {
                 <Ionicons name="trash-outline" size={18} color={C.error} />
               </Pressable>
             </View>
+            <Pressable testID={`doc-view-${item.doc_id}`} onPress={() => view(item)} style={styles.viewBtn}>
+              {opening === item.doc_id ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="eye-outline" size={16} color={C.brand} />}
+              <Text style={styles.viewBtnText}>ZOBRAZIŤ / OTVORIŤ</Text>
+            </Pressable>
             {item.plain_language ? (
               <View style={styles.translation}>
-                <Text style={styles.translationLabel}>{t('translate', lang).toUpperCase()}</Text>
+                <Text style={styles.translationLabel}>🤖 JARVIS ZHRNUTIE</Text>
                 <Text style={styles.translationText}>{item.plain_language}</Text>
               </View>
             ) : busyDoc === item.doc_id ? (
@@ -118,18 +143,10 @@ export default function Vault() {
                 <Text style={styles.translateBtnText}>{t('reading_document', lang).toUpperCase()}</Text>
               </View>
             ) : (
-              <View style={{ flexDirection: 'row', gap: S.sm }}>
-                {isOcrable(item) && (
-                  <Pressable testID={`doc-ocr-${item.doc_id}`} onPress={() => ocrAndTranslate(item)} style={[styles.translateBtn, { flex: 1, backgroundColor: C.brand }]}>
-                    <Ionicons name="scan-outline" size={16} color={C.onInverse} />
-                    <Text style={styles.translateBtnText}>{t('ocr_translate', lang).toUpperCase()}</Text>
-                  </Pressable>
-                )}
-                <Pressable testID={`doc-translate-${item.doc_id}`} onPress={() => translate(item)} style={[styles.translateBtn, { flex: 1 }]}>
-                  <Ionicons name="language-outline" size={16} color={C.onInverse} />
-                  <Text style={styles.translateBtnText}>{t('translate', lang).toUpperCase()}</Text>
-                </Pressable>
-              </View>
+              <Pressable testID={`doc-jarvis-${item.doc_id}`} onPress={() => (isOcrable(item) ? ocrAndTranslate(item) : translate(item))} style={[styles.translateBtn, { backgroundColor: C.brand }]}>
+                <Ionicons name="sparkles" size={16} color={C.onInverse} />
+                <Text style={styles.translateBtnText}>🤖 JARVIS ZHRNUTIE</Text>
+              </Pressable>
             )}
           </View>
         )}
@@ -145,6 +162,22 @@ export default function Vault() {
           <Text style={styles.priBtnText}>{t('upload_doc', lang).toUpperCase()}</Text>
         </Pressable>
       </View>
+
+      {/* FULL-SCREEN IMAGE PREVIEW */}
+      <Modal visible={!!preview} animationType="slide" onRequestClose={() => setPreview(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'bottom']}>
+          <View style={styles.pvHeader}>
+            <Pressable testID="doc-preview-close" onPress={() => setPreview(null)} hitSlop={12}>
+              <Ionicons name="close" size={26} color={C.fg} />
+            </Pressable>
+            <Text style={styles.pvTitle} numberOfLines={1}>{preview?.title}</Text>
+            <View style={{ width: 26 }} />
+          </View>
+          {preview && (
+            <Image testID="doc-preview-image" source={{ uri: preview.uri }} style={{ flex: 1 }} resizeMode="contain" />
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -170,4 +203,8 @@ const styles = StyleSheet.create({
   priBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
   secBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.bg, paddingVertical: S.md, borderWidth: 2, borderColor: C.borderStrong },
   secBtnText: { color: C.fg, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
+  viewBtn: { marginTop: S.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: C.brand, paddingVertical: S.md, backgroundColor: 'rgba(212,175,55,0.08)', minHeight: 48 },
+  viewBtnText: { color: C.brand, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
+  pvHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.lg, paddingVertical: S.md, gap: S.md },
+  pvTitle: { flex: 1, color: C.fg, fontWeight: '800', fontSize: 14, textAlign: 'center' },
 });

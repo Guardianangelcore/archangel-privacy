@@ -241,22 +241,24 @@ async def agent_anomalies(authorization: Optional[str] = Header(None)):
     return {"alerts": alerts}
 
 # =========================================================================
-# WEATHER (open-meteo, keyless, graceful fallback) — for the morning briefing
+# WEATHER (open-meteo, keyless, graceful fallback) — geo-aware for the briefing
 # =========================================================================
-async def _weather() -> Optional[dict]:
+async def _weather(user: Optional[dict] = None) -> Optional[dict]:
+    from routes.geo import geo_of
+    g = geo_of(user or {})
     try:
         async with httpx.AsyncClient(timeout=3.5) as cli:
             r = await cli.get("https://api.open-meteo.com/v1/forecast",
-                              params={"latitude": 48.15, "longitude": 17.11,
+                              params={"latitude": g["lat"], "longitude": g["lng"],
                                       "current": "temperature_2m,weather_code",
                                       "daily": "temperature_2m_max,temperature_2m_min",
-                                      "timezone": "Europe/Bratislava", "forecast_days": 1})
+                                      "timezone": g["tz"], "forecast_days": 1})
             d = r.json()
             code = int(d["current"]["weather_code"])
             desc = ("jasno" if code == 0 else "polooblačno" if code in (1, 2) else
                     "zamračené" if code == 3 else "hmla" if code in (45, 48) else
                     "dážď" if code < 70 else "sneženie" if code < 80 else "prehánky")
-            return {"city": "Bratislava", "now_c": round(d["current"]["temperature_2m"]),
+            return {"city": g["city"], "now_c": round(d["current"]["temperature_2m"]),
                     "max_c": round(d["daily"]["temperature_2m_max"][0]),
                     "min_c": round(d["daily"]["temperature_2m_min"][0]), "desc": desc}
     except Exception as e:
@@ -372,7 +374,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
             return clean(cached)
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
-    weather = await _weather()
+    weather = await _weather(user)
     # today's meds
     rems = await db.med_reminders.find({"user_id": uid}, {"_id": 0}).to_list(20)
     intakes = await db.med_intakes.find({"user_id": uid, "date": today}, {"_id": 0}).to_list(50)

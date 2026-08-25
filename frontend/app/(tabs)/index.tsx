@@ -73,7 +73,7 @@ export default function Home() {
             <Text style={styles.brand}>GUARDIAN</Text>
             {beaconSent && <View testID="beacon-dot" style={styles.beaconDot} />}
           </View>
-          <Text style={styles.brandSub}>SOVEREIGN SURVIVAL OS</Text>
+          <Text style={styles.brandSub}>SUVERÉNNY OCHRANNÝ SYSTÉM</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
           <Pressable testID="home-jarvis" onPress={() => { tap(); router.push('/jarvis'); }} hitSlop={8}>
@@ -120,20 +120,20 @@ export default function Home() {
         </GlassCard>
 
         <View style={styles.pillarGrid}>
-          <PillarTile testID="pillar-health" icon="heart" title="Health Hub" sub="Trezor · AI prekladač · Physio" onPress={() => router.navigate('/(tabs)/health')} />
-          <PillarTile testID="pillar-family" icon="people" title="Family Shield" sub="Angel Mode · Family Pulse" onPress={() => router.navigate('/(tabs)/family')} />
-          <PillarTile testID="pillar-legacy" icon="rose" title="Legacy & Wealth" sub="Solidarita · Závet · Fond" onPress={() => router.navigate('/(tabs)/legacy')} />
-          <PillarTile testID="pillar-hunter" icon="search" title="The Hunter" sub="Termíny · Zásoby · Blackout" onPress={() => router.navigate('/(tabs)/hunter')} />
+          <PillarTile testID="pillar-health" icon="heart" title="Zdravie" sub="Trezor · AI prekladač · Rehabilitácia" onPress={() => router.navigate('/(tabs)/health')} />
+          <PillarTile testID="pillar-family" icon="people" title="Rodina" sub="Angel režim · Rodinný pulz" onPress={() => router.navigate('/(tabs)/family')} />
+          <PillarTile testID="pillar-legacy" icon="rose" title="Odkaz a majetok" sub="Solidarita · Závet · Fond" onPress={() => router.navigate('/(tabs)/legacy')} />
+          <PillarTile testID="pillar-hunter" icon="search" title="Lovec termínov" sub="Termíny · Zásoby · Blackout" onPress={() => router.navigate('/(tabs)/hunter')} />
         </View>
 
         <View style={styles.ecoRow}>
           <Pressable testID="home-token" onPress={() => { tap(); router.push('/token'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
             <Ionicons name="diamond" size={18} color={C.brand} />
-            <Text style={styles.ecoText}>GA-T WALLET</Text>
+            <Text style={styles.ecoText}>GA-T PEŇAŽENKA</Text>
           </Pressable>
           <Pressable testID="home-fortress" onPress={() => { tap(); router.push('/fortress'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
             <Ionicons name="shield-half" size={18} color={C.brand} />
-            <Text style={styles.ecoText}>CYBER-FORTRESS</Text>
+            <Text style={styles.ecoText}>KYBER-PEVNOSŤ</Text>
           </Pressable>
         </View>
 
@@ -159,8 +159,10 @@ const HOME_ORB = 150;
 
 function HomeOrb({ onPress }: { onPress: () => void }) {
   const [agent, setAgent] = useState<any>(null);
+  const [geo, setGeo] = useState<any>(null);
   useEffect(() => {
     (async () => { try { setAgent(await api('/agent/state')); } catch {} })();
+    (async () => { try { const g: any = await api('/geo/context'); setGeo(g.geo); } catch {} })();
   }, []);
   const cfg = ORB_MOOD[agent?.mood as string] || ORB_MOOD.calm;
   const breath = useSharedValue(0);
@@ -186,6 +188,7 @@ function HomeOrb({ onPress }: { onPress: () => void }) {
       </Animated.View>
       <Text style={styles.orbTitle}>JARVIS</Text>
       <Text style={styles.orbSub}>Ťuknite a hovorte — váš anjel počúva</Text>
+      {!!geo && <Text style={styles.orbGeo}>📍 {geo.city} · {geo.country}</Text>}
     </View>
   );
 }
@@ -357,6 +360,7 @@ const styles = StyleSheet.create({
   orbLvl: { marginTop: 4, fontWeight: '900', fontSize: 11, letterSpacing: 2 },
   orbTitle: { color: C.brand, fontWeight: '900', fontSize: 14, letterSpacing: 5, marginTop: S.sm },
   orbSub: { color: C.info, fontSize: 11 },
+  orbGeo: { color: C.brand, fontSize: 10, letterSpacing: 1.5, fontWeight: '800', marginTop: 4 },
   lensMini: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
   pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginTop: S.xl },
   ecoRow: { flexDirection: 'row', gap: S.md, marginTop: S.md },

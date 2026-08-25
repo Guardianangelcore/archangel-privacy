@@ -4,6 +4,7 @@ import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platf
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { ContactSheet } from '@/src/ui/ContactSheet';
@@ -22,6 +23,41 @@ export default function Profile() {
   const [admin, setAdmin] = useState<any>(null);
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoMsg, setDemoMsg] = useState('');
+  const [geo, setGeo] = useState<any>(null);
+  const [geoMsg, setGeoMsg] = useState('');
+
+  const toggleTravel = async (v: boolean) => {
+    setGeoMsg('');
+    try {
+      if (v && Platform.OS !== 'web') {
+        const p = await Location.getForegroundPermissionsAsync();
+        if (!p.granted) {
+          if (!p.canAskAgain) {
+            setGeoMsg('Poloha je zablokovaná — povoľte ju v Nastaveniach telefónu.');
+            return;
+          }
+          const r = await Location.requestForegroundPermissionsAsync();
+          if (!r.granted) {
+            setGeoMsg(r.canAskAgain ? 'Bez polohy sa mesto neprispôsobí automaticky.' : 'Poloha je zablokovaná — povoľte ju v Nastaveniach telefónu.');
+            return;
+          }
+        }
+      }
+      const res: any = await api('/geo/travel-mode', { method: 'PUT', body: JSON.stringify({ enabled: v }) });
+      setGeo(res.geo);
+      if (v && Platform.OS !== 'web') {
+        try {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const loc: any = await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
+          setGeo(loc.geo);
+          if (loc.language_switched) setGeoMsg(`Jazyk prepnutý podľa polohy: ${loc.geo.city} (${loc.language.toUpperCase()})`);
+          else setGeoMsg(`Poloha: ${loc.geo.city} · ${loc.geo.country}`);
+        } catch {}
+      }
+      const me: any = await api('/auth/me');
+      if (me?.user) setUser(me.user);
+    } catch (e: any) { setGeoMsg(String(e.message || e)); }
+  };
 
   const toggleDemo = async (v: boolean) => {
     setDemoBusy(true); setDemoMsg('');
@@ -41,6 +77,7 @@ export default function Profile() {
   const load = useCallback(async () => {
     try { setProfile(await api('/emergency-profile')); } catch (e) { console.log(e); }
     try { setAdmin(await api('/demo/status')); } catch { setAdmin(null); }
+    try { const g: any = await api('/geo/context'); setGeo(g.geo); } catch {}
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -113,6 +150,15 @@ export default function Profile() {
           </View>
           <Switch testID="prof-pulse-optin" value={!!(user as any)?.pulse_check_optin} onValueChange={v => setPref({ pulse_check_optin: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
+        <View style={styles.guardRow}>
+          <Ionicons name="airplane-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>CESTOVNÝ REŽIM (GEO)</Text>
+            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}` : '📍 Praha · CZ'} — automatické mesto, jazyk a predpisy podľa GPS</Text>
+          </View>
+          <Switch testID="prof-travel-mode" value={!!(user as any)?.travel_mode} onValueChange={toggleTravel} trackColor={{ true: C.brand, false: C.surface3 }} />
+        </View>
+        {!!geoMsg && <Text style={styles.geoMsg}>{geoMsg}</Text>}
         {!!(user as any)?.inactivity_guard && (
           <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
             {[4, 6, 8, 12].map(h => {
@@ -266,6 +312,7 @@ const styles = StyleSheet.create({
   guardRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, marginBottom: S.sm, backgroundColor: C.bg },
   guardTitle: { fontWeight: '900', letterSpacing: 1, color: C.fg, fontSize: 13 },
   guardSub: { color: C.onS3, fontSize: 11, marginTop: 2 },
+  geoMsg: { color: C.brand, fontSize: 11, marginTop: S.sm, fontWeight: '700' },
   chip: { paddingHorizontal: S.md, paddingVertical: 8, borderWidth: 1.5, borderColor: C.borderStrong, height: 36, alignItems: 'center', justifyContent: 'center' },
   chipActive: { backgroundColor: C.inverse },
   chipText: { fontWeight: '800', color: C.fg, letterSpacing: 1, fontSize: 12 },

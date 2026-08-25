@@ -63,6 +63,15 @@ async def upload_document(
         size=len(data), storage_path=path, hash=file_hash,
     ).model_dump()
     await db.documents.insert_one(doc.copy())
+    # Health Timeline indexing — every saved file is immediately visible on the timeline
+    await db.calendar_events.insert_one({
+        "event_id": uuid.uuid4().hex, "user_id": user["user_id"],
+        "category": "history", "title": f"📄 {doc['title']}"[:140],
+        "date": datetime.now(timezone.utc).date().isoformat(),
+        "notes": "Dokument uložený v Zdravotnom trezore", "booster_due": None,
+        "source": "vault", "doc_id": doc_id,
+        "created_at": datetime.now(timezone.utc),
+    })
     # Jarvis Autopilot (Medical Sentinel) — orchestrate the new document in the
     # background: OCR → AI preklad → kalendár → rezervácia termínu, bez pýtania.
     if user.get("jarvis_autopilot", True):
@@ -185,6 +194,34 @@ def build_translator_system(lang_code: str) -> str:
         f"Respond ONLY in {lang}." + AI_COMPLIANCE_NOTE
     )
 
+# --------- NEXT-APPOINTMENT EXTRACTION (gpt-5.4, strict JSON) ---------
+APPT_SYSTEM = (
+    "You extract the next upcoming medical appointment from medical text. "
+    'Reply ONLY with strict JSON: {"found": true/false, "date": "YYYY-MM-DD" or null, '
+    '"time": "HH:MM" or null, "title": "short Slovak label, e.g. Kontrola — ortopédia"}. '
+    "Only report a date explicitly stated as a FUTURE appointment / check-up "
+    "(kontrola, termín, vyšetrenie, dostavte sa, objednaný na). If none, found=false. No prose."
+)
+
+async def extract_next_appointment(text: str, tag: str) -> Optional[dict]:
+    """Flag the 'Next Appointment Date' from medical text — never raises."""
+    if not text or not text.strip() or not EMERGENT_LLM_KEY:
+        return None
+    try:
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"appt-{tag}",
+                       system_message=APPT_SYSTEM).with_model("openai", "gpt-5.4")
+        resp = await chat.send_message(UserMessage(text=text[:6000]))
+        import json as _json
+        m = re.search(r"\{.*\}", resp or "", re.S)
+        data = _json.loads(m.group(0)) if m else {}
+        if data.get("found") and data.get("date"):
+            datetime.strptime(str(data["date"]), "%Y-%m-%d")
+            return {"date": data["date"], "time": data.get("time"),
+                    "title": (data.get("title") or "Kontrola u lekára")[:140]}
+    except Exception as e:
+        logger.warning(f"appointment extraction failed: {e}")
+    return None
+
 class TranslateIn(BaseModel):
     text: str
     language: str = "sk"
@@ -205,7 +242,8 @@ async def ai_translate(body: TranslateIn, authorization: Optional[str] = Header(
 
     try:
         resp = await chat.send_message(UserMessage(text=body.text[:8000]))
-        return {"plain_language": resp}
+        appt = await extract_next_appointment(body.text, f"t{user['user_id'][:8]}")
+        return {"plain_language": resp, "next_appointment": appt}
     except Exception as e:
         logger.error(f"AI translate error: {e}")
         raise HTTPException(502, "AI service unavailable")
@@ -230,11 +268,12 @@ async def ai_translate_doc(body: TranslateDocIn, authorization: Optional[str] = 
     ).with_model("anthropic", "claude-sonnet-5")
     try:
         resp = await chat.send_message(UserMessage(text=source_text[:8000]))
+        appt = await extract_next_appointment(source_text, doc["doc_id"][:12])
         await db.documents.update_one(
             {"doc_id": doc["doc_id"]},
-            {"$set": {"plain_language": resp, "translation": resp}},
+            {"$set": {"plain_language": resp, "translation": resp, "next_appointment": appt}},
         )
-        return {"plain_language": resp}
+        return {"plain_language": resp, "next_appointment": appt}
     except Exception as e:
         logger.error(f"AI translate doc error: {e}")
         raise HTTPException(502, "AI service unavailable")
