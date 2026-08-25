@@ -9,7 +9,7 @@ import asyncio
 from core import api, db, client, logger, init_storage
 from db_indexes import ensure_indexes
 # Importing route modules registers their endpoints on the shared `api` router.
-from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension  # noqa: F401
+from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension, founder  # noqa: F401
 from routes.origin import ORIGIN
 
 app = FastAPI(title="Guardian Health & Angel API")

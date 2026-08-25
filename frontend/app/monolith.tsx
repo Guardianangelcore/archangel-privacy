@@ -179,6 +179,20 @@ export default function Monolith() {
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         {!!err && <Text style={st.err}>{err}</Text>}
 
+        {/* GATEWAY ROW — Partner Portal + Founder's Toolkit */}
+        <View style={st.gateRow}>
+          <Pressable testID="mono-partners" onPress={() => { tap('light'); router.push('/partners'); }} style={st.gateTile}>
+            <Ionicons name="business-outline" size={22} color={C.brand} />
+            <Text style={st.gateTitle}>UHP PARTNERS</Text>
+            <Text style={st.gateSub}>Kliniky · poisťovne · pripojenie k protokolu</Text>
+          </Pressable>
+          <Pressable testID="mono-founder" onPress={() => { tap('light'); router.push('/founder-toolkit'); }} style={st.gateTile}>
+            <Ionicons name="briefcase-outline" size={22} color={C.brand} />
+            <Text style={st.gateTitle}>{"FOUNDER'S TOOLKIT"}</Text>
+            <Text style={st.gateSub}>Investor demo · prognóza · release package</Text>
+          </Pressable>
+        </View>
+
         <Section id="uhp" icon="git-network-outline" title="GLOBAL SENTINEL NETWORK" sub="Universal Health Protocol · povinná brána" open={open} onToggle={setOpen}>
           {cap ? (
             <>
@@ -424,4 +438,8 @@ const st = StyleSheet.create({
   tlText: { color: C.info, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
   err: { color: C.error, fontSize: 12, paddingHorizontal: S.xl, marginTop: S.sm },
   footer: { textAlign: 'center', color: C.info, fontSize: 9, letterSpacing: 1.5, marginTop: S.xl, paddingHorizontal: S.xl },
+  gateRow: { flexDirection: 'row', gap: S.sm, marginHorizontal: S.lg, marginTop: S.md },
+  gateTile: { flex: 1, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.md, backgroundColor: 'rgba(212,175,55,0.07)', padding: S.md, gap: 4, minHeight: 96 },
+  gateTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1, marginTop: 4 },
+  gateSub: { color: C.info, fontSize: 9.5, lineHeight: 13 },
 });

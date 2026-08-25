@@ -8,12 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { useAuth } from '@/src/auth';
 import { api } from '@/src/api';
 import { useAcousticGuard } from '@/src/acoustic';
 import { C, S, R, GOLD } from '@/src/theme';
-import { GlassCard, Pulse, tap } from '@/src/ui/glass';
+import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
 
 const ANGEL_BG = 'https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
@@ -91,6 +91,9 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.greeting}>Dobrý deň,{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian').split(' ')[0]}.</Text></Text>
 
+        {/* JARVIS PRESENCE — pulsing AI Orb, the primary welcome interface */}
+        <HomeOrb onPress={() => { tap('heavy'); router.push('/jarvis'); }} />
+
         <GlassCard testID="home-daily-brief" onPress={() => router.push('/daily-brief')} pad={S.md} style={{ marginTop: S.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
             <View style={styles.briefIcon}><Ionicons name="sunny" size={22} color={C.brand} /></View>
@@ -102,19 +105,19 @@ export default function Home() {
           </View>
         </GlassCard>
 
-        {/* ONE-LENS SYSTEM — the most important action in the app */}
-        <View style={styles.lensWrap}>
-          <Pulse maxScale={1.05} duration={1500} style={styles.lensGlow}>
-            <Pressable testID="home-lens" onPress={() => { tap('heavy'); router.push('/lens'); }}
-              style={({ pressed }) => [pressed && { transform: [{ scale: 0.96 }] }]}>
-              <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.lensFab}>
-                <Ionicons name="aperture" size={54} color={C.onInverse} />
-              </LinearGradient>
-            </Pressable>
-          </Pulse>
-          <Text style={styles.lensTitle}>GUARDIAN LENS</Text>
-          <Text style={styles.lensSub}>Odfoťte liek či nález — Jarvis okamžite koná</Text>
-        </View>
+        {/* ONE-LENS SYSTEM — quick action */}
+        <GlassCard testID="home-lens" onPress={() => router.push('/lens')} pad={S.md} style={{ marginTop: S.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+            <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.lensMini}>
+              <Ionicons name="aperture" size={26} color={C.onInverse} />
+            </LinearGradient>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.briefTitle}>GUARDIAN LENS</Text>
+              <Text style={styles.briefSub}>Odfoťte liek či nález — Jarvis okamžite koná</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={C.info} />
+          </View>
+        </GlassCard>
 
         <View style={styles.pillarGrid}>
           <PillarTile testID="pillar-health" icon="heart" title="Health Hub" sub="Trezor · AI prekladač · Physio" onPress={() => router.navigate('/(tabs)/health')} />
@@ -141,6 +144,49 @@ export default function Home() {
         <Text style={styles.beaconHint}>◉ Tichý maják: podržte logo GUARDIAN 1 sekundu</Text>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// ---- JARVIS PRESENCE — breathing AI Orb on the home screen (mood-aware) ----
+const ORB_MOOD: Record<string, { color: string; glow: string; dur: number }> = {
+  calm: { color: '#D4AF37', glow: 'rgba(212,175,55,0.35)', dur: 2600 },
+  energetic: { color: '#FFD75E', glow: 'rgba(255,215,94,0.4)', dur: 1200 },
+  thinking: { color: '#9B6DFF', glow: 'rgba(155,109,255,0.4)', dur: 900 },
+  concerned: { color: '#4A90D9', glow: 'rgba(74,144,217,0.4)', dur: 2000 },
+  alert: { color: '#FF453A', glow: 'rgba(255,69,58,0.45)', dur: 700 },
+};
+const HOME_ORB = 150;
+
+function HomeOrb({ onPress }: { onPress: () => void }) {
+  const [agent, setAgent] = useState<any>(null);
+  useEffect(() => {
+    (async () => { try { setAgent(await api('/agent/state')); } catch {} })();
+  }, []);
+  const cfg = ORB_MOOD[agent?.mood as string] || ORB_MOOD.calm;
+  const breath = useSharedValue(0);
+  useEffect(() => {
+    cancelAnimation(breath);
+    breath.value = 0;
+    breath.value = withRepeat(withTiming(1, { duration: cfg.dur, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [cfg.dur, breath]);
+  const core = useAnimatedStyle(() => ({ transform: [{ scale: 1 + breath.value * 0.05 }] }));
+  const glow = useAnimatedStyle(() => ({
+    opacity: 0.4 + breath.value * 0.5,
+    transform: [{ scale: 1.08 + breath.value * 0.18 }],
+  }));
+  return (
+    <View style={styles.orbWrap}>
+      <Animated.View pointerEvents="none" style={[styles.orbGlow, { backgroundColor: cfg.glow }, glow]} />
+      <Animated.View style={core}>
+        <Pressable testID="home-orb" onPress={onPress} style={[styles.orbCore, { borderColor: cfg.color, shadowColor: cfg.color }]}>
+          <View style={[styles.orbInner, { backgroundColor: cfg.color }]} />
+          <Ionicons name="sparkles" size={40} color={cfg.color} />
+          <Text style={[styles.orbLvl, { color: cfg.color }]}>LVL {agent?.level ?? 1}</Text>
+        </Pressable>
+      </Animated.View>
+      <Text style={styles.orbTitle}>JARVIS</Text>
+      <Text style={styles.orbSub}>Ťuknite a hovorte — váš anjel počúva</Text>
+    </View>
   );
 }
 
@@ -304,14 +350,14 @@ const styles = StyleSheet.create({
   briefIcon: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(212,175,55,0.14)', alignItems: 'center', justifyContent: 'center' },
   briefTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   briefSub: { color: C.info, fontSize: 10.5, marginTop: 2 },
-  lensWrap: { alignItems: 'center', marginTop: S.xl, gap: 6 },
-  lensGlow: Platform.select({
-    web: { boxShadow: '0 0 46px rgba(212,175,55,0.45)', borderRadius: 999 } as any,
-    default: { shadowColor: '#D4AF37', shadowOpacity: 0.55, shadowRadius: 26, shadowOffset: { width: 0, height: 0 }, elevation: 14, borderRadius: 999 },
-  }),
-  lensFab: { width: 128, height: 128, borderRadius: 64, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.35)' },
-  lensTitle: { color: C.brand, fontWeight: '900', fontSize: 15, letterSpacing: 4, marginTop: S.sm },
-  lensSub: { color: C.info, fontSize: 11, letterSpacing: 0.5 },
+  orbWrap: { alignItems: 'center', marginTop: S.xl, gap: 4 },
+  orbGlow: { position: 'absolute', top: 0, width: HOME_ORB, height: HOME_ORB, borderRadius: HOME_ORB / 2 },
+  orbCore: { width: HOME_ORB, height: HOME_ORB, borderRadius: HOME_ORB / 2, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: '#101017', shadowOpacity: 0.9, shadowRadius: 26, shadowOffset: { width: 0, height: 0 }, elevation: 14, overflow: 'hidden' },
+  orbInner: { position: 'absolute', width: HOME_ORB * 0.7, height: HOME_ORB * 0.7, borderRadius: HOME_ORB, opacity: 0.15 },
+  orbLvl: { marginTop: 4, fontWeight: '900', fontSize: 11, letterSpacing: 2 },
+  orbTitle: { color: C.brand, fontWeight: '900', fontSize: 14, letterSpacing: 5, marginTop: S.sm },
+  orbSub: { color: C.info, fontSize: 11 },
+  lensMini: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
   pillarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginTop: S.xl },
   ecoRow: { flexDirection: 'row', gap: S.md, marginTop: S.md },
   ecoTile: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.pill, minHeight: 50, backgroundColor: 'rgba(212,175,55,0.05)' },

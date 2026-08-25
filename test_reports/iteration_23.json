@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 23 — FINAL PRODUCTION HANDOVER stability sweep GREEN. Backend: 27/27 tests passing (new phase25_founder_handover.py 7/7 + phase24_monolith.py 20/20 regression). New /api/founder/toolkit returns forecast.years (5 rows 2026-2030 with correct mrr_eur*12=arr_eur math, gross_margin=87%), forecast.assumptions (ARPU 63.5€, guardian_tax_pct=15, tier_mix guardian/sentinel/archangel), 8-item roadmap (2026 LAUNCH → 2100+ ARCHANGEL), and release_package.docs (4 docs with real sha256+bytes). /api/founder/release/{doc} returns full utf-8 content whose sha256 matches server-computed hash for all 4 files (README.md, ARCHITECTURE.md, API_SPEC.md, LICENSE); unknown doc → 404, no auth → 401/403. UHP regression clean: POST /api/uhp/partners/register (public, no auth) still issues partner_id (uhp_*), api_key (uhpk_*), 64-char hmac_secret, protocol=UHP/1.0. GET /api/uhp/capacity remains ≥1B (1.02B) with 12×4096×32×650 topology. Full monolith regression (UHP HMAC ingest/replay/idempotency, arbitrage 10k index+math, liquidity payout state machine INITIATED→AUTHORIZED→SETTLED, FX, credit score/draw, ascension trajectories/sentinel/edge/truth/gbi, 60-parallel-ingest stress p95<4s, 20-parallel arbitrage, swarm agents) all pass. Frontend E2E 14/14 GREEN on mobile viewport 390×844 with seeded gh_session_token=smoketok-fresh-handover: (1) Home tab renders pulsing AI Orb testID=home-orb as hero under 'Dobrý deň, Smoke.' greeting; tapping it navigates to /jarvis (jv-orb + jv-input visible). (2) home-daily-brief + compact home-lens GlassCard row both render and are tappable. (3) /monolith Command Deck shows two gateway tiles mono-partners and mono-founder at top. (4) /partners hero renders live capacity stats (1.02 B streamov, 22 partnerov, 245 eventov), 3 value-prop cards (KLINIKY/POISŤOVNE/LABORATÓRIÁ), 4 onboarding steps (REGISTRÁCIA/PODPIS/INGEST/MONITORING), security pills (HMAC-SHA256/REPLAY±300s/IDEMPOTENCIA/240 LIMIT); pt-sandbox button generates and displays pt-creds card with real partner_id/api_key/hmac_secret. (5) /founder-toolkit renders assumption tiles + year cards ft-year-2026..2030 with bars (490k → 392.4M € ARR), roadmap timeline (ft-road-0), release doc rows (ft-doc-README.md etc.); tapping README.md opens full-screen viewer with content + ft-doc-share + ft-doc-close. NO CRITICAL OR MINOR BUGS FOUND in this session's new features. Non-blocking warnings unchanged from prior iterations: 'shadow*' props deprecated (React Native Web), pointerEvents deprecation, expo-notifications web listener no-op. Deployment SEAL: READY.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "React Native Web deprecation warning: 'shadow* style props are deprecated. Use boxShadow'. Non-blocking; will be enforced in future RN Web versions. Reference: multiple screens using shadowColor/shadowOffset (e.g., app/(tabs)/index.tsx orbCore, app/jarvis.tsx)."},
+      {"component": "props.pointerEvents", "issue": "React Native Web deprecation warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Non-blocking; already flagged in prior iterations."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_23.json",
+    "/app/backend/tests/test_phase25_founder_handover.py",
+    "/app/test_reports/pytest/pytest_phase25.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (post-PUBLISH polish): migrate shadow* style props to boxShadow and props.pointerEvents to style.pointerEvents across app/(tabs)/index.tsx orb, app/jarvis.tsx, and any other components using them, to silence RN Web deprecation warnings before a future breaking version.",
+    "OPTIONAL: previously reported (iter22) LLM JSON-parsing brittleness in ascension.py /api/legacy/blueprint/train and /api/twin/simulate still open — replace naive json.loads(re.sub fences) with json.JSONDecoder().raw_decode() to eliminate transient 502s. Not blocking PUBLISH."
+  ],
+  "critical_code_review_comments": [
+    "routes/founder.py (116 lines): clean, well-scoped, deterministic forecast math (TIER_MIX blended ARPU + 15% guardian tax on marketplace GMV × conversion). Uses hashlib.sha256 on file bytes — sha256 in response matches sha256 of returned content string, confirmed by test. RELEASE_DIR resolved relative to file (parents[2]) which is correct for /app/backend/routes → /app.",
+    "release doc endpoint exposes .decode('utf-8') — if any file contained non-UTF-8 bytes this would raise 500. All 4 current files are ASCII/UTF-8 so safe today, but a try/except UnicodeDecodeError → 415 would be robust.",
+    "app/partners.tsx and app/founder-toolkit.tsx: testIDs consistent (pt-*, ft-*), all Text wrapped in <Text>, no HTML elements, uses SafeAreaView with edges=['top']. Doc modal has both ft-doc-close and ft-doc-share. LGTM.",
+    "app/(tabs)/index.tsx home-orb refactor: Pulse import removed, orb is now the hero pressable navigating to /jarvis; home-lens preserved as compact GlassCard row. testIDs preserved.",
+    "app/monolith.tsx gateway tiles (mono-partners, mono-founder) render above the existing 8 sections; existing testIDs unchanged, no regression.",
+    "No deprecated Expo packages (expo-av / expo-barcode-scanner / expo-background-fetch) detected in the newly added / modified frontend files."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase25_founder_handover.py (new — 7 tests, all passing)"
+  ],
+  "success_rate": {
+    "backend": "100% (27/27: 7 new phase25 + 20 phase24 regression)",
+    "frontend": "100% (14/14 E2E checks across home orb, /jarvis, /monolith gateway, /partners full sandbox flow, /founder-toolkit forecast+roadmap+doc modal)"
+  },
+  "seed_data_creation": "Created 2 test UHP partners with prefix TEST_QA-* via public /api/uhp/partners/register during pytest run + 1 additional partner via the /partners UI pt-sandbox button. All are non-destructive (isolated to uhp_partners collection, status=active, no ingestion). Existing smoketok-fresh-handover session (user_smoke2026) reused, no user data modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "For frontend web tests: page.add_init_script(\"localStorage.setItem('gh_session_token','smoketok-fresh-handover')\") THEN navigate. Backend uses EXPO_PUBLIC_BACKEND_URL (note the PUBLIC prefix in frontend/.env). Run new suite: pytest backend/tests/test_phase25_founder_handover.py -v. Phase24 regression is 20 tests / ~5s. To exercise full 432-test suite serially (only if needed): pytest backend/tests/ -o addopts=''. The new /api/founder/release/{doc} accepts EXACT filenames (README.md, ARCHITECTURE.md, API_SPEC.md, LICENSE — case sensitive, .md included). Unknown docs return 404 with body 'unknown_doc'. On /founder-toolkit, tapping any ft-doc-* row loads the modal via a second API call — allow ~1-2s for content fetch.",
+  "rca_of_issue": "N/A — no bugs introduced in this handover session. All new endpoints (routes/founder.py) and new screens (partners.tsx, founder-toolkit.tsx, monolith gateway tiles, home orb refactor) are production-ready. Prior known non-blocking issues (LLM JSON parsing in ascension.py from iter22, RN Web shadow*/pointerEvents deprecation warnings) remain open but do not affect PUBLISH readiness."
+}

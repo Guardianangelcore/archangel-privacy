@@ -217,3 +217,11 @@ FRONTEND:
 Tests: test_phase24_monolith.py (20: HMAC/replay/idempotency, arbitrage math exact, ledger states, FX, credit, trajectory clamp, sentinel, edge fraud, truth verify, 60-concurrent ingest p95<4s, swarm agents), test_phase24_llm_live.py (3, by testing agent). FULL SUITE 432/432.
 New collections: uhp_partners, uhp_events, sentinel_streams, arb_clinics, arb_analyses, payouts, ledger_entries, liq_balances, credit_scores, credit_lines, gait_samples, sentinel_alerts, edge_nodes, gbi_payments, collective_truth, personality_blueprints, blueprint_dialogues, twin_simulations, data_deals, talisman_checks, satellite_queue.
 Simulated (user-approved): card rails adapter, satellite radio, BLE mesh radio, rPPG.
+
+## Phase 26: FINAL PRODUCTION HANDOVER — SEAL & DEPLOY (June 2026) — DONE ✅
+1. JARVIS PRESENCE — pulsing AI Orb moved to home screen as the primary welcome interface: (tabs)/index.tsx HomeOrb component (breathing reanimated glow, mood colors from GET /api/agent/state, LVL badge, testID home-orb, tap → /jarvis). Guardian Lens FAB demoted to compact GlassCard row (testID home-lens preserved).
+2. UHP PARTNERS landing (/partners) — high-end portal for clinics/insurers: live capacity stats, 3 value-prop cards, 4-step onboarding (register → HMAC sign → ingest → stats), security pills, SANDBOX button issuing real credentials via POST /api/uhp/partners/register (pt-sandbox → pt-creds), contact mailto guardian.angel.core@proton.me.
+3. FOUNDER'S TOOLKIT (/founder-toolkit) — investor demo: financial forecast 2026–2030 (deterministic tier-mix model: ARPU 63.5 €, 15% Guardian Tax, 2030 ARR 392.4 M €), 22nd-century roadmap (8 milestones LAUNCH→ARCHANGEL), GitHub Release Package viewer with sha256 integrity + native Share.
+4. GITHUB RELEASE PACKAGE — /app/release_package/{README.md, ARCHITECTURE.md, API_SPEC.md, LICENSE (private + evaluation grant)} for the competition submission; served by routes/founder.py: GET /api/founder/toolkit + GET /api/founder/release/{doc} (auth, 404 unknown).
+5. COMMAND DECK — monolith.tsx gateway row: mono-partners + mono-founder tiles at top.
+Tests: test_phase25_founder_handover.py (7) + phase24 regression (20) + full frontend E2E 14/14 — iteration_23.json ALL GREEN. STATUS: SEALED — user to press PUBLISH → Deploy → Generate iOS/Android builds.

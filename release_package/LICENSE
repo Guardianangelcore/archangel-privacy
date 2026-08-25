@@ -1,0 +1,48 @@
+GUARDIAN ANGEL PROPRIETARY LICENSE — PRIVATE RELEASE PACKAGE
+Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
+
+1. OWNERSHIP
+   "Guardian Health & Angel — Sovereign Survival OS" (the "Software"),
+   including all source code, object code, logic, algorithms, designs,
+   user interfaces, documentation (including this Release Package),
+   data models and derivative works, is the sole and exclusive property
+   of the Guardian Angel Sovereign Foundation (DAO) (the "Owner").
+
+2. LICENSE TRANSITION
+   Any and all prior open-source licensing of this project (including
+   the GNU Affero General Public License v3) is RESCINDED and superseded
+   by this Proprietary License for all versions, builds and derivatives.
+
+3. LIMITED EVALUATION GRANT
+   The Owner grants competition juries, accredited investors and named
+   UHP partner candidates a personal, non-exclusive, non-transferable,
+   revocable right to READ this Release Package solely for the purpose
+   of evaluating the Software. No other right is granted.
+
+4. CONFIDENTIALITY
+   The source code and this documentation are CONFIDENTIAL trade secrets
+   of the Owner. No part may be disclosed to any third party without
+   the Owner's prior written consent.
+
+5. RESTRICTIONS
+   Unauthorized duplication, modification, reverse engineering,
+   decompilation, sublicensing, distribution, public display, training
+   of machine-learning models, or any other exploitation of the Software,
+   in whole or in part, is STRICTLY PROHIBITED and will be prosecuted to
+   the maximum extent permitted by law.
+
+6. PROOF OF ORIGIN
+   The authoritative build is cryptographically fingerprinted (SHA-256)
+   and anchored via DID-linked Proof of Existence on the Bitcoin
+   blockchain (OpenTimestamps). Hidden watermarks exist in the client
+   bundle and in every API response. Any build lacking the original
+   Guardian Angel watermark is unauthorized.
+
+7. NO WARRANTY; LIMITATION OF LIABILITY
+   THE SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS" WITHOUT WARRANTY
+   OF ANY KIND. IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM,
+   DAMAGES OR OTHER LIABILITY ARISING FROM THEIR USE OR EVALUATION.
+
+8. CONTACT
+   Guardian Angel Sovereign Foundation (DAO)
+   guardian.angel.core@proton.me
