@@ -240,3 +240,6 @@ physio_media.py CRUD + stream (curl 6/6 OK: upload/list/privacy/global-founder/s
 
 ## Iteration 31 (Phase 35: Auto-captions + Weekly plan, June 2026)
 Whisper→Claude caption pipeline (E2E s reálnou rečou OK), 7-day plan s dennou kotvou z Kolotoča (anchor knee OK), day-complete cez UI klik OK (done flag zapísaný), CC toggle zobrazuje kroky. Curl + screenshot verified. Video >24MB → too_large (bez titulkov, video funguje).
+
+## Iteration 32 (Phase 36: Evening plan reminder + Pain diary, June 2026)
+physio_reminder_sweep + swarm physio_coach (curl: 1 sent, dedup OK; push 401 v dev = expected, placeholder key). Pain diary POST/trends + report section 5 s bar grafom (PDF 200). PainLogger UI klik → reply + trend (screenshot OK). Validácia level 11 → 400.

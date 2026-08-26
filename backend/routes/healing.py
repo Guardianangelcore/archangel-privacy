@@ -638,6 +638,28 @@ async def _report_parts(uid: str) -> list:
         parts.append(f"  Priemer: {avg}/5 · Tendencia: {_TREND_SK[direction]}")
     else:
         parts.append("  Žiadne denné check-iny za posledných 14 dní.")
+    # PAIN DIARY — 1-10 after every exercise, the doctor sees the healing curve
+    pain = await db.pain_diary.find(
+        {"user_id": uid, "created_at": {"$gte": since}}, {"_id": 0}).sort("created_at", 1).to_list(100)
+    parts.append("\n5. BOLESŤOVÝ DENNÍK (14 dní) / PAIN DIARY — 1 až 10")
+    if pain:
+        for p in pain[-14:]:
+            d = str(p.get("created_at", ""))[:10]
+            bar = "█" * p["level"] + "░" * (10 - p["level"])
+            gid = f" · {p['guide_id']}" if p.get("guide_id") else ""
+            parts.append(f"  {d}  {bar}  {p['level']}/10{gid}")
+        levels = [p["level"] for p in pain]
+        avgp = round(sum(levels) / len(levels), 1)
+        pdir = "stable"
+        if len(levels) >= 4:
+            half = len(levels) // 2
+            a, b = sum(levels[:half]) / half, sum(levels[half:]) / (len(levels) - half)
+            pdir = "improving" if a - b > 0.5 else ("worsening" if b - a > 0.5 else "stable")
+        pdir_sk = {"improving": "BOLESŤ KLESÁ ↘ (hojenie)", "worsening": "BOLESŤ RASTIE ↗ (konzultujte lekára)",
+                   "stable": "STABILNÁ →"}[pdir]
+        parts.append(f"  Priemer: {avgp}/10 · Tendencia: {pdir_sk} · Záznamov: {len(levels)}")
+    else:
+        parts.append("  Žiadne záznamy bolesti — pacient zatiaľ necvičil alebo nezapisoval.")
     parts.append(f"\nVygenerované Sovereign Healing Loop · {_now().date().isoformat()}")
     return parts
 

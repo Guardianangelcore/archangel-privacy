@@ -49,6 +49,50 @@ function GuideVideo({ url, testID, muted = true }: { url: string; testID: string
   );
 }
 
+/** PAIN DIARY — record 1-10 after every exercise; the trend flows into the doctor's report. */
+function PainLogger({ guideId }: { guideId: string }) {
+  const [reply, setReply] = useState('');
+  const [trend, setTrend] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => { try { setTrend(await api('/physio/pain/trends')); } catch {} })();
+  }, []);
+
+  const log = async (level: number) => {
+    setBusy(true);
+    try {
+      tap(level >= 8 ? 'heavy' : 'light');
+      const r: any = await api('/physio/pain', { method: 'POST', body: JSON.stringify({ level, guide_id: guideId }) });
+      setReply(r.reply);
+      setTrend(await api('/physio/pain/trends'));
+    } catch (e) { console.log(e); }
+    setBusy(false);
+  };
+
+  const trendLabel = trend?.trend === 'improving' ? '↘ BOLESŤ KLESÁ — HOJENIE'
+    : trend?.trend === 'worsening' ? '↗ BOLESŤ RASTIE — POZOR'
+    : '→ STABILNÁ';
+
+  return (
+    <View style={styles.painBox}>
+      <Text style={styles.painLbl}>🩹 AKÁ BOLA BOLESŤ PO CVIČENÍ? (1–10)</Text>
+      <View style={styles.painRow}>
+        {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+          <Pressable key={n} testID={`pain-${guideId}-${n}`} onPress={() => log(n)} disabled={busy}
+            style={[styles.painDot, n >= 8 && { borderColor: C.error }, n >= 5 && n < 8 && { borderColor: C.warn }]}>
+            <Text style={[styles.painDotText, n >= 8 && { color: C.error }]}>{n}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {!!reply && <Text testID={`pain-reply-${guideId}`} style={styles.painReply}>💛 {reply}</Text>}
+      {!!trend?.avg_14d && (
+        <Text style={styles.painTrend}>Priemer 14 dní: {trend.avg_14d}/10 · {trendLabel} · ide do reportu pre lekára</Text>
+      )}
+    </View>
+  );
+}
+
 /** WEEKLY RECOVERY PLAYLIST — 7-day plan guiding the patient through the whole week. */
 function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
   const [plan, setPlan] = useState<any>(null);
@@ -405,6 +449,7 @@ export default function Physio() {
                             ))}
                             {!!g.video_note && <Text style={styles.videoNote}>{g.video_note}</Text>}
                             <ExpertVideos guideId={g.id} />
+                            <PainLogger guideId={g.id} />
                           </View>
                         )}
                       </GlassCard>
@@ -486,4 +531,11 @@ const styles = StyleSheet.create({
   ccStep: { color: C.fg, fontSize: 11.5, lineHeight: 17, marginTop: 4, paddingLeft: 4 },
   ccNote: { color: C.info, fontSize: 10, marginTop: 6 },
   ccRetry: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, borderRadius: R.sm, paddingHorizontal: 8, borderWidth: 1, borderColor: C.warn },
+  painBox: { marginTop: S.md, borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.md },
+  painLbl: { fontSize: 10, letterSpacing: 1.5, color: C.brand, fontWeight: '900', marginBottom: 8 },
+  painRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  painDot: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: C.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  painDotText: { color: C.fg, fontWeight: '900', fontSize: 13 },
+  painReply: { color: C.brand, fontSize: 11.5, lineHeight: 16, marginTop: 8, fontWeight: '700' },
+  painTrend: { color: C.info, fontSize: 10, marginTop: 6 },
 });

@@ -77,6 +77,8 @@ AGENTS = {
                           "desc": "Jemne pripomenie seniorom dennú otázku Spoločníka, keď ráno zabudnú odpovedať"},
     "weekly_reporter":   {"interval": 3600, "label": "Weekly Reporter (Nedeľný report)",
                           "desc": "Každú nedeľu uloží týždenný report uzdravenia priamo do Zdravotného trezora"},
+    "physio_coach":      {"interval": 900, "label": "Physio Coach (Večerná pripomienka)",
+                          "desc": "Večer pripomenie, keď dnešný deň týždenného plánu zotavenia nie je odškrtnutý"},
 }
 
 async def _agent_waitlist_hunter() -> int:
@@ -482,6 +484,11 @@ async def _agent_weekly_reporter() -> int:
     return await weekly_report_sweep()
 
 
+async def _agent_physio_coach() -> int:
+    from routes.physio_media import physio_reminder_sweep
+    return await physio_reminder_sweep()
+
+
 _AGENT_FN = {
     "waitlist_hunter": _agent_waitlist_hunter,
     "marketplace": _agent_marketplace,
@@ -495,6 +502,7 @@ _AGENT_FN = {
     "system_janitor": _agent_system_janitor,
     "companion_care": _agent_companion_care,
     "weekly_reporter": _agent_weekly_reporter,
+    "physio_coach": _agent_physio_coach,
 }
 
 async def run_agent(agent_id: str) -> dict:

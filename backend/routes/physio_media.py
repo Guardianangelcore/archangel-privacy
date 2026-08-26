@@ -332,3 +332,88 @@ async def physio_plan_day_done(day: int, authorization: Optional[str] = Header(N
         except Exception:
             pass
     return {"ok": True, "done_days": done, "week_complete": done == 7}
+
+
+# =========================================================================
+# EVENING EXERCISE REMINDER — Jarvis nudges when today's plan day isn't done
+# =========================================================================
+
+async def physio_reminder_sweep(force: bool = False) -> int:
+    now = datetime.now(timezone.utc)
+    prague = now + timedelta(hours=2)
+    if not force and not (18 <= prague.hour < 21):
+        return 0
+    today = prague.date().isoformat()
+    sent = 0
+    async for plan in db.physio_plans.find({}, {"_id": 0, "user_id": 1, "days": 1}):
+        day = next((d for d in plan["days"] if d.get("date") == today), None)
+        if not day or day.get("done"):
+            continue
+        if await db.physio_reminders.find_one({"user_id": plan["user_id"], "date": today}):
+            continue
+        try:
+            await send_push(recipients=[plan["user_id"]], data={
+                "title": "🧘 JARVIS — VEČERNÁ PRIPOMIENKA",
+                "message": f"Dnešný deň plánu ({day.get('theme', '')}) ešte nie je odškrtnutý. 10 minút pred spaním stačí — telo sa vám poďakuje.",
+                "action_url": "/physio"})
+        except Exception as e:
+            logger.warning(f"physio reminder push: {e}")
+        await db.physio_reminders.insert_one({"user_id": plan["user_id"], "date": today, "created_at": now})
+        sent += 1
+    return sent
+
+
+@api.post("/physio/plan/remind-sweep")
+async def physio_remind_now(authorization: Optional[str] = Header(None)):
+    """Manual trigger (testing) — bypasses the evening window, respects daily dedup."""
+    await get_current_user(authorization)
+    sent = await physio_reminder_sweep(force=True)
+    return {"ok": True, "reminders_sent": sent}
+
+
+# =========================================================================
+# PAIN DIARY — 1-10 after every exercise; trend goes to the doctor's report
+# =========================================================================
+
+from pydantic import BaseModel
+
+
+class PainIn(BaseModel):
+    level: int                 # 1..10
+    guide_id: Optional[str] = None
+    note: Optional[str] = ""
+
+
+@api.post("/physio/pain")
+async def pain_log(body: PainIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    if not 1 <= body.level <= 10:
+        raise HTTPException(400, "level must be 1..10")
+    doc = {"entry_id": uuid.uuid4().hex, "user_id": user["user_id"],
+           "level": body.level, "guide_id": (body.guide_id or "")[:60] or None,
+           "note": (body.note or "")[:200], "created_at": datetime.now(timezone.utc)}
+    await db.pain_diary.insert_one(doc.copy())
+    if body.level >= 8:
+        reply = "Zapísané. Bolesť 8+/10 je signál STOP — dnes už necvičte a ak potrvá do zajtra, kontaktujte lekára."
+    elif body.level >= 5:
+        reply = "Zapísané. Stredná bolesť — znížte intenzitu a skráťte sériu. Trend sledujem za vás."
+    else:
+        reply = "Zapísané. Nízka bolesť — výborné, telo sa hojí. Len tak ďalej!"
+    return {"ok": True, "reply": reply, "entry": clean(doc)}
+
+
+@api.get("/physio/pain/trends")
+async def pain_trends(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    since = datetime.now(timezone.utc) - timedelta(days=14)
+    rows = await db.pain_diary.find(
+        {"user_id": user["user_id"], "created_at": {"$gte": since}}, {"_id": 0}
+    ).sort("created_at", 1).to_list(100)
+    levels = [r["level"] for r in rows]
+    avg = round(sum(levels) / len(levels), 1) if levels else None
+    direction = "stable"
+    if len(levels) >= 4:
+        half = len(levels) // 2
+        a, b = sum(levels[:half]) / half, sum(levels[half:]) / (len(levels) - half)
+        direction = "improving" if a - b > 0.5 else ("worsening" if b - a > 0.5 else "stable")
+    return {"entries": rows, "avg_14d": avg, "trend": direction, "count": len(rows)}
