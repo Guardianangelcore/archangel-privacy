@@ -24,6 +24,7 @@ export default function FamilyDashboard() {
   const lang: Lang = (user?.language as Lang) || 'sk';
   const router = useRouter();
   const [dash, setDash] = useState<Dash | null>(null);
+  const [loved, setLoved] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [hr, setHr] = useState('');
@@ -32,6 +33,7 @@ export default function FamilyDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     try { setDash(await api<Dash>('/wellness/dashboard')); } catch (e) { console.log(e); }
+    try { const r: any = await api('/family/recovery-pulse'); setLoved(r.loved_ones || []); } catch (e) { console.log(e); }
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -98,6 +100,33 @@ export default function FamilyDashboard() {
             <Ionicons name="chevron-forward" size={18} color={C.brand} />
           </Pressable>
         )}
+
+        {/* RECOVERY PULSE — loved ones' pain curve & healing progress */}
+        {loved.length > 0 && (<>
+          <Text style={styles.section}>💛 ZOTAVENIE BLÍZKYCH</Text>
+          {loved.map(p => (
+            <View key={p.user_id} testID={`fd-loved-${p.user_id}`} style={styles.lovedCard}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="heart" size={16} color={C.brand} />
+                <Text style={styles.lovedName}>{p.name}</Text>
+                {p.healing_active && (
+                  <View style={styles.lovedPill}><Text style={styles.lovedPillText}>KOLOTOČ {p.healing_progress_pct} %</Text></View>
+                )}
+              </View>
+              {!!p.healing_label && <Text style={styles.lovedSub}>{p.healing_label}</Text>}
+              {p.pain_levels?.length ? (
+                <View style={styles.lovedBars}>
+                  {p.pain_levels.map((l: number, i: number) => (
+                    <View key={i} style={[styles.lovedBar, { height: 6 + l * 4.5, backgroundColor: l >= 8 ? C.error : l >= 5 ? C.warn : C.brand }]} />
+                  ))}
+                  <Text style={styles.lovedAvg}>Ø {p.pain_avg_14d}/10</Text>
+                </View>
+              ) : null}
+              <Text style={[styles.lovedMsg, p.pain_trend === 'worsening' && { color: C.warn }]}>{p.message}</Text>
+              {!!p.last_mood_label && <Text style={styles.lovedSub}>Posledná nálada: {p.last_mood_label}</Text>}
+            </View>
+          ))}
+        </>)}
 
         <Text style={styles.section}>{t('mood_trend', lang).toUpperCase()}</Text>
         {dash?.checkins?.length ? (
@@ -190,6 +219,15 @@ const styles = StyleSheet.create({
   checkinBannerText: { flex: 1, fontWeight: '900', letterSpacing: 1, color: C.brand, fontSize: 13 },
   section: { marginTop: S.lg, marginBottom: S.md, fontSize: 11, letterSpacing: 2, color: C.fg, fontWeight: '900' },
   noData: { color: C.onS3, fontSize: 12, letterSpacing: 1 },
+  lovedCard: { backgroundColor: C.surface2, borderRadius: 14, padding: S.md, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.4)', marginBottom: S.sm },
+  lovedName: { color: C.fg, fontWeight: '900', fontSize: 14, flex: 1 },
+  lovedPill: { backgroundColor: C.brand, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
+  lovedPillText: { color: C.onInverse, fontWeight: '900', fontSize: 8.5, letterSpacing: 0.5 },
+  lovedSub: { color: C.info, fontSize: 10.5, marginTop: 3 },
+  lovedBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, marginTop: 8, minHeight: 52 },
+  lovedBar: { width: 14, borderRadius: 3 },
+  lovedAvg: { color: C.info, fontSize: 9.5, fontWeight: '800', marginLeft: 6, alignSelf: 'center' },
+  lovedMsg: { color: C.brand, fontWeight: '800', fontSize: 12, marginTop: 8 },
   moodStrip: { flexDirection: 'row', gap: S.md, flexWrap: 'wrap' },
   moodDot: { alignItems: 'center', gap: 4 },
   moodDotDate: { fontSize: 9, color: C.onS3, letterSpacing: 1 },

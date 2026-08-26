@@ -340,6 +340,59 @@ async def echoes_heard(echo_id: str, authorization: Optional[str] = Header(None)
     return {"ok": True}
 
 
+# ---- RECOVERY PULSE — family sees that pain is dropping and healing goes well ----
+
+def _pain_trend_of(levels: list) -> str:
+    if len(levels) >= 4:
+        half = len(levels) // 2
+        a, b = sum(levels[:half]) / half, sum(levels[half:]) / (len(levels) - half)
+        return "improving" if a - b > 0.5 else ("worsening" if b - a > 0.5 else "stable")
+    return "stable"
+
+
+_PULSE_MSG = {
+    "improving": "Bolesť klesá — zotavenie ide dobre 💛",
+    "worsening": "Bolesť rastie — zavolajte a povzbuďte 📞",
+    "stable": "Stav je stabilný — drží sa 💪",
+}
+
+
+@api.get("/family/recovery-pulse")
+async def family_recovery_pulse(authorization: Optional[str] = Header(None)):
+    """Summary of loved ones' healing (I am their guardian): pain curve + Carousel progress."""
+    user = await get_current_user(authorization)
+    links = await db.guardians.find(
+        {"guardian_user_id": user["user_id"]}, {"_id": 0}).to_list(20)
+    since = _now() - timedelta(days=14)
+    out = []
+    for l in links:
+        u = await db.users.find_one({"user_id": l["user_id"]}, {"_id": 0, "user_id": 1, "name": 1, "email": 1})
+        if not u:
+            continue
+        pain = await db.pain_diary.find(
+            {"user_id": u["user_id"], "created_at": {"$gte": since}}, {"_id": 0, "level": 1}
+        ).sort("created_at", 1).to_list(100)
+        levels = [p["level"] for p in pain]
+        trend = _pain_trend_of(levels)
+        j = await db.healing_journeys.find_one({"user_id": u["user_id"], "status": "active"}, {"_id": 0})
+        progress = None
+        if j:
+            done = sum(1 for s in j["steps"].values() if s == "done")
+            progress = int(done / len(STEP_KEYS) * 100)
+        checkin = await db.companion_checkins.find_one(
+            {"user_id": u["user_id"]}, {"_id": 0, "mood": 1, "mood_label": 1}, sort=[("created_at", -1)])
+        out.append({
+            "user_id": u["user_id"], "name": u.get("name") or u["email"],
+            "pain_levels": levels[-7:], "pain_avg_14d": round(sum(levels) / len(levels), 1) if levels else None,
+            "pain_trend": trend if levels else None,
+            "message": _PULSE_MSG[trend] if levels else "Zatiaľ žiadne záznamy bolesti",
+            "healing_active": bool(j), "healing_progress_pct": progress,
+            "healing_label": f"{j['kind_label']} · {j['specialty']}" if j else None,
+            "last_mood": (checkin or {}).get("mood"), "last_mood_label": (checkin or {}).get("mood_label"),
+        })
+    return {"loved_ones": out}
+
+
 # ---- REMOTE FAMILY ACCESS — Inner Circle / guardians send echoes from their own account ----
 
 async def _may_send_to(sender: dict, recipient: dict) -> bool:

@@ -246,3 +246,6 @@ physio_reminder_sweep + swarm physio_coach (curl: 1 sent, dedup OK; push 401 v d
 
 ## Iteration 33 (Phase 37: Pain curve in Carousel + voice pain logging, June 2026)
 PainCurve v /healing (screenshot OK: stĺpce+trend+hint), agent.py pain intent (4/4 curl variants correct, žiadny false positive na bežnú otázku). pain_diary entries source:'voice'.
+
+## Iteration 34 (Phase 38: Recovery pulse for family, June 2026)
+/api/family/recovery-pulse (curl OK ako fam-token: pain_levels/trend/kolotoč/nálada) + fd-loved sekcia v Rodinnom pulze (screenshot E2E OK ako Lucka). Bez blízkych sa sekcia nerenderuje.
