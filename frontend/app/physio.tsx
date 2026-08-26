@@ -1,7 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // PHYSIO-AI — Video-Native Hub: premium video guides (expo-video, zero-stutter) + cached TTS narration
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, LayoutAnimation, Platform, UIManager, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, LayoutAnimation, Platform, UIManager, Linking, Animated as RNAnimated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -49,11 +49,45 @@ function GuideVideo({ url, testID, muted = true }: { url: string; testID: string
   );
 }
 
+/** CONFETTI BURST — small dependency-free celebration for recovery milestones. */
+const CONF_COLORS = ['#D4AF37', '#E74C3C', '#2ECC71', '#3498DB', '#F1C40F', '#9B59B6'];
+function ConfettiBurst() {
+  const pieces = useRef(
+    Array.from({ length: 18 }, () => ({
+      a: new RNAnimated.Value(0),
+      x: Math.random() * 260 - 130,
+      r: Math.random() * 720 - 360,
+      c: CONF_COLORS[Math.floor(Math.random() * CONF_COLORS.length)],
+    }))
+  ).current;
+  useEffect(() => {
+    pieces.forEach((p, i) =>
+      RNAnimated.timing(p.a, { toValue: 1, duration: 1400 + Math.random() * 500, delay: i * 30, useNativeDriver: true }).start());
+  }, [pieces]);
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', overflow: 'hidden' }}>
+      {pieces.map((p, i) => (
+        <RNAnimated.View key={i} style={{
+          position: 'absolute', top: 0, width: 8, height: 12, borderRadius: 2, backgroundColor: p.c,
+          transform: [
+            { translateY: p.a.interpolate({ inputRange: [0, 1], outputRange: [0, 170] }) },
+            { translateX: p.a.interpolate({ inputRange: [0, 1], outputRange: [0, p.x] }) },
+            { rotate: p.a.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${p.r}deg`] }) },
+          ],
+          opacity: p.a.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
+        }} />
+      ))}
+    </View>
+  );
+}
+
 /** PAIN DIARY — record 1-10 after every exercise; the trend flows into the doctor's report. */
 function PainLogger({ guideId }: { guideId: string }) {
   const [reply, setReply] = useState('');
   const [trend, setTrend] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [milestone, setMilestone] = useState('');
+  const [confetti, setConfetti] = useState(0);
 
   useEffect(() => {
     (async () => { try { setTrend(await api('/physio/pain/trends')); } catch {} })();
@@ -65,6 +99,11 @@ function PainLogger({ guideId }: { guideId: string }) {
       tap(level >= 8 ? 'heavy' : 'light');
       const r: any = await api('/physio/pain', { method: 'POST', body: JSON.stringify({ level, guide_id: guideId }) });
       setReply(r.reply);
+      if (r.milestone) {
+        tap('success');
+        setMilestone(r.milestone_message);
+        setConfetti(c => c + 1);
+      }
       setTrend(await api('/physio/pain/trends'));
     } catch (e) { console.log(e); }
     setBusy(false);
@@ -86,9 +125,11 @@ function PainLogger({ guideId }: { guideId: string }) {
         ))}
       </View>
       {!!reply && <Text testID={`pain-reply-${guideId}`} style={styles.painReply}>💛 {reply}</Text>}
+      {!!milestone && <Text testID={`pain-milestone-${guideId}`} style={styles.painMilestone}>{milestone}</Text>}
       {!!trend?.avg_14d && (
         <Text style={styles.painTrend}>Priemer 14 dní: {trend.avg_14d}/10 · {trendLabel} · ide do reportu pre lekára</Text>
       )}
+      {confetti > 0 && <ConfettiBurst key={confetti} />}
     </View>
   );
 }
@@ -537,5 +578,6 @@ const styles = StyleSheet.create({
   painDot: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: C.borderStrong, alignItems: 'center', justifyContent: 'center' },
   painDotText: { color: C.fg, fontWeight: '900', fontSize: 13 },
   painReply: { color: C.brand, fontSize: 11.5, lineHeight: 16, marginTop: 8, fontWeight: '700' },
+  painMilestone: { color: C.brand, fontSize: 13, lineHeight: 18, marginTop: 8, fontWeight: '900' },
   painTrend: { color: C.info, fontSize: 10, marginTop: 6 },
 });

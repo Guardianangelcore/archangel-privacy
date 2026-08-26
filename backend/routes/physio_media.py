@@ -399,7 +399,31 @@ async def pain_log(body: PainIn, authorization: Optional[str] = Header(None)):
         reply = "Zapísané. Stredná bolesť — znížte intenzitu a skráťte sériu. Trend sledujem za vás."
     else:
         reply = "Zapísané. Nízka bolesť — výborné, telo sa hojí. Len tak ďalej!"
-    return {"ok": True, "reply": reply, "entry": clean(doc)}
+    milestone, m_msg = await check_pain_milestone(user["user_id"])
+    return {"ok": True, "reply": reply, "entry": clean(doc),
+            "milestone": milestone, "milestone_message": m_msg}
+
+
+async def check_pain_milestone(uid: str):
+    """RECOVERY MILESTONE — celebrate every full-point drop of the 14-day pain average."""
+    since = datetime.now(timezone.utc) - timedelta(days=14)
+    rows = await db.pain_diary.find(
+        {"user_id": uid, "created_at": {"$gte": since}}, {"_id": 0, "level": 1}).to_list(200)
+    levels = [r["level"] for r in rows]
+    if len(levels) < 3:
+        return False, ""
+    avg = round(sum(levels) / len(levels), 1)
+    floor_now = int(avg)
+    prev = await db.pain_milestones.find_one({"user_id": uid}, {"_id": 0})
+    now = datetime.now(timezone.utc)
+    if prev is None:
+        await db.pain_milestones.insert_one({"user_id": uid, "best_floor": floor_now, "updated_at": now})
+        return False, ""
+    if floor_now < prev["best_floor"]:
+        await db.pain_milestones.update_one(
+            {"user_id": uid}, {"$set": {"best_floor": floor_now, "updated_at": now}})
+        return True, f"🎉 MÍĽNIK ZOTAVENIA! Priemer bolesti klesol na {avg}/10 — hojenie krásne napreduje. Oslavujeme!"
+    return False, ""
 
 
 @api.get("/physio/pain/trends")

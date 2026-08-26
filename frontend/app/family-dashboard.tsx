@@ -25,6 +25,7 @@ export default function FamilyDashboard() {
   const router = useRouter();
   const [dash, setDash] = useState<Dash | null>(null);
   const [loved, setLoved] = useState<any[]>([]);
+  const [encSent, setEncSent] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [hr, setHr] = useState('');
@@ -124,6 +125,23 @@ export default function FamilyDashboard() {
               ) : null}
               <Text style={[styles.lovedMsg, p.pain_trend === 'worsening' && { color: C.warn }]}>{p.message}</Text>
               {!!p.last_mood_label && <Text style={styles.lovedSub}>Posledná nálada: {p.last_mood_label}</Text>}
+              {/* ONE-TAP ENCOURAGEMENT — sends a Voice Echo straight from the card */}
+              {encSent[p.user_id] ? (
+                <Text testID={`fd-enc-sent-${p.user_id}`} style={styles.encSent}>✓ Povzbudenie odoslané — Jarvis mu ho prečíta nahlas 💛</Text>
+              ) : (
+                <Pressable testID={`fd-encourage-${p.user_id}`} onPress={async () => {
+                  try {
+                    const msg = p.pain_trend === 'worsening'
+                      ? 'Drž sa! Myslíme na teba — zajtra bude lepšie. Ľúbime ťa. ❤️'
+                      : 'Sme na teba hrdí, zotavenie ti ide skvele! Len tak ďalej. ❤️';
+                    await api('/family/echoes/send', { method: 'POST', body: JSON.stringify({ to_email: p.email, message: msg }) });
+                    setEncSent(prev => ({ ...prev, [p.user_id]: true }));
+                  } catch (e) { console.log(e); }
+                }} style={styles.encBtn}>
+                  <Ionicons name="heart-circle" size={16} color={C.onInverse} />
+                  <Text style={styles.encBtnText}>POSLAŤ POVZBUDENIE (VOICE ECHO)</Text>
+                </Pressable>
+              )}
             </View>
           ))}
         </>)}
@@ -228,6 +246,9 @@ const styles = StyleSheet.create({
   lovedBar: { width: 14, borderRadius: 3 },
   lovedAvg: { color: C.info, fontSize: 9.5, fontWeight: '800', marginLeft: 6, alignSelf: 'center' },
   lovedMsg: { color: C.brand, fontWeight: '800', fontSize: 12, marginTop: 8 },
+  encBtn: { marginTop: 10, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: 24, minHeight: 44 },
+  encBtnText: { color: C.onInverse, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
+  encSent: { marginTop: 10, color: C.brand, fontWeight: '800', fontSize: 11.5 },
   moodStrip: { flexDirection: 'row', gap: S.md, flexWrap: 'wrap' },
   moodDot: { alignItems: 'center', gap: 4 },
   moodDotDate: { fontSize: 9, color: C.onS3, letterSpacing: 1 },

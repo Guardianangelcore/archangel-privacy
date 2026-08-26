@@ -382,7 +382,7 @@ async def family_recovery_pulse(authorization: Optional[str] = Header(None)):
         checkin = await db.companion_checkins.find_one(
             {"user_id": u["user_id"]}, {"_id": 0, "mood": 1, "mood_label": 1}, sort=[("created_at", -1)])
         out.append({
-            "user_id": u["user_id"], "name": u.get("name") or u["email"],
+            "user_id": u["user_id"], "name": u.get("name") or u["email"], "email": u["email"],
             "pain_levels": levels[-7:], "pain_avg_14d": round(sum(levels) / len(levels), 1) if levels else None,
             "pain_trend": trend if levels else None,
             "message": _PULSE_MSG[trend] if levels else "Zatiaľ žiadne záznamy bolesti",

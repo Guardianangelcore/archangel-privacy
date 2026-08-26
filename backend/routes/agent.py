@@ -373,8 +373,12 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
             {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply, "mood": mood, "at": now},
         ])
         await db.agent_state.update_one({"user_id": uid}, {"$set": {"mood": mood}})
+        from routes.physio_media import check_pain_milestone
+        milestone, m_msg = await check_pain_milestone(uid)
+        if milestone:
+            reply = f"{reply} {m_msg}"
         xp = await award_xp(uid, 5, "pain_log")
-        return {"reply": reply, "mood": mood, "pain_logged": pain_lvl,
+        return {"reply": reply, "mood": mood, "pain_logged": pain_lvl, "milestone": milestone,
                 "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
                 "level_name": LEVEL_NAMES[xp["level"] - 1], "alerts": []}
 
