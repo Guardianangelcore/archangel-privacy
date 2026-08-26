@@ -1,0 +1,47 @@
+{
+  "summary": "Phase 32 — REMOTE VOICE ECHOES + REFERRAL SCAN BRIDGE (auto-wizard) + WEEKLY HEALING REPORT PDF fully GREEN. Backend (test_phase32_remote_echoes_report.py, 12/12 pytest with two fresh seeded users + a stranger): Recipients endpoint returns senior only when guardian link exists (family sees Jaroslav-test-user, stranger + senior see empty [] arrays). Remote send happy-path: 200 with echo.remote=true + sender_user_id set + senior /family/echoes lists the new echo_id + DB row in voice_echoes has remote:True; 403 branch fires for stranger with Slovak 'oprávnenie' message; 404 for unknown email; 400 for empty message and self-send. Healing report PDF: zero-state (stranger with no journey) still returns application/pdf %PDF>500 bytes; with active journey returns >1000-byte PDF; ?token= query param works (for browser window.open); missing auth → 401/403. Frontend E2E on mobile 390x844 with senior user_test123/test-token-abc (TOS-accepted, active journey pre-cleared) and family user_family1/fam-token-abc (guardian of senior, seeded via /tmp/seed_ph32_fe.py): (T1) /healing?specialty=Neurológ&auto=1 auto-opens wizard modal, kind='illness' chip is background=rgb(212,175,55) (selected), 'Neurológ' chip is dynamically added to the SPECIALTIES list and selected (rgb(212,175,55)); tapping healing-wizard-go fires POST /healing/injury-event and healing-msg shows '⚡ Neural Bus: poistná žiadosť predvyplnená (315 €) + termín zarezervovaný: 2026-09-03 16:15 — FN Motol'. (T2) healing-report button visible in BOTH active state AND zero-state; on web click calls window.open('.../api/healing/report.pdf?token=test-token-abc') without JS errors. (T3) /voice-echoes as family user shows 'KOMU?' section with ve-target-self + ve-target-user_test123 (Jaroslav) chip; selecting senior chip hides ve-from input and reveals remote hint; ve-preset-0 triggers POST /family/echoes/send and ve-sent-msg banner shows '💌 Odkaz odoslaný na diaľku — Jaroslav si ho vypočuje na svojom zariadení.'. (T4) /voice-echoes as senior with NO recipients → 'KOMU?' section absent (ve-target-self count=0), ve-from input visible, preset-0 self-send closes modal cleanly. (T5) /healing without query params does NOT auto-open the wizard (regression PASSED). No console errors on any screen. Phase 31 regression: home HealingStrip + healing screen active/zero states still render correctly. Deprecated packages detected: NONE (voice-echoes correctly uses expo-audio createAudioPlayer + setAudioModeAsync, not the deprecated expo-av).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase32_remote_echoes_report.py",
+    "/app/test_reports/pytest/pytest_phase32.xml",
+    "/app/test_reports/iteration_28.json"
+  ],
+  "action_items": [
+    "None blocking — Phase 32 ships green.",
+    "Optional: routes/healing.py:305 db.voice_echoes.find without a $or on sender_user_id — a senior sees only echoes where user_id=self, which is correct. But consider adding an index on {user_id:1, created_at:-1} for /family/echoes list performance as remote echoes grow.",
+    "Optional UX: after a successful remote send the ve-sent-msg banner persists indefinitely on /voice-echoes — consider auto-hiding after ~5s or on next modal open (currently only cleared when user starts a new send).",
+    "Optional: /api/family/echoes/send returns 400 'Odkaz sebe pošlite cez bežné pridanie.' when to_email equals sender — the Slovak grammar is slightly off ('Odkaz sebe' should be 'Odkaz sám sebe' or 'Odkaz pre seba'). Cosmetic Slovak polish only."
+  ],
+  "critical_code_review_comments": [
+    "routes/healing.py:341-401 REMOTE FAMILY ACCESS block: _may_send_to() checks both guardians link AND inner_circle membership — correct dual-path authorization. Race-safe because both are read-only lookups before insert.",
+    "routes/healing.py:381-387: recipient lookup does .strip().lower() on to_email — matches DB normalization done elsewhere. Good. The 400 self-send guard at line 384 uses user_id comparison, not email — race-safe against email-case tricks.",
+    "routes/healing.py:388-393: remote echo doc adds sender_user_id + remote:True fields — schema is a strict superset of the local-add path so /family/echoes list handler (line 305) works transparently. ✓",
+    "routes/healing.py:355-367 /family/echoes/recipients: iterates guardians then does an N+1 db.users.find_one per link — fine for typical family size (<20) but consider $lookup or bulk find({'user_id':{'$in':[...]}}) if inner-circle families grow.",
+    "routes/healing.py:412-470 healing_report_pdf: falls back to latest journey if no active exists — good UX (report never empty). Uses run_in_threadpool for reportlab CPU work — good practice. _auth_pdf accepts either header or ?token= query — matches window.open pattern used by /healing.tsx:211.",
+    "frontend/app/healing.tsx:44-52 MAGIC LENS BRIDGE useEffect: guards with autoOpened flag so wizard doesn't re-open on state re-render; also skips if state.active — correct (auto-open only in zero-state). Dependency array is complete. ✓",
+    "frontend/app/healing.tsx:247 spec chip render: (SPECIALTIES.includes(spec) ? SPECIALTIES : [spec, ...SPECIALTIES]) — dynamically prepends the referral specialty if it's not in the hard-coded list. Elegant. ✓",
+    "frontend/app/healing.tsx:211 sharePdf('/healing/report.pdf', ...) — relies on src/pdf.ts to append ?token=... for web window.open. Verified working in T2.",
+    "frontend/app/voice-echoes.tsx:66-83 send(): correctly branches on target (null=self path vs remote path) with different API endpoints. Modal closes and setSentMsg is called only for remote path — expected. Self path reloads the echoes list.",
+    "frontend/app/voice-echoes.tsx:134-150 recipients section is conditionally rendered only when recipients.length > 0 — correct (senior with no recipients sees the classic self-flow). ✓",
+    "frontend/app/voice-echoes.tsx: uses expo-audio (createAudioPlayer + setAudioModeAsync) — the NEW package, NOT deprecated expo-av. ✓"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase32_remote_echoes_report.py (new — 12 tests, 3 classes: Recipients, RemoteEchoSend, HealingReportPdf)",
+    "/app/test_reports/pytest/pytest_phase32.xml",
+    "/tmp/seed_ph32_fe.py (frontend-session seed helper: senior + family + guardian link)"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 in test_phase32_remote_echoes_report.py — 3 Recipients + 5 RemoteEchoSend + 4 HealingReportPdf; run in ~2.4s parallel)",
+    "frontend": "100% (20/20 assertions across T1 auto-wizard + T2 report-btn both states + T3 family remote send + T4 senior no-recipients regression + T5 no-auto-open regression)"
+  },
+  "seed_data_creation": "Backend tests: module-scope 'duo' fixture creates 3 fresh users (senior/family/stranger) + guardian link + disability policy + companion checkin; teardown deletes all across 12 collections including guardians. Frontend session seed via /tmp/seed_ph32_fe.py: user_test123 (Jaroslav, test-token-abc, TOS accepted) + user_family1 (Lucka, fam-token-abc, TOS accepted, guardian of senior via db.guardians) + closes any pre-existing active healing journey so auto-wizard test enters zero-state. Post-run residue: senior has ONE new active healing journey from T1 (Neurológ illness) + one voice echo from Lucka (remote); family test session persists (harmless).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 32 endpoints live at {EXPO_PUBLIC_BACKEND_URL}/api. Two frontend session tokens seeded and persistent in Mongo: test-token-abc → user_test123 Jaroslav (senior, guardian_of={user_family1}), fam-token-abc → user_family1 Lucka (guardian of user_test123). Frontend storage key: localStorage.gh_session_token. Guardian link is in db.guardians with schema {user_id: senior, guardian_user_id: family, name, email, relation}. To reset senior to zero-state for wizard tests: db.healing_journeys.update_many({user_id:'user_test123', status:'active'}, {$set:{status:'recovered', recovered_at:now}}). Healing PDF endpoint accepts EITHER Authorization: Bearer <tok> header OR ?token=<tok> query param (used by frontend window.open on web). Referral bridge query params: /healing?specialty=X&auto=1 → sets kind='illness' + prepends X to SPECIALTIES list if missing + auto-opens wizard IFF state.active==false (guarded by autoOpened flag to prevent re-open). Remote echo doc schema: {echo_id, user_id: recipient, from_name: sender_name, sender_user_id, remote:true, message, heard:false, created_at} — /family/echoes list returns both remote+local echoes for the recipient user."
+}

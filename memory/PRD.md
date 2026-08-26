@@ -272,3 +272,10 @@ Founder directive: separate 'Life' from 'Legacy'; insurance = money NOW at injur
 3. ETERNAL VAULT (/eternal-vault, expo-local-authentication@17.0.9 installed): biometric lock (web/no-hw fallback opens), contains dignity/legal/biometric-will/video-legacy/digital-legacy/healthcare-proxy. REMOVED from daily flow: legacy tab stripped of end-of-life items → renamed 'Majetok a príjem' (wallet icon, MAJETOK tab); profile dignity-btn → eternal-vault-btn; home pillar 'Odkaz' → 'Majetok'.
 4. JARVIS AWARENESS: neural._gather_context now includes healing_loop (steps, booked slot, claim status/€) + companion (avg mood 7d) — verified via /api/jarvis/context.
 Backend verified by curl: injury-event → 40% progress, claim 315 € prefilled, slot booked; companion greeting/checkin; echoes CRUD; jarvis context.
+
+## Phase 32: REMOTE ECHOES + REFERRAL BRIDGE + HEALING REPORT (June 2026) — DONE ✅
+(iteration_28 ALL GREEN: 12/12 backend + 20/20 frontend E2E)
+1. RODINNÝ PRÍSTUP — GET /api/family/echoes/recipients (users where I'm guardian via db.guardians + inner_circle flag); POST /api/family/echoes/send {to_email,message} (auth: guardian link OR inner_circle member; 403/404/400 branches; push to senior; echo has remote:true + sender_user_id). voice-echoes.tsx: 'KOMU?' chips (ve-target-self / ve-target-<uid>), remote hint, ve-sent-msg confirmation.
+2. SKEN VÝMENNÉHO LÍSTKA — lens.tsx result adds 'SPUSTIŤ KOLOTOČ UZDRAVENIA' (ln-act-healing) when kind∈{medical_report,prescription,lab_results} or specialty → /healing?specialty=X&auto=1; healing.tsx useLocalSearchParams auto-opens wizard (only when no active journey), sets kind=illness, injects specialty as extra selected chip.
+3. TÝŽDENNÝ REPORT — GET /api/healing/report.pdf (_auth_pdf token support): carousel steps [X]/[!]/[ ], claim €, PN/vychádzky, 14d mood bar graph (█ blocks) + avg + trend SK; healing-report button on /healing (both states) via sharePdf.
+Test users: senior test@example.com/test-token-abc, family lucka@example.com/fam-token-abc (guardian of senior).

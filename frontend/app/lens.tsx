@@ -176,6 +176,10 @@ export default function Lens() {
             <Text style={st.actLbl}>OKAMŽITÉ AKCIE</Text>
             <View style={st.actGrid}>
               <ActionBtn testID="ln-act-speak" icon="volume-high" label="PREČÍTAŤ NAHLAS" busy={speaking} onPress={() => speak(scan)} />
+              {(['medical_report', 'prescription', 'lab_results'].includes(scan.kind) || !!scan.specialty) && (
+                <ActionBtn testID="ln-act-healing" icon="sync" label="SPUSTIŤ KOLOTOČ UZDRAVENIA"
+                  onPress={() => router.push(`/healing?specialty=${encodeURIComponent(scan.specialty || '')}&auto=1` as any)} />
+              )}
               {has('add_med_reminder') && (
                 <ActionBtn testID="ln-act-med" icon="alarm" label="DO KALENDÁRA LIEKOV" busy={busy === 'med'} onPress={addMed} />
               )}

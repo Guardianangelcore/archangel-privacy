@@ -4,8 +4,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/api';
+import { sharePdf } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 
@@ -23,6 +24,7 @@ const STEP_CTA: Record<string, string> = {
 
 export default function Healing() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ specialty?: string; auto?: string }>();
   const [state, setState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [wizard, setWizard] = useState(false);
@@ -31,12 +33,23 @@ export default function Healing() {
   const [part, setPart] = useState('Koleno');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [autoOpened, setAutoOpened] = useState(false);
 
   const load = useCallback(async () => {
     try { setState(await api('/healing/state')); } catch (e) { console.log(e); }
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  // MAGIC LENS BRIDGE — a scanned referral pre-fills the specialist and opens the wizard
+  useEffect(() => {
+    if (loading || autoOpened || params.auto !== '1') return;
+    setAutoOpened(true);
+    if (state?.active) return;
+    const s = String(params.specialty || '').trim();
+    if (s) { setSpec(s); setKind('illness'); }
+    setWizard(true);
+  }, [loading, autoOpened, params.auto, params.specialty, state?.active]);
 
   const start = async () => {
     setBusy(true); setMsg('');
@@ -193,6 +206,16 @@ export default function Healing() {
               </Pressable>
             </View>
           )}
+
+          {/* WEEKLY HEALING REPORT — mood graph + carousel progress for doctor & family */}
+          <Pressable testID="healing-report" onPress={() => { tap(); sharePdf('/healing/report.pdf', 'guardian_healing_report.pdf').catch(() => {}); }} style={st.reportBtn}>
+            <Ionicons name="document-attach-outline" size={18} color={C.brand} />
+            <View style={{ flex: 1 }}>
+              <Text style={st.reportTitle}>TÝŽDENNÝ REPORT UZDRAVENIA (PDF)</Text>
+              <Text style={st.reportSub}>Graf nálady + postup kolotoča — pre lekára aj rodinu</Text>
+            </View>
+            <Ionicons name="share-outline" size={18} color={C.info} />
+          </Pressable>
         </ScrollView>
       )}
 
@@ -221,7 +244,7 @@ export default function Healing() {
             </>)}
             <Text style={st.sheetLbl}>AKÝ ŠPECIALISTA?</Text>
             <View style={st.chipWrap}>
-              {SPECIALTIES.map(s => (
+              {(SPECIALTIES.includes(spec) ? SPECIALTIES : [spec, ...SPECIALTIES]).map(s => (
                 <Pressable testID={`healing-spec-${s}`} key={s} onPress={() => { tap(); setSpec(s); }} style={[st.chip, spec === s && st.chipOn]}>
                   <Text style={[st.chipText, spec === s && { color: C.onInverse }]}>{s}</Text>
                 </Pressable>
@@ -281,6 +304,9 @@ const st = StyleSheet.create({
   stepCtaText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   fitBtn: { marginTop: S.xl, flexDirection: 'row', gap: S.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: R.pill, minHeight: 56 },
   fitText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
+  reportBtn: { marginTop: S.lg, flexDirection: 'row', alignItems: 'center', gap: S.md, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.lg, padding: S.md, minHeight: 64, backgroundColor: C.surface2 },
+  reportTitle: { color: C.fg, fontWeight: '900', fontSize: 11.5, letterSpacing: 1 },
+  reportSub: { color: C.info, fontSize: 10.5, marginTop: 2 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: C.surface2, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg, padding: S.xl, paddingBottom: 34, borderWidth: 1, borderColor: C.borderStrong },
   sheetHandle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: C.surface3, marginBottom: S.md },

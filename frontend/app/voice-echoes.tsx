@@ -29,10 +29,14 @@ export default function VoiceEchoes() {
   const [fromName, setFromName] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recipients, setRecipients] = useState<any[]>([]);
+  const [target, setTarget] = useState<any>(null); // null = this device (self)
+  const [sentMsg, setSentMsg] = useState('');
   const playerRef = useRef<any>(null);
 
   const load = useCallback(async () => {
     try { const r: any = await api('/family/echoes'); setEchoes(r.echoes || []); } catch (e) { console.log(e); }
+    try { const rc: any = await api('/family/echoes/recipients'); setRecipients(rc.recipients || []); } catch {}
     setLoading(false);
   }, []);
   useEffect(() => {
@@ -62,13 +66,19 @@ export default function VoiceEchoes() {
   const send = async (text?: string) => {
     const message = (text || msg).trim();
     if (!message) return;
-    setBusy(true);
+    setBusy(true); setSentMsg('');
     try {
       tap('success');
-      await api('/family/echoes', { method: 'POST', body: JSON.stringify({ from_name: fromName.trim() || 'Rodina', message }) });
+      if (target) {
+        // REMOTE FAMILY ACCESS — send from my own account to the senior's device
+        const r: any = await api('/family/echoes/send', { method: 'POST', body: JSON.stringify({ to_email: target.email, message }) });
+        setSentMsg(`💌 Odkaz odoslaný na diaľku — ${r.to} si ho vypočuje na svojom zariadení.`);
+      } else {
+        await api('/family/echoes', { method: 'POST', body: JSON.stringify({ from_name: fromName.trim() || 'Rodina', message }) });
+        await load();
+      }
       setAdd(false); setMsg('');
-      await load();
-    } catch (e) { console.log(e); }
+    } catch (e: any) { setSentMsg(String(e.message || e)); }
     setBusy(false);
   };
 
@@ -87,6 +97,7 @@ export default function VoiceEchoes() {
       {loading ? <ActivityIndicator color={C.brand} style={{ marginTop: 60 }} /> : (
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 100, gap: S.md }}>
           <Text style={st.hint}>Ťuknite na kartu — Jarvis vám odkaz prečíta nahlas. 🔊</Text>
+          {!!sentMsg && <View style={st.sentBox}><Text testID="ve-sent-msg" style={st.sentText}>{sentMsg}</Text></View>}
           {echoes.length === 0 && (
             <View style={st.empty}>
               <Ionicons name="heart" size={44} color={C.brand} />
@@ -120,8 +131,27 @@ export default function VoiceEchoes() {
           <Pressable style={st.sheet} onPress={() => {}}>
             <View style={st.sheetHandle} />
             <Text style={st.sheetTitle}>Poslať hlasový odkaz</Text>
-            <Text style={st.lbl}>KTO POSIELA?</Text>
-            <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="Napr. Vnučka Lucka" placeholderTextColor="#888" />
+            {recipients.length > 0 && (<>
+              <Text style={st.lbl}>KOMU?</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
+                <Pressable testID="ve-target-self" onPress={() => { tap(); setTarget(null); }} style={[st.targetChip, !target && st.targetChipOn]}>
+                  <Ionicons name="phone-portrait-outline" size={14} color={!target ? C.onInverse : C.fg} />
+                  <Text style={[st.targetText, !target && { color: C.onInverse }]}>Toto zariadenie</Text>
+                </Pressable>
+                {recipients.map(r => (
+                  <Pressable testID={`ve-target-${r.user_id}`} key={r.user_id} onPress={() => { tap(); setTarget(r); }}
+                    style={[st.targetChip, target?.user_id === r.user_id && st.targetChipOn]}>
+                    <Ionicons name="heart-outline" size={14} color={target?.user_id === r.user_id ? C.onInverse : C.brand} />
+                    <Text style={[st.targetText, target?.user_id === r.user_id && { color: C.onInverse }]}>{r.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              {!!target && <Text style={st.remoteHint}>💌 Odkaz pôjde na diaľku na zariadenie: {target.name} ({target.email})</Text>}
+            </>)}
+            {!target && (<>
+              <Text style={st.lbl}>KTO POSIELA?</Text>
+              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="Napr. Vnučka Lucka" placeholderTextColor="#888" />
+            </>)}
             <Text style={st.lbl}>RÝCHLE ODKAZY — 1 ŤUK</Text>
             <View style={{ gap: S.sm }}>
               {PRESETS.map((p, i) => (
@@ -148,6 +178,12 @@ const st = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.lg, paddingVertical: S.md, borderBottomWidth: 1, borderBottomColor: C.border },
   title: { color: C.fg, fontWeight: '900', fontSize: 16, letterSpacing: 2 },
   hint: { color: C.info, fontSize: 13, textAlign: 'center', marginBottom: S.sm },
+  sentBox: { backgroundColor: 'rgba(212,175,55,0.1)', borderWidth: 1, borderColor: C.borderStrong, borderRadius: R.md, padding: S.md },
+  sentText: { color: C.brand, fontWeight: '800', fontSize: 12, lineHeight: 17 },
+  targetChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: S.md, minHeight: 44, borderRadius: R.pill, borderWidth: 1.5, borderColor: C.borderStrong },
+  targetChipOn: { backgroundColor: C.brand, borderColor: C.brand },
+  targetText: { color: C.fg, fontWeight: '800', fontSize: 12.5 },
+  remoteHint: { marginTop: S.sm, color: C.brand, fontSize: 11, fontWeight: '700' },
   empty: { alignItems: 'center', padding: S.xl, gap: S.sm, backgroundColor: C.surface2, borderRadius: R.lg, borderWidth: 1, borderColor: C.border },
   emptyTitle: { color: C.fg, fontWeight: '900', fontSize: 18 },
   emptySub: { color: C.onS3, fontSize: 13, textAlign: 'center', lineHeight: 19 },

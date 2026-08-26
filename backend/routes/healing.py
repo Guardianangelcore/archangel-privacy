@@ -11,9 +11,13 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import HTTPException, Header
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
-from core import api, db, logger, clean, get_current_user, send_push
+from core import (
+    api, db, logger, clean, get_current_user, send_push,
+    _make_pdf, _auth_pdf, _pdf_footer, _pdf_response,
+)
 from routes.hunter import _simulate_slot
 
 STEP_KEYS = ["intake", "financial_shield", "access", "bureaucracy", "recovery"]
@@ -332,3 +336,135 @@ async def echoes_heard(echo_id: str, authorization: Optional[str] = Header(None)
     await db.voice_echoes.update_one(
         {"echo_id": echo_id, "user_id": user["user_id"]}, {"$set": {"heard": True}})
     return {"ok": True}
+
+
+# ---- REMOTE FAMILY ACCESS — Inner Circle / guardians send echoes from their own account ----
+
+async def _may_send_to(sender: dict, recipient: dict) -> bool:
+    """Sender may send an echo if the recipient listed them as a guardian,
+    or the sender is an Inner Circle member (founder family)."""
+    link = await db.guardians.find_one(
+        {"user_id": recipient["user_id"], "guardian_user_id": sender["user_id"]})
+    if link:
+        return True
+    if await db.inner_circle.find_one({"email": sender.get("email", "").lower()}):
+        return True
+    return False
+
+
+@api.get("/family/echoes/recipients")
+async def echoes_recipients(authorization: Optional[str] = Header(None)):
+    """People I can send remote echoes to (I am their guardian)."""
+    user = await get_current_user(authorization)
+    links = await db.guardians.find(
+        {"guardian_user_id": user["user_id"]}, {"_id": 0}).to_list(20)
+    out = []
+    for l in links:
+        u = await db.users.find_one({"user_id": l["user_id"]}, {"_id": 0, "user_id": 1, "name": 1, "email": 1})
+        if u:
+            out.append({"user_id": u["user_id"], "name": u.get("name") or u["email"], "email": u["email"]})
+    is_inner = bool(await db.inner_circle.find_one({"email": user.get("email", "").lower()}))
+    return {"recipients": out, "inner_circle_member": is_inner}
+
+
+class RemoteEchoIn(BaseModel):
+    to_email: str
+    message: str
+
+
+@api.post("/family/echoes/send")
+async def echoes_send_remote(body: RemoteEchoIn, authorization: Optional[str] = Header(None)):
+    """Family member sends a Voice Echo to a senior FROM THEIR OWN account, remotely."""
+    sender = await get_current_user(authorization)
+    if not body.message.strip():
+        raise HTTPException(400, "message required")
+    recipient = await db.users.find_one({"email": body.to_email.strip().lower()}, {"_id": 0})
+    if not recipient:
+        raise HTTPException(404, "Príjemca s týmto e-mailom neexistuje v Guardian OS.")
+    if recipient["user_id"] == sender["user_id"]:
+        raise HTTPException(400, "Odkaz sebe pošlite cez bežné pridanie.")
+    if not await _may_send_to(sender, recipient):
+        raise HTTPException(403, "Nemáte oprávnenie — príjemca si vás musí pridať ako strážcu (Sovereign Recovery), alebo musíte byť vo Vnútornom kruhu.")
+    doc = {"echo_id": uuid.uuid4().hex, "user_id": recipient["user_id"],
+           "from_name": sender.get("name") or sender.get("email") or "Rodina",
+           "sender_user_id": sender["user_id"], "remote": True,
+           "message": body.message.strip()[:400], "heard": False,
+           "created_at": _now()}
+    await db.voice_echoes.insert_one(doc.copy())
+    try:
+        await send_push(recipients=[recipient["user_id"]], data={
+            "title": "💌 NOVÝ ODKAZ OD RODINY",
+            "message": f"{doc['from_name']}: ťuknite a Jarvis vám ho prečíta.",
+            "action_url": "/voice-echoes"})
+    except Exception:
+        pass
+    return {"ok": True, "echo": clean(doc), "to": recipient.get("name") or recipient["email"]}
+
+
+# =========================================================================
+# WEEKLY HEALING REPORT — mood graph + Carousel progress in one PDF
+# =========================================================================
+
+_MOOD_BAR = {1: "█░░░░", 2: "██░░░", 3: "███░░", 4: "████░", 5: "█████"}
+_TREND_SK = {"improving": "ZLEPŠUJE SA ↗", "declining": "ZHORŠUJE SA ↘", "stable": "STABILNÁ →"}
+
+
+@api.get("/healing/report.pdf")
+async def healing_report_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    uid = user["user_id"]
+    j = await _active_journey(uid) or await db.healing_journeys.find_one(
+        {"user_id": uid}, {"_id": 0}, sort=[("created_at", -1)])
+    claim = await db.insurance_claims.find_one({"journey_id": (j or {}).get("journey_id")}, {"_id": 0}) if j else None
+    recovery = await db.recovery.find_one({"user_id": uid}, {"_id": 0}) or {}
+    since = _now() - timedelta(days=14)
+    checkins = await db.companion_checkins.find(
+        {"user_id": uid, "created_at": {"$gte": since}}, {"_id": 0}).sort("created_at", 1).to_list(60)
+
+    parts = []
+    parts.append("1. KOLOTOČ UZDRAVENIA / HEALING CAROUSEL")
+    if j:
+        done = sum(1 for s in j["steps"].values() if s == "done")
+        parts.append(f"  Stav: {'AKTÍVNY' if j['status'] == 'active' else j['status'].upper()} · {j['kind_label']}"
+                     f"{(' · ' + j['body_part']) if j.get('body_part') else ''} · {j['specialty']}")
+        parts.append(f"  Postup: {int(done / len(STEP_KEYS) * 100)} % ({done}/{len(STEP_KEYS)} krokov)")
+        for i, k in enumerate(STEP_KEYS):
+            st = j["steps"].get(k, "pending")
+            mark = "[X]" if st == "done" else ("[!]" if st == "action_needed" else "[ ]")
+            parts.append(f"    {mark} {i + 1}. {STEP_META[k]['title']} — {STEP_META[k]['sub']}")
+        if (j.get("access") or {}).get("slot"):
+            parts.append(f"  Zarezervovaný termín: {j['access']['slot']}")
+    else:
+        parts.append("  Žiadny kolotoč zatiaľ nebol spustený.")
+    parts.append("\n2. FINANČNÝ ŠTÍT / INSURANCE CLAIM")
+    if claim:
+        parts.append(f"  Poisťovňa: {claim['provider']} · Stav žiadosti: {claim['status'].upper()}")
+        parts.append(f"  Denná dávka: {claim['daily_benefit_eur']} EUR · Odhad spolu ({claim['estimated_days']} dní): {claim['estimated_total_eur']} EUR")
+    else:
+        parts.append("  Žiadna poistná žiadosť v tomto kolotoči.")
+    parts.append("\n3. NESCHOPENKA / SICK LEAVE")
+    if recovery.get("start_date"):
+        parts.append(f"  PN: {recovery['start_date']} → {recovery.get('end_date') or '?'} · vychádzky: "
+                     + (", ".join(f"{o['from_time']}–{o['to_time']}" for o in recovery.get("outings", [])) or "žiadne"))
+    else:
+        parts.append("  Bez aktívnej PN.")
+    parts.append("\n4. GRAF NÁLADY (14 dní) / MOOD TREND")
+    if checkins:
+        for c in checkins[-14:]:
+            d = str(c.get("created_at", ""))[:10]
+            parts.append(f"  {d}  {_MOOD_BAR.get(c['mood'], '?????')}  {c['mood']}/5 — {c['mood_label']}")
+        moods = [c["mood"] for c in checkins]
+        avg = round(sum(moods) / len(moods), 2)
+        direction = "stable"
+        if len(moods) >= 4:
+            half = len(moods) // 2
+            a, b = sum(moods[:half]) / half, sum(moods[half:]) / (len(moods) - half)
+            direction = "improving" if b - a > 0.3 else ("declining" if a - b > 0.3 else "stable")
+        parts.append(f"  Priemer: {avg}/5 · Tendencia: {_TREND_SK[direction]}")
+    else:
+        parts.append("  Žiadne denné check-iny za posledných 14 dní.")
+    parts.append(f"\nVygenerované Sovereign Healing Loop · {_now().date().isoformat()}")
+    pdf = await run_in_threadpool(
+        _make_pdf, "TÝŽDENNÝ REPORT UZDRAVENIA\nKOLOTOČ · FINANČNÝ ŠTÍT · NÁLADA — pre lekára aj rodinu",
+        "\n".join(parts), _pdf_footer())
+    return _pdf_response(pdf, "guardian_healing_report.pdf")
