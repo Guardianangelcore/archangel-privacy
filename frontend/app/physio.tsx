@@ -49,6 +49,88 @@ function GuideVideo({ url, testID, muted = true }: { url: string; testID: string
   );
 }
 
+/** WEEKLY RECOVERY PLAYLIST — 7-day plan guiding the patient through the whole week. */
+function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
+  const [plan, setPlan] = useState<any>(null);
+  const [pct, setPct] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    try { const r: any = await api('/physio/plan'); setPlan(r.plan); setPct(r.progress_pct || 0); } catch (e) { console.log(e); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const gen = async () => {
+    setBusy(true);
+    try { tap('medium'); const r: any = await api('/physio/plan/generate', { method: 'POST' }); setPlan(r.plan); setPct(0); }
+    catch (e) { console.log(e); }
+    setBusy(false);
+  };
+  const doneDay = async (d: number) => {
+    try { tap('success'); await api(`/physio/plan/day/${d}/complete`, { method: 'POST' }); await load(); }
+    catch (e) { console.log(e); }
+  };
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.lbl}>📅 TÝŽDENNÝ PLÁN ZOTAVENIA</Text>
+        {!!plan && (
+          <Pressable testID="ph-plan-regen" onPress={gen} hitSlop={10} disabled={busy}>
+            {busy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="refresh" size={16} color={C.info} />}
+          </Pressable>
+        )}
+      </View>
+      {!plan ? (
+        <GlassCard pad={S.md} radius={R.md}>
+          <Text style={styles.planIntro}>Jarvis zoradí návody a expertné videá do 7-dňového plánu — deň po dni až k úľave. Pri aktívnom Kolotoči pridá dennú kotvu na boľavé miesto.</Text>
+          <Pressable testID="ph-plan-generate" onPress={gen} disabled={busy} style={styles.planGenBtn}>
+            {busy ? <ActivityIndicator color={C.onInverse} /> : (<>
+              <Ionicons name="calendar" size={16} color={C.onInverse} />
+              <Text style={styles.planGenText}>ZOSTAVIŤ 7-DŇOVÝ PLÁN</Text>
+            </>)}
+          </Pressable>
+        </GlassCard>
+      ) : (
+        <View>
+          <View style={styles.planProgress}>
+            <View style={[styles.planProgressFill, { width: `${pct}%` }]} />
+            <Text style={styles.planProgressText}>{plan.days.filter((d: any) => d.done).length}/7 DNÍ · {pct} %</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm, paddingVertical: S.sm }}>
+            {plan.days.map((d: any) => (
+              <View key={d.day} testID={`plan-day-${d.day}`} style={[styles.dayCard, d.done && styles.dayCardDone]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.dayNum}>{d.day}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dayWeekday}>{d.weekday.toUpperCase()}</Text>
+                    <Text style={styles.dayTheme} numberOfLines={1}>{d.theme}</Text>
+                  </View>
+                  {d.done && <Ionicons name="checkmark-circle" size={18} color={C.brand} />}
+                </View>
+                <View style={{ gap: 4, marginTop: 8, flex: 1 }}>
+                  {d.items.map((it: any, ix: number) => (
+                    <Pressable key={ix} testID={`plan-item-${d.day}-${ix}`}
+                      onPress={() => { tap('light'); onOpenGuide(it.type === 'guide' ? it.id : (it.guide_id || it.id)); }}
+                      style={styles.dayItem}>
+                      <Ionicons name={it.anchor ? 'star' : it.icon} size={12} color={it.anchor ? C.brand : C.info} />
+                      <Text style={[styles.dayItemText, it.anchor && { color: C.brand, fontWeight: '900' }]} numberOfLines={1}>{it.title}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {!d.done && (
+                  <Pressable testID={`ph-plan-done-${d.day}`} onPress={() => doneDay(d.day)} style={styles.dayDoneBtn}>
+                    <Text style={styles.dayDoneText}>HOTOVO ✓</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
 /** FOUNDER'S EXPERT VIDEOS — upload your own massage/rehab videos per guide (authentic rehab). */
 function ExpertVideos({ guideId }: { guideId: string }) {
   const [videos, setVideos] = useState<any[]>([]);
@@ -56,6 +138,8 @@ function ExpertVideos({ guideId }: { guideId: string }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [camBlocked, setCamBlocked] = useState(false);
+  const [ccOpen, setCcOpen] = useState<string | null>(null);
+  const [ccBusy, setCcBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -95,9 +179,21 @@ function ExpertVideos({ guideId }: { guideId: string }) {
     try { await api(`/physio/videos/${id}`, { method: 'DELETE' }); await load(); } catch (e) { console.log(e); }
   };
 
+  const retryCc = async (id: string) => {
+    setCcBusy(id);
+    try { tap('medium'); await api(`/physio/videos/${id}/transcribe`, { method: 'POST' }); await load(); }
+    catch (e) { console.log(e); }
+    setCcBusy(null);
+  };
+
   return (
     <View style={{ marginTop: S.sm }}>
-      <Text style={styles.evLbl}>🎬 EXPERTNÉ VIDEÁ — VLASTNÁ NARÁCIA</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.evLbl}>🎬 EXPERTNÉ VIDEÁ — VLASTNÁ NARÁCIA</Text>
+        <Pressable testID={`ev-refresh-${guideId}`} onPress={load} hitSlop={10}>
+          <Ionicons name="refresh" size={14} color={C.info} />
+        </Pressable>
+      </View>
       {videos.map(v => (
         <View key={v.video_id} style={styles.evCard}>
           {!!tk && <GuideVideo url={`${API_BASE}/api/physio/videos/${v.video_id}/file?token=${tk}`} testID={`ev-video-${v.video_id}`} muted={false} />}
@@ -111,6 +207,31 @@ function ExpertVideos({ guideId }: { guideId: string }) {
               </Pressable>
             )}
           </View>
+          {/* ACCESSIBILITY — auto-captions from Jarvis (Whisper narration → steps for the deaf) */}
+          {v.transcript_status === 'done' && (
+            <Pressable testID={`ev-cc-${v.video_id}`} onPress={() => { tap('light'); setCcOpen(ccOpen === v.video_id ? null : v.video_id); }} style={styles.ccBtn}>
+              <Ionicons name="chatbox-ellipses-outline" size={13} color={C.brand} />
+              <Text style={styles.ccBtnText}>TITULKY PRE NEPOČUJÚCICH (CC)</Text>
+              <Ionicons name={ccOpen === v.video_id ? 'chevron-up' : 'chevron-down'} size={12} color={C.info} />
+            </Pressable>
+          )}
+          {ccOpen === v.video_id && (v.caption_steps || []).map((s: string, i: number) => (
+            <Text key={i} style={styles.ccStep}>{i + 1}. {s}</Text>
+          ))}
+          {(v.transcript_status === 'processing' || v.transcript_status === 'pending') && (
+            <Text style={styles.ccNote}>⏳ Jarvis prepisuje naráciu na titulky… (obnovte o chvíľu)</Text>
+          )}
+          {v.transcript_status === 'too_large' && (
+            <Text style={styles.ccNote}>ℹ️ Video nad 24 MB — titulky podporujú kratšie videá.</Text>
+          )}
+          {v.transcript_status === 'failed' && v.mine && (
+            <Pressable testID={`ev-cc-retry-${v.video_id}`} onPress={() => retryCc(v.video_id)} disabled={ccBusy === v.video_id} style={styles.ccRetry}>
+              {ccBusy === v.video_id ? <ActivityIndicator size="small" color={C.brand} /> : (<>
+                <Ionicons name="refresh" size={12} color={C.brand} />
+                <Text style={styles.ccBtnText}>TITULKY ZLYHALI — SKÚSIŤ ZNOVA</Text>
+              </>)}
+            </Pressable>
+          )}
         </View>
       ))}
       {videos.length === 0 && <Text style={styles.evEmpty}>Zatiaľ žiadne vlastné video k tomuto cviku — nahrajte prvé a rehabilitácia bude autenticky vaša.</Text>}
@@ -210,6 +331,12 @@ export default function Physio() {
       <View style={styles.sub}><Text style={styles.subText}>FOUNDER’S LEGACY · VIDEO-NATÍVNE NÁVODY · SELF-MASSAGE</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
+        {/* WEEKLY RECOVERY PLAYLIST — day-by-day guidance through the whole week */}
+        <WeeklyPlan onOpenGuide={(id) => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setOpenGuide(id);
+        }} />
+
         <Text style={styles.lbl}>REGION</Text>
         <View style={styles.grid}>
           {REGIONS.map(r => (
@@ -339,4 +466,24 @@ const styles = StyleSheet.create({
   evSettings: { marginTop: S.sm, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: C.warn },
   evSettingsText: { color: C.onWarn, fontWeight: '900', fontSize: 10.5 },
   evErr: { color: C.error, fontSize: 10.5, marginTop: 6, fontWeight: '700' },
+  planIntro: { color: C.onS3, fontSize: 12, lineHeight: 17 },
+  planGenBtn: { marginTop: S.md, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: R.pill, minHeight: 50 },
+  planGenText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
+  planProgress: { height: 26, borderRadius: R.pill, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, overflow: 'hidden', justifyContent: 'center' },
+  planProgressFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(212,175,55,0.35)' },
+  planProgressText: { color: C.fg, fontWeight: '900', fontSize: 10, letterSpacing: 1, textAlign: 'center' },
+  dayCard: { width: 235, borderWidth: 1.5, borderColor: C.border, borderRadius: R.md, padding: S.md, backgroundColor: C.surface2, minHeight: 170 },
+  dayCardDone: { borderColor: 'rgba(212,175,55,0.55)', backgroundColor: 'rgba(212,175,55,0.06)' },
+  dayNum: { color: C.brand, fontWeight: '900', fontSize: 22, width: 24 },
+  dayWeekday: { color: C.fg, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  dayTheme: { color: C.info, fontSize: 10, marginTop: 1 },
+  dayItem: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 30, borderRadius: R.sm, paddingHorizontal: 6, backgroundColor: 'rgba(255,255,255,0.03)' },
+  dayItemText: { color: C.fg, fontSize: 10.5, flex: 1 },
+  dayDoneBtn: { marginTop: 8, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.pill, borderWidth: 1.5, borderColor: C.brand },
+  dayDoneText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  ccBtn: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, borderRadius: R.sm, paddingHorizontal: 8, backgroundColor: 'rgba(212,175,55,0.08)', borderWidth: 1, borderColor: C.border },
+  ccBtnText: { color: C.brand, fontWeight: '900', fontSize: 9.5, letterSpacing: 0.5, flex: 1 },
+  ccStep: { color: C.fg, fontSize: 11.5, lineHeight: 17, marginTop: 4, paddingLeft: 4 },
+  ccNote: { color: C.info, fontSize: 10, marginTop: 6 },
+  ccRetry: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, borderRadius: R.sm, paddingHorizontal: 8, borderWidth: 1, borderColor: C.warn },
 });

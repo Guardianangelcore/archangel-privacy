@@ -237,3 +237,6 @@ Backend: /family/echoes/recipients + /family/echoes/send (guardian/inner_circle 
 
 ## Iteration 30 (Phase 34: Physio Expert Videos, June 2026)
 physio_media.py CRUD + stream (curl 6/6 OK: upload/list/privacy/global-founder/stream/delete), physio.tsx ExpertVideos per guide (screenshot OK: section+FOUNDER badge+web note), app.json camera/mic/photo permissions added. Video upload/record is native-only (web shows note).
+
+## Iteration 31 (Phase 35: Auto-captions + Weekly plan, June 2026)
+Whisper→Claude caption pipeline (E2E s reálnou rečou OK), 7-day plan s dennou kotvou z Kolotoča (anchor knee OK), day-complete cez UI klik OK (done flag zapísaný), CC toggle zobrazuje kroky. Curl + screenshot verified. Video >24MB → too_large (bez titulkov, video funguje).
