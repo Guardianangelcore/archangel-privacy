@@ -244,3 +244,10 @@ User reported "premium features don't work" — root cause: no working payment p
 3. FOUNDER ENTITLEMENT — System Janitor repair #3: first-created user auto-gets inner_circle:true + is_founder + lifetime archangel (in prod DB = the real founder after deploy).
 4. FRONTEND subscription.tsx — 'KARTOU {€}' buttons (web same-tab Stripe redirect + return polling via useLocalSearchParams; native openAuthSessionAsync + poll), cancelled banner, updated copy (Stripe TEST 4242 note).
 subscription/upgrade card branch now 400 use_billing_checkout (GA-T path unchanged). Trial regression OK (one-time 409).
+
+## Phase 29: SUBSCRIPTION SUITE — MANAGEMENT, RECEIPTS, FAMILY PACK, FOUNDER GIFTING (June 2026) — DONE ✅
+(iteration_26 tests ALL GREEN: 12/12 backend + frontend E2E)
+1. SPRÁVA PREDPLATNÉHO — POST /subscription/cancel (immediate downgrade→sovereign; inner_circle 400; repeat 409); subscription.tsx: transactions list (sb-tx-*, GET /billing/transactions) + two-step cancel (sb-cancel → sb-cancel-yes/no).
+2. POTVRDENIE O PLATBE — billing._issue_receipt after every card activation: PDF (core._make_pdf) → object storage → db.documents (source billing_receipt, 'Doklad o platbe — …') + 🧾 calendar_events timeline entry; failure never breaks payment; visible in Vault with ZOBRAZIŤ/JARVIS buttons.
+3. RODINNÝ BALÍK — tier 'family_sentinel' (249 €/mes, 2390 €/rok, FAMILY_PACK max 4 members): activation gives payer Sentinel (non-destructive: never downgrades archangel/inner_circle) + up to 4 db.guardians members (tier_paid_with family_pack, family_members_activated on tx); sb-family-pack card in UI.
+4. FOUNDER GIFTING (user request 'daj zakladateľovi prístup na darovanie') — POST /billing/gift {email,tier,days≤3650} founder-only (403 otherwise, 404 unknown email, 409 inner_circle recipient) → grants tier + db.gifts + push; GET /billing/gifts history; UI: sb-gift box (email input, tier/days chips, history) visible only to founder.

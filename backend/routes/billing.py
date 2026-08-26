@@ -11,12 +11,15 @@ Security model per playbook:
   via GET /billing/status/{session_id} and confirmed by POST /webhook/stripe.
 """
 import os
+import uuid
+import hashlib
 from fastapi import HTTPException, Header, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from core import api, db, clean, get_current_user
+from core import api, db, clean, get_current_user, logger, _make_pdf, _pdf_footer, APP_NAME, put_object_sync, send_push
 from routes.subscription import TIERS, record_revenue
 
 from emergentintegrations.payments.stripe.checkout import (
@@ -25,6 +28,9 @@ from emergentintegrations.payments.stripe.checkout import (
 
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 
+# Family pack — one payer unlocks Sentinel for themselves + up to 4 family guardians
+FAMILY_PACK = {"monthly": 249.0, "annual": 2390.0, "max_members": 4}
+
 
 def _packages() -> dict:
     """Fixed server-side price catalogue: {tier}_{billing} → EUR amount."""
@@ -32,6 +38,8 @@ def _packages() -> dict:
     for tier in ("guardian", "sentinel", "archangel"):
         out[f"{tier}_monthly"] = float(TIERS[tier]["price_eur"])
         out[f"{tier}_annual"] = float(TIERS[tier]["price_eur_year"])
+    out["family_sentinel_monthly"] = FAMILY_PACK["monthly"]
+    out["family_sentinel_annual"] = FAMILY_PACK["annual"]
     return out
 
 
@@ -51,8 +59,8 @@ class CheckoutIn(BaseModel):
 @api.post("/billing/checkout")
 async def billing_checkout(body: CheckoutIn, request: Request, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
-    if body.tier not in ("guardian", "sentinel", "archangel"):
-        raise HTTPException(400, "tier must be guardian|sentinel|archangel")
+    if body.tier not in ("guardian", "sentinel", "archangel", "family_sentinel"):
+        raise HTTPException(400, "tier must be guardian|sentinel|archangel|family_sentinel")
     if body.billing not in ("monthly", "annual"):
         raise HTTPException(400, "billing must be monthly|annual")
     amount = _packages()[f"{body.tier}_{body.billing}"]
@@ -81,6 +89,44 @@ async def billing_checkout(body: CheckoutIn, request: Request, authorization: Op
             "amount_eur": amount, "tier": body.tier, "billing": body.billing}
 
 
+async def _issue_receipt(tx: dict, tier_until: datetime, family_members: int = 0):
+    """Payment receipt → PDF stored directly in the user's Health Vault + timeline."""
+    try:
+        label = ("Rodinný balík — Sentinel pre celú rodinu" if tx["tier"] == "family_sentinel"
+                 else f"{tx['tier'].capitalize()} Tier")
+        billing_sk = "ročné predplatné (−20 %)" if tx["billing"] == "annual" else "mesačné predplatné"
+        now = datetime.now(timezone.utc)
+        body = (
+            f"Číslo dokladu: {tx['session_id']}\n"
+            f"Dátum platby: {now.strftime('%d.%m.%Y %H:%M UTC')}\n\n"
+            f"Položka: {label} — {billing_sk}\n"
+            f"Suma: {tx['amount_eur']:.2f} EUR\n"
+            f"Spôsob platby: Platobná karta (Stripe)\n"
+            f"Platnosť do: {tier_until.strftime('%d.%m.%Y')}\n"
+            + (f"Členovia rodinného kruhu s aktivovaným Sentinelom: {family_members}\n" if family_members else "")
+            + "\nĎakujeme, že chránite seba aj svoju rodinu s Guardian Health & Angel."
+        )
+        pdf = await run_in_threadpool(_make_pdf, "POTVRDENIE O PLATBE — GUARDIAN HEALTH & ANGEL", body, _pdf_footer())
+        doc_id = uuid.uuid4().hex
+        path = f"{APP_NAME}/uploads/{tx['user_id']}/{doc_id}.pdf"
+        await run_in_threadpool(put_object_sync, path, pdf, "application/pdf")
+        title = f"Doklad o platbe — {label}"
+        await db.documents.insert_one({
+            "doc_id": doc_id, "user_id": tx["user_id"], "title": title,
+            "file_name": f"doklad_{tx['session_id'][:14]}.pdf", "content_type": "application/pdf",
+            "size": len(pdf), "storage_path": path, "hash": hashlib.sha256(pdf).hexdigest(),
+            "uploaded_at": now, "source": "billing_receipt",
+        })
+        await db.calendar_events.insert_one({
+            "event_id": uuid.uuid4().hex, "user_id": tx["user_id"], "category": "history",
+            "title": f"🧾 {title}"[:140], "date": now.date().isoformat(),
+            "notes": f"{tx['amount_eur']:.2f} EUR · karta (Stripe)", "booster_due": None,
+            "source": "billing", "doc_id": doc_id, "created_at": now,
+        })
+    except Exception as e:
+        logger.warning(f"receipt issue failed (payment unaffected): {e}")
+
+
 async def _activate_tier(session_id: str) -> bool:
     """Idempotent fulfilment — activates the tier exactly once per paid session."""
     now = datetime.now(timezone.utc)
@@ -91,12 +137,34 @@ async def _activate_tier(session_id: str) -> bool:
     if not res:
         return False
     days = 365 if res["billing"] == "annual" else 30
-    await db.users.update_one({"user_id": res["user_id"]}, {"$set": {
-        "tier": res["tier"], "tier_until": now + timedelta(days=days),
-        "tier_paid_with": "card", "tier_billing": res["billing"]}})
+    until = now + timedelta(days=days)
+    family_members = 0
+    if res["tier"] == "family_sentinel":
+        # payer gets Sentinel + up to 4 family-circle guardians get it too (never downgrades Archangel/Inner Circle)
+        await db.users.update_one(
+            {"user_id": res["user_id"], "inner_circle": {"$ne": True}, "tier": {"$ne": "archangel"}},
+            {"$set": {"tier": "sentinel", "tier_until": until, "tier_paid_with": "card",
+                      "tier_billing": res["billing"]}})
+        await db.users.update_one({"user_id": res["user_id"]}, {"$set": {"family_pack_owner": True}})
+        guardians = await db.guardians.find(
+            {"user_id": res["user_id"]}, {"_id": 0, "guardian_user_id": 1}).to_list(FAMILY_PACK["max_members"])
+        member_ids = [g["guardian_user_id"] for g in guardians if g.get("guardian_user_id")]
+        if member_ids:
+            upd = await db.users.update_many(
+                {"user_id": {"$in": member_ids}, "inner_circle": {"$ne": True}, "tier": {"$ne": "archangel"}},
+                {"$set": {"tier": "sentinel", "tier_until": until,
+                          "tier_paid_with": "family_pack", "tier_billing": res["billing"]}})
+            family_members = upd.modified_count
+        await db.payment_transactions.update_one(
+            {"session_id": session_id}, {"$set": {"family_members_activated": family_members}})
+    else:
+        await db.users.update_one({"user_id": res["user_id"]}, {"$set": {
+            "tier": res["tier"], "tier_until": until,
+            "tier_paid_with": "card", "tier_billing": res["billing"]}})
     await record_revenue("subscription", res["amount_eur"], res["user_id"],
                          {"tier": res["tier"], "billing": res["billing"], "paid_with": "card",
-                          "stripe_session": session_id})
+                          "stripe_session": session_id, "family_members": family_members})
+    await _issue_receipt(res, until, family_members)
     return True
 
 
@@ -145,4 +213,57 @@ async def billing_transactions(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     rows = await db.payment_transactions.find(
         {"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    return clean(rows)
+
+
+# ---------------- FOUNDER GIFTING — darovanie prémia ----------------
+class GiftIn(BaseModel):
+    email: str
+    tier: str = "sentinel"   # guardian | sentinel | archangel
+    days: int = 30
+    note: str = ""
+
+
+@api.post("/billing/gift")
+async def billing_gift(body: GiftIn, authorization: Optional[str] = Header(None)):
+    """Founder-only: gift a premium tier to any user by e-mail (free of charge)."""
+    user = await get_current_user(authorization)
+    fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "is_founder": 1})
+    if not (fresh or {}).get("is_founder"):
+        raise HTTPException(403, "founder_only: Darovanie prémia môže vykonať iba zakladateľ.")
+    if body.tier not in ("guardian", "sentinel", "archangel"):
+        raise HTTPException(400, "tier must be guardian|sentinel|archangel")
+    days = max(1, min(3650, int(body.days)))
+    email = body.email.strip().lower()
+    target = await db.users.find_one({"email": email}, {"_id": 0, "user_id": 1, "email": 1, "inner_circle": 1, "name": 1})
+    if not target:
+        raise HTTPException(404, "user_not_found: Používateľ s týmto e-mailom zatiaľ nemá účet.")
+    if target.get("inner_circle"):
+        raise HTTPException(409, "already_inner_circle: Tento používateľ má doživotný Archangel.")
+    now = datetime.now(timezone.utc)
+    until = now + timedelta(days=days)
+    await db.users.update_one({"user_id": target["user_id"]}, {"$set": {
+        "tier": body.tier, "tier_until": until,
+        "tier_paid_with": "founder_gift", "tier_billing": "gift"}})
+    gift = {"gift_id": uuid.uuid4().hex, "from_user_id": user["user_id"], "to_user_id": target["user_id"],
+            "to_email": email, "tier": body.tier, "days": days, "note": body.note[:200],
+            "tier_until": until, "created_at": now}
+    await db.gifts.insert_one(gift.copy())
+    try:
+        await send_push([target["user_id"]],
+                        {"title": "🎁 Darček od Guardian Angel",
+                         "body": f"Zakladateľ vám daroval {body.tier.upper()} na {days} dní. Prémiové funkcie sú odomknuté!"},
+                        idempotency_key=f"gift-{gift['gift_id']}")
+    except Exception:
+        pass
+    return {"ok": True, "gift": clean(gift)}
+
+
+@api.get("/billing/gifts")
+async def billing_gifts(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "is_founder": 1})
+    if not (fresh or {}).get("is_founder"):
+        raise HTTPException(403, "founder_only")
+    rows = await db.gifts.find({}, {"_id": 0}).sort("created_at", -1).to_list(30)
     return clean(rows)

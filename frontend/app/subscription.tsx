@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -23,12 +23,22 @@ export default function Subscription() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [txs, setTxs] = useState<any[]>([]);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [gifts, setGifts] = useState<any[]>([]);
+  const [giftEmail, setGiftEmail] = useState('');
+  const [giftTier, setGiftTier] = useState<'guardian' | 'sentinel' | 'archangel'>('sentinel');
+  const [giftDays, setGiftDays] = useState(30);
   const polledRef = useRef(false);
 
   const load = useCallback(async () => {
     try {
       setData(await api('/subscription'));
-      try { setFounder(await api('/wealth/founder-dashboard')); } catch { setFounder(null); }
+      try { setTxs(await api('/billing/transactions')); } catch {}
+      try {
+        setFounder(await api('/wealth/founder-dashboard'));
+        try { setGifts(await api('/billing/gifts')); } catch {}
+      } catch { setFounder(null); }
     } catch (e: any) { setErr(String(e.message || e)); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -40,7 +50,8 @@ export default function Subscription() {
       try {
         const s: any = await api(`/billing/status/${sid}`);
         if (s.payment_status === 'paid') {
-          setMsg(`✓ Platba prijatá — ${String(s.tier).toUpperCase()} je aktívny! Prémiové funkcie sú odomknuté.`);
+          const label = String(s.tier) === 'family_sentinel' ? 'SENTINEL (RODINNÝ BALÍK)' : String(s.tier).toUpperCase();
+          setMsg(`✓ Platba prijatá — ${label} je aktívny! Prémiové funkcie sú odomknuté. 🧾 Doklad o platbe bol uložený do Trezora.`);
           await load();
           return;
         }
@@ -92,6 +103,29 @@ export default function Subscription() {
       if (m.includes('insufficient_balance')) setErr('Nedostatok GA-T — zarobte tokeny cez Proof-of-Help (Family Shield / Angel Gigs), zaplaťte kartou alebo skúste 7-dňový Sentinel trial.');
       else setErr(m);
     } finally { setBusy(null); }
+  };
+
+  const cancelSub = async () => {
+    setBusy('cancel'); setErr(''); setMsg('');
+    try {
+      const r: any = await api('/subscription/cancel', { method: 'POST' });
+      setMsg(r.message || 'Predplatné zrušené.');
+      setCancelConfirm(false);
+      await load();
+    } catch (e: any) { setErr(String(e.message || e)); }
+    finally { setBusy(null); }
+  };
+
+  const sendGift = async () => {
+    if (!giftEmail.trim()) return;
+    setBusy('gift'); setErr(''); setMsg('');
+    try {
+      const r: any = await api('/billing/gift', { method: 'POST', body: JSON.stringify({ email: giftEmail.trim(), tier: giftTier, days: giftDays }) });
+      setMsg(`🎁 Darované: ${giftTier.toUpperCase()} na ${giftDays} dní pre ${r.gift.to_email}.`);
+      setGiftEmail('');
+      try { setGifts(await api('/billing/gifts')); } catch {}
+    } catch (e: any) { setErr(String(e.message || e)); }
+    finally { setBusy(null); }
   };
 
   const trial = async () => {
@@ -192,9 +226,70 @@ export default function Subscription() {
           );
         })}
 
+        {/* RODINNÝ BALÍK — one payer unlocks Sentinel for the whole family circle */}
+        {data && (
+          <View testID="sb-family-pack" style={[styles.tierCard, { borderColor: '#B8860B', backgroundColor: OBSIDIAN, borderWidth: 2.5 }]}>
+            <Text style={[styles.vipRibbon, { color: '#B8860B' }]}>👨‍👩‍👧‍👦 RODINNÝ BALÍK</Text>
+            <View style={styles.tierHead}>
+              <Ionicons name="people" size={24} color="#B8860B" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.tierName, { color: PLATINUM }]}>SENTINEL PRE CELÚ RODINU</Text>
+                <Text style={styles.tierTagline}>Jeden platca — vy + až 4 strážcovia z rodinného kruhu</Text>
+              </View>
+              <Text style={[styles.tierPrice, { color: PLATINUM }]}>{annual ? '2390 €/rok' : '249 €/mes.'}</Text>
+            </View>
+            {['Sentinel funkcie pre 5 ľudí (ušetríte až 66 %)', 'Aktivuje sa automaticky pre prepojených Strážcov', 'Nikdy neznižuje vyšší tier žiadneho člena'].map((f, i) => (
+              <View key={i} style={styles.featRow}>
+                <Ionicons name="checkmark" size={14} color="#B8860B" />
+                <Text style={[styles.featText, { color: '#B9B9C0' }]}>{f}</Text>
+              </View>
+            ))}
+            <Pressable testID="sb-family-card" onPress={() => cardCheckout('family_sentinel')} disabled={!!busy} style={[styles.payBtn, { backgroundColor: '#B8860B', marginTop: S.md }]}>
+              {busy === 'family_sentinel-card' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="card-outline" size={14} color={OBSIDIAN} />
+                  <Text style={[styles.payText, { color: OBSIDIAN }]}>KARTOU {annual ? '2390' : '249'} €</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        )}
+
         {data && (
           <Text style={styles.ppu}>PAY-PER-USE: Bio-Scanner {data.payperuse?.bioscan_single} GA-T/sken · IPS export {data.payperuse?.ips_export_single} GA-T · Human Second Opinion podľa sadzby špecialistu (GA-T)</Text>
         )}
+
+        {/* SPRÁVA PREDPLATNÉHO — payment history + one-tap cancel */}
+        <Text style={styles.mgmtTitle}>SPRÁVA PREDPLATNÉHO</Text>
+        {data && data.tier !== 'sovereign' && !data.inner_circle && (
+          cancelConfirm ? (
+            <View style={styles.cancelRow}>
+              <Pressable testID="sb-cancel-yes" onPress={cancelSub} disabled={busy === 'cancel'} style={[styles.cancelBtn, { backgroundColor: C.error, borderColor: C.error }]}>
+                {busy === 'cancel' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.cancelText, { color: '#fff' }]}>ÁNO, ZRUŠIŤ HNEĎ</Text>}
+              </Pressable>
+              <Pressable testID="sb-cancel-no" onPress={() => setCancelConfirm(false)} style={styles.cancelBtn}>
+                <Text style={styles.cancelText}>PONECHAŤ</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable testID="sb-cancel" onPress={() => setCancelConfirm(true)} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>ZRUŠIŤ PREDPLATNÉ</Text>
+            </Pressable>
+          )
+        )}
+        {data?.inner_circle && <Text style={styles.txEmpty}>👑 Inner Circle — doživotný Archangel, nie je čo rušiť.</Text>}
+        {txs.length === 0 ? (
+          <Text style={styles.txEmpty}>Zatiaľ žiadne platby kartou.</Text>
+        ) : txs.map((tx: any) => (
+          <View key={tx.session_id} testID={`sb-tx-${tx.session_id}`} style={styles.txRow}>
+            <Ionicons name={tx.processed ? 'checkmark-circle' : tx.payment_status === 'expired' ? 'close-circle' : 'time-outline'} size={16} color={tx.processed ? '#5FA779' : tx.payment_status === 'expired' ? C.error : C.info} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.txTitle}>{tx.tier === 'family_sentinel' ? 'Rodinný balík (Sentinel)' : String(tx.tier).toUpperCase()} · {tx.billing === 'annual' ? 'ročné' : 'mesačné'}</Text>
+              <Text style={styles.txMeta}>{String(tx.created_at).slice(0, 10)} · {tx.processed ? 'zaplatené · 🧾 doklad v Trezore' : tx.payment_status}</Text>
+            </View>
+            <Text style={styles.txAmount}>{tx.amount_eur} €</Text>
+          </View>
+        ))}
 
         {founder && (
           <View testID="sb-founder" style={styles.founderBox}>
@@ -206,6 +301,44 @@ export default function Subscription() {
               <View style={styles.founderCell}><Text style={styles.founderVal}>{(founder.revenue_by_kind?.payperuse || 0).toFixed(0)} €</Text><Text style={styles.founderLbl}>PAY-PER-USE</Text></View>
             </View>
             <Text style={styles.founderMeta}>Tiery: {Object.entries(founder.tier_distribution || {}).map(([k, v]) => `${k}:${v}`).join(' · ') || '—'} · GA-T treasury: {Number(founder.gat_treasury).toFixed(0)} · burned: {Number(founder.gat_burned).toFixed(1)}</Text>
+          </View>
+        )}
+
+        {/* FOUNDER GIFTING — darovanie prémia */}
+        {founder && (
+          <View testID="sb-gift" style={styles.giftBox}>
+            <Text style={styles.founderTitle}>🎁 DAROVAŤ PRÉMIUM (ZAKLADATEĽ)</Text>
+            <Text style={styles.giftHint}>Darujte tier komukoľvek podľa e-mailu — zadarmo, okamžite, s notifikáciou.</Text>
+            <TextInput
+              testID="sb-gift-email"
+              value={giftEmail}
+              onChangeText={setGiftEmail}
+              placeholder="email@pouzivatela.sk"
+              placeholderTextColor="#666"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={styles.giftInput}
+            />
+            <View style={styles.chipRow}>
+              {(['guardian', 'sentinel', 'archangel'] as const).map(t3 => (
+                <Pressable key={t3} testID={`sb-gift-tier-${t3}`} onPress={() => setGiftTier(t3)} style={[styles.chip, giftTier === t3 && styles.chipActive]}>
+                  <Text style={[styles.chipText, giftTier === t3 && styles.chipTextActive]}>{t3.toUpperCase()}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.chipRow}>
+              {[30, 90, 365].map(d => (
+                <Pressable key={d} testID={`sb-gift-days-${d}`} onPress={() => setGiftDays(d)} style={[styles.chip, giftDays === d && styles.chipActive]}>
+                  <Text style={[styles.chipText, giftDays === d && styles.chipTextActive]}>{d} DNÍ</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable testID="sb-gift-send" onPress={sendGift} disabled={!!busy || !giftEmail.trim()} style={[styles.payBtn, { backgroundColor: '#B8860B', marginTop: S.md, opacity: giftEmail.trim() ? 1 : 0.5 }]}>
+              {busy === 'gift' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, { color: OBSIDIAN }]}>DAROVAŤ {giftTier.toUpperCase()} · {giftDays} DNÍ</Text>}
+            </Pressable>
+            {gifts.slice(0, 5).map((g: any) => (
+              <Text key={g.gift_id} style={styles.giftRow}>🎁 {g.to_email} — {String(g.tier).toUpperCase()} · {g.days} dní · {String(g.created_at).slice(0, 10)}</Text>
+            ))}
           </View>
         )}
 
@@ -256,4 +389,22 @@ const styles = StyleSheet.create({
   info: { color: '#5FA779', marginTop: S.md, fontSize: 12, lineHeight: 17 },
   err: { color: C.error, marginTop: S.md, fontSize: 12, lineHeight: 16 },
   disclaimer: { marginTop: S.xl, color: C.info, fontSize: 10, lineHeight: 15, textAlign: 'center' },
+  mgmtTitle: { marginTop: S.xl, color: C.info, fontWeight: '800', fontSize: 11, letterSpacing: 2 },
+  cancelRow: { flexDirection: 'row', gap: S.sm, marginTop: S.md },
+  cancelBtn: { flex: 1, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.sm, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: S.md },
+  cancelText: { color: C.info, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  txEmpty: { color: C.info, fontSize: 11, marginTop: S.md },
+  txRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.surface2, borderRadius: R.sm, padding: S.md, marginTop: S.sm },
+  txTitle: { color: C.fg, fontWeight: '800', fontSize: 12 },
+  txMeta: { color: C.info, fontSize: 10, marginTop: 2 },
+  txAmount: { color: C.fg, fontWeight: '900', fontSize: 13 },
+  giftBox: { marginTop: S.md, borderWidth: 2, borderColor: '#B8860B', padding: S.md, backgroundColor: OBSIDIAN },
+  giftHint: { color: '#8A8A93', fontSize: 10.5, marginTop: 4, lineHeight: 14 },
+  giftInput: { marginTop: S.md, borderWidth: 1.5, borderColor: '#3A3A44', color: PLATINUM, paddingHorizontal: S.md, minHeight: 48, fontSize: 14, borderRadius: R.sm },
+  chipRow: { flexDirection: 'row', gap: S.sm, marginTop: S.sm },
+  chip: { flex: 1, borderWidth: 1.5, borderColor: '#3A3A44', borderRadius: R.pill, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  chipActive: { borderColor: '#B8860B', backgroundColor: 'rgba(184,134,11,0.15)' },
+  chipText: { color: '#8A8A93', fontWeight: '900', fontSize: 9.5, letterSpacing: 1 },
+  chipTextActive: { color: '#B8860B' },
+  giftRow: { color: '#8A8A93', fontSize: 10.5, marginTop: S.sm },
 });

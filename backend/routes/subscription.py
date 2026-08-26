@@ -164,6 +164,23 @@ async def subscription_trial(authorization: Optional[str] = Header(None)):
     return {"ok": True, "tier": "sentinel", "trial": True, "tier_until": until.isoformat()}
 
 
+@api.post("/subscription/cancel")
+async def subscription_cancel(authorization: Optional[str] = Header(None)):
+    """One-tap cancellation — immediate downgrade to Sovereign (no auto-renew exists)."""
+    user = await get_current_user(authorization)
+    fresh = await db.users.find_one({"user_id": user["user_id"]},
+                                    {"_id": 0, "tier": 1, "tier_until": 1, "inner_circle": 1}) or {}
+    if fresh.get("inner_circle"):
+        raise HTTPException(400, "inner_circle_permanent: Doživotný Archangel (Inner Circle) sa nedá zrušiť.")
+    if current_tier(fresh) == "sovereign":
+        raise HTTPException(409, "no_active_subscription: Nemáte aktívne predplatné.")
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
+        "tier": "sovereign", "tier_until": None, "tier_paid_with": None,
+        "tier_billing": None, "family_pack_owner": False}})
+    return {"ok": True, "tier": "sovereign",
+            "message": "Predplatné zrušené — vraciate sa na bezplatný Sovereign. Kedykoľvek sa môžete vrátiť."}
+
+
 @api.get("/wealth/founder-dashboard")
 async def founder_dashboard(authorization: Optional[str] = Header(None)):
     """Founder-only admin view — MRR, ACV, Guardian Tax and premium revenue."""
