@@ -14,7 +14,10 @@
       "bundleIdentifier": "com.emergent.angelos.qvqss9",
       "infoPlist": {
         "NSMotionUsageDescription": "Detect falls and inactivity to keep you safe",
-        "NSLocationWhenInUseUsageDescription": "Send your location to family in emergencies"
+        "NSLocationWhenInUseUsageDescription": "Send your location to family in emergencies",
+        "NSCameraUsageDescription": "Scan medicine labels and record expert rehab videos",
+        "NSMicrophoneUsageDescription": "Record family voice messages and talk to Jarvis",
+        "NSPhotoLibraryUsageDescription": "Upload medical documents and rehab videos"
       }
     },
     "android": {
@@ -27,7 +30,9 @@
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.ACTIVITY_RECOGNITION",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {

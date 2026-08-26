@@ -234,3 +234,6 @@ Backend: /family/echoes/recipients + /family/echoes/send (guardian/inner_circle 
 
 ## Iteration 29 (Phase 33: SOVEREIGN TRIANGLE, June 2026)
 3-pillar restructure (UZDRAVOVANIE / RODINNÝ ŠTÍT / TREZOR), PillarHub sections+hero props, hunter tab hidden, gold pulsing Angel hero, Eternal Vault entry in pillar 3B. Also Phase 32.5: audio voice echoes (record+stream), companion morning reminder sweep + weekly vault report sweep (swarm agents companion_care/weekly_reporter). Frontend audit 60/60 GREEN, 0 dead buttons, 0 console errors (iteration_29.json). Optional note: /fall-verify countdown starts on mount (by design).
+
+## Iteration 30 (Phase 34: Physio Expert Videos, June 2026)
+physio_media.py CRUD + stream (curl 6/6 OK: upload/list/privacy/global-founder/stream/delete), physio.tsx ExpertVideos per guide (screenshot OK: section+FOUNDER badge+web note), app.json camera/mic/photo permissions added. Video upload/record is native-only (web shows note).

@@ -1,13 +1,14 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // PHYSIO-AI — Video-Native Hub: premium video guides (expo-video, zero-stutter) + cached TTS narration
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, LayoutAnimation, Platform, UIManager } from 'react-native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, LayoutAnimation, Platform, UIManager, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { api } from '@/src/api';
+import { api, apiUpload, API_BASE, getToken } from '@/src/api';
 import { cachedAudioUri, cachedVideo, prefetchVideo } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
@@ -29,21 +30,112 @@ const REGIONS = [
 const INTENSITY = ['light', 'medium', 'firm'];
 
 /** Zero-stutter guide video — hardware-accelerated player, local FS cache + native caching. */
-function GuideVideo({ url, testID }: { url: string; testID: string }) {
+function GuideVideo({ url, testID, muted = true }: { url: string; testID: string; muted?: boolean }) {
   const src = cachedVideo(url);
   const player = useVideoPlayer(
     src.startsWith('file') ? src : ({ uri: src, useCaching: true } as any),
     p => {
-      p.loop = true;
-      p.muted = true; // demonstration loop — narration comes from Jarvis TTS
+      p.loop = muted;
+      p.muted = muted; // demonstration loops are silent — expert uploads keep their own narration
       p.bufferOptions = { preferredForwardBufferDuration: 10, waitsToMinimizeStalling: true } as any;
-      p.play();
+      if (muted) p.play();
     });
   return (
     <View style={styles.videoWrap}>
       <VideoView testID={testID} player={player} style={styles.video} contentFit="cover"
         nativeControls allowsFullscreen allowsPictureInPicture={false} />
       <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>▶ VIDEO-NÁVOD · HD</Text></View>
+    </View>
+  );
+}
+
+/** FOUNDER'S EXPERT VIDEOS — upload your own massage/rehab videos per guide (authentic rehab). */
+function ExpertVideos({ guideId }: { guideId: string }) {
+  const [videos, setVideos] = useState<any[]>([]);
+  const [tk, setTk] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [camBlocked, setCamBlocked] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [r, tok] = await Promise.all([api(`/physio/videos?guide_id=${guideId}`), getToken()]);
+      setVideos((r as any).videos || []);
+      setTk(tok || '');
+    } catch (e) { console.log(e); }
+  }, [guideId]);
+  useEffect(() => { load(); }, [load]);
+
+  const upload = async (fromCamera: boolean) => {
+    setErr('');
+    try {
+      let res: ImagePicker.ImagePickerResult;
+      if (fromCamera) {
+        let perm = await ImagePicker.getCameraPermissionsAsync();
+        if (!perm.granted) {
+          if (perm.canAskAgain === false) { setCamBlocked(true); return; }
+          perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { if (perm.canAskAgain === false) setCamBlocked(true); return; }
+        }
+        res = await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: 180, quality: 0.7 } as any);
+      } else {
+        res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 0.7 } as any);
+      }
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      setBusy(true);
+      tap('success');
+      await apiUpload('/physio/videos', a.uri, a.fileName || 'expert.mp4', a.mimeType || 'video/mp4', { guide_id: guideId });
+      await load();
+    } catch (e: any) { setErr(String(e.message || e)); }
+    setBusy(false);
+  };
+
+  const remove = async (id: string) => {
+    try { await api(`/physio/videos/${id}`, { method: 'DELETE' }); await load(); } catch (e) { console.log(e); }
+  };
+
+  return (
+    <View style={{ marginTop: S.sm }}>
+      <Text style={styles.evLbl}>🎬 EXPERTNÉ VIDEÁ — VLASTNÁ NARÁCIA</Text>
+      {videos.map(v => (
+        <View key={v.video_id} style={styles.evCard}>
+          {!!tk && <GuideVideo url={`${API_BASE}/api/physio/videos/${v.video_id}/file?token=${tk}`} testID={`ev-video-${v.video_id}`} muted={false} />}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.evTitle} numberOfLines={1}>{v.title}</Text>
+            {v.is_global && <View style={styles.evBadge}><Text style={styles.evBadgeText}>FOUNDER</Text></View>}
+            <View style={{ flex: 1 }} />
+            {v.mine && (
+              <Pressable testID={`ev-del-${v.video_id}`} onPress={() => remove(v.video_id)} hitSlop={10}>
+                <Ionicons name="trash-outline" size={16} color={C.info} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      ))}
+      {videos.length === 0 && <Text style={styles.evEmpty}>Zatiaľ žiadne vlastné video k tomuto cviku — nahrajte prvé a rehabilitácia bude autenticky vaša.</Text>}
+      {Platform.OS === 'web' ? (
+        <Text style={styles.evEmpty}>📱 Nahrávanie videí funguje v mobilnej appke (galéria alebo kamera).</Text>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
+          <Pressable testID={`ev-record-${guideId}`} onPress={() => upload(true)} disabled={busy} style={styles.evBtn}>
+            {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : (<>
+              <Ionicons name="videocam" size={15} color={C.onInverse} />
+              <Text style={styles.evBtnText}>NAHRAŤ KAMEROU</Text>
+            </>)}
+          </Pressable>
+          <Pressable testID={`ev-pick-${guideId}`} onPress={() => upload(false)} disabled={busy} style={[styles.evBtn, styles.evBtnGhost]}>
+            <Ionicons name="images-outline" size={15} color={C.brand} />
+            <Text style={[styles.evBtnText, { color: C.brand }]}>Z GALÉRIE</Text>
+          </Pressable>
+        </View>
+      )}
+      {camBlocked && (
+        <Pressable onPress={() => Linking.openSettings()} style={styles.evSettings}>
+          <Text style={styles.evSettingsText}>Kamera je zablokovaná — OTVORIŤ NASTAVENIA</Text>
+        </Pressable>
+      )}
+      {!!err && <Text style={styles.evErr}>{err}</Text>}
     </View>
   );
 }
@@ -115,7 +207,7 @@ export default function Physio() {
         <Text style={styles.title}>PHYSIO-AI</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>FOUNDER'S LEGACY · VIDEO-NATÍVNE NÁVODY · SELF-MASSAGE</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>FOUNDER’S LEGACY · VIDEO-NATÍVNE NÁVODY · SELF-MASSAGE</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <Text style={styles.lbl}>REGION</Text>
@@ -185,6 +277,7 @@ export default function Physio() {
                               <Text key={i} style={styles.guideStep}>{i + 1}. {s}</Text>
                             ))}
                             {!!g.video_note && <Text style={styles.videoNote}>{g.video_note}</Text>}
+                            <ExpertVideos guideId={g.id} />
                           </View>
                         )}
                       </GlassCard>
@@ -234,4 +327,16 @@ const styles = StyleSheet.create({
   videoBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(10,10,15,0.72)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 },
   videoBadgeText: { color: C.brand, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   videoNote: { color: C.info, fontSize: 9, marginTop: 4 },
+  evLbl: { fontSize: 10, letterSpacing: 1.5, color: C.brand, fontWeight: '900', marginTop: S.sm, marginBottom: 6 },
+  evCard: { marginBottom: S.sm, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, padding: 8, backgroundColor: 'rgba(212,175,55,0.04)' },
+  evTitle: { color: C.fg, fontWeight: '800', fontSize: 11.5, flexShrink: 1 },
+  evBadge: { backgroundColor: C.brand, borderRadius: R.pill, paddingHorizontal: 6, paddingVertical: 1 },
+  evBadgeText: { color: C.onInverse, fontWeight: '900', fontSize: 8, letterSpacing: 1 },
+  evEmpty: { color: C.info, fontSize: 10.5, lineHeight: 15 },
+  evBtn: { flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: R.pill, minHeight: 44 },
+  evBtnGhost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: C.brand },
+  evBtnText: { color: C.onInverse, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  evSettings: { marginTop: S.sm, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: C.warn },
+  evSettingsText: { color: C.onWarn, fontWeight: '900', fontSize: 10.5 },
+  evErr: { color: C.error, fontSize: 10.5, marginTop: 6, fontWeight: '700' },
 });
