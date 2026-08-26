@@ -303,12 +303,81 @@ class AgentChatIn(BaseModel):
     message: str
     language: str = "sk"
 
+
+# ---- VOICE PAIN LOGGING — "bolí ma to na sedem" → pain diary, no LLM needed ----
+PAIN_NUM_WORDS = {
+    "jeden": 1, "jedna": 1, "jednu": 1, "dva": 2, "dve": 2, "dvě": 2, "tri": 3, "tři": 3,
+    "štyri": 4, "styri": 4, "čtyři": 4, "ctyri": 4, "päť": 5, "pat": 5, "päť": 5, "pět": 5, "pet": 5,
+    "šesť": 6, "sest": 6, "šest": 6, "sedem": 7, "sedm": 7, "osem": 8, "osm": 8,
+    "deväť": 9, "devat": 9, "devět": 9, "desať": 10, "desat": 10, "deset": 10,
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+}
+
+
+def _detect_pain_level(text: str) -> Optional[int]:
+    t = (text or "").lower().strip()
+    if len(t) > 120 or not re.search(r"bol[íi]|boles[tť]|pain|hurt", t):
+        return None
+    cand = None
+    m = re.search(r"(?:\bna|\bat|úroveň|uroven|\blevel|stupe[ňn])\s+(\d{1,2}|[a-záäčďéíľňóôřšťúýž]+)", t)
+    if m:
+        cand = m.group(1)
+    if cand is None:
+        m2 = re.search(r"\b(\d{1,2})\s*(?:/|z|out of)\s*10\b", t) or re.search(r"\b(\d{1,2})\b", t)
+        if m2:
+            cand = m2.group(1)
+    if cand is None:
+        for w, v in PAIN_NUM_WORDS.items():
+            if re.search(rf"\b{w}\b", t):
+                cand = w
+                break
+    if cand is None:
+        return None
+    lvl = int(cand) if str(cand).isdigit() else PAIN_NUM_WORDS.get(str(cand))
+    return lvl if lvl and 1 <= lvl <= 10 else None
+
+
 @api.post("/agent/chat")
 async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     if not body.message.strip():
         raise HTTPException(400, "message required")
+
+    # HANDS-FREE PAIN DIARY — deterministic intent, instant confirmation (no LLM round-trip)
+    pain_lvl = _detect_pain_level(body.message)
+    if pain_lvl:
+        now = datetime.now(timezone.utc)
+        await db.pain_diary.insert_one({
+            "entry_id": uuid.uuid4().hex, "user_id": uid, "level": pain_lvl,
+            "guide_id": None, "note": body.message[:200], "source": "voice",
+            "created_at": now})
+        sk = (user.get("language") or "sk")[:2] in ("sk", "cs")
+        if pain_lvl >= 8:
+            reply = (f"Zapísal som bolesť {pain_lvl}/10 do bolesťového denníka. To je veľa — dnes už necvičte, "
+                     "odpočiňte si, a ak to potrvá do zajtra, spolu kontaktujeme lekára. Krivku uvidíte v Kolotoči uzdravenia."
+                     if sk else f"Logged pain {pain_lvl}/10. That's high — stop exercising today and rest. If it persists, contact your doctor.")
+            mood = "concerned"
+        elif pain_lvl >= 5:
+            reply = (f"Zapísal som bolesť {pain_lvl}/10. Stredná úroveň — znížte intenzitu cvičenia. "
+                     "Trend sledujem za vás a lekár ho uvidí v reporte."
+                     if sk else f"Logged pain {pain_lvl}/10. Moderate — reduce exercise intensity. The trend goes into your doctor's report.")
+            mood = "thinking"
+        else:
+            reply = (f"Zapísal som bolesť {pain_lvl}/10 — nízka, telo sa pekne hojí. Krivka pokroku rastie v Kolotoči uzdravenia. 💛"
+                     if sk else f"Logged pain {pain_lvl}/10 — low, you're healing well. See your progress curve in the Healing Carousel. 💛")
+            mood = "calm"
+        await db.agent_conversations.insert_many([
+            {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": body.message[:1000], "at": now},
+            {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply, "mood": mood, "at": now},
+        ])
+        await db.agent_state.update_one({"user_id": uid}, {"$set": {"mood": mood}})
+        xp = await award_xp(uid, 5, "pain_log")
+        return {"reply": reply, "mood": mood, "pain_logged": pain_lvl,
+                "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
+                "level_name": LEVEL_NAMES[xp["level"] - 1], "alerts": []}
+
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
     ctx = await _gather_context(user)

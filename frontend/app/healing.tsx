@@ -22,6 +22,47 @@ const STEP_CTA: Record<string, string> = {
   bureaucracy: 'Neschopenka a vychádzky', recovery: 'Spustiť Physio-AI cviky',
 };
 
+/** PAIN CURVE — proof of progress toward 100% fit, fed by the pain diary (incl. voice logs). */
+function PainCurve() {
+  const [t, setT] = useState<any>(null);
+  useEffect(() => { (async () => { try { setT(await api('/physio/pain/trends')); } catch (e) { console.log(e); } })(); }, []);
+  if (!t?.entries?.length) return null;
+  const last = t.entries.slice(-14);
+  const label = t.trend === 'improving' ? '↘ BOLESŤ KLESÁ — HOJENIE'
+    : t.trend === 'worsening' ? '↗ BOLESŤ RASTIE — POZOR' : '→ STABILNÁ';
+  const color = (l: number) => (l >= 8 ? C.error : l >= 5 ? C.warn : C.brand);
+  return (
+    <View testID="healing-pain-curve" style={pc.card}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={pc.title}>📉 KRIVKA BOLESTI — DÔKAZ POKROKU</Text>
+        <Text style={[pc.trend, t.trend === 'worsening' && { color: C.warn }]}>{label}</Text>
+      </View>
+      <View style={pc.bars}>
+        {last.map((e: any, i: number) => (
+          <View key={i} style={pc.barCol}>
+            <View style={[pc.bar, { height: 8 + e.level * 6.5, backgroundColor: color(e.level) }]} />
+            <Text style={pc.barNum}>{e.level}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={pc.sub}>Priemer 14 dní: {t.avg_14d}/10 · {t.count} záznamov · lekár vidí krivku v reporte</Text>
+      <Text style={pc.hint}>🎙 Stačí povedať Jarvisovi: „Bolí ma to na sedem“ — zapíše sa samo.</Text>
+    </View>
+  );
+}
+
+const pc = StyleSheet.create({
+  card: { marginTop: S.md, backgroundColor: C.surface2, borderRadius: R.lg, padding: S.md, borderWidth: 1, borderColor: C.border },
+  title: { color: C.fg, fontWeight: '900', fontSize: 11, letterSpacing: 0.5 },
+  trend: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 0.5 },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 5, marginTop: S.md, minHeight: 84 },
+  barCol: { alignItems: 'center', gap: 3, flex: 1, maxWidth: 26 },
+  bar: { width: '100%', borderRadius: 4 },
+  barNum: { color: C.info, fontSize: 8.5, fontWeight: '800' },
+  sub: { color: C.info, fontSize: 10, marginTop: S.sm },
+  hint: { color: C.brand, fontSize: 10.5, fontWeight: '700', marginTop: 4 },
+});
+
 export default function Healing() {
   const router = useRouter();
   const params = useLocalSearchParams<{ specialty?: string; auto?: string }>();
@@ -146,6 +187,9 @@ export default function Healing() {
                   </View>
                 </View>
               </GlassCard>
+
+              {/* PAIN CURVE — visible proof of healing inside the Carousel */}
+              <PainCurve />
 
               <View style={{ marginTop: S.lg, gap: S.md }}>
                 {keys.map((k, i) => {

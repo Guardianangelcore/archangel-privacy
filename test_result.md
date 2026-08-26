@@ -243,3 +243,6 @@ Whisper→Claude caption pipeline (E2E s reálnou rečou OK), 7-day plan s denno
 
 ## Iteration 32 (Phase 36: Evening plan reminder + Pain diary, June 2026)
 physio_reminder_sweep + swarm physio_coach (curl: 1 sent, dedup OK; push 401 v dev = expected, placeholder key). Pain diary POST/trends + report section 5 s bar grafom (PDF 200). PainLogger UI klik → reply + trend (screenshot OK). Validácia level 11 → 400.
+
+## Iteration 33 (Phase 37: Pain curve in Carousel + voice pain logging, June 2026)
+PainCurve v /healing (screenshot OK: stĺpce+trend+hint), agent.py pain intent (4/4 curl variants correct, žiadny false positive na bežnú otázku). pain_diary entries source:'voice'.
