@@ -73,7 +73,7 @@ export default function Home() {
             <Text style={styles.brand}>GUARDIAN</Text>
             {beaconSent && <View testID="beacon-dot" style={styles.beaconDot} />}
           </View>
-          <Text style={styles.brandSub}>SUVERÉNNY OCHRANNÝ SYSTÉM</Text>
+          <Text style={styles.brandSub}>{t('brand_sub', lang)}</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
           <Pressable testID="home-jarvis" onPress={() => { tap(); router.push('/jarvis'); }} hitSlop={8}>
@@ -89,17 +89,20 @@ export default function Home() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.greeting}>Dobrý deň,{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian').split(' ')[0]}.</Text></Text>
+        <Text style={styles.greeting}>{t('greeting_hello', lang)}{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian').split(' ')[0]}.</Text></Text>
 
         {/* JARVIS PRESENCE — pulsing AI Orb, the primary welcome interface */}
-        <HomeOrb onPress={() => { tap('heavy'); router.push('/jarvis'); }} />
+        <HomeOrb lang={lang} onPress={() => { tap('heavy'); router.push('/jarvis'); }} />
+
+        {/* THE HEALING CAROUSEL — the ENGINE of the app: injury → money → doctor → papers → fit */}
+        <HealingStrip router={router} />
 
         <GlassCard testID="home-daily-brief" onPress={() => router.push('/daily-brief')} pad={S.md} style={{ marginTop: S.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
             <View style={styles.briefIcon}><Ionicons name="sunny" size={22} color={C.brand} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.briefTitle}>DENNÝ PREHĽAD</Text>
-              <Text style={styles.briefSub}>Lieky · termíny · odkazy od rodiny na jednu obrazovku</Text>
+              <Text style={styles.briefTitle}>{t('daily_brief', lang)}</Text>
+              <Text style={styles.briefSub}>{t('daily_brief_sub', lang)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.info} />
           </View>
@@ -113,27 +116,27 @@ export default function Home() {
             </LinearGradient>
             <View style={{ flex: 1 }}>
               <Text style={styles.briefTitle}>GUARDIAN LENS</Text>
-              <Text style={styles.briefSub}>Odfoťte liek či nález — Jarvis okamžite koná</Text>
+              <Text style={styles.briefSub}>{t('lens_sub', lang)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.info} />
           </View>
         </GlassCard>
 
         <View style={styles.pillarGrid}>
-          <PillarTile testID="pillar-health" icon="heart" title="Zdravie" sub="Trezor · AI prekladač · Rehabilitácia" onPress={() => router.navigate('/(tabs)/health')} />
-          <PillarTile testID="pillar-family" icon="people" title="Rodina" sub="Angel režim · Rodinný pulz" onPress={() => router.navigate('/(tabs)/family')} />
-          <PillarTile testID="pillar-legacy" icon="rose" title="Odkaz a majetok" sub="Solidarita · Závet · Fond" onPress={() => router.navigate('/(tabs)/legacy')} />
-          <PillarTile testID="pillar-hunter" icon="search" title="Lovec termínov" sub="Termíny · Zásoby · Blackout" onPress={() => router.navigate('/(tabs)/hunter')} />
+          <PillarTile testID="pillar-health" icon="heart" title={t('pillar_health', lang)} sub={t('pillar_health_sub', lang)} onPress={() => router.navigate('/(tabs)/health')} />
+          <PillarTile testID="pillar-family" icon="people" title={t('pillar_family', lang)} sub={t('pillar_family_sub', lang)} onPress={() => router.navigate('/(tabs)/family')} />
+          <PillarTile testID="pillar-legacy" icon="wallet" title="Majetok" sub="Príjem · poistné nároky · GA-T ekonomika" onPress={() => router.navigate('/(tabs)/legacy')} />
+          <PillarTile testID="pillar-hunter" icon="search" title={t('pillar_hunter', lang)} sub={t('pillar_hunter_sub', lang)} onPress={() => router.navigate('/(tabs)/hunter')} />
         </View>
 
         <View style={styles.ecoRow}>
           <Pressable testID="home-token" onPress={() => { tap(); router.push('/token'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
             <Ionicons name="diamond" size={18} color={C.brand} />
-            <Text style={styles.ecoText}>GA-T PEŇAŽENKA</Text>
+            <Text style={styles.ecoText}>{t('gat_wallet', lang)}</Text>
           </Pressable>
           <Pressable testID="home-fortress" onPress={() => { tap(); router.push('/fortress'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
             <Ionicons name="shield-half" size={18} color={C.brand} />
-            <Text style={styles.ecoText}>KYBER-PEVNOSŤ</Text>
+            <Text style={styles.ecoText}>{t('cyber_fortress', lang)}</Text>
           </Pressable>
         </View>
 
@@ -141,7 +144,7 @@ export default function Home() {
           <Ionicons name="qr-code-outline" size={18} color={C.onError} />
           <Text style={styles.sosPillText}>{t('emergency_qr', lang).toUpperCase()}</Text>
         </Pressable>
-        <Text style={styles.beaconHint}>◉ Tichý maják: podržte logo GUARDIAN 1 sekundu</Text>
+        <Text style={styles.beaconHint}>{t('beacon_hint', lang)}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -157,7 +160,7 @@ const ORB_MOOD: Record<string, { color: string; glow: string; dur: number }> = {
 };
 const HOME_ORB = 150;
 
-function HomeOrb({ onPress }: { onPress: () => void }) {
+function HomeOrb({ lang, onPress }: { lang: Lang; onPress: () => void }) {
   const [agent, setAgent] = useState<any>(null);
   const [geo, setGeo] = useState<any>(null);
   useEffect(() => {
@@ -187,14 +190,108 @@ function HomeOrb({ onPress }: { onPress: () => void }) {
         </Pressable>
       </Animated.View>
       <Text style={styles.orbTitle}>JARVIS</Text>
-      <Text style={styles.orbSub}>Ťuknite a hovorte — váš anjel počúva</Text>
+      <Text style={styles.orbSub}>{t('orb_sub', lang)}</Text>
       {!!geo && <Text style={styles.orbGeo}>📍 {geo.city} · {geo.country}</Text>}
     </View>
   );
 }
 
-function PillarTile({ testID, icon, title, sub, onPress }: any) {
+// ---- THE HEALING CAROUSEL STRIP — the engine of the app on the home screen ----
+const HEAL_FALLBACK_META: Record<string, { title: string; icon: string }> = {
+  intake: { title: 'Príjem', icon: 'scan' },
+  financial_shield: { title: 'Peniaze', icon: 'umbrella' },
+  access: { title: 'Doktor', icon: 'search' },
+  bureaucracy: { title: 'PN', icon: 'document-text' },
+  recovery: { title: 'Fyzio', icon: 'body' },
+};
+
+function HealingStrip({ router }: any) {
+  const [hs, setHs] = useState<any>(null);
+  useEffect(() => { (async () => { try { setHs(await api('/healing/state')); } catch {} })(); }, []);
+  const keys: string[] = hs?.step_keys || Object.keys(HEAL_FALLBACK_META);
+  const meta = hs?.steps_meta || {};
+  const steps = hs?.journey?.steps || {};
   return (
+    <GlassCard testID="home-healing" onPress={() => { tap('medium'); router.push('/healing'); }} pad={S.md} style={{ marginTop: S.lg }} glow>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.healTitle}>⚙️ KOLOTOČ UZDRAVENIA</Text>
+        <Text style={styles.healPct}>{hs?.active ? `${hs.progress_pct} %` : 'MOTOR APPKY'}</Text>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm, paddingTop: S.md }}>
+        {keys.map((k, i) => {
+          const done = steps[k] === 'done';
+          const m = meta[k] || HEAL_FALLBACK_META[k];
+          return (
+            <View key={k} style={[styles.healStep, done && styles.healStepOn]}>
+              <Ionicons name={(m?.icon || 'ellipse') as any} size={18} color={done ? C.onInverse : C.brand} />
+              <Text style={[styles.healStepText, done && { color: C.onInverse }]}>{i + 1}. {(m?.title || k).toUpperCase()}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+      <Text style={styles.healSub}>
+        {hs?.active
+          ? `${hs.journey.kind_label} · ${hs.journey.specialty} — Jarvis riadi celú cestu k 100 % fit`
+          : 'Úraz či choroba? 1 ťuk — poistka platí hneď, doktor nájdený, neschopenka strážená.'}
+      </Text>
+    </GlassCard>
+  );
+}
+
+// ---- THE COMPANION — empathetic caregiver check-in (Angel Shield 2.0) ----
+function CompanionCard() {
+  const [g, setG] = useState<any>(null);
+  const [reply, setReply] = useState('');
+  useEffect(() => { (async () => { try { setG(await api('/companion/greeting')); } catch {} })(); }, []);
+  const answer = async (mood: number) => {
+    tap('medium');
+    try {
+      const r: any = await api('/companion/checkin', { method: 'POST', body: JSON.stringify({ mood, topic: g?.topic }) });
+      setReply(r.reply);
+    } catch (e) { console.log(e); }
+  };
+  if (!g) return null;
+  return (
+    <View testID="angel-companion" style={styles.compCard}>
+      <Text style={styles.compQ}>{g.question}</Text>
+      {!!g.care_note && <Text style={styles.compCare}>{g.care_note}</Text>}
+      {reply ? (
+        <Text testID="companion-reply" style={styles.compReply}>💛 {reply}</Text>
+      ) : g.answered_today ? (
+        <Text style={styles.compReply}>Dnes ste mi už odpovedali — ďakujem. 💛</Text>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
+          {([[5, '😊'], [3, '😐'], [1, '😞']] as const).map(([m, e]) => (
+            <Pressable key={m} testID={`companion-mood-${m}`} onPress={() => answer(m)} style={styles.compBtn}>
+              <Text style={{ fontSize: 36 }}>{e}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ---- VOICE ECHOES CARD — family voice-stream, one tap, no menus ----
+function VoiceEchoCard({ router }: any) {
+  const [unheard, setUnheard] = useState(0);
+  useEffect(() => { (async () => { try { const r: any = await api('/family/echoes'); setUnheard(r.unheard || 0); } catch {} })(); }, []);
+  return (
+    <Pressable testID="angel-voice-echoes" onPress={() => { tap('heavy'); router.push('/voice-echoes'); }} style={styles.angelBigCard}>
+      <View style={styles.angelBigIcon}>
+        <Ionicons name="heart" size={32} color={C.onInverse} />
+        {unheard > 0 && <View style={styles.echoBadge}><Text style={styles.echoBadgeText}>{unheard}</Text></View>}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.angelBigTitle}>ODKAZY OD RODINY</Text>
+        <Text style={styles.angelBigSub}>{unheard > 0 ? `Máte ${unheard} nové odkazy — ťuknite a vypočujte si ich.` : 'Vypočujte si hlasové odkazy od najbližších.'}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={22} color={C.brand} />
+    </Pressable>
+  );
+}
+
+function PillarTile({ testID, icon, title, sub, onPress }: any) {  return (
     <View style={{ width: '48%', flexGrow: 1 }}>
       <GlassCard testID={testID} onPress={onPress} pad={S.lg} radius={R.md}>
         <View style={{ minHeight: 118, justifyContent: 'space-between', gap: S.md }}>
@@ -298,31 +395,44 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
               </Pressable>
             </View>
 
-            <View style={styles.angelCenter}>
-              <Animated.View style={[styles.jarvisOrbOuter, pulse]}>
-                <Pressable
-                  testID="angel-jarvis"
-                  onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-                    router.push('/jarvis');
-                  }}
-                  style={styles.jarvisOrb}
-                >
-                  <Ionicons name="mic" size={64} color={C.onInverse} />
-                </Pressable>
-              </Animated.View>
-              <Text style={styles.jarvisLabel}>HOVORIŤ S JARVISOM</Text>
-              <View style={{ flexDirection: 'row', gap: S.md }}>
-                <Pressable testID="angel-daily-brief" onPress={() => { tap(); router.push('/daily-brief'); }} style={styles.angelBrief}>
-                  <Ionicons name="sunny" size={22} color={C.brand} />
-                  <Text style={styles.angelBriefText}>MÔJ DEŇ</Text>
-                </Pressable>
-                <Pressable testID="angel-lens" onPress={() => { tap('heavy'); router.push('/lens'); }} style={styles.angelBrief}>
-                  <Ionicons name="aperture" size={22} color={C.brand} />
-                  <Text style={styles.angelBriefText}>ŠOŠOVKA</Text>
-                </Pressable>
+            <ScrollView contentContainerStyle={styles.angelScroll} showsVerticalScrollIndicator={false}>
+              {/* THE COMPANION — Jarvis as a caregiver, not an alarm clock */}
+              <CompanionCard />
+
+              <View style={{ alignItems: 'center', gap: S.md, marginTop: S.lg }}>
+                <Animated.View style={[styles.jarvisOrbOuter, pulse]}>
+                  <Pressable
+                    testID="angel-jarvis"
+                    onPress={() => {
+                      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+                      router.push('/jarvis');
+                    }}
+                    style={styles.jarvisOrb}
+                  >
+                    <Ionicons name="mic" size={52} color={C.onInverse} />
+                  </Pressable>
+                </Animated.View>
+                <Text style={styles.jarvisLabel}>HOVORIŤ S JARVISOM</Text>
               </View>
-            </View>
+
+              {/* MAGIC LENS — one tap: photograph a label, Jarvis reads it aloud */}
+              <Pressable testID="angel-magic-lens" onPress={() => { tap('heavy'); router.push('/lens'); }} style={styles.angelBigCard}>
+                <View style={styles.angelBigIcon}><Ionicons name="aperture" size={32} color={C.onInverse} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.angelBigTitle}>KÚZELNÁ LUPA</Text>
+                  <Text style={styles.angelBigSub}>Odfoťte krabičku lieku či noviny — prečítam vám to nahlas.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={C.brand} />
+              </Pressable>
+
+              {/* FAMILY VOICE-STREAM */}
+              <VoiceEchoCard router={router} />
+
+              <Pressable testID="angel-daily-brief" onPress={() => { tap(); router.push('/daily-brief'); }} style={[styles.angelBrief, { alignSelf: 'center', marginTop: S.md }]}>
+                <Ionicons name="sunny" size={22} color={C.brand} />
+                <Text style={styles.angelBriefText}>MÔJ DEŇ</Text>
+              </Pressable>
+            </ScrollView>
 
             <View style={styles.angelBottom}>
               <Pressable testID="angel-sos" onPress={() => router.push('/fall-verify')} style={[styles.angelEmg, { backgroundColor: C.error }]}>
@@ -390,9 +500,27 @@ const styles = StyleSheet.create({
   acousticBtnOn: { backgroundColor: C.brand },
   acousticText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
   angelCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: S.xl },
-  jarvisOrbOuter: { width: 210, height: 210, borderRadius: 105, backgroundColor: 'rgba(212,175,55,0.18)', alignItems: 'center', justifyContent: 'center' },
-  jarvisOrb: { width: 164, height: 164, borderRadius: 82, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.brandSec },
-  jarvisLabel: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 16 },
+  angelScroll: { padding: S.lg, paddingBottom: S.md, gap: S.md },
+  jarvisOrbOuter: { width: 170, height: 170, borderRadius: 85, backgroundColor: 'rgba(212,175,55,0.18)', alignItems: 'center', justifyContent: 'center' },
+  jarvisOrb: { width: 132, height: 132, borderRadius: 66, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.brandSec },
+  jarvisLabel: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 15 },
+  angelBigCard: { flexDirection: 'row', alignItems: 'center', gap: S.lg, backgroundColor: 'rgba(16,16,23,0.92)', borderRadius: R.lg, padding: S.lg, minHeight: 96, borderWidth: 2, borderColor: C.brand, marginTop: S.md },
+  angelBigIcon: { width: 62, height: 62, borderRadius: 31, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
+  angelBigTitle: { color: C.fg, fontWeight: '900', fontSize: 17, letterSpacing: 1 },
+  angelBigSub: { color: C.onS3, fontSize: 13, lineHeight: 18, marginTop: 3 },
+  echoBadge: { position: 'absolute', top: -4, right: -4, minWidth: 24, height: 24, borderRadius: 12, backgroundColor: C.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  echoBadgeText: { color: C.onError, fontWeight: '900', fontSize: 12 },
+  compCard: { backgroundColor: 'rgba(16,16,23,0.92)', borderRadius: R.lg, padding: S.lg, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.5)' },
+  compQ: { color: C.fg, fontWeight: '800', fontSize: 18, lineHeight: 26 },
+  compCare: { color: C.brand, fontSize: 13, marginTop: 6, lineHeight: 18 },
+  compReply: { color: C.brand, fontWeight: '700', fontSize: 14, lineHeight: 20, marginTop: S.md },
+  compBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 64, borderRadius: R.md, borderWidth: 1.5, borderColor: C.borderStrong, backgroundColor: 'rgba(32,32,43,0.8)' },
+  healTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+  healPct: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  healStep: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.pill, paddingHorizontal: S.md, minHeight: 40 },
+  healStepOn: { backgroundColor: C.brand, borderColor: C.brand },
+  healStepText: { color: C.fg, fontWeight: '900', fontSize: 9.5, letterSpacing: 0.5 },
+  healSub: { color: C.info, fontSize: 10.5, marginTop: S.md, lineHeight: 15 },
   angelBrief: { flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 2, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.xl, minHeight: 56, backgroundColor: 'rgba(10,10,15,0.5)' },
   angelBriefText: { color: C.brand, fontWeight: '900', fontSize: 15, letterSpacing: 2 },
   angelBottom: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', paddingBottom: S.xxl, paddingTop: S.lg },

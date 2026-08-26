@@ -251,3 +251,24 @@ subscription/upgrade card branch now 400 use_billing_checkout (GA-T path unchang
 2. POTVRDENIE O PLATBE — billing._issue_receipt after every card activation: PDF (core._make_pdf) → object storage → db.documents (source billing_receipt, 'Doklad o platbe — …') + 🧾 calendar_events timeline entry; failure never breaks payment; visible in Vault with ZOBRAZIŤ/JARVIS buttons.
 3. RODINNÝ BALÍK — tier 'family_sentinel' (249 €/mes, 2390 €/rok, FAMILY_PACK max 4 members): activation gives payer Sentinel (non-destructive: never downgrades archangel/inner_circle) + up to 4 db.guardians members (tier_paid_with family_pack, family_members_activated on tx); sb-family-pack card in UI.
 4. FOUNDER GIFTING (user request 'daj zakladateľovi prístup na darovanie') — POST /billing/gift {email,tier,days≤3650} founder-only (403 otherwise, 404 unknown email, 409 inner_circle recipient) → grants tier + db.gifts + push; GET /billing/gifts history; UI: sb-gift box (email input, tier/days chips, history) visible only to founder.
+
+## Phase 30: LANGUAGE-AWARE OS — "the app speaks whatever language you set" (June 2026) — DONE ✅
+User demand: UI + Jarvis must follow the user's language setting (incl. German). Verified with language=de (screenshot + live LLM calls):
+1. JARVIS SPEAKS YOUR LANGUAGE — agent.py: LANG_FULL map + _lang_name(user); chat system prompt 'Answer STRICTLY in {lang}' + CRITICAL LANGUAGE RULE appended at the end (overrides conversation-language bias — required, model ignored the earlier instruction alone); briefing + insight prompts language-aware; Whisper STT language = user.language (was hardcoded sk); memory extraction language-neutral. Verified: chat reply + morning briefing in German ('Guten Morgen… In Prag ist es gerade…').
+2. UI LANGUAGE-AWARE — new i18n keys (sk/cs/en/de, others fall back to en): greeting_hello, brand_sub, orb_sub, daily_brief(_sub), lens_sub, pillar_*(_sub), gat_wallet, cyber_fortress, beacon_hint, tab_legacy, tab_hunter; wired in (tabs)/index.tsx (greeting, Orb, brief, lens, pillars, eco row, beacon hint) and (tabs)/_layout.tsx tab titles. Language switch in Profile (existing picker) or automatic via Travel Mode.
+Note: deep screens (hub item lists, monolith, partners) remain Slovak-first — translate on demand.
+
+## Phase 31: LIFE-FIRST REORGANIZATION — Sovereign Healing Loop + Angel Shield 2.0 + Eternal Vault (June 2026) — DONE ✅
+Founder directive: separate 'Life' from 'Legacy'; insurance = money NOW at injury (belongs in the loop, not the grave).
+1. KOLOTOČ UZDRAVENIA (backend routes/healing.py + frontend /healing):
+   - POST /api/healing/injury-event — NEURAL BUS: asyncio.gather fires Insurance Claim prefill (insurance_claims, daily benefit + 21d estimate from user's policies) AND Waitlist Hunter booking (Prague) SIMULTANEOUSLY; neural_bus event logged.
+   - GET /api/healing/state (5 steps: intake→financial_shield→access→bureaucracy→recovery; auto-completes bureaucracy when PN active; progress_pct), POST /healing/step/{k}/complete, POST /healing/claim/{id}/submit, POST /healing/close (100% fit).
+   - /healing screen: zero-typing smart wizard (kind/body-part/specialty chips), step timeline with claim card (ODOSLAŤ ŽIADOSŤ O ODŠKODNÉ), booked slot, CTAs → /translate /insurance /(tabs)/hunter /my-recovery /physio.
+   - Home: HealingStrip card (engine) under Jarvis orb; health hub top item hh-healing.
+2. ANGEL SHIELD 2.0 (senior suite, AngelHome rewritten with ScrollView):
+   - THE COMPANION: GET /api/companion/greeting (Prague-time empathetic question: sleep/meal/pain/evening + care_note on low mood), POST /api/companion/checkin (mood 1-5, warm reply, push to family on mood≤2), GET /api/companion/trends (14d avg + improving/declining). 3 huge emoji buttons on Angel home.
+   - MAGIC LENS (Kúzelná lupa): lens.tsx auto-reads analysis aloud after scan (TTS nova 0.92) + PREČÍTAŤ NAHLAS action; big Angel card → /lens.
+   - VOICE ECHOES: /api/family/echoes GET/POST + /{id}/heard; /voice-echoes screen (huge play cards, TTS 'Odkaz od…', unheard badge, preset quick messages); Angel card with unheard count.
+3. ETERNAL VAULT (/eternal-vault, expo-local-authentication@17.0.9 installed): biometric lock (web/no-hw fallback opens), contains dignity/legal/biometric-will/video-legacy/digital-legacy/healthcare-proxy. REMOVED from daily flow: legacy tab stripped of end-of-life items → renamed 'Majetok a príjem' (wallet icon, MAJETOK tab); profile dignity-btn → eternal-vault-btn; home pillar 'Odkaz' → 'Majetok'.
+4. JARVIS AWARENESS: neural._gather_context now includes healing_loop (steps, booked slot, claim status/€) + companion (avg mood 7d) — verified via /api/jarvis/context.
+Backend verified by curl: injury-event → 40% progress, claim 315 € prefilled, slot booked; companion greeting/checkin; echoes CRUD; jarvis context.

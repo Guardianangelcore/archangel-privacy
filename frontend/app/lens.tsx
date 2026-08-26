@@ -1,12 +1,15 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // GUARDIAN LENS — one tap: photograph any medical artefact → AI identifies → instant workflow
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { api, apiUpload } from '@/src/api';
+import { cachedAudioUri } from '@/src/media';
+import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, GoldButton, Pulse, tap } from '@/src/ui/glass';
 
@@ -17,12 +20,31 @@ const KIND_LABEL: Record<string, string> = {
 
 export default function Lens() {
   const router = useRouter();
+  const { user } = useAuth();
   const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [scan, setScan] = useState<any>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [camBlocked, setCamBlocked] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const playerRef = useRef<any>(null);
+
+  // MAGIC LENS — Jarvis reads the label aloud (high-fidelity TTS for seniors)
+  const speak = async (result: any) => {
+    const text = `${result.name}. ${result.summary_sk || ''} ${(result.warnings || []).join('. ')}`.trim();
+    if (!text) return;
+    setSpeaking(true);
+    try {
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1500), voice: 'nova', speed: 0.92, language: user?.language || 'sk' }) });
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
+      const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
+      try { playerRef.current?.remove?.(); } catch {}
+      const p = createAudioPlayer(src.headers ? { uri: src.uri, headers: src.headers } : { uri: src.uri });
+      playerRef.current = p; p.play();
+    } catch (e) { console.log('lens tts err', e); }
+    setSpeaking(false);
+  };
 
   const takePhoto = async () => {
     setErr(''); setScan(null); tap('medium');
@@ -61,6 +83,7 @@ export default function Lens() {
       const r: any = await apiUpload('/lens/analyze', photo.uri, photo.name, photo.type);
       setScan(r);
       tap('success');
+      speak(r); // Magic Lens: automatically read the result aloud
     } catch (e: any) { setErr(String(e.message || e)); tap('error'); }
     finally { setBusy(null); }
   };
@@ -152,6 +175,7 @@ export default function Lens() {
 
             <Text style={st.actLbl}>OKAMŽITÉ AKCIE</Text>
             <View style={st.actGrid}>
+              <ActionBtn testID="ln-act-speak" icon="volume-high" label="PREČÍTAŤ NAHLAS" busy={speaking} onPress={() => speak(scan)} />
               {has('add_med_reminder') && (
                 <ActionBtn testID="ln-act-med" icon="alarm" label="DO KALENDÁRA LIEKOV" busy={busy === 'med'} onPress={addMed} />
               )}

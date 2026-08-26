@@ -242,9 +242,9 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{t('legal_hub', lang).toUpperCase()} · 2026</Text>
         </Pressable>
 
-        <Pressable testID="dignity-btn" onPress={() => router.push('/dignity')} style={styles.qrBtn}>
-          <Ionicons name="rose-outline" size={18} color={C.fg} />
-          <Text style={styles.qrBtnText}>FINAL DIGNITY · POHREBNÝ FOND</Text>
+        <Pressable testID="eternal-vault-btn" onPress={() => router.push('/eternal-vault')} style={styles.qrBtn}>
+          <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>VEČNÝ TREZOR · ODKAZ A POSLEDNÁ VÔĽA</Text>
         </Pressable>
 
         {admin?.is_founder && (

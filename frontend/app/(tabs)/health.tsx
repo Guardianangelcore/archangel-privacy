@@ -11,6 +11,7 @@ export default function HealthHub() {
       title="Zdravie"
       subtitle="Váš zdravotný trezor, AI prekladač a rehabilitácia — všetko na jednom mieste."
       items={[
+        { testID: 'hh-healing', icon: 'sync-outline', title: 'Kolotoč uzdravenia', subtitle: 'Úraz → peniaze hneď → doktor → PN → fyzio', route: '/healing' },
         { testID: 'hh-vault', icon: 'lock-closed-outline', title: 'Zdravotný trezor', subtitle: 'Dokumenty · OCR · AI preklad', choices: [
           { icon: 'folder-open-outline', label: 'Otvoriť trezor', sub: 'Zobraziť a spravovať dokumenty', route: '/(tabs)/vault' },
           { icon: 'camera-outline', label: 'Nahrať dokument + AI preklad', sub: 'Odfotiť / nahrať → ľudská reč', route: '/translate' },

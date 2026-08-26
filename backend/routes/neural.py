@@ -43,6 +43,10 @@ async def _gather_context(user: dict) -> dict:
     testament = await db.legal_testaments.find_one({"user_id": uid}, {"_id": 0}) or {}
     proxy = await db.proxy_directives.find_one({"user_id": uid}, {"_id": 0}) or {}
     bio = await db.biometric_wills.find_one({"user_id": uid}, {"_id": 0}) or {}
+    journey = await db.healing_journeys.find_one({"user_id": uid, "status": "active"}, {"_id": 0})
+    claim = await db.insurance_claims.find_one({"journey_id": journey["journey_id"]}, {"_id": 0}) if journey else None
+    comp = await db.companion_checkins.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).sort("created_at", 1).to_list(30)
+    comp_moods = [c["mood"] for c in comp]
 
     upcoming = sorted([e for e in cal if e["category"] == "exam" and e["date"] >= today], key=lambda e: e["date"])[:5]
     boosters = [e for e in cal if e["category"] == "vaccine" and e.get("booster_due")]
@@ -50,6 +54,19 @@ async def _gather_context(user: dict) -> dict:
 
     return {
         "name": user.get("name"), "did": user["did"], "today": today,
+        "healing_loop": {
+            "active": bool(journey),
+            "kind": (journey or {}).get("kind_label"), "specialty": (journey or {}).get("specialty"),
+            "steps": (journey or {}).get("steps"),
+            "booked_slot": ((journey or {}).get("access") or {}).get("slot"),
+            "insurance_claim": ({"provider": claim.get("provider"), "status": claim.get("status"),
+                                 "estimated_total_eur": claim.get("estimated_total_eur")} if claim else None),
+        },
+        "companion": {
+            "checkins_7d": len(comp_moods),
+            "avg_mood_7d": round(sum(comp_moods) / len(comp_moods), 2) if comp_moods else None,
+            "last_mood_label": comp[-1]["mood_label"] if comp else None,
+        },
         "health": {
             "blood_type": prof.get("blood_type"), "allergies": prof.get("allergies"), "conditions": prof.get("conditions"),
             "recovery": {

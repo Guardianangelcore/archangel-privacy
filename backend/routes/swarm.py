@@ -450,6 +450,16 @@ async def _agent_system_janitor() -> int:
             "inner_circle": True, "is_founder": True, "tier": "archangel",
             "tier_until": None, "tier_paid_with": "founder"}})
         actions += 1
+    # 4. Mosaic Blueprint autonomy — fork detection → autonomous GA-T contract redeploy
+    #    + Wealth Hub payout verification (anchoring into Mosaic blocks)
+    try:
+        from routes.mosaic import verify_chain_and_wealth
+        chain = await verify_chain_and_wealth()
+        if chain["fork_detected"]:
+            actions += 1 + chain["orphaned"]
+        actions += chain["wealth_anchored"]
+    except Exception as e:
+        logger.warning(f"janitor mosaic check failed: {e}")
     if actions:
         await db.janitor_runs.insert_one({
             "at": datetime.now(timezone.utc), "repaired_total": actions,

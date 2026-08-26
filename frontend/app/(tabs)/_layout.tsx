@@ -6,10 +6,12 @@ import { Platform } from 'react-native';
 import { C } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { useAuth } from '@/src/auth';
+import { t, Lang } from '@/src/i18n';
 
 export default function TabsLayout() {
   const { user } = useAuth();
   const angel = !!user?.angel_mode;
+  const lang: Lang = (user?.language as Lang) || 'sk';
 
   return (
     <Tabs
@@ -34,7 +36,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="health"
         options={{
-          title: 'ZDRAVIE',
+          title: t('pillar_health', lang).toUpperCase(),
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-health',
         }}
@@ -42,7 +44,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="family"
         options={{
-          title: 'RODINA',
+          title: t('pillar_family', lang).toUpperCase(),
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-family',
         }}
@@ -50,15 +52,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="legacy"
         options={{
-          title: 'ODKAZ',
-          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'rose' : 'rose-outline'} size={size} color={color} />,
+          title: 'MAJETOK',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-legacy',
         }}
       />
       <Tabs.Screen
         name="hunter"
         options={{
-          title: 'LOVEC',
+          title: t('tab_hunter', lang).toUpperCase(),
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'search' : 'search-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-hunter',
         }}

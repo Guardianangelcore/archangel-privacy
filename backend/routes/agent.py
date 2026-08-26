@@ -122,11 +122,18 @@ async def agent_state(authorization: Optional[str] = Header(None)):
 # =========================================================================
 # MEMORY — self-teaching: extracts facts from every conversation
 # =========================================================================
+LANG_FULL = {"sk": "Slovak", "cs": "Czech", "en": "English", "de": "German", "pl": "Polish",
+             "hu": "Hungarian", "ru": "Russian", "es": "Spanish", "fr": "French", "it": "Italian",
+             "uk": "Ukrainian", "zh": "Chinese", "ja": "Japanese", "ar": "Arabic"}
+
+def _lang_name(user: dict) -> str:
+    return LANG_FULL.get((user or {}).get("language") or "sk", "Slovak")
+
 MEM_EXTRACT_SYS = (
     "You extract long-term memories for a caring AI companion. From the exchange below, "
     "extract 0-3 NEW facts worth remembering about the user or their family "
     "(health events, habits, preferences, names, plans). Output ONLY a JSON array: "
-    '[{"text":"<fact in Slovak, past tense, max 15 words>","topic":"health|family|habit|preference|event","importance":1-5}] '
+    '[{"text":"<fact in the same language as the conversation, past tense, max 15 words>","topic":"health|family|habit|preference|event","importance":1-5}] '
     "Return [] if nothing new. No markdown fences."
 )
 
@@ -286,7 +293,7 @@ def _persona(level: int, name: str) -> str:
     return base + tone
 
 CHAT_JSON_RULE = (
-    ' Respond ONLY with strict JSON (no fences): {"reply":"<your answer in Slovak, warm, max 6 sentences>",'
+    ' Respond ONLY with strict JSON (no fences): {"reply":"<your answer in the required language, warm, max 6 sentences>",'
     '"mood":"calm|thinking|alert|energetic|concerned"} '
     "Pick mood: alert for emergencies, concerned for worrying health data, energetic for good news/mornings, "
     "thinking for analysis, calm otherwise."
@@ -313,13 +320,16 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     mem_block = "\n".join(f"- {m['text']} ({m['topic']}, {str(m['created_at'])[:10]})" for m in memories) or "-"
     sys = (
         _persona(level, user.get("name", "")) +
-        f" Companion level: {level}/10 ({LEVEL_NAMES[level - 1]}). Answer in Slovak for a senior. "
+        f" Companion level: {level}/10 ({LEVEL_NAMES[level - 1]}). Answer STRICTLY in {_lang_name(user)} for a senior. "
         "Never invent data not present in the snapshot or memories. "
         f"{AI_COMPLIANCE_NOTE}" + CHAT_JSON_RULE +
         f"\n\nLONG-TERM MEMORIES:\n{mem_block}" +
         (f"\n\nACTIVE HEALTH ALERTS:\n" + "\n".join(a["text"] for a in anomalies) if anomalies else "") +
         f"\n\nRECENT CONVERSATION:\n{convo or '-'}" +
-        f"\n\nLIVE DATA SNAPSHOT (JSON):\n{json.dumps(ctx, ensure_ascii=False, default=str)[:5000]}"
+        f"\n\nLIVE DATA SNAPSHOT (JSON):\n{json.dumps(ctx, ensure_ascii=False, default=str)[:5000]}" +
+        f"\n\nCRITICAL LANGUAGE RULE: The 'reply' value MUST be written in {_lang_name(user)} — "
+        "regardless of the language of the user's message, memories or prior conversation. "
+        "This is the user's chosen app language."
     )
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
@@ -402,7 +412,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
     }
     sys = (
         _persona(level, user.get("name", "")) +
-        " Compose a warm, personal daily briefing in Slovak (5-8 short sentences) from the JSON data: "
+        f" Compose a warm, personal daily briefing STRICTLY in {_lang_name(user)} (5-8 short sentences) from the JSON data: "
         "greet by name and part of day, mention weather (if present), pending meds, upcoming appointments, "
         "and IMPORTANTLY ask a caring follow-up question about any recent memory "
         "(e.g. 'Včera si spomínal, že Tomáša boleli žily — ako mu je dnes?'). "
@@ -461,7 +471,7 @@ async def agent_analyze(authorization: Optional[str] = Header(None)):
         "memories": mems_n, "recent_bp": bps, "anomalies": [a["text"] for a in anomalies],
     }
     sys = ("You are JARVIS 2.0 performing a deep data synthesis. From the JSON stats, produce ONE insight "
-           "in Slovak (2-3 sentences): the single most important pattern or recommendation for the user today. "
+           f"in {_lang_name(user)} (2-3 sentences): the single most important pattern or recommendation for the user today. "
            "Plain text, warm, senior-friendly." + AI_COMPLIANCE_NOTE)
     try:
         chat = LlmChat(api_key=EMERGENT_LLM_KEY,
@@ -481,7 +491,7 @@ async def agent_analyze(authorization: Optional[str] = Header(None)):
 # =========================================================================
 @api.post("/agent/transcribe")
 async def agent_transcribe(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
-    await get_current_user(authorization)
+    user = await get_current_user(authorization)
     data = await file.read()
     if len(data) == 0:
         raise HTTPException(400, "Empty audio")
@@ -497,7 +507,8 @@ async def agent_transcribe(file: UploadFile = File(...), authorization: Optional
             tmp.write(data)
             tmp_path = tmp.name
         stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
-        result = stt.transcribe(open(tmp_path, "rb"), model="whisper-1", language="sk")
+        result = stt.transcribe(open(tmp_path, "rb"), model="whisper-1",
+                                language=(user.get("language") or "sk"))
         if inspect.isawaitable(result):
             result = await result
         if isinstance(result, str):
