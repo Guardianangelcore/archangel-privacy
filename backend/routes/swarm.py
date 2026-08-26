@@ -73,6 +73,10 @@ AGENTS = {
                           "desc": "Spravuje obnovu účtov, 2FA handshaky, Bio-Beacony a satelitné Nano-Packety"},
     "system_janitor":    {"interval": 120, "label": "System Janitor (Self-Repair)",
                           "desc": "Autonómne skenuje a opravuje nekonzistencie — chýbajúce záznamy časovej osi, geo kontext, integritu dát"},
+    "companion_care":    {"interval": 600, "label": "Companion Care (Ranná pripomienka)",
+                          "desc": "Jemne pripomenie seniorom dennú otázku Spoločníka, keď ráno zabudnú odpovedať"},
+    "weekly_reporter":   {"interval": 3600, "label": "Weekly Reporter (Nedeľný report)",
+                          "desc": "Každú nedeľu uloží týždenný report uzdravenia priamo do Zdravotného trezora"},
 }
 
 async def _agent_waitlist_hunter() -> int:
@@ -468,6 +472,16 @@ async def _agent_system_janitor() -> int:
                           {"repaired": actions, "timeline_backfills": repaired_timeline})
     return actions
 
+async def _agent_companion_care() -> int:
+    from routes.healing import companion_reminder_sweep
+    return await companion_reminder_sweep()
+
+
+async def _agent_weekly_reporter() -> int:
+    from routes.healing import weekly_report_sweep
+    return await weekly_report_sweep()
+
+
 _AGENT_FN = {
     "waitlist_hunter": _agent_waitlist_hunter,
     "marketplace": _agent_marketplace,
@@ -479,6 +493,8 @@ _AGENT_FN = {
     "news_sentinel": _agent_news_sentinel,
     "sovereign_guard": _agent_sovereign_guard,
     "system_janitor": _agent_system_janitor,
+    "companion_care": _agent_companion_care,
+    "weekly_reporter": _agent_weekly_reporter,
 }
 
 async def run_agent(agent_id: str) -> dict:

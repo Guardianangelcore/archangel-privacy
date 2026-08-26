@@ -6,12 +6,10 @@ import { Platform } from 'react-native';
 import { C } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { useAuth } from '@/src/auth';
-import { t, Lang } from '@/src/i18n';
 
 export default function TabsLayout() {
   const { user } = useAuth();
   const angel = !!user?.angel_mode;
-  const lang: Lang = (user?.language as Lang) || 'sk';
 
   return (
     <Tabs
@@ -36,15 +34,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="health"
         options={{
-          title: t('pillar_health', lang).toUpperCase(),
-          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />,
+          title: 'UZDRAVOVANIE',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'sync-circle' : 'sync-circle-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-health',
         }}
       />
       <Tabs.Screen
         name="family"
         options={{
-          title: t('pillar_family', lang).toUpperCase(),
+          title: 'RODINNÝ ŠTÍT',
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-family',
         }}
@@ -52,19 +50,12 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="legacy"
         options={{
-          title: 'MAJETOK',
-          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={size} color={color} />,
+          title: 'TREZOR',
+          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-legacy',
         }}
       />
-      <Tabs.Screen
-        name="hunter"
-        options={{
-          title: t('tab_hunter', lang).toUpperCase(),
-          tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'search' : 'search-outline'} size={size} color={color} />,
-          tabBarButtonTestID: 'tab-hunter',
-        }}
-      />
+      <Tabs.Screen name="hunter" options={{ href: null }} />
       <Tabs.Screen name="vault" options={{ href: null }} />
       <Tabs.Screen name="waitlist" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />

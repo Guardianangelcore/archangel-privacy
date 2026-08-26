@@ -216,6 +216,21 @@ export default function Healing() {
             </View>
             <Ionicons name="share-outline" size={18} color={C.info} />
           </Pressable>
+
+          {/* SUNDAY AUTO-REPORT — Jarvis files it into the Health Vault automatically */}
+          <Pressable testID="healing-report-vault" disabled={busy} onPress={async () => {
+            setBusy(true);
+            try { tap('success'); const r: any = await api('/healing/report/save-to-vault', { method: 'POST' }); setMsg(r.note); }
+            catch (e: any) { setMsg(String(e.message || e)); }
+            setBusy(false);
+          }} style={st.reportBtn}>
+            <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
+            <View style={{ flex: 1 }}>
+              <Text style={st.reportTitle}>ULOŽIŤ REPORT DO ZDRAVOTNÉHO TREZORA</Text>
+              <Text style={st.reportSub}>AUTO: Jarvis ho ukladá každú nedeľu sám</Text>
+            </View>
+            {busy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="chevron-forward" size={18} color={C.info} />}
+          </Pressable>
         </ScrollView>
       )}
 

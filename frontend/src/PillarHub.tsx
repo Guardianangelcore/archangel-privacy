@@ -8,8 +8,11 @@ import { C, S, R } from './theme';
 
 export type HubChoice = { icon: any; label: string; sub?: string; route?: string; onPress?: () => void };
 export type HubItem = { testID: string; icon: any; title: string; subtitle: string; route?: string; onPress?: () => void; choices?: HubChoice[] };
+export type HubSection = { title: string; items: HubItem[] };
 
-export default function PillarHub({ title, subtitle, icon, items, testID }: { title: string; subtitle: string; icon: any; items: HubItem[]; testID: string }) {
+export default function PillarHub({ title, subtitle, icon, items, sections, hero, testID }: {
+  title: string; subtitle: string; icon: any; items?: HubItem[]; sections?: HubSection[]; hero?: React.ReactNode; testID: string;
+}) {
   const router = useRouter();
   const [sheet, setSheet] = useState<HubItem | null>(null);
 
@@ -24,6 +27,24 @@ export default function PillarHub({ title, subtitle, icon, items, testID }: { ti
     if (c.onPress) { c.onPress(); return; }
     if (c.route) router.push(c.route as any);
   };
+
+  const renderItem = (it: HubItem) => (
+    <Pressable
+      key={it.testID}
+      testID={it.testID}
+      onPress={() => open(it)}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: C.surface3 }]}
+    >
+      <View style={styles.rowIcon}>
+        <Ionicons name={it.icon} size={22} color={C.brand} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle}>{it.title}</Text>
+        <Text style={styles.rowSub}>{it.subtitle}</Text>
+      </View>
+      <Ionicons name={it.choices?.length ? 'apps-outline' : 'chevron-forward'} size={18} color={C.info} />
+    </Pressable>
+  );
 
   return (
     <SafeAreaView testID={testID} style={styles.root} edges={['top']}>
@@ -41,25 +62,20 @@ export default function PillarHub({ title, subtitle, icon, items, testID }: { ti
         </View>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
-        <View style={{ marginTop: S.xl, gap: S.md }}>
-          {items.map(it => (
-            <Pressable
-              key={it.testID}
-              testID={it.testID}
-              onPress={() => open(it)}
-              style={({ pressed }) => [styles.row, pressed && { backgroundColor: C.surface3 }]}
-            >
-              <View style={styles.rowIcon}>
-                <Ionicons name={it.icon} size={22} color={C.brand} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{it.title}</Text>
-                <Text style={styles.rowSub}>{it.subtitle}</Text>
-              </View>
-              <Ionicons name={it.choices?.length ? 'apps-outline' : 'chevron-forward'} size={18} color={C.info} />
-            </Pressable>
-          ))}
-        </View>
+        {hero}
+        {!!items?.length && (
+          <View style={{ marginTop: S.xl, gap: S.md }}>
+            {items.map(renderItem)}
+          </View>
+        )}
+        {(sections || []).map((sec, i) => (
+          <View key={i}>
+            <Text style={styles.sectionTitle}>{sec.title}</Text>
+            <View style={{ gap: S.md }}>
+              {sec.items.map(renderItem)}
+            </View>
+          </View>
+        ))}
       </ScrollView>
 
       {/* SMART CHOICE MODAL — interactive options instead of a static jump */}
@@ -97,6 +113,7 @@ const styles = StyleSheet.create({
   heroIcon: { width: 60, height: 60, borderRadius: R.lg, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center' },
   title: { marginTop: S.lg, fontSize: 28, fontWeight: '900', color: C.fg, letterSpacing: 0.5 },
   subtitle: { marginTop: 4, fontSize: 14, color: C.onS3, lineHeight: 20 },
+  sectionTitle: { marginTop: S.xl, marginBottom: S.md, fontSize: 11, letterSpacing: 2.5, color: C.brand, fontWeight: '900' },
   row: { flexDirection: 'row', alignItems: 'center', gap: S.lg, backgroundColor: C.surface2, borderRadius: R.lg, padding: S.lg, minHeight: 72, borderWidth: 1, borderColor: C.border },
   rowIcon: { width: 44, height: 44, borderRadius: R.md, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center' },
   rowTitle: { fontWeight: '800', fontSize: 15, color: C.fg },

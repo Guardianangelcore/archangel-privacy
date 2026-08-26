@@ -122,11 +122,11 @@ export default function Home() {
           </View>
         </GlassCard>
 
+        {/* SOVEREIGN TRIANGLE — the three pillars of the OS */}
         <View style={styles.pillarGrid}>
-          <PillarTile testID="pillar-health" icon="heart" title={t('pillar_health', lang)} sub={t('pillar_health_sub', lang)} onPress={() => router.navigate('/(tabs)/health')} />
-          <PillarTile testID="pillar-family" icon="people" title={t('pillar_family', lang)} sub={t('pillar_family_sub', lang)} onPress={() => router.navigate('/(tabs)/family')} />
-          <PillarTile testID="pillar-legacy" icon="wallet" title="Majetok" sub="Príjem · poistné nároky · GA-T ekonomika" onPress={() => router.navigate('/(tabs)/legacy')} />
-          <PillarTile testID="pillar-hunter" icon="search" title={t('pillar_hunter', lang)} sub={t('pillar_hunter_sub', lang)} onPress={() => router.navigate('/(tabs)/hunter')} />
+          <PillarTile testID="pillar-health" icon="sync-circle" title="Moje uzdravovanie" sub="Kolotoč: žiadanka → peniaze → doktor → fyzio" onPress={() => router.navigate('/(tabs)/health')} />
+          <PillarTile testID="pillar-family" icon="people" title="Rodinný štít" sub="Angel Mode · Kúzelná lupa · Voice Echoes · SOS" onPress={() => router.navigate('/(tabs)/family')} />
+          <PillarTile testID="pillar-legacy" icon="shield-checkmark" title="Suverénny trezor" sub="Majetok a poistky · Večný odkaz · Bunker mód" onPress={() => router.navigate('/(tabs)/legacy')} />
         </View>
 
         <View style={styles.ecoRow}>

@@ -1,12 +1,12 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // VOICE ECHOES — rodinný hlasový prúd pre seniorov. Jeden ťuk = Jarvis prečíta odkaz nahlas.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
-import { api } from '@/src/api';
+import { createAudioPlayer, setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
+import { api, apiUpload } from '@/src/api';
 import { cachedAudioUri } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
@@ -32,7 +32,10 @@ export default function VoiceEchoes() {
   const [recipients, setRecipients] = useState<any[]>([]);
   const [target, setTarget] = useState<any>(null); // null = this device (self)
   const [sentMsg, setSentMsg] = useState('');
+  const [recording, setRecording] = useState(false);
+  const [micBlocked, setMicBlocked] = useState(false);
   const playerRef = useRef<any>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const load = useCallback(async () => {
     try { const r: any = await api('/family/echoes'); setEchoes(r.echoes || []); } catch (e) { console.log(e); }
@@ -48,10 +51,16 @@ export default function VoiceEchoes() {
     tap('medium');
     setPlaying(e.echo_id);
     try {
-      const text = `Odkaz od: ${e.from_name}. ${e.message}`;
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1000), voice: 'nova', speed: 0.95, language: user?.language || 'sk' }) });
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
-      const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
+      let src: { uri: string; headers?: Record<string, string> };
+      if (e.audio) {
+        // REAL family voice recording — stream the original audio
+        src = await cachedAudioUri(`/family/echoes/${e.echo_id}/audio`);
+      } else {
+        const text = `Odkaz od: ${e.from_name}. ${e.message}`;
+        const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1000), voice: 'nova', speed: 0.95, language: user?.language || 'sk' }) });
+        src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
+      }
       try { playerRef.current?.remove?.(); } catch {}
       const p = createAudioPlayer(src.headers ? { uri: src.uri, headers: src.headers } : { uri: src.uri });
       playerRef.current = p; p.play();
@@ -59,8 +68,45 @@ export default function VoiceEchoes() {
         await api(`/family/echoes/${e.echo_id}/heard`, { method: 'POST' });
         setEchoes(prev => prev.map(x => x.echo_id === e.echo_id ? { ...x, heard: true } : x));
       }
-    } catch (err) { console.log('echo tts err', err); }
+    } catch (err) { console.log('echo play err', err); }
     setPlaying(null);
+  };
+
+  // 🎙 RECORD A REAL VOICE MESSAGE — own voice instead of Jarvis TTS
+  const toggleRecord = async () => {
+    if (recording) {
+      try {
+        await recorder.stop();
+        setRecording(false);
+        const uri = recorder.uri;
+        if (!uri) return;
+        setBusy(true); setSentMsg('');
+        const extra: Record<string, string> = { from_name: fromName.trim() || 'Rodina' };
+        if (target) extra.to_email = target.email;
+        const r: any = await apiUpload('/family/echoes/audio', uri, 'echo.m4a', 'audio/m4a', extra);
+        tap('success');
+        setSentMsg(target
+          ? `🎙 Hlasová nahrávka odoslaná na diaľku — ${r.to} si vypočuje váš skutočný hlas.`
+          : '🎙 Hlasová nahrávka uložená — ťuknite na kartu a vypočujte si ju.');
+        setAdd(false);
+        await load();
+      } catch (e: any) { setSentMsg(String(e.message || e)); }
+      setBusy(false);
+      return;
+    }
+    try {
+      let perm = await AudioModule.getRecordingPermissionsAsync();
+      if (!perm.granted) {
+        if (perm.canAskAgain === false) { setMicBlocked(true); return; }
+        perm = await AudioModule.requestRecordingPermissionsAsync();
+        if (!perm.granted) { if (perm.canAskAgain === false) setMicBlocked(true); return; }
+      }
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true } as any);
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      tap('heavy');
+      setRecording(true);
+    } catch (e) { console.log('rec err', e); }
   };
 
   const send = async (text?: string) => {
@@ -112,7 +158,7 @@ export default function VoiceEchoes() {
             <Pressable key={e.echo_id} testID={`echo-${e.echo_id}`} onPress={() => play(e)}
               style={({ pressed }) => [st.card, !e.heard && st.cardNew, pressed && { opacity: 0.85 }]}>
               <View style={st.playCircle}>
-                {playing === e.echo_id ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="play" size={30} color={C.onInverse} />}
+                {playing === e.echo_id ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name={e.audio ? 'mic' : 'play'} size={30} color={C.onInverse} />}
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -152,6 +198,28 @@ export default function VoiceEchoes() {
               <Text style={st.lbl}>KTO POSIELA?</Text>
               <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="Napr. Vnučka Lucka" placeholderTextColor="#888" />
             </>)}
+
+            {/* 🎙 REAL VOICE RECORDING — own voice instead of Jarvis */}
+            <Text style={st.lbl}>VLASTNÝM HLASOM — 1 ŤUK</Text>
+            {Platform.OS === 'web' ? (
+              <Text style={st.webNote}>🎙 Nahrávanie vlastným hlasom funguje v mobilnej appke (Expo Go / natívny build).</Text>
+            ) : (
+              <Pressable testID="ve-record" onPress={toggleRecord} disabled={busy}
+                style={[st.recBtn, recording && st.recBtnOn]}>
+                {busy ? <ActivityIndicator color={recording ? C.onError : C.onInverse} /> : (<>
+                  <Ionicons name={recording ? 'stop-circle' : 'mic'} size={26} color={recording ? C.onError : C.onInverse} />
+                  <Text style={[st.recText, recording && { color: C.onError }]}>
+                    {recording ? 'NAHRÁVAM… ŤUKNITE PRE ODOSLANIE' : 'NAHRAŤ VLASTNÝM HLASOM'}
+                  </Text>
+                </>)}
+              </Pressable>
+            )}
+            {micBlocked && (
+              <Pressable testID="ve-mic-settings" onPress={() => Linking.openSettings()} style={st.micSettings}>
+                <Text style={st.micSettingsText}>Mikrofón je zablokovaný — OTVORIŤ NASTAVENIA</Text>
+              </Pressable>
+            )}
+
             <Text style={st.lbl}>RÝCHLE ODKAZY — 1 ŤUK</Text>
             <View style={{ gap: S.sm }}>
               {PRESETS.map((p, i) => (
@@ -184,6 +252,12 @@ const st = StyleSheet.create({
   targetChipOn: { backgroundColor: C.brand, borderColor: C.brand },
   targetText: { color: C.fg, fontWeight: '800', fontSize: 12.5 },
   remoteHint: { marginTop: S.sm, color: C.brand, fontSize: 11, fontWeight: '700' },
+  recBtn: { flexDirection: 'row', gap: S.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: R.pill, minHeight: 60 },
+  recBtnOn: { backgroundColor: C.error },
+  recText: { color: C.onInverse, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
+  webNote: { color: C.info, fontSize: 11.5, lineHeight: 16, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: S.md },
+  micSettings: { marginTop: S.sm, minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: R.md, backgroundColor: C.warn },
+  micSettingsText: { color: C.onWarn, fontWeight: '900', fontSize: 11 },
   empty: { alignItems: 'center', padding: S.xl, gap: S.sm, backgroundColor: C.surface2, borderRadius: R.lg, borderWidth: 1, borderColor: C.border },
   emptyTitle: { color: C.fg, fontWeight: '900', fontSize: 18 },
   emptySub: { color: C.onS3, fontSize: 13, textAlign: 'center', lineHeight: 19 },

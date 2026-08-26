@@ -6,17 +6,19 @@ Injury Event → Neural Bus fires SIMULTANEOUSLY: Insurance Claim (money IN) + W
 Steps: intake → financial_shield → access → bureaucracy → recovery.
 Also: Companion (empathetic senior check-ins + emotional trends) and Voice Echoes (family voice-stream)."""
 import asyncio
+import hashlib
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Header, UploadFile, File, Form, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from core import (
     api, db, logger, clean, get_current_user, send_push,
     _make_pdf, _auth_pdf, _pdf_footer, _pdf_response,
+    APP_NAME, put_object_sync, get_object_sync,
 )
 from routes.hunter import _simulate_slot
 
@@ -401,18 +403,191 @@ async def echoes_send_remote(body: RemoteEchoIn, authorization: Optional[str] = 
     return {"ok": True, "echo": clean(doc), "to": recipient.get("name") or recipient["email"]}
 
 
+# ---- VOICE RECORDINGS — family records a real voice message (microphone) ----
+
+async def _resolve_echo_recipient(sender: dict, to_email: Optional[str]) -> dict:
+    """Recipient of an echo: self, or a linked senior (guardian/inner-circle authz)."""
+    if not to_email:
+        return sender
+    recipient = await db.users.find_one({"email": to_email.strip().lower()}, {"_id": 0})
+    if not recipient:
+        raise HTTPException(404, "Príjemca s týmto e-mailom neexistuje v Guardian OS.")
+    if recipient["user_id"] != sender["user_id"] and not await _may_send_to(sender, recipient):
+        raise HTTPException(403, "Nemáte oprávnenie — príjemca si vás musí pridať ako strážcu (Sovereign Recovery), alebo musíte byť vo Vnútornom kruhu.")
+    return recipient
+
+
+@api.post("/family/echoes/audio")
+async def echoes_add_audio(
+    file: UploadFile = File(...),
+    from_name: str = Form("Rodina"),
+    to_email: Optional[str] = Form(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Upload a REAL voice recording as an echo (own voice instead of Jarvis TTS)."""
+    sender = await get_current_user(authorization)
+    recipient = await _resolve_echo_recipient(sender, to_email)
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "empty audio")
+    if len(data) > 15 * 1024 * 1024:
+        raise HTTPException(400, "audio too large (max 15 MB)")
+    echo_id = uuid.uuid4().hex
+    ctype = file.content_type or "audio/m4a"
+    path = f"{APP_NAME}/echoes/{recipient['user_id']}/{echo_id}.m4a"
+    await run_in_threadpool(put_object_sync, path, data, ctype)
+    remote = recipient["user_id"] != sender["user_id"]
+    doc = {"echo_id": echo_id, "user_id": recipient["user_id"],
+           "from_name": (sender.get("name") if remote else from_name.strip()[:60]) or "Rodina",
+           "sender_user_id": sender["user_id"], "remote": remote,
+           "message": "🎙 Hlasová nahrávka", "audio": True,
+           "storage_path": path, "content_type": ctype, "size": len(data),
+           "heard": False, "created_at": _now()}
+    await db.voice_echoes.insert_one(doc.copy())
+    try:
+        await send_push(recipients=[recipient["user_id"]], data={
+            "title": "🎙 HLASOVÝ ODKAZ OD RODINY",
+            "message": f"{doc['from_name']} vám nahral(a) odkaz vlastným hlasom.",
+            "action_url": "/voice-echoes"})
+    except Exception:
+        pass
+    return {"ok": True, "echo": clean(doc), "to": recipient.get("name") or recipient["email"]}
+
+
+@api.get("/family/echoes/{echo_id}/audio")
+async def echoes_audio_stream(echo_id: str, token: Optional[str] = None,
+                              authorization: Optional[str] = Header(None)):
+    if not authorization and token:
+        authorization = f"Bearer {token}"
+    user = await get_current_user(authorization)
+    e = await db.voice_echoes.find_one(
+        {"echo_id": echo_id, "$or": [{"user_id": user["user_id"]}, {"sender_user_id": user["user_id"]}]},
+        {"_id": 0})
+    if not e or not e.get("audio"):
+        raise HTTPException(404, "Audio echo not found")
+    try:
+        content, ctype = await run_in_threadpool(get_object_sync, e["storage_path"])
+    except Exception as ex:
+        raise HTTPException(502, f"Storage read failed: {ex}")
+    return Response(content=content, media_type=ctype or e.get("content_type") or "audio/m4a")
+
+
 # =========================================================================
-# WEEKLY HEALING REPORT — mood graph + Carousel progress in one PDF
+# THE CARE SWEEPS — gentle morning reminder + Sunday auto-report (swarm hooks)
 # =========================================================================
+
+async def companion_reminder_sweep(force: bool = False) -> int:
+    """Gentle morning nudge for seniors who forgot the Companion daily question."""
+    now = _now()
+    prague_hour = (now.hour + 2) % 24
+    if not force and not (9 <= prague_hour < 12):
+        return 0
+    today = now.date().isoformat()
+    start_of_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) - timedelta(hours=2)
+    uids = set(await db.companion_checkins.distinct("user_id"))
+    async for u in db.users.find({"angel_mode": True}, {"_id": 0, "user_id": 1}):
+        uids.add(u["user_id"])
+    sent = 0
+    for uid in uids:
+        if await db.companion_checkins.find_one({"user_id": uid, "created_at": {"$gte": start_of_day}}):
+            continue
+        if await db.companion_reminders.find_one({"user_id": uid, "date": today}):
+            continue
+        u = await db.users.find_one({"user_id": uid}, {"_id": 0, "name": 1})
+        n = ((u or {}).get("name") or "").split(" ")[0] or "priateľu"
+        try:
+            await send_push(recipients=[uid], data={
+                "title": "💛 JARVIS SA PÝTA",
+                "message": f"Dobré ráno, {n}. Ešte ste mi dnes nepovedali, ako sa máte — ťuknite na smajlíka, poteší ma to.",
+                "action_url": "/"})
+        except Exception as e:
+            logger.warning(f"companion reminder push: {e}")
+        await db.companion_reminders.insert_one({"user_id": uid, "date": today, "created_at": now})
+        sent += 1
+    return sent
+
+
+@api.post("/companion/remind-sweep")
+async def companion_remind_now(authorization: Optional[str] = Header(None)):
+    """Manual trigger (testing/founder) — bypasses the morning window, respects daily dedup."""
+    await get_current_user(authorization)
+    sent = await companion_reminder_sweep(force=True)
+    return {"ok": True, "reminders_sent": sent}
+
+
+async def _save_report_to_vault(uid: str) -> dict:
+    """Build the healing report PDF and file it into the user's Health Vault."""
+    parts = await _report_parts(uid)
+    pdf = await run_in_threadpool(
+        _make_pdf, "TÝŽDENNÝ REPORT UZDRAVENIA\nKOLOTOČ · FINANČNÝ ŠTÍT · NÁLADA — pre lekára aj rodinu",
+        "\n".join(parts), _pdf_footer())
+    now = _now()
+    doc_id = uuid.uuid4().hex
+    path = f"{APP_NAME}/uploads/{uid}/{doc_id}.pdf"
+    await run_in_threadpool(put_object_sync, path, pdf, "application/pdf")
+    title = f"Týždenný report uzdravenia — {now.date().isoformat()}"
+    doc = {"doc_id": doc_id, "user_id": uid, "title": title,
+           "file_name": f"healing_report_{now.date().isoformat()}.pdf",
+           "content_type": "application/pdf", "size": len(pdf),
+           "storage_path": path, "hash": hashlib.sha256(pdf).hexdigest(),
+           "uploaded_at": now, "source": "healing_report"}
+    await db.documents.insert_one(doc.copy())
+    await db.calendar_events.insert_one({
+        "event_id": uuid.uuid4().hex, "user_id": uid, "category": "history",
+        "title": f"📄 {title}"[:140], "date": now.date().isoformat(),
+        "notes": "Automatický report Kolotoča uzdravenia (Jarvis)", "booster_due": None,
+        "source": "healing_report", "doc_id": doc_id, "created_at": now,
+    })
+    return clean(doc)
+
+
+@api.post("/healing/report/save-to-vault")
+async def healing_report_to_vault(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    doc = await _save_report_to_vault(user["user_id"])
+    return {"ok": True, "document": doc,
+            "note": "Report uložený do Zdravotného trezora. Jarvis ho ukladá automaticky každú nedeľu."}
+
+
+async def weekly_report_sweep(force: bool = False) -> int:
+    """Every Sunday (Prague) Jarvis files the healing report into the Vault automatically."""
+    now = _now()
+    prague = now + timedelta(hours=2)
+    if not force and prague.weekday() != 6:  # Sunday
+        return 0
+    iso_week = prague.strftime("%G-W%V")
+    week_ago = now - timedelta(days=7)
+    uids = set()
+    async for j in db.healing_journeys.find({"status": "active"}, {"_id": 0, "user_id": 1}):
+        uids.add(j["user_id"])
+    async for c in db.companion_checkins.find({"created_at": {"$gte": week_ago}}, {"_id": 0, "user_id": 1}):
+        uids.add(c["user_id"])
+    saved = 0
+    for uid in uids:
+        if await db.healing_report_runs.find_one({"user_id": uid, "week": iso_week}):
+            continue
+        try:
+            doc = await _save_report_to_vault(uid)
+            await db.healing_report_runs.insert_one(
+                {"user_id": uid, "week": iso_week, "doc_id": doc["doc_id"], "created_at": now})
+            try:
+                await send_push(recipients=[uid], data={
+                    "title": "📄 NEDEĽNÝ REPORT V TREZORE",
+                    "message": "Jarvis uložil týždenný report uzdravenia do Zdravotného trezora — pripravený pre lekára aj rodinu.",
+                    "action_url": "/(tabs)/vault"})
+            except Exception:
+                pass
+            saved += 1
+        except Exception as e:
+            logger.warning(f"weekly report for {uid}: {e}")
+    return saved
 
 _MOOD_BAR = {1: "█░░░░", 2: "██░░░", 3: "███░░", 4: "████░", 5: "█████"}
 _TREND_SK = {"improving": "ZLEPŠUJE SA ↗", "declining": "ZHORŠUJE SA ↘", "stable": "STABILNÁ →"}
 
 
-@api.get("/healing/report.pdf")
-async def healing_report_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
-    user = await _auth_pdf(authorization, token)
-    uid = user["user_id"]
+async def _report_parts(uid: str) -> list:
+    """Shared body of the weekly healing report (PDF endpoint + Sunday vault auto-save)."""
     j = await _active_journey(uid) or await db.healing_journeys.find_one(
         {"user_id": uid}, {"_id": 0}, sort=[("created_at", -1)])
     claim = await db.insurance_claims.find_one({"journey_id": (j or {}).get("journey_id")}, {"_id": 0}) if j else None
@@ -464,6 +639,13 @@ async def healing_report_pdf(token: Optional[str] = None, authorization: Optiona
     else:
         parts.append("  Žiadne denné check-iny za posledných 14 dní.")
     parts.append(f"\nVygenerované Sovereign Healing Loop · {_now().date().isoformat()}")
+    return parts
+
+
+@api.get("/healing/report.pdf")
+async def healing_report_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    parts = await _report_parts(user["user_id"])
     pdf = await run_in_threadpool(
         _make_pdf, "TÝŽDENNÝ REPORT UZDRAVENIA\nKOLOTOČ · FINANČNÝ ŠTÍT · NÁLADA — pre lekára aj rodinu",
         "\n".join(parts), _pdf_footer())

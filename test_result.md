@@ -231,3 +231,6 @@ Sovereign Healing Loop: routes/healing.py (injury-event → asyncio.gather fires
 
 ## Iteration 28 (Phase 32: Remote Echoes + Referral Bridge + Healing Report PDF, June 2026)
 Backend: /family/echoes/recipients + /family/echoes/send (guardian/inner_circle authz) + /healing/report.pdf. Frontend: voice-echoes KOMU? remote targeting, lens ln-act-healing → /healing?specialty&auto=1 wizard prefill, healing-report PDF button. Tests: test_phase32_remote_echoes_report.py 12/12 + frontend E2E 20/20 (iteration_28.json). ALL GREEN.
+
+## Iteration 29 (Phase 33: SOVEREIGN TRIANGLE, June 2026)
+3-pillar restructure (UZDRAVOVANIE / RODINNÝ ŠTÍT / TREZOR), PillarHub sections+hero props, hunter tab hidden, gold pulsing Angel hero, Eternal Vault entry in pillar 3B. Also Phase 32.5: audio voice echoes (record+stream), companion morning reminder sweep + weekly vault report sweep (swarm agents companion_care/weekly_reporter). Frontend audit 60/60 GREEN, 0 dead buttons, 0 console errors (iteration_29.json). Optional note: /fall-verify countdown starts on mount (by design).

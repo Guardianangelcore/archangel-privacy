@@ -279,3 +279,18 @@ Backend verified by curl: injury-event → 40% progress, claim 315 € prefilled
 2. SKEN VÝMENNÉHO LÍSTKA — lens.tsx result adds 'SPUSTIŤ KOLOTOČ UZDRAVENIA' (ln-act-healing) when kind∈{medical_report,prescription,lab_results} or specialty → /healing?specialty=X&auto=1; healing.tsx useLocalSearchParams auto-opens wizard (only when no active journey), sets kind=illness, injects specialty as extra selected chip.
 3. TÝŽDENNÝ REPORT — GET /api/healing/report.pdf (_auth_pdf token support): carousel steps [X]/[!]/[ ], claim €, PN/vychádzky, 14d mood bar graph (█ blocks) + avg + trend SK; healing-report button on /healing (both states) via sharePdf.
 Test users: senior test@example.com/test-token-abc, family lucka@example.com/fam-token-abc (guardian of senior).
+
+## Phase 32.5: VOICE RECORDINGS + CARE SWEEPS (June 2026) — DONE ✅ (backend curl-verified; UI audited in iteration_29)
+1. HLASOVÉ NAHRÁVKY — POST /api/family/echoes/audio (multipart, max 15MB, self alebo to_email s guardian/inner-circle authz, object storage APP_NAME/echoes/{uid}/{id}.m4a, echo audio:true) + GET /api/family/echoes/{id}/audio (stream, token query, recipient OR sender). voice-echoes.tsx: useAudioRecorder(HIGH_QUALITY) + AudioModule permission contract (canAskAgain → Linking.openSettings), ve-record (native only; web note), playback plays real audio via cachedAudioUri, mic icon on audio cards.
+2. RANNÁ PRIPOMIENKA — companion_reminder_sweep (Praha 9–12h, users s checkinmi alebo angel_mode, skip ak dnes odpovedali, dedup db.companion_reminders per deň, push '💛 JARVIS SA PÝTA') + POST /api/companion/remind-sweep (force). Swarm agent 'companion_care' (600s).
+3. NEDEĽNÝ AUTO-REPORT — _report_parts(uid) refaktor; _save_report_to_vault → PDF do object storage + db.documents (source healing_report) + calendar event; weekly_report_sweep (nedeľa Praha, dedup db.healing_report_runs per ISO week, push) + POST /api/healing/report/save-to-vault; swarm agent 'weekly_reporter' (3600s); healing.tsx button healing-report-vault ('AUTO: každú nedeľu').
+Curl-verified: audio upload+stream 200, remind sweep 1 sent + dedup, vault doc saved (36kB), weekly sweep saved 1.
+
+## Phase 33: SOVEREIGN TRIANGLE — 3-Pillar Permanent Architecture (June 2026) — DONE ✅
+(iteration_29: 60/60 frontend audit GREEN, zero dead buttons, zero console errors)
+Founder's final blueprint: 4 taby → 3 piliere so 100% zachovaním funkcií.
+- PillarHub.tsx: nové props `sections: {title, items[]}[]` + `hero: ReactNode` (spätne kompatibilné s items).
+- PILIER 1 (tabs)/health.tsx 'Moje uzdravovanie' (icon sync-circle): sekcie KOLOTOČ (hh-healing/translate/waitlist/arbitrage/recovery/physio — absorboval medicínske položky Huntera), ZDRAVOTNÉ DÁTA (vault/timeline/lens/drop/clinic-sync/news/border/ips/bible), LIEKY A TELO (meds/cabinet/pharmacy/bioscan/longevity/mental).
+- PILIER 2 (tabs)/family.tsx 'Rodinný štít': zlatý pulzujúci ANGEL MODE hero (fs-angel, Pulse), sekcie HEROIC SENIOR SUITE (fs-magic-lens/echoes/wellness/fallverify/onboarding), RODINNÁ SYNCHRONIZÁCIA (pulse/pulsecheck/respect/fs-2fa→recovery-suite/monolith/gigs), OCHRANA (scam/duress/medic/paramedic/qr/wallpaper).
+- PILIER 3 (tabs)/legacy.tsx 'Suverénny trezor' (icon shield-checkmark, tab TREZOR): A·MAJETOK A POISTKY (wealth/insurance/healing/refunds/lw-token/subscription/protocol/market/barter/solidarity/inner-circle), B·ODKAZ (lw-eternal→/eternal-vault biometria), C·PREŽITIE BUNKER MODE (compass/mesh/blackout/survival/enviro/humanitarian/truth/ghost/fortress/recovery-suite/mosaic — absorboval survival položky Huntera).
+- _layout.tsx: 3 taby UZDRAVOVANIE/RODINNÝ ŠTÍT/TREZOR; hunter tab hidden (href:null, routy /(tabs)/hunter a /(tabs)/waitlist fungujú ďalej). Home: 3 pillar tiles.
