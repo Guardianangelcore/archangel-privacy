@@ -211,6 +211,7 @@ async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None))
             "extracted_text": cached_text,
             "cached": True,
             "birth_year_detected": None,  # already-cached docs don't re-scan
+            "birth_year_applied": False,  # never mutates state on cache hits
         }
     try:
         text = await extract_doc_text(doc)

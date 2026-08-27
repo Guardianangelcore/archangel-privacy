@@ -130,12 +130,28 @@ export default function Vault() {
         contentContainerStyle={{ padding: S.lg, paddingBottom: 160 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
         ListHeaderComponent={
-          ageToast ? (
-            <View testID="vault-age-toast" style={styles.ageToast}>
-              <Ionicons name="sparkles" size={16} color={C.onInverse} />
-              <Text style={styles.ageToastText}>{ageToast}</Text>
-            </View>
-          ) : null
+          <>
+            {ageToast ? (
+              <View testID="vault-age-toast" style={styles.ageToast}>
+                <Ionicons name="sparkles" size={16} color={C.onInverse} />
+                <Text style={styles.ageToastText}>{ageToast}</Text>
+              </View>
+            ) : null}
+            {/* OCR VAULT ONBOARDING — first-visit prompt if user has no birth_year AND no docs.
+                One-tap: Jarvis will fill Bio-Timeline + insurance fields from the scanned ID. */}
+            {!loading && !docs.length && !(user as any)?.birth_year && (
+              <Pressable testID="vault-first-scan" onPress={upload} disabled={uploading} style={styles.firstScan}>
+                <View style={styles.firstScanIcon}>
+                  {uploading ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="scan-outline" size={38} color={C.onInverse} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.firstScanTitle}>NASKENUJTE OBČIANKU</Text>
+                  <Text style={styles.firstScanSub}>Jarvis vyplní Vek, Bio-Timeline a poistkové polia — bez ťukania.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={C.onInverse} />
+              </Pressable>
+            )}
+          </>
         }
         ListEmptyComponent={
           !loading ? (
@@ -213,6 +229,10 @@ export default function Vault() {
 const styles = StyleSheet.create({
   ageToast: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.brand, borderRadius: 12, paddingHorizontal: S.md, paddingVertical: S.sm, marginBottom: S.md },
   ageToastText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 0.5, flex: 1 },
+  firstScan: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.brand, borderRadius: 16, padding: S.md, marginBottom: S.lg, shadowColor: C.brand, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
+  firstScanIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' },
+  firstScanTitle: { color: C.onInverse, fontWeight: '900', fontSize: 14, letterSpacing: 2 },
+  firstScanSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, lineHeight: 16, marginTop: 3 },
   root: { flex: 1, backgroundColor: C.bg },
   header: { paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse, borderBottomWidth: 2, borderBottomColor: C.inverse },
   title: { color: C.onInverse, fontSize: 22, fontWeight: '900', letterSpacing: 2 },

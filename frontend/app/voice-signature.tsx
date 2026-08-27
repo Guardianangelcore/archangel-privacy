@@ -5,7 +5,7 @@
 // real recording plays. The audio itself is stored server-side so a future
 // voice-ID model can match unknown callers.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, TextInput, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, TextInput, Platform, Linking, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,15 +30,20 @@ export default function VoiceSignature() {
   const [err, setErr] = useState('');
   const [okMsg, setOkMsg] = useState('');
   const [micBlocked, setMicBlocked] = useState(false);
+  const [circle, setCircle] = useState<{ members: any[]; recorded: number; total: number } | null>(null);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const cdRef = useRef<any>(null);
   const pulse = useSharedValue(0);
 
   const load = useCallback(async () => {
     try {
-      const r: any = await api('/family/voice-signature');
+      const [r, c]: any = await Promise.all([
+        api('/family/voice-signature'),
+        api('/family/voice-signature/circle'),
+      ]);
       setSig(r && r.sig_id ? r : null);
       setLabel((r && r.label) || (user?.name || '').split(' ')[0] || '');
+      setCircle(c);
     } catch (e) { console.log(e); }
   }, [user?.name]);
   useEffect(() => { load(); }, [load]);
@@ -116,7 +121,7 @@ export default function VoiceSignature() {
         <View style={{ width: 26 }} />
       </View>
 
-      <View style={styles.body}>
+      <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
           Nahrajte svoj hlas na 5 sekúnd. Keď potom pošlete odkaz babičke, Jarvis oznámi:
           <Text style={{ color: C.brand, fontWeight: '900' }}> „Máte novú správu od {label.trim() || 'Vás'}.“</Text>
@@ -174,10 +179,46 @@ export default function VoiceSignature() {
           </Pressable>
         )}
 
+        {/* FAMILY VOICE CIRCLE — every family member's voice-print status */}
+        {circle && circle.total > 1 && (
+          <View testID="vs-circle" style={styles.circleWrap}>
+            <View style={styles.circleHdr}>
+              <Ionicons name="people-circle" size={22} color={C.brand} />
+              <Text style={styles.circleTitle}>RODINNÝ HLASOVÝ KRUH</Text>
+              <View style={styles.circleCount}>
+                <Text style={styles.circleCountText}>{circle.recorded} / {circle.total}</Text>
+              </View>
+            </View>
+            <Text style={styles.circleSub}>
+              Každý člen rodiny nahrá vlastný hlas — Jarvis oznámi babičke, od koho odkaz je.
+            </Text>
+            {circle.members.map((m) => (
+              <View key={m.user_id} testID={`vs-circle-${m.user_id}`} style={styles.memberRow}>
+                <View style={[styles.memberAvatar, m.has_signature && styles.memberAvatarDone]}>
+                  <Ionicons name={m.has_signature ? 'mic-circle' : 'mic-off'} size={20} color={m.has_signature ? C.onInverse : C.info} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.memberName}>{m.name} {m.is_self && <Text style={styles.memberYou}>· TO STE VY</Text>}</Text>
+                  <Text style={styles.memberStatus}>
+                    {m.has_signature
+                      ? `„${m.label}“ · nahrané`
+                      : m.is_self ? 'Nahrajte hore ↑' : 'ešte nenahral svoj hlas'}
+                  </Text>
+                </View>
+                {m.has_signature ? (
+                  <Ionicons name="checkmark-circle" size={22} color={C.brand} />
+                ) : (
+                  <Ionicons name="time-outline" size={22} color={C.info} />
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
         <Text style={styles.hint}>
           Nahrávka sa nikomu neposiela — slúži iba na to, aby vás rodina spoznala v odkazoch.
         </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -202,5 +243,17 @@ const styles = StyleSheet.create({
   err: { color: C.error, fontSize: 12, marginTop: S.md },
   settingsBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: S.md, minHeight: 44, paddingHorizontal: S.md, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill },
   settingsText: { color: C.brand, fontWeight: '800', fontSize: 11 },
-  hint: { color: C.info, fontSize: 11, lineHeight: 16, marginTop: 'auto', textAlign: 'center' },
+  hint: { color: C.info, fontSize: 11, lineHeight: 16, marginTop: S.xl, textAlign: 'center' },
+  circleWrap: { marginTop: S.xl, borderWidth: 1, borderColor: C.border, borderRadius: R.md, backgroundColor: C.surface2, padding: S.md, gap: S.sm },
+  circleHdr: { flexDirection: 'row', alignItems: 'center', gap: S.sm },
+  circleTitle: { flex: 1, color: C.brand, fontWeight: '900', fontSize: 12, letterSpacing: 2 },
+  circleCount: { backgroundColor: C.brand, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  circleCountText: { color: C.onInverse, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  circleSub: { color: C.info, fontSize: 11, lineHeight: 16, marginBottom: S.sm },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
+  memberAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface3, borderWidth: 1, borderColor: C.borderStrong },
+  memberAvatarDone: { backgroundColor: C.brand, borderColor: C.brand },
+  memberName: { color: C.fg, fontWeight: '800', fontSize: 13 },
+  memberYou: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 1 },
+  memberStatus: { color: C.onS3, fontSize: 11, marginTop: 2 },
 });

@@ -45,6 +45,16 @@ export default function Home() {
   const [beaconSent, setBeaconSent] = useState(false);
   const stage = stageFromUser(user);
   const seniorHint = suggestAngelMode(stage);
+  // SOVEREIGN ACHIEVEMENTS — progress chip in top nav (dopamine hook)
+  const [achProgress, setAchProgress] = useState<{ unlocked: number; total: number } | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r: any = await api('/achievements');
+        setAchProgress({ unlocked: r.unlocked_count, total: r.total });
+      } catch {}
+    })();
+  }, [user?.user_id, user?.birth_year, user?.biometric_enabled, user?.onboarding_completed]);
 
   const toggleAngel = async () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -82,6 +92,17 @@ export default function Home() {
           <Text style={styles.brandSub}>{t('brand_sub', lang)}</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          {achProgress && (
+            <Pressable
+              testID="home-achievements"
+              onPress={() => { tap(); router.push('/achievements'); }}
+              hitSlop={8}
+              style={styles.achChip}
+            >
+              <Ionicons name="trophy" size={13} color={C.brand} />
+              <Text style={styles.achChipText}>{achProgress.unlocked}/{achProgress.total}</Text>
+            </Pressable>
+          )}
           <Pressable testID="home-jarvis" onPress={() => { tap(); router.push('/jarvis'); }} hitSlop={8}>
             <Ionicons name="sparkles" size={20} color={C.brand} />
           </Pressable>
@@ -519,6 +540,8 @@ const styles = StyleSheet.create({
   angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.md, paddingVertical: 8 },
   angelToggleGold: { backgroundColor: C.brand, borderColor: C.brand, shadowColor: C.brand, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
   angelToggleText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1.5 },
+  achChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: 'rgba(212,175,55,0.08)' },
+  achChipText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
   guardianGold: { marginTop: S.lg, borderRadius: R.md, overflow: 'hidden', shadowColor: C.brand, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
   guardianGoldBg: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.lg, paddingHorizontal: S.lg, minHeight: 96 },
   guardianGoldIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },

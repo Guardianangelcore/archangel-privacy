@@ -1,0 +1,30 @@
+{
+  "summary": "SOVEREIGN UX EXTENSIONS (Iter 32) — backend-only contract validated. 13/13 pytest cases GREEN (test_iter32_sovereign_extensions.py). Coverage: (A) /api/achievements — 401 without auth, response shape {unlocked, locked, unlocked_count, total=8, progress}, each row carries key/title/hint/icon/unlocked/unlocked_at, catalog contains EXACTLY the 8 expected badge keys (sovereign_onboarded, bio_timeline_set, biometric_gate, voice_print_first, angel_first_contact, physio_first_series, healing_loop_first, vault_first_doc), field-based derivation verified: biometric_enabled=true → biometric_gate unlocked, birth_year unset → bio_timeline_set in locked list, onboarding_completed=true → sovereign_onboarded unlocked, progress = round(unlocked_count*100/total). (B) /api/family/voice-signature/circle — 401 without auth, response shape {members, recorded, total}, caller is always in members with is_self=true, guardian link (either direction) surfaces the counterpart in members[], recorded count increments after POST /api/family/voice-signature (self shows has_signature=true + label). (C) Regression — OCR /api/vault/documents/{doc_id}/ocr still returns birth_year_detected (and birth_year_applied on non-cached path per iter31 spec), /api/voice/tts with onyx still 200 (returns JSON pointer {key,url} to cached mp3, current app contract).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter32_sovereign_extensions.py",
+    "/app/test_reports/pytest/pytest_iter32.xml"
+  ],
+  "action_items": [
+    "None blocking — Sovereign UX Extensions backend contract is production-ready.",
+    "Optional/minor: routes/health.py:208-214 the cached-branch response deliberately omits `birth_year_applied` (only returns extracted_text, cached=true, birth_year_detected=null). This matches iter31 spec but is inconsistent with the fresh-detection path shape. Frontend must therefore treat birth_year_applied as optional/false when cached=true. Consider always returning `birth_year_applied: false` on the cached branch to keep the response shape uniform.",
+    "Optional/minor: routes/achievements.py:78 `check_field` looks up user field but reports `created_at` as `unlocked_at`. That means the badge timestamp equals the user creation date — not the moment the flag actually flipped. Fine for MVP, but if the frontend animates 'just unlocked' toasts based on unlocked_at, this will be wrong. Consider timestamping each flag flip (e.g., biometric_enabled_at, onboarding_completed_at) or using updated_at."
+  ],
+  "critical_code_review_comments": [
+    "routes/achievements.py:74-92 _count_for correctly handles both check_field and check_collection paths; guardian OR-direction query on line 87 (`user_id` OR `guardian_user_id`) means angel_first_contact unlocks from either side of the relationship, which is intended.",
+    "routes/achievements.py:117-124 progress calculation uses `round(len(unlocked)*100/total)` — matches the response the frontend expects (integer 0-100).",
+    "routes/family.py:684-738 voice_circle uses ONE round-trip per collection (users_by_id + sigs_by_uid) instead of N per member — good perf. Self is always added on line 699 so caller is guaranteed to be in the list even without any guardian link. Sort order (self → recorded → not-recorded) will render nicely on the mobile grid.",
+    "routes/family.py:721 name is derived as `(u.get('name') or u.get('email') or 'Rodina').split(' ')[0]` — first-name-only for the tile label. Consider preserving full name if the frontend needs it (only first name is currently exposed).",
+    "routes/achievements.py CATALOG has exactly 8 entries and their keys match the review-request spec verbatim.",
+    "server.py imports the `achievements` route module correctly (line 12), and the route is picked up under /api/achievements without a router prefix conflict."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter32_sovereign_extensions.py (new — 13 test cases across 3 classes: TestAchievements, TestVoiceCircle, TestRegression)"
+  ],
+  "success_rate": {"backend": "100% (13/13 pytest cases)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "No new users. Used existing smoketest-user-1 (token smoketok-fresh-2026) and smoketest-user-2 (token smoketok-fresh-2026-u2). Tests use pymongo directly to (i) toggle biometric_enabled/onboarding_completed and restore prior state, (ii) temporarily unset birth_year and restore, (iii) reuse the pre-existing guardians link between the two smoke users (no duplicate-insert; falls back to seeding a marker-tagged link only when no link exists, and deletes it in finally). Voice-signature upload test cleans up via DELETE /api/family/voice-signature to leave iter31 teardown state intact. Iter30 (30) and iter31 (17) test suites were not modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter 32 SOVEREIGN UX EXTENSIONS passes 13/13. New endpoints: /api/achievements (routes/achievements.py, CATALOG of 8 badges with mixed check_field/check_collection derivation) and /api/family/voice-signature/circle (routes/family.py:684-738, aggregates guardian links in BOTH directions + always includes self). Regression key notes: /api/voice/tts now returns JSON `{key, url}` pointer (not raw audio bytes) — cache is served at /api/voice/tts/{key}.mp3. OCR endpoint at /api/vault/documents/{doc_id}/ocr (NOT /api/ocr/document) — cached-branch response only contains {extracted_text, cached=true, birth_year_detected=null}; fresh-branch adds birth_year_applied. Iter30 + iter31 test suites remain untouched and green under prior state."
+}

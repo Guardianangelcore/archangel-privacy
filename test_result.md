@@ -319,3 +319,31 @@ Backend tests: 17/17 GREEN (test_iter31_sentient_finale.py) — onboarding flag,
 voice-signature CRUD, idempotency, edge cases.
 Frontend screenshots verified: Sovereign Tour renders card 1/4 with pillar icon + progress dots;
 Voice-Signature screen renders label, big golden mic button, and Jarvis intro line.
+
+## Iteration 32 (SOVEREIGN EXTENSIONS — Voice Circle, OCR Onboarding, Achievements, Feb 2026)
+NEW backend:
+- routes/achievements.py: /api/achievements returns 8 badges (sovereign_onboarded, bio_timeline_set,
+  biometric_gate, voice_print_first, angel_first_contact, physio_first_series, healing_loop_first,
+  vault_first_doc) with progress %. Field-based badges (birth_year, onboarding_completed,
+  biometric_enabled) + collection-based (voice_signatures, guardians, physio_videos, healing_events,
+  documents). Idempotent, no new collections.
+- routes/family.py: /api/family/voice-signature/circle returns full family voice-circle
+  (guardian links both directions + self). Members carry has_signature + label so the frontend
+  can render "Tomáš ✓" / "Mama ⌛" tiles.
+- routes/health.py: cached OCR branch now returns birth_year_applied=false (consistency).
+NEW frontend:
+- app/achievements.tsx: full-screen badge grid — zlatý hero baner s progress bar, unlocked
+  section (gold gradient badges), locked section (dashed grey with red lock dot). Tap any
+  badge → Jarvis onyx voice reads the title/hint.
+- app/(tabs)/index.tsx: home nav now has home-achievements chip (🏆 5/8) — one-tap into
+  the Sovereign badges screen. Auto-refreshes when user prefs change.
+UPGRADED frontend:
+- app/voice-signature.tsx: below the recorder, a Family Voice Circle panel lists every
+  circle member (self first) with mic-on/off avatar + status: "Tomáš — nahrané" / "Mama — ešte
+  nenahral svoj hlas". Counter chip in header (0/2, 3/3 …).
+- app/(tabs)/vault.tsx: first-visit banner "NASKENUJTE OBČIANKU · Jarvis vyplní Vek, Bio-Timeline
+  a poistkové polia" (only shows when docs.length==0 && birth_year==null). Gold linear card,
+  one-tap → document picker.
+Backend tests: 13/13 GREEN (test_iter32_sovereign_extensions.py). Overall Sentient UX suite:
+30 (iter30) + 17 (iter31) + 13 (iter32) = 60 tests green.
+Frontend screenshots verified: home 🏆 5/8 chip, Achievements hero + grid, Voice Circle tiles.

@@ -673,3 +673,66 @@ async def voice_signature_delete(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     await db.voice_signatures.delete_one({"user_id": user["user_id"]})
     return {"ok": True}
+
+
+# --------- FAMILY VOICE CIRCLE ---------
+# The founder's Sentient vision: every family member (Tomáš, mama, babička)
+# records a 5-second voice print in ONE shared circle. Grandma hears
+# "Máte novú správu od Tomáša" — Jarvis knows who is who by user_id.
+# The circle = anyone in a guardian relationship with the caller (either direction).
+
+@api.get("/family/voice-signature/circle")
+async def voice_circle(authorization: Optional[str] = Header(None)):
+    """Every family member in your circle + whether they have a voice print yet."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+
+    # Collect member user_ids from BOTH sides of the guardian relationship.
+    member_ids: set[str] = set()
+    async for l in db.guardians.find({"user_id": uid}, {"_id": 0, "guardian_user_id": 1}):
+        if l.get("guardian_user_id"):
+            member_ids.add(l["guardian_user_id"])
+    async for l in db.guardians.find({"guardian_user_id": uid}, {"_id": 0, "user_id": 1}):
+        if l.get("user_id"):
+            member_ids.add(l["user_id"])
+    # Include self in the circle so Tomáš sees his own tile too.
+    member_ids.add(uid)
+
+    # One round-trip per collection instead of N per member.
+    users_by_id = {}
+    async for u in db.users.find(
+        {"user_id": {"$in": list(member_ids)}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "did": 1},
+    ):
+        users_by_id[u["user_id"]] = u
+    sigs_by_uid = {}
+    async for s in db.voice_signatures.find(
+        {"user_id": {"$in": list(member_ids)}},
+        {"_id": 0, "user_id": 1, "label": 1, "size": 1, "updated_at": 1, "sig_id": 1},
+    ):
+        sigs_by_uid[s["user_id"]] = s
+
+    members = []
+    for m_uid in member_ids:
+        u = users_by_id.get(m_uid) or {"user_id": m_uid, "name": "Neznámy", "email": ""}
+        sig = sigs_by_uid.get(m_uid)
+        members.append({
+            "user_id": m_uid,
+            "name": (u.get("name") or u.get("email") or "Rodina").split(" ")[0],
+            "email": u.get("email") or "",
+            "is_self": m_uid == uid,
+            "has_signature": bool(sig),
+            "label": (sig or {}).get("label") if sig else None,
+            "recorded_at": (sig or {}).get("updated_at"),
+        })
+    # Self first, then recorded members alphabetically, then not-yet-recorded.
+    members.sort(key=lambda m: (
+        0 if m["is_self"] else (1 if m["has_signature"] else 2),
+        (m["name"] or "").lower(),
+    ))
+    recorded = sum(1 for m in members if m["has_signature"])
+    return {
+        "members": clean(members),
+        "recorded": recorded,
+        "total": len(members),
+    }

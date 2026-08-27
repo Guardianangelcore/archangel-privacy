@@ -368,3 +368,29 @@ Founder directive: pass the "Tomáš Test" — beautiful, intuitive, lightning-f
    onboarding, biometric-gate, vault). Guardian Gold Toggle prominent on Hub + top nav.
 
 Backend: 17/17 pytest green (test_iter31_sentient_finale.py). Frontend screenshots verified.
+
+## Phase 42: SOVEREIGN EXTENSIONS — Voice Circle · Vault Onboarding · Achievements (Feb 2026) — DONE ✅
+Building on the SENTIENT UX FINALE, the 3 requested extensions are live:
+
+1. FAMILY VOICE PRINT GROUP:
+   - Backend: GET /api/family/voice-signature/circle returns every family circle member
+     (both sides of the db.guardians relationship + self) with their voice-print status.
+   - Frontend: voice-signature.tsx now shows a "RODINNÝ HLASOVÝ KRUH · X/Y" panel below
+     the recorder. Tomáš, mama, babička each see who has recorded and who hasn't.
+   - Jarvis already announces each sender by name via voice-echoes.tsx (iter 31).
+
+2. OCR VAULT ONBOARDING:
+   - Frontend: vault.tsx first-visit banner (only for users with no docs AND no birth_year).
+     One-tap opens the document picker; the OCR pipeline auto-fills birth_year and Jarvis
+     confirms in Onyx voice.
+   - Zero-Friction Age Sync (iter 31) does the heavy lifting under the hood.
+
+3. SOVEREIGN ACHIEVEMENTS:
+   - Backend: /api/achievements → 8 badges with progress %.
+   - Frontend: app/achievements.tsx (hero + gold-vs-locked grid) + home 🏆 X/Y chip.
+   - Each badge maps to a real journey milestone: onboarding, Bio-Timeline, biometric,
+     voice-print, first guardian, physio series, healing loop, first Vault doc.
+   - Tap → Jarvis Onyx congratulation (unlocked) or hint (locked).
+
+Backend: 13/13 pytest green (test_iter32_sovereign_extensions.py). Full Sentient suite: 60 tests.
+Frontend: home nav chip, Achievements screen, Voice Circle panel, Vault banner all screenshot-verified.
