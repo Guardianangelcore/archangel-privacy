@@ -103,7 +103,7 @@ export default function Home() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.greeting}>{t('greeting_hello', lang)}{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian').split(' ')[0]}.</Text></Text>
+        <Text style={styles.greeting}>{t('greeting_hello', lang)}{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian Angel').split(' ')[0]}.</Text></Text>
 
         {/* JARVIS PRESENCE — pulsing AI Orb, the primary welcome interface */}
         <HomeOrb lang={lang} onPress={() => { tap('heavy'); router.push('/jarvis'); }} />

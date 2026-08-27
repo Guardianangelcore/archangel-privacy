@@ -16,6 +16,7 @@ import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
 import { GA_ORIGIN_MARK } from "@/src/watermark";
 import { BiometricGate } from "@/src/biometric-gate";
+import { OnboardingTour } from "@/src/onboarding-tour";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
@@ -131,6 +132,8 @@ function RootNav() {
           freezeOnBlur: true,
           gestureEnabled: true,
         }} />
+        {/* SENTIENT ONBOARDING — 30-second Sovereign Tour on first launch (Onyx narrated) */}
+        <OnboardingTour />
       </BiometricGate>
       {/* Hidden digital watermark — original Guardian Angel build fingerprint */}
       <Text

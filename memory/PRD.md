@@ -349,3 +349,22 @@ Bio-Timeline (5 stages).
 Verified: Home screenshot shows SENIOR pill + Guardian Gold card 'ETAPA ŽIVOTA: SENIOR (65+)' after
 setting birth_year=1958. Profile screenshot shows all four Sentient controls in Slovak.
 Backend: 30/30 pytest green (test_iter30_sentient_ux.py).
+
+## Phase 41: SENTIENT UX FINALE — Zero-Friction & Voice Signatures (Feb 2026) — DONE ✅
+Founder directive: pass the "Tomáš Test" — beautiful, intuitive, lightning-fast.
+
+1. Personalization: default fallback name is now "Guardian Angel" (never a raw email).
+   Biometric unlock greeting: "Vitajte doma, Guardian Angel. Som váš Jarvis." (Onyx).
+2. Sentient Onboarding: 30-second Sovereign Tour auto-runs on first launch. 4-step narrated
+   walkthrough (Uzdravovanie → Rodinný štít → Trezor → JARVIS wake-word cue). Onboarding
+   flag stored on backend (PrefIn.onboarding_completed), never repeats.
+3. Zero-Friction Age Sync: OCR of any ID/DOB/RČ document silently patches user.birth_year
+   when not set → Bio-Timeline stage updates automatically. Jarvis says "Rozumiem. Vek
+   nastavený — SENIOR (65+). Rozhranie som prispôsobil." Toast in Vault.
+4. Voice Signatures: 5-second voice-print recording under Family Shield. Sender name
+   announced by Jarvis (Onyx) before every Voice Echo playback: "Máte novú správu od
+   Tomáša." Audio stored server-side for future voice-ID ML model.
+5. Integrity: Onyx voice used across all 14 languages (jarvis, physio, voice-echoes,
+   onboarding, biometric-gate, vault). Guardian Gold Toggle prominent on Hub + top nav.
+
+Backend: 17/17 pytest green (test_iter31_sentient_finale.py). Frontend screenshots verified.

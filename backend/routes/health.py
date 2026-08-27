@@ -157,14 +157,61 @@ async def extract_doc_text(doc: dict) -> str:
         await db.documents.update_one({"doc_id": doc_id}, {"$set": {"extracted_text": text}})
     return text
 
+# --------- BIRTH YEAR AUTO-DETECT (Zero-Friction Age Sync) ---------
+# When an ID/passport/birth certificate is OCR'd, extract the birth year and
+# silently update the user's Bio-Timeline. Never overwrites an existing value.
+_BIRTH_YEAR_PATTERNS = [
+    # SK ID pattern: RČ (rodné číslo) — YYMMDD/XXXX; year=YY (with century inference)
+    re.compile(r"\b(?:RČ|rodné\s*číslo|rodne\s*cislo|birth\s*number)[^0-9]{0,10}(\d{2})(\d{2})(\d{2})[/-]?(\d{3,4})\b", re.I),
+    # Date of birth: DD.MM.YYYY / DD/MM/YYYY / DD-MM-YYYY (whitespace-tolerant)
+    re.compile(r"\b(?:dátum\s+narodenia|datum\s+narozeni|date\s+of\s+birth|geburtsdatum|dob)[^0-9]{0,10}(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{4})\b", re.I),
+    # ISO YYYY-MM-DD after DOB label
+    re.compile(r"\b(?:dátum\s+narodenia|datum\s+narozeni|date\s+of\s+birth|geburtsdatum|dob)[^0-9]{0,10}(\d{4})-(\d{2})-(\d{2})\b", re.I),
+    # Loose "narodený/narodená DD.MM.YYYY" (whitespace-tolerant, gendered)
+    re.compile(r"\bnaroden(?:[ýá]|a|y)?\s+(?:d[ňn]a\s+)?(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{4})\b", re.I),
+]
+
+def _detect_birth_year(text: str) -> Optional[int]:
+    if not text:
+        return None
+    t = text[:8000]
+    now_year = datetime.now(timezone.utc).year
+    for i, pat in enumerate(_BIRTH_YEAR_PATTERNS):
+        m = pat.search(t)
+        if not m:
+            continue
+        groups = m.groups()
+        try:
+            if i == 0:
+                # RČ: century inference — trailing block of 3 digits ≈ pre-1954, 4 digits ≈ 1954+
+                yy = int(groups[0])
+                trailing = groups[3] or ""
+                century = 1900 if len(trailing) == 3 else 2000 if yy < 54 else 1900
+                year = century + yy
+            elif i == 2:
+                year = int(groups[0])
+            else:
+                year = int(groups[2])
+            if 1900 <= year <= now_year - 1:
+                return year
+        except (ValueError, IndexError):
+            continue
+    return None
+
+
 @api.post("/vault/documents/{doc_id}/ocr")
 async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     doc = await db.documents.find_one({"doc_id": doc_id, "user_id": user["user_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Not found")
-    if doc.get("extracted_text"):
-        return {"extracted_text": doc["extracted_text"], "cached": True}
+    cached_text = doc.get("extracted_text")
+    if cached_text:
+        return {
+            "extracted_text": cached_text,
+            "cached": True,
+            "birth_year_detected": None,  # already-cached docs don't re-scan
+        }
     try:
         text = await extract_doc_text(doc)
     except HTTPException:
@@ -175,7 +222,25 @@ async def ocr_document(doc_id: str, authorization: Optional[str] = Header(None))
 
     if not text:
         raise HTTPException(422, "No text could be extracted from this document")
-    return {"extracted_text": text}
+
+    # Zero-Friction Age Sync — auto-detect + patch only if user has NO birth_year yet.
+    by_detected = _detect_birth_year(text)
+    by_applied = False
+    if by_detected and not user.get("birth_year"):
+        try:
+            await db.users.update_one(
+                {"user_id": user["user_id"]},
+                {"$set": {"birth_year": by_detected}},
+            )
+            by_applied = True
+        except Exception as e:
+            logger.warning(f"birth_year autofill failed: {e}")
+
+    return {
+        "extracted_text": text,
+        "birth_year_detected": by_detected,
+        "birth_year_applied": by_applied,
+    }
 
 
 # --------- AI HEALTH TRANSLATOR ---------

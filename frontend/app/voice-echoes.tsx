@@ -11,6 +11,7 @@ import { cachedAudioUri } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
+import { speak as jarvisSpeak } from '@/src/voice';
 
 const PRESETS = [
   'Ľúbime ťa, babička! Mysli na nás. ❤️',
@@ -52,13 +53,21 @@ export default function VoiceEchoes() {
     setPlaying(e.echo_id);
     try {
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
+      // SENTIENT ANNOUNCEMENT — Jarvis (Onyx) says the sender's name FIRST, so babička
+      // knows who is speaking before their real voice starts playing.
+      const senderLabel = (e.from_name || 'rodinný člen').trim();
+      const langNow = (user?.language as any) || 'sk';
+      await jarvisSpeak(`Máte novú správu od ${senderLabel}.`, { voice: 'onyx', speed: 0.95, language: langNow });
+      // Small pause so the intro is clearly heard before the real echo starts.
+      await new Promise(r => setTimeout(r, 2200));
+
       let src: { uri: string; headers?: Record<string, string> };
       if (e.audio) {
         // REAL family voice recording — stream the original audio
         src = await cachedAudioUri(`/family/echoes/${e.echo_id}/audio`);
       } else {
-        const text = `Odkaz od: ${e.from_name}. ${e.message}`;
-        const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1000), voice: 'nova', speed: 0.95, language: user?.language || 'sk' }) });
+        // Text-only echo — Onyx reads it (unified with Jarvis timbre)
+        const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: (e.message || '').slice(0, 1000), voice: 'onyx', speed: 0.95, language: langNow }) });
         src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
       }
       try { playerRef.current?.remove?.(); } catch {}

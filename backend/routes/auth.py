@@ -106,6 +106,7 @@ class PrefIn(BaseModel):
     birth_year: Optional[int] = None  # 1900..2030 for Bio-Timeline (infant→senior)
     biometric_enabled: Optional[bool] = None  # FaceID/Fingerprint gate on app open
     wake_word_enabled: Optional[bool] = None  # Alexa-style "JARVIS" always-listening
+    onboarding_completed: Optional[bool] = None  # 30-second Sovereign Tour played once
 
 @api.patch("/me/prefs")
 async def update_prefs(body: PrefIn, authorization: Optional[str] = Header(None)):

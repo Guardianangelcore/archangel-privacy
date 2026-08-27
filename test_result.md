@@ -291,3 +291,31 @@ EXISTING files upgraded:
 Screenshots verified: home shows SENIOR pill + Guardian Gold card with ETAPA ŽIVOTA: SENIOR (65+) after
 birth_year=1958 seed. Profile Sentient UX section renders all four controls in Slovak.
 NEEDS TESTING: all backend PrefIn field flows + TTS onyx roundtrip via testing_agent.
+
+## Iteration 31 (SENTIENT UX FINALE — Zero-Friction & Voice Signatures, Feb 2026)
+NEW backend:
+- routes/auth.py PrefIn: onboarding_completed added.
+- routes/health.py: _detect_birth_year() with 5 regex patterns (RČ, SK/CS/EN/DE DOB labels, ISO,
+  loose "narodený"). ocr_document endpoint now returns birth_year_detected + birth_year_applied.
+  Never overwrites an existing birth_year.
+- routes/family.py: 4 new voice-signature endpoints (POST multipart, GET meta, GET /file streamed,
+  DELETE). 3MB size limit, upsert-by-user_id, storage under {APP}/voice-signatures/{user_id}.
+NEW frontend:
+- src/onboarding-tour.tsx: 30-second Sovereign Tour, Onyx-narrated, auto-runs when
+  onboarding_completed=false, sets flag on finish/skip.
+- app/voice-signature.tsx: recorder screen (5s countdown, mic permission handling, upload,
+  delete, Onyx confirmation "Ďakujem, {label}. Váš hlasový podpis je zaznamenaný.").
+UPGRADED frontend:
+- app/(tabs)/index.tsx: greeting fallback name "Guardian Angel" (was "Guardian").
+- app/(tabs)/family.tsx: new fs-voice-signature tile (Hlasový podpis).
+- app/(tabs)/vault.tsx: OCR pipeline now shows "✨ Bio-Timeline aktualizovaná: {stage}" toast +
+  Jarvis Onyx confirmation + auto-refreshes user (birth_year applied silently).
+- app/voice-echoes.tsx: Jarvis (Onyx) now announces sender name before playback:
+  "Máte novú správu od {label}." 2.2s pause then real audio.
+- src/biometric-gate.tsx: greeting text updated to "Vitajte doma, {name}. Som váš Jarvis."
+  and fallback to "Guardian Angel" (never uses raw email).
+- app/_layout.tsx: OnboardingTour wired inside BiometricGate wrapper.
+Backend tests: 17/17 GREEN (test_iter31_sentient_finale.py) — onboarding flag, OCR autofill,
+voice-signature CRUD, idempotency, edge cases.
+Frontend screenshots verified: Sovereign Tour renders card 1/4 with pillar icon + progress dots;
+Voice-Signature screen renders label, big golden mic button, and Jarvis intro line.

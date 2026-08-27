@@ -601,3 +601,75 @@ async def pulse_sent(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     return await db.pulse_requests.find({"from_user": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(30)
 
+
+
+# --------- VOICE SIGNATURES (Inner Circle Voice Prints) ---------
+# The founder's vision: each family member records a 5-second voice print.
+# When they send a Voice Echo to grandma, Jarvis announces the sender by name.
+# The recognition itself is by user_id (secure) — the audio is stored so a future
+# voice-ID model can match unknown callers to their print.
+
+@api.post("/family/voice-signature")
+async def voice_signature_upload(
+    file: UploadFile = File(...),
+    label: str = Form(""),
+    authorization: Optional[str] = Header(None),
+):
+    """Record a 5-second voice print. Overwrites the previous one for this user."""
+    user = await get_current_user(authorization)
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty audio")
+    if len(data) > 3 * 1024 * 1024:  # 3MB is plenty for 5s at any sane bitrate
+        raise HTTPException(400, "Audio too large (max 3MB)")
+    sig_id = uuid.uuid4().hex
+    ext = "m4a" if (file.content_type or "").endswith(("mp4", "aac", "m4a")) else "webm"
+    path = f"{APP_NAME}/voice-signatures/{user['user_id']}.{ext}"
+    try:
+        await run_in_threadpool(put_object_sync, path, data, file.content_type or "audio/webm")
+    except Exception as e:
+        logger.error(f"voice-sig upload failed: {e}")
+        raise HTTPException(502, "Storage upload failed")
+    label_clean = (label or user.get("name") or user.get("email") or "").strip()[:60]
+    rec = {
+        "sig_id": sig_id,
+        "user_id": user["user_id"],
+        "did": user["did"],
+        "label": label_clean or "Guardian",
+        "storage_path": path,
+        "size": len(data),
+        "content_type": file.content_type or "audio/webm",
+        "updated_at": datetime.now(timezone.utc),
+    }
+    await db.voice_signatures.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": rec},
+        upsert=True,
+    )
+    return {"ok": True, "sig_id": sig_id, "label": rec["label"]}
+
+@api.get("/family/voice-signature")
+async def voice_signature_get(authorization: Optional[str] = Header(None)):
+    """Returns the caller's own voice-print record (without the audio bytes)."""
+    user = await get_current_user(authorization)
+    rec = await db.voice_signatures.find_one({"user_id": user["user_id"]}, {"_id": 0, "storage_path": 0})
+    return rec or {}
+
+@api.get("/family/voice-signature/file")
+async def voice_signature_file(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    """Streams the caller's own voice-print audio bytes."""
+    user = await _auth_pdf(authorization, token)
+    rec = await db.voice_signatures.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not rec:
+        raise HTTPException(404, "No voice signature recorded yet")
+    try:
+        content, ctype = await run_in_threadpool(get_object_sync, rec["storage_path"])
+    except Exception as e:
+        raise HTTPException(502, f"Storage read failed: {e}")
+    return Response(content=content, media_type=ctype)
+
+@api.delete("/family/voice-signature")
+async def voice_signature_delete(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await db.voice_signatures.delete_one({"user_id": user["user_id"]})
+    return {"ok": True}

@@ -1,0 +1,33 @@
+{
+  "summary": "SENTIENT UX FINALE (Iter 31) — backend-only contract validated. 17/17 pytest cases GREEN (test_iter31_sentient_finale.py). ALL three feature areas fully covered: (1) PrefIn.onboarding_completed accepted (true/false persist and echo in /auth/me), invalid string type correctly rejected with 422 Pydantic; (2) OCR birth-year auto-detect works end-to-end via a real text-based PDF upload (autopilot disabled to prevent orchestrator race) — 'date of birth: 15.03.1958' → birth_year_detected=1958 + birth_year_applied=true when user has no birth_year; cache-hit second call → cached=true + birth_year_detected=null (per spec); user WITH birth_year set → birth_year_applied=false (never overwrites); 'rodne cislo: 580315/1234' RČ pattern → 1958 detected; text with no birth info → birth_year_detected=null + birth_year_applied=false; (3) Voice-signature endpoints — POST multipart 2KB webm → 200 {ok:true,sig_id,label}, GET returns record without storage_path, GET /file returns exact audio bytes (len match), file GET without auth → 401, empty audio → 400, >3MB audio → 400, DELETE → 200 with subsequent GET → {} and /file → 404, second POST idempotent (upsert on user_id, label updated to GuardianV2). Regressions all green: PATCH prefs {birth_year, biometric_enabled, wake_word_enabled} persist as-is, /voice/tts with onyx still 200, /auth/me returns all four sentient UX fields (birth_year, biometric_enabled, wake_word_enabled, onboarding_completed).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter31_sentient_finale.py",
+    "/app/test_reports/pytest/pytest_iter31.xml"
+  ],
+  "action_items": [
+    "None blocking — SENTIENT UX FINALE backend contract is production-ready.",
+    "Optional: The OCR endpoint returns cached=True with birth_year_detected=null on repeat calls (per spec), but this means the birth-year auto-apply happens ONLY on the first OCR call. If a user uploads an ID doc while already having a birth_year set (birth_year_applied=false), they can never re-trigger detection later. Consider an explicit force-rescan flag for edge cases.",
+    "Optional: /api/family/voice-signature accepts any audio/webm content-type without validating actual audio content (magic bytes). Fine for MVP; consider ffprobe validation before shipping voice-ID matching."
+  ],
+  "critical_code_review_comments": [
+    "routes/auth.py:109 PrefIn.onboarding_completed correctly declared Optional[bool] — Pydantic v2 rejects string 'not-a-bool' with 422. Confirmed via test_patch_invalid_type_422.",
+    "routes/auth.py:114 upd dict `{k:v for k,v in body.model_dump().items() if v is not None}` correctly preserves False values (only None skipped). Verified test_patch_false persists onboarding_completed=False in /auth/me.",
+    "routes/health.py:163-172 _BIRTH_YEAR_PATTERNS: 4 regex patterns cover RČ (SK), DD.MM.YYYY DOB with SK/CZ/EN/DE labels, ISO YYYY-MM-DD after DOB label, and 'narodený/á' loose. Case-insensitive. Regex '_detect_birth_year' correctly returns None for text without DOB tokens.",
+    "routes/health.py:185-190 RČ century inference: 4-digit trailing block with yy<54 → 2000, else 1900. Correctly returns 1958 for '580315/1234' (yy=58, trailing 4 digits → 1900+58).",
+    "routes/health.py:227-237 birth-year auto-apply guard: `if by_detected and not user.get('birth_year')` — never overwrites existing. Verified test_never_overwrites_existing_birth_year (user 1970 stays 1970 even when doc says 1958).",
+    "routes/health.py:209-214 cached-branch returns birth_year_detected=None deliberately (per spec — no re-scan for cached docs). Behavior confirmed.",
+    "routes/family.py:612-649 voice_signature_upload: correctly enforces empty audio → 400 and >3MB → 400; uses upsert on user_id ensuring idempotency; label defaults to user name/email if not provided.",
+    "routes/family.py:655 voice_signature_get projects out storage_path — good, prevents leakage of internal object path.",
+    "routes/family.py:661 voice_signature_file uses _auth_pdf which accepts token via query param OR bearer — /file endpoint returns 401 without either (test_file_without_auth_401 confirms)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter31_sentient_finale.py (new — 17 test cases across 4 classes)"
+  ],
+  "success_rate": {"backend": "100% (17/17 pytest cases)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "No new users. Used existing smoketest-user-1 (token smoketok-fresh-2026). Tests use pymongo directly to temporarily clear/restore user.birth_year for the fresh-detection scenario and to set birth_year=1970 for the never-overwrite scenario — all state is restored to birth_year=1958 in teardown. Autopilot is toggled off during OCR tests and restored to True afterwards, so no lingering side-effects.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter 31 SENTIENT FINALE passes 17/17. PrefIn.onboarding_completed at routes/auth.py:109; birth-year auto-detect at routes/health.py:160-243 (_BIRTH_YEAR_PATTERNS + _detect_birth_year + ocr_document integration); voice-signature quartet at routes/family.py:606-675. Key trick used for OCR fresh-detection test: disable jarvis_autopilot via PUT /api/jarvis/autopilot {enabled:false} BEFORE uploading a doc to prevent the background orchestrator from OCR-caching the doc first; also mongo-clears user.birth_year to force the applied=True path. Use fpdf2 to build tiny text-layer PDFs (pypdf extracts them without needing vision-OCR). Voice-signature POST requires multipart (no Content-Type: application/json — use MULTI headers without Content-Type). Note iter30's 30 tests remain untouched and still pass under prior state."
+}

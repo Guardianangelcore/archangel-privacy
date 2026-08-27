@@ -8,13 +8,15 @@ import { useRouter } from 'expo-router';
 import { api, apiUpload, API_BASE, getToken } from '@/src/api';
 import { shareFile } from '@/src/pdf';
 import { useAuth } from '@/src/auth';
+import { AGE_LABEL_SK, ageFromBirthYear, stageFromAge } from '@/src/age';
+import { speak as jarvisSpeak } from '@/src/voice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
 type Doc = { doc_id: string; title: string; file_name: string; content_type: string; size: number; uploaded_at: string; plain_language?: string; extracted_text?: string };
 
 export default function Vault() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'sk';
   const router = useRouter();
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -61,11 +63,29 @@ export default function Vault() {
     return ct.startsWith('image/') || ct.includes('pdf') || /\.(pdf|jpe?g|png|webp|heic)$/.test(fn);
   };
 
+  const [ageToast, setAgeToast] = useState('');
+
   const ocrAndTranslate = async (doc: Doc) => {
     setBusyDoc(doc.doc_id);
     try {
       const ocr: any = await api(`/vault/documents/${doc.doc_id}/ocr`, { method: 'POST' });
       setDocs(prev => prev.map(d => d.doc_id === doc.doc_id ? { ...d, extracted_text: ocr.extracted_text } : d));
+      // ZERO-FRICTION AGE SYNC — the backend auto-detected the user's birth year
+      // from an ID/DOB/RČ pattern and silently updated Bio-Timeline. Announce it.
+      if (ocr.birth_year_applied && ocr.birth_year_detected) {
+        const stage = stageFromAge(ageFromBirthYear(ocr.birth_year_detected));
+        const stageLbl = AGE_LABEL_SK[stage];
+        setAgeToast(`✨ Bio-Timeline aktualizovaná: ${stageLbl} (rok ${ocr.birth_year_detected})`);
+        try {
+          const me: any = await api('/auth/me');
+          if (me?.user) setUser(me.user);
+        } catch {}
+        try {
+          jarvisSpeak(`Rozumiem. Vek nastavený — ${stageLbl}. Rozhranie som prispôsobil.`,
+            { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk' });
+        } catch {}
+        setTimeout(() => setAgeToast(''), 6000);
+      }
       const res: any = await api('/ai/translate-document', {
         method: 'POST',
         body: JSON.stringify({ doc_id: doc.doc_id, language: lang }),
@@ -109,6 +129,14 @@ export default function Vault() {
         keyExtractor={i => i.doc_id}
         contentContainerStyle={{ padding: S.lg, paddingBottom: 160 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
+        ListHeaderComponent={
+          ageToast ? (
+            <View testID="vault-age-toast" style={styles.ageToast}>
+              <Ionicons name="sparkles" size={16} color={C.onInverse} />
+              <Text style={styles.ageToastText}>{ageToast}</Text>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
@@ -183,6 +211,8 @@ export default function Vault() {
 }
 
 const styles = StyleSheet.create({
+  ageToast: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.brand, borderRadius: 12, paddingHorizontal: S.md, paddingVertical: S.sm, marginBottom: S.md },
+  ageToastText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 0.5, flex: 1 },
   root: { flex: 1, backgroundColor: C.bg },
   header: { paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse, borderBottomWidth: 2, borderBottomColor: C.inverse },
   title: { color: C.onInverse, fontSize: 22, fontWeight: '900', letterSpacing: 2 },

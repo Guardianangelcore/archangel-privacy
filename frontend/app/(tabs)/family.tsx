@@ -42,6 +42,7 @@ export default function FamilyShield() {
         { title: '👵 HEROIC SENIOR SUITE', items: [
           { testID: 'fs-magic-lens', icon: 'aperture-outline', title: 'Kúzelná lupa', subtitle: 'Odfoť liek či noviny — Jarvis číta nahlas', route: '/lens' },
           { testID: 'fs-echoes', icon: 'heart-outline', title: 'Odkazy od rodiny', subtitle: 'Voice Echoes · vlastný hlas rodiny · 1 ťuk', route: '/voice-echoes' },
+          { testID: 'fs-voice-signature', icon: 'mic-circle-outline', title: 'Hlasový podpis', subtitle: '5-sekundový voice-print · Jarvis ohlási meno', route: '/voice-signature' },
           { testID: 'fs-wellness', icon: 'sparkles-outline', title: 'Spoločník (denná kontrola)', subtitle: '„Ako ste sa vyspali?" · emočné trendy', route: '/wellness' },
           { testID: 'fs-fallverify', icon: 'body-outline', title: 'Safety Sentinel — pád', subtitle: '120 s overovacia slučka · hlasové zrušenie', route: '/fall-verify' },
           { testID: 'fs-onboarding', icon: 'heart-outline', title: 'Sprievodca pre seniorov', subtitle: '3 kroky: strážca · Jarvis · núdzové QR', route: '/onboarding' },

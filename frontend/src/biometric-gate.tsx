@@ -69,8 +69,11 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
         if (!greetedRef.current) {
           greetedRef.current = true;
           const stage = stageFromUser(user);
-          const name = (user?.name || '').split(' ')[0] || 'priateľu';
-          speak(`Vitajte späť, ${name}. Som Jarvis, váš anjel-strážca.`, {
+          // Founder directive: default greeting is "Guardian Angel" — never a raw email/first-name.
+          const displayName = (user?.name && user.name.trim() && user.name.trim() !== user?.email)
+            ? user.name.split(' ')[0]
+            : 'Guardian Angel';
+          speak(`Vitajte doma, ${displayName}. Som váš Jarvis.`, {
             mood: jarvisToneFor(stage),
             language: (user?.language as any) || 'sk',
           });
