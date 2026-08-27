@@ -2,9 +2,10 @@
 # SOVEREIGN ACHIEVEMENTS — small dopamine hits for building trust.
 # Each badge is derived on-demand from cross-cutting collections. No new
 # collection required (the source of truth stays in place).
+import uuid
 from typing import Optional
 from datetime import datetime, timezone
-from fastapi import Header
+from fastapi import Header, HTTPException
 
 from core import api, db, clean
 from routes.auth import get_current_user
@@ -200,4 +201,67 @@ async def streak_physio(authorization: Optional[str] = Header(None)):
         "best": max(best, current),
         "tier": tier,
         "active_today": today.isoformat() in day_set,
+        "freeze_available": await _freeze_available(uid),
+        "blazing_celebrated": await _blazing_celebrated(uid),
     }
+
+
+# --------- SAVE-FREEZE DAY ---------
+# One freeze per calendar week protects a senior's streak on a rough health day.
+# Freezes are inserted into `db.streak_freezes`. The streak endpoint above still
+# needs to be aware of them, but for MVP the freeze simply "counts as a workout"
+# for the given date by inserting a phantom physio_video with a marker flag.
+
+async def _freeze_available(uid: str) -> bool:
+    """Returns True if the user has NOT used a freeze this ISO calendar week."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    used = await db.streak_freezes.count_documents({"user_id": uid, "used_at": {"$gte": monday}})
+    return used == 0
+
+
+async def _blazing_celebrated(uid: str) -> bool:
+    row = await db.streak_freezes.find_one({"user_id": uid, "kind": "blazing_celebration"})
+    return bool(row)
+
+
+@api.post("/streaks/freeze")
+async def streak_freeze(authorization: Optional[str] = Header(None)):
+    """Use this week's freeze — protects today's streak. Inserts a phantom
+    physio_video so the streak endpoint counts today automatically."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    if not await _freeze_available(uid):
+        raise HTTPException(409, "Tento týždeň už máte využitú ochranu série (jedna na týždeň).")
+    now = datetime.now(timezone.utc)
+    # 1) Insert a phantom physio_video so the streak counter includes today.
+    await db.physio_videos.insert_one({
+        "video_id": f"freeze-{uuid.uuid4().hex}",
+        "user_id": uid,
+        "title": "❄ Ochrana série (Save-Freeze)",
+        "created_at": now,
+        "is_freeze": True,
+    })
+    # 2) Record the freeze use for the weekly cap.
+    await db.streak_freezes.insert_one({
+        "freeze_id": uuid.uuid4().hex,
+        "user_id": uid,
+        "used_at": now,
+        "kind": "weekly",
+    })
+    return {"ok": True, "used_at": now.isoformat(), "message": "Séria zachránená. Odpočiňte si — vrátite sa silnejší."}
+
+
+@api.post("/streaks/blazing/celebrated")
+async def streak_blazing_celebrated(authorization: Optional[str] = Header(None)):
+    """Mark that the user has seen the 30-day 'Sovereign Blazing Guardian'
+    ceremonial screen so it never plays twice."""
+    user = await get_current_user(authorization)
+    await db.streak_freezes.update_one(
+        {"user_id": user["user_id"], "kind": "blazing_celebration"},
+        {"$set": {"user_id": user["user_id"], "kind": "blazing_celebration",
+                  "seen_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    return {"ok": True}

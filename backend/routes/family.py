@@ -675,6 +675,106 @@ async def voice_signature_delete(authorization: Optional[str] = Header(None)):
     return {"ok": True}
 
 
+# --------- ANGEL PULSE (Haptic Heartbeat) ---------
+# Send a wordless heartbeat vibration to an Inner Circle member. The receiver's
+# phone plays a rhythmic pulse (frontend uses expo-haptics). No message body —
+# only "I'm alive, thinking of you." Push notification carries the pulse spec.
+
+class AngelPulseIn(BaseModel):
+    to_user_id: Optional[str] = None
+    to_email: Optional[str] = None
+    pattern: Optional[str] = "heartbeat"   # heartbeat | soft | strong | sos
+    bpm: Optional[int] = 72                 # 40..120 (frontend clamps too)
+
+@api.post("/angel/pulse")
+async def angel_pulse_send(body: AngelPulseIn, authorization: Optional[str] = Header(None)):
+    sender = await get_current_user(authorization)
+    if not body.to_user_id and not body.to_email:
+        raise HTTPException(400, "Provide to_user_id or to_email")
+    recipient = None
+    if body.to_user_id:
+        recipient = await db.users.find_one({"user_id": body.to_user_id}, {"_id": 0})
+    if not recipient and body.to_email:
+        recipient = await db.users.find_one({"email": body.to_email.strip().lower()}, {"_id": 0})
+    if not recipient:
+        raise HTTPException(404, "Recipient not found")
+    if recipient["user_id"] == sender["user_id"]:
+        raise HTTPException(400, "Cannot pulse yourself")
+
+    # Circle check — sender must be in a guardian link either direction, or Inner Circle.
+    ok = await db.guardians.find_one({
+        "$or": [
+            {"user_id": recipient["user_id"], "guardian_user_id": sender["user_id"]},
+            {"user_id": sender["user_id"], "guardian_user_id": recipient["user_id"]},
+        ]
+    })
+    if not ok:
+        if not await db.inner_circle.find_one({"email": sender.get("email", "").lower()}):
+            raise HTTPException(403, "Not in the recipient's Inner Circle")
+
+    pattern = body.pattern or "heartbeat"
+    if pattern not in {"heartbeat", "soft", "strong", "sos"}:
+        pattern = "heartbeat"
+    bpm = max(40, min(120, int(body.bpm or 72)))
+
+    pulse = {
+        "pulse_id": uuid.uuid4().hex,
+        "from_user_id": sender["user_id"],
+        "from_name": sender.get("name") or sender.get("email") or "Guardian",
+        "to_user_id": recipient["user_id"],
+        "pattern": pattern,
+        "bpm": bpm,
+        "created_at": datetime.now(timezone.utc),
+        "delivered": False,
+    }
+    await db.angel_pulses.insert_one(pulse.copy())
+    try:
+        await send_push(recipients=[recipient["user_id"]], data={
+            "title": "💓 TEP ANJELA",
+            "message": f"{pulse['from_name']} vám poslal svoj tep. Ťuknite pre pocit spojenia.",
+            "action_url": f"/angel-pulse?id={pulse['pulse_id']}",
+            "pulse_pattern": pattern,
+            "pulse_bpm": str(bpm),
+        })
+    except Exception as e:
+        logger.warning(f"pulse push: {e}")
+    return {"ok": True, "pulse": clean(pulse)}
+
+
+@api.get("/angel/pulse/inbox")
+async def angel_pulse_inbox(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    rows = await db.angel_pulses.find(
+        {"to_user_id": user["user_id"]},
+        {"_id": 0},
+    ).sort("created_at", -1).to_list(30)
+    return {"pulses": clean(rows), "count": len(rows)}
+
+
+@api.post("/angel/pulse/{pulse_id}/felt")
+async def angel_pulse_felt(pulse_id: str, authorization: Optional[str] = Header(None)):
+    """Recipient acknowledges they felt the pulse — the sender sees a 💛 confirmation."""
+    user = await get_current_user(authorization)
+    r = await db.angel_pulses.find_one_and_update(
+        {"pulse_id": pulse_id, "to_user_id": user["user_id"]},
+        {"$set": {"delivered": True, "felt_at": datetime.now(timezone.utc)}},
+        return_document=True,
+    )
+    if not r:
+        raise HTTPException(404, "Pulse not found")
+    r.pop("_id", None)
+    # Notify sender that the pulse was felt.
+    try:
+        await send_push(recipients=[r["from_user_id"]], data={
+            "title": "💛 TEP POCÍTENÝ",
+            "message": f"Váš anjelský tep dorazil.",
+            "action_url": "/",
+        })
+    except Exception:
+        pass
+    return clean(r)
+
+
 # --------- FAMILY VOICE CIRCLE ---------
 # The founder's Sentient vision: every family member (Tomáš, mama, babička)
 # records a 5-second voice print in ONE shared circle. Grandma hears

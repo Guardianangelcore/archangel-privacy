@@ -374,3 +374,50 @@ Backend tests: 12/12 GREEN (test_iter33_streaks_polish.py). Overall Sentient UX:
 Frontend screenshots verified: home shows 🔥4 + 🏆6/8; achievements shows fresh-unlock
 banner + gold confetti cascade + progress 75%; voice-signature shows per-member POZVAŤ
 buttons + bulk invite CTA.
+
+## Iteration 34 (1% PERFECTION FINALE — 6 features, Feb 2026)
+NEW backend routes (all registered in server.py):
+- routes/pantry.py — Survival Pantry (list/counts/CRUD/alerts/scan). 9 item categories,
+  urgency tiers (expired/critical/soon/healthy/fresh/unknown), OCR expiry regex (SK/EN/DE
+  BB/MHD/Spotreba do/Best before). Reuses vault OCR pipeline via extract_doc_text.
+- routes/impact.py — /impact/dashboard aggregates physio/pain/scam/wellness/vitals/documents,
+  computes people_helped (capped 120k), research_hours, tokens_earned, 4-week timeline,
+  top_thread with Slovak Jarvis narration line. Safe-count helper avoids hasattr trap.
+- routes/silent_witness.py — session open/close + chunked audio upload (5MB cap), auto push
+  to Inner Circle when session starts. Stored under {APP}/silent-witness/{uid}/{sid}/NNNN.
+- routes/family.py extended — /angel/pulse (send, guardian-link enforced, self-pulse blocked),
+  /angel/pulse/inbox, /angel/pulse/{id}/felt (acks sender). Push carries pattern+bpm.
+- routes/achievements.py extended — /streaks/freeze (weekly cap, phantom physio_video record
+  keeps the streak alive), /streaks/blazing/celebrated (marks 30-day ceremony as seen).
+  Streak GET now also returns freeze_available + blazing_celebrated flags.
+
+NEW frontend screens:
+- app/pantry.tsx — full pantry manager: color-coded urgency chips, Jarvis-narrated top alert
+  line, scan CTA via document picker → OCR pipeline, manual add modal, 9 categories.
+- app/impact.tsx — gold hero (people_helped), 3 KPIs, top research thread (Onyx-narrated
+  on tap), 4-week bar chart, category breakdown grid, Slovak CTA line.
+- app/silent-witness.tsx — big radio button, rolling 20s chunk uploads to Vault, live counter
+  (elapsed + chunks uploaded), history list, mic permission handling.
+- app/angel-pulse.tsx — inbox of received pulses + send composer (target chips, 4 patterns,
+  40-120 bpm). Playing a pulse triggers a full-screen animated heart + haptic pattern via
+  src/haptic-heartbeat.ts + auto-ack after 8s.
+
+NEW frontend src/:
+- src/haptic-heartbeat.ts — 4 patterns (heartbeat/soft/strong/sos) using expo-haptics.
+  Returns a stop() function; caps at 15s to avoid runaway vibration.
+- src/blazing-ceremony.tsx — full-screen ceremonial overlay: pulsing gold orb + Onyx
+  narration "Tridsať dní. Sovereign Blazing Guardian." + PRIJÍMAM CTU button that
+  POSTs /streaks/blazing/celebrated.
+
+UPGRADED frontend:
+- app/(tabs)/index.tsx — streak chip long-press protects the day via /streaks/freeze; a small
+  ❄ snowflake dot on the chip indicates freeze_available. Auto-mounts <BlazingCeremony/>
+  when current>=30 and blazing_celebrated=false. Slovak freeze toast.
+- app/(tabs)/family.tsx — new tiles fs-angel-pulse, fs-silent-witness.
+- app/(tabs)/legacy.tsx — new tiles lw-impact, lw-pantry.
+
+Backend tests: 25/25 GREEN (test_iter34_perfection.py). Total Sentient UX suite: 97 tests
+(iter30 30 + iter31 17 + iter32 13 + iter33 12 + iter34 25).
+Screenshots verified: pantry list + scan CTA, impact hero + timeline, home nav chips.
+Code review note applied: replaced hasattr(motor_db, name) (always True) with a safe try/except
+_safe_count helper in impact.py.

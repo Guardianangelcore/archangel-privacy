@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // HOME 2026 — Glass/Luxe command center: Guardian Lens FAB, glass pillars, breathing Jarvis
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,6 +19,7 @@ import { stageFromUser, AGE_LABEL_SK, suggestAngelMode } from '@/src/age';
 import { startWakeWord, stopWakeWord } from '@/src/wake-word';
 import { useAudioRecorder, RecordingPresets } from 'expo-audio';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { BlazingCeremony } from '@/src/blazing-ceremony';
 
 const ANGEL_BG = 'https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
 
@@ -48,19 +49,50 @@ export default function Home() {
   // SOVEREIGN ACHIEVEMENTS — progress chip in top nav (dopamine hook)
   const [achProgress, setAchProgress] = useState<{ unlocked: number; total: number } | null>(null);
   // SOVEREIGN STREAK — 7-day gold flame for Physio consistency
-  const [streak, setStreak] = useState<{ current: number; tier: number } | null>(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        const [a, s]: any = await Promise.all([
-          api('/achievements'),
-          api('/streaks/physio'),
-        ]);
-        setAchProgress({ unlocked: a.unlocked_count, total: a.total });
-        setStreak({ current: s.current, tier: s.tier });
-      } catch {}
-    })();
-  }, [user?.user_id, user?.birth_year, user?.biometric_enabled, user?.onboarding_completed]);
+  const [streak, setStreak] = useState<{ current: number; tier: number; freeze_available: boolean; blazing_celebrated: boolean } | null>(null);
+  const [showBlazing, setShowBlazing] = useState(false);
+  const [freezeMsg, setFreezeMsg] = useState('');
+  const loadStreak = useCallback(async () => {
+    try {
+      const [a, s]: any = await Promise.all([
+        api('/achievements'),
+        api('/streaks/physio'),
+      ]);
+      setAchProgress({ unlocked: a.unlocked_count, total: a.total });
+      setStreak({
+        current: s.current,
+        tier: s.tier,
+        freeze_available: s.freeze_available,
+        blazing_celebrated: s.blazing_celebrated,
+      });
+      // Auto-trigger the Blazing ceremony once when the user hits 30 days.
+      if (s.current >= 30 && !s.blazing_celebrated) {
+        setShowBlazing(true);
+      }
+    } catch {}
+  }, []);
+  useEffect(() => { loadStreak(); }, [loadStreak, user?.user_id, user?.birth_year, user?.biometric_enabled, user?.onboarding_completed]);
+
+  const claimFreeze = useCallback(async () => {
+    setFreezeMsg('');
+    try {
+      const r: any = await api('/streaks/freeze', { method: 'POST' });
+      setFreezeMsg(r.message || 'Séria zachránená.');
+      jarvisSpeak(r.message || 'Séria zachránená. Odpočiňte si.', {
+        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+      });
+      await loadStreak();
+      setTimeout(() => setFreezeMsg(''), 4000);
+    } catch (e: any) {
+      const m = String(e?.message || e);
+      if (m.includes('409') || m.toLowerCase().includes('týžde')) {
+        setFreezeMsg('Tento týždeň už máte využitú ochranu.');
+      } else {
+        setFreezeMsg(m);
+      }
+      setTimeout(() => setFreezeMsg(''), 4000);
+    }
+  }, [user?.language, loadStreak]);
 
   const toggleAngel = async () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -89,6 +121,17 @@ export default function Home() {
 
   return (
     <SafeAreaView testID="standard-home" style={styles.root} edges={['top']}>
+      {/* Freeze toast — appears when the user long-presses the streak chip to protect their series */}
+      {!!freezeMsg && (
+        <View testID="home-freeze-toast" style={styles.freezeToast}>
+          <Ionicons name="snow" size={16} color={C.onInverse} />
+          <Text style={styles.freezeToastText}>{freezeMsg}</Text>
+        </View>
+      )}
+      {/* BLAZING CEREMONY — auto-triggers when current streak hits 30 for the first time */}
+      {showBlazing && (
+        <BlazingCeremony onClose={() => { setShowBlazing(false); loadStreak(); }} />
+      )}
       <View style={styles.header}>
         <Pressable testID="brand-beacon" onLongPress={beacon} delayLongPress={700}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -102,11 +145,18 @@ export default function Home() {
             <Pressable
               testID="home-streak"
               onPress={() => { tap(); router.push('/physio'); }}
+              onLongPress={() => { if (streak.freeze_available) { tap('medium'); claimFreeze(); } }}
               hitSlop={8}
+              delayLongPress={500}
               style={[styles.streakChip, streak.tier >= 2 && styles.streakChipHot, streak.tier >= 3 && styles.streakChipBlazing]}
             >
               <Ionicons name="flame" size={13} color={streak.tier >= 2 ? C.onInverse : C.brand} />
               <Text style={[styles.streakChipText, streak.tier >= 2 && { color: C.onInverse }]}>{streak.current}</Text>
+              {streak.freeze_available && (
+                <View style={styles.freezeDot} testID="home-freeze-dot">
+                  <Ionicons name="snow" size={9} color={C.info} />
+                </View>
+              )}
             </Pressable>
           )}
           {achProgress && (
@@ -563,6 +613,9 @@ const styles = StyleSheet.create({
   streakChipHot: { backgroundColor: C.brand, borderColor: C.brand, shadowColor: C.brand, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
   streakChipBlazing: { shadowOpacity: 0.85, shadowRadius: 14 },
   streakChipText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  freezeDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: 'rgba(59,130,246,0.14)', alignItems: 'center', justifyContent: 'center', marginLeft: 2, borderWidth: 1, borderColor: C.info },
+  freezeToast: { position: 'absolute', top: 60, left: S.lg, right: S.lg, zIndex: 900, flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: C.info, borderRadius: R.pill, paddingHorizontal: S.md, paddingVertical: S.sm, shadowColor: C.info, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  freezeToastText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 0.3, flex: 1 },
   guardianGold: { marginTop: S.lg, borderRadius: R.md, overflow: 'hidden', shadowColor: C.brand, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
   guardianGoldBg: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.lg, paddingHorizontal: S.lg, minHeight: 96 },
   guardianGoldIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },

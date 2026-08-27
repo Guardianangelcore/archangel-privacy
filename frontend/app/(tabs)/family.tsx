@@ -49,6 +49,7 @@ export default function FamilyShield() {
         ] },
         { title: '👨‍👩‍👧 RODINNÁ SYNCHRONIZÁCIA', items: [
           { testID: 'fs-pulse', icon: 'pulse-outline', title: 'Rodinný pulz', subtitle: 'Nálada · kroky · alarmy rodiny', route: '/family-dashboard' },
+          { testID: 'fs-angel-pulse', icon: 'heart-outline', title: 'Angel Pulse', subtitle: 'Tep srdca cez oceán · bez slov · vibrácia', route: '/angel-pulse' },
           { testID: 'fs-pulsecheck', icon: 'heart-half-outline', title: 'Tichá kontrola', subtitle: 'Ping „si OK?" · prísne opt-in', route: '/pulse-check' },
           { testID: 'fs-respect', icon: 'star-outline', title: 'Mapa rešpektu', subtitle: 'Lekári s rešpektom · komunita', route: '/respect-map' },
           { testID: 'fs-2fa', icon: 'key-outline', title: 'Social 2FA Handshake', subtitle: 'Strážcovia · potvrdenie prihlásenia rodinou', route: '/recovery-suite' },
@@ -57,6 +58,7 @@ export default function FamilyShield() {
         ] },
         { title: '🛡 OCHRANA A NÚDZA', items: [
           { testID: 'fs-scam', icon: 'shield-half-outline', title: 'Scam štít', subtitle: 'AI ochrana pred podvodmi', route: '/scam-shield' },
+          { testID: 'fs-silent-witness', icon: 'radio-outline', title: 'Tichý svedok', subtitle: 'Šifrované nahrávanie do Trezoru · konflikt / úradník', route: '/silent-witness' },
           { testID: 'fs-duress', icon: 'hand-left-outline', title: 'Núdzový PIN (Duress)', subtitle: 'Falošný trezor · tichý alarm', route: '/duress' },
           { testID: 'fs-medic', icon: 'medkit-outline', title: 'AI poľný medik', subtitle: 'Hlasový záchranár · KPR · krvácanie · offline', route: '/tactical-medic' },
           { testID: 'fs-paramedic', icon: 'key-outline', title: 'Kľúč pre záchranárov', subtitle: 'Núdzový vstupný kód · NCZI/ÚZIS', route: '/paramedic' },
