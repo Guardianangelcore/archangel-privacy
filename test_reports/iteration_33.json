@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 33 (Sovereign Streaks + OCR cache polish) backend regression suite: 12/12 tests passing under `pytest -n 2 --dist loadscope`. Streak endpoint verified for auth gating, empty state, tiers 1/2/3, gap semantics, grace-day rule, and 60-day cutoff. OCR cached branch confirmed to return all 4 keys (extracted_text, cached, birth_year_detected, birth_year_applied). Regressions passing for /api/achievements (8 badges), /api/family/voice-signature/circle, and /api/voice/tts (onyx).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter33_streaks_polish.py",
+    "/app/test_reports/pytest/pytest_iter33.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "achievements.py streak_physio: `best = max(best, current)` in return keeps `best >= current` invariant which is defensive but slightly hides pure historical best — acceptable given the frontend labels it as `best`.",
+    "OCR cached branch (health.py:208-215) now correctly returns all 4 keys; birth_year_applied is hard-coded False on cache hits which matches spec (never re-mutates state).",
+    "physio_videos date parsing handles both naive UTC (Motor strips tzinfo) and ISO strings — good defensive coding at achievements.py:150-158."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter33_streaks_polish.py (new pytest suite)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "physio_videos rows tagged {seeded_test: True} for smoketest-user-1, seeded per-test and wiped on setup+teardown via class-scoped autouse fixture (loadscope keeps TestStreaksPhysio on one worker to avoid cross-worker races on the same collection).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Suite is safe to re-run: all seed rows carry seeded_test:True and never touch real user data. If empty-state assertions ever skip, that means smoketest-user-1 accumulated real physio_videos rows — the tier tests fall back to >= assertions in that case. Reuse test_iter33_streaks_polish.py for regression of streaks & OCR cache going forward.",
+  "rca_of_issue": "N/A — no bugs found."
+}

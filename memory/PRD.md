@@ -394,3 +394,27 @@ Building on the SENTIENT UX FINALE, the 3 requested extensions are live:
 
 Backend: 13/13 pytest green (test_iter32_sovereign_extensions.py). Full Sentient suite: 60 tests.
 Frontend: home nav chip, Achievements screen, Voice Circle panel, Vault banner all screenshot-verified.
+
+## Phase 43: SOVEREIGN POLISH — Invite · Confetti · Streaks (Feb 2026) — DONE ✅
+Founder ask "dokonči všechno tak jak má být … buď kritický". Delivered all 3 items
+plus a critical fix (DB name mismatch in streak seed) and cleaned up the OCR cache
+shape inconsistency reported by testing_agent.
+
+1. VOICE PRINT INVITE (frontend-only, zero backend):
+   - src/invite.ts exposes inviteFamilyToRecord() using React Native Share.
+   - Message is bilingual-safe Slovak with deep link to /voice-signature.
+   - Per-member "POZVAŤ" button in Family Voice Circle for anyone without a signature,
+     plus a bulk "POZVAŤ ĎALŠIEHO ČLENA RODINY" CTA under the list.
+2. BADGE UNLOCK CONFETTI (frontend-only, AsyncStorage-based diff):
+   - src/ui/ConfettiBurst.tsx: 42 gold particles, ~2.4s, react-native-reanimated only.
+   - Achievements screen persists the last-seen unlocked set in ga.achievements.seen.v1;
+     any new key on next load triggers: gold gradient "ČERSTVO ODOMKNUTÉ" banner +
+     confetti overlay + Onyx voice "{Title}. Odomknuté.". Never replays for the same badge.
+3. SOVEREIGN STREAKS (backend + frontend):
+   - GET /api/streaks/physio → {current, best, tier 0..3, active_today}. Grace-day rule
+     (yesterday counts if today is empty), 60-day cutoff, safe against naive datetimes.
+   - Home 🔥X chip next to 🏆X/Y. Chip glows gold at tier≥2 (7+ consecutive days),
+     more intense at tier=3 (30+). One-tap → /physio.
+
+Backend suite: 72/72 pytest green (iter30 30 + iter31 17 + iter32 13 + iter33 12).
+Frontend: all three features screenshot-verified in Slovak.

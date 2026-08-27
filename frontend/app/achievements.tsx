@@ -7,11 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S, R, GOLD } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { ConfettiBurst } from '@/src/ui/ConfettiBurst';
+
+const SEEN_KEY = 'ga.achievements.seen.v1';
 
 type Badge = {
   key: string;
@@ -27,15 +31,36 @@ export default function Achievements() {
   const { user } = useAuth();
   const [data, setData] = useState<{ unlocked: Badge[]; locked: Badge[]; unlocked_count: number; total: number; progress: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confetti, setConfetti] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState<Badge | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const r: any = await api('/achievements');
       setData(r);
+      // Detect newly-unlocked badges by diffing against what we've shown before.
+      try {
+        const seenRaw = (await AsyncStorage.getItem(SEEN_KEY)) || '[]';
+        const seen: string[] = JSON.parse(seenRaw);
+        const currentKeys = (r.unlocked as Badge[]).map((b) => b.key);
+        const fresh = (r.unlocked as Badge[]).filter((b) => !seen.includes(b.key));
+        if (fresh.length > 0) {
+          // Celebrate the most recently earned badge (first in the diff).
+          const b = fresh[0];
+          setJustUnlocked(b);
+          setConfetti(true);
+          jarvisSpeak(`${b.title}. Odomknuté.`, {
+            voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+          });
+          tap('success');
+        }
+        // Persist the current set so the same badge never celebrates twice.
+        await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(currentKeys));
+      } catch { /* AsyncStorage failure is non-blocking */ }
     } catch (e) { console.log('ach err', e); }
     setLoading(false);
-  }, []);
+  }, [user?.language]);
   useEffect(() => { load(); }, [load]);
 
   const celebrate = (b: Badge) => {
@@ -68,6 +93,22 @@ export default function Achievements() {
         <Text style={styles.title}>SOVEREIGN ODZNAKY</Text>
         <View style={{ width: 26 }} />
       </View>
+
+      {/* JUST-UNLOCKED celebration banner — shown once after diff */}
+      {justUnlocked && (
+        <View testID="ach-just-unlocked" style={styles.freshBanner}>
+          <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.freshBg}>
+            <Ionicons name={justUnlocked.icon} size={28} color={C.onInverse} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.freshLbl}>ČERSTVO ODOMKNUTÉ</Text>
+              <Text style={styles.freshTitle}>{justUnlocked.title}</Text>
+            </View>
+            <Pressable testID="ach-just-close" onPress={() => setJustUnlocked(null)} hitSlop={10}>
+              <Ionicons name="close" size={22} color={C.onInverse} />
+            </Pressable>
+          </LinearGradient>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
@@ -130,6 +171,9 @@ export default function Achievements() {
           ))}
         </View>
       </ScrollView>
+
+      {/* CONFETTI overlay — mounted only during the burst window */}
+      {confetti && <ConfettiBurst onDone={() => setConfetti(false)} />}
     </SafeAreaView>
   );
 }
@@ -154,4 +198,8 @@ const styles = StyleSheet.create({
   badgeTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 0.5, textAlign: 'center' },
   badgeState: { color: C.brand, fontSize: 9, letterSpacing: 1.5, fontWeight: '900' },
   badgeHint: { color: C.info, fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  freshBanner: { marginHorizontal: S.lg, borderRadius: R.md, overflow: 'hidden', shadowColor: C.brand, shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 12 },
+  freshBg: { flexDirection: 'row', alignItems: 'center', gap: S.md, padding: S.md },
+  freshLbl: { color: 'rgba(255,255,255,0.9)', fontWeight: '900', fontSize: 9, letterSpacing: 2 },
+  freshTitle: { color: C.onInverse, fontWeight: '900', fontSize: 14, marginTop: 2 },
 });

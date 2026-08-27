@@ -122,3 +122,82 @@ async def achievements(authorization: Optional[str] = Header(None)):
         "total": total,
         "progress": round(len(unlocked) * 100 / total) if total else 0,
     }
+
+
+# --------- SOVEREIGN STREAKS ---------
+# Habit-building for seniors: consecutive days with at least one Physio Video watched.
+# The streak breaks the moment a full calendar day passes without a record.
+# Purposely simple — the real habit strength comes from the tiny gold flame next to
+# the trophy chip, not from complex tiers.
+
+@api.get("/streaks/physio")
+async def streak_physio(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+
+    # Pull the last ~60 days worth of Physio activity — plenty for a 7-day flame.
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=60)
+    day_set: set[str] = set()
+    async for v in db.physio_videos.find(
+        {"user_id": uid, "created_at": {"$gte": cutoff}},
+        {"_id": 0, "created_at": 1},
+    ):
+        d = v.get("created_at")
+        if not d:
+            continue
+        if isinstance(d, str):
+            try:
+                d = datetime.fromisoformat(d.replace("Z", "+00:00"))
+            except Exception:
+                continue
+        # Motor strips tzinfo — treat naive datetimes as already-UTC (they were
+        # inserted via datetime.now(timezone.utc)) so we don't accidentally shift.
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        day_set.add(d.astimezone(timezone.utc).date().isoformat())
+
+    today = now.date()
+    # Current streak: count backwards from today (or yesterday if today is empty)
+    current = 0
+    cursor = today
+    if today.isoformat() not in day_set:
+        # yesterday is the grace day — if that's also missing, streak = 0
+        cursor = today - timedelta(days=1)
+    while cursor.isoformat() in day_set:
+        current += 1
+        cursor = cursor - timedelta(days=1)
+
+    # Best streak in the last 60 days
+    best = 0
+    if day_set:
+        sorted_days = sorted(day_set)
+        run = 1
+        for i in range(1, len(sorted_days)):
+            prev = datetime.fromisoformat(sorted_days[i - 1]).date()
+            cur = datetime.fromisoformat(sorted_days[i]).date()
+            if (cur - prev).days == 1:
+                run += 1
+                best = max(best, run)
+            else:
+                best = max(best, run)
+                run = 1
+        best = max(best, run)
+
+    # Compute a "tier" for the flame glow — 1..3 based on current streak length.
+    if current >= 30:
+        tier = 3  # Blazing (30+ days)
+    elif current >= 7:
+        tier = 2  # Golden (7-29 days)
+    elif current >= 1:
+        tier = 1  # Ember (1-6 days)
+    else:
+        tier = 0  # Cold — no flame
+
+    return {
+        "current": current,
+        "best": max(best, current),
+        "tier": tier,
+        "active_today": today.isoformat() in day_set,
+    }

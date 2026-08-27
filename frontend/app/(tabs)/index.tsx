@@ -47,11 +47,17 @@ export default function Home() {
   const seniorHint = suggestAngelMode(stage);
   // SOVEREIGN ACHIEVEMENTS — progress chip in top nav (dopamine hook)
   const [achProgress, setAchProgress] = useState<{ unlocked: number; total: number } | null>(null);
+  // SOVEREIGN STREAK — 7-day gold flame for Physio consistency
+  const [streak, setStreak] = useState<{ current: number; tier: number } | null>(null);
   useEffect(() => {
     (async () => {
       try {
-        const r: any = await api('/achievements');
-        setAchProgress({ unlocked: r.unlocked_count, total: r.total });
+        const [a, s]: any = await Promise.all([
+          api('/achievements'),
+          api('/streaks/physio'),
+        ]);
+        setAchProgress({ unlocked: a.unlocked_count, total: a.total });
+        setStreak({ current: s.current, tier: s.tier });
       } catch {}
     })();
   }, [user?.user_id, user?.birth_year, user?.biometric_enabled, user?.onboarding_completed]);
@@ -92,6 +98,17 @@ export default function Home() {
           <Text style={styles.brandSub}>{t('brand_sub', lang)}</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          {streak && streak.current > 0 && (
+            <Pressable
+              testID="home-streak"
+              onPress={() => { tap(); router.push('/physio'); }}
+              hitSlop={8}
+              style={[styles.streakChip, streak.tier >= 2 && styles.streakChipHot, streak.tier >= 3 && styles.streakChipBlazing]}
+            >
+              <Ionicons name="flame" size={13} color={streak.tier >= 2 ? C.onInverse : C.brand} />
+              <Text style={[styles.streakChipText, streak.tier >= 2 && { color: C.onInverse }]}>{streak.current}</Text>
+            </Pressable>
+          )}
           {achProgress && (
             <Pressable
               testID="home-achievements"
@@ -542,6 +559,10 @@ const styles = StyleSheet.create({
   angelToggleText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1.5 },
   achChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: 'rgba(212,175,55,0.08)' },
   achChipText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  streakChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: 'rgba(212,175,55,0.08)' },
+  streakChipHot: { backgroundColor: C.brand, borderColor: C.brand, shadowColor: C.brand, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
+  streakChipBlazing: { shadowOpacity: 0.85, shadowRadius: 14 },
+  streakChipText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
   guardianGold: { marginTop: S.lg, borderRadius: R.md, overflow: 'hidden', shadowColor: C.brand, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
   guardianGoldBg: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.lg, paddingHorizontal: S.lg, minHeight: 96 },
   guardianGoldIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },

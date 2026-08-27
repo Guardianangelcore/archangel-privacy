@@ -347,3 +347,30 @@ UPGRADED frontend:
 Backend tests: 13/13 GREEN (test_iter32_sovereign_extensions.py). Overall Sentient UX suite:
 30 (iter30) + 17 (iter31) + 13 (iter32) = 60 tests green.
 Frontend screenshots verified: home 🏆 5/8 chip, Achievements hero + grid, Voice Circle tiles.
+
+## Iteration 33 (SOVEREIGN POLISH — Invite · Confetti · Streaks, Feb 2026)
+NEW backend:
+- routes/achievements.py: /api/streaks/physio — 60-day rolling window computes current
+  streak (with grace day rule) + best + tier (0..3 flame). Handles naive Motor-stripped
+  datetimes safely (assumes UTC).
+- routes/health.py: OCR cache branch now returns birth_year_applied:false for shape parity.
+NEW frontend:
+- src/ui/ConfettiBurst.tsx: 42-piece gold particle system, ~2.4s cascade,
+  100% react-native-reanimated (no new deps). Works on native and web.
+- src/invite.ts: inviteFamilyToRecord() + inviteFamilyViaSMS() — native Share sheet
+  with Slovak pre-filled message + deep link to /voice-signature. Web falls back to
+  navigator.share or mailto.
+UPGRADED frontend:
+- app/(tabs)/index.tsx: home-streak chip (🔥 X) next to home-achievements (🏆 X/Y).
+  Tier 2+ turns solid gold with brand glow; opens /physio on tap.
+- app/achievements.tsx: on load, diffs current unlocked keys vs. AsyncStorage
+  ga.achievements.seen.v1 → for a fresh badge shows a gold LinearGradient "ČERSTVO
+  ODOMKNUTÉ" banner + ConfettiBurst overlay + Onyx voice "{Title}. Odomknuté.".
+  Prevents replay by persisting the current key set.
+- app/voice-signature.tsx: per-member POZVAŤ button in Family Voice Circle for members
+  without a signature; a large POZVAŤ ĎALŠIEHO ČLENA RODINY primary CTA below the list.
+  Both use the native Share sheet with pre-composed Slovak invite + /voice-signature URL.
+Backend tests: 12/12 GREEN (test_iter33_streaks_polish.py). Overall Sentient UX: 72 tests.
+Frontend screenshots verified: home shows 🔥4 + 🏆6/8; achievements shows fresh-unlock
+banner + gold confetti cascade + progress 75%; voice-signature shows per-member POZVAŤ
+buttons + bulk invite CTA.

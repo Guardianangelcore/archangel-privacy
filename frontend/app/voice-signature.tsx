@@ -16,6 +16,7 @@ import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { inviteFamilyToRecord } from '@/src/invite';
 
 const RECORD_LEN_MS = 5000;
 
@@ -207,11 +208,30 @@ export default function VoiceSignature() {
                 </View>
                 {m.has_signature ? (
                   <Ionicons name="checkmark-circle" size={22} color={C.brand} />
-                ) : (
+                ) : m.is_self ? (
                   <Ionicons name="time-outline" size={22} color={C.info} />
+                ) : (
+                  <Pressable
+                    testID={`vs-invite-${m.user_id}`}
+                    onPress={() => { tap(); inviteFamilyToRecord(m.name); }}
+                    style={styles.inviteBtn}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="paper-plane-outline" size={14} color={C.brand} />
+                    <Text style={styles.inviteBtnText}>POZVAŤ</Text>
+                  </Pressable>
                 )}
               </View>
             ))}
+            {/* Bulk invite — one tap opens native share sheet with a generic Slovak message */}
+            <Pressable
+              testID="vs-invite-any"
+              onPress={() => { tap(); inviteFamilyToRecord(); }}
+              style={styles.inviteBulk}
+            >
+              <Ionicons name="share-social-outline" size={16} color={C.onInverse} />
+              <Text style={styles.inviteBulkText}>POZVAŤ ĎALŠIEHO ČLENA RODINY</Text>
+            </Pressable>
           </View>
         )}
 
@@ -256,4 +276,8 @@ const styles = StyleSheet.create({
   memberName: { color: C.fg, fontWeight: '800', fontSize: 13 },
   memberYou: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 1 },
   memberStatus: { color: C.onS3, fontSize: 11, marginTop: 2 },
+  inviteBtn: { flexDirection: 'row', gap: 4, alignItems: 'center', paddingHorizontal: 10, minHeight: 34, borderRadius: 17, borderWidth: 1.5, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.06)' },
+  inviteBtnText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  inviteBulk: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: R.pill, minHeight: 48, marginTop: S.md },
+  inviteBulkText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
 });
