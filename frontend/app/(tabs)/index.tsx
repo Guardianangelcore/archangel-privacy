@@ -15,6 +15,10 @@ import { useAcousticGuard } from '@/src/acoustic';
 import { C, S, R, GOLD } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
+import { stageFromUser, AGE_LABEL_SK, suggestAngelMode } from '@/src/age';
+import { startWakeWord, stopWakeWord } from '@/src/wake-word';
+import { useAudioRecorder, RecordingPresets } from 'expo-audio';
+import { speak as jarvisSpeak } from '@/src/voice';
 
 const ANGEL_BG = 'https://images.pexels.com/photos/31622917/pexels-photo-31622917.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940';
 
@@ -39,6 +43,8 @@ export default function Home() {
   const angel = !!user?.angel_mode;
   const [busy, setBusy] = useState(false);
   const [beaconSent, setBeaconSent] = useState(false);
+  const stage = stageFromUser(user);
+  const seniorHint = suggestAngelMode(stage);
 
   const toggleAngel = async () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -75,12 +81,20 @@ export default function Home() {
           </View>
           <Text style={styles.brandSub}>{t('brand_sub', lang)}</Text>
         </Pressable>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
           <Pressable testID="home-jarvis" onPress={() => { tap(); router.push('/jarvis'); }} hitSlop={8}>
             <Ionicons name="sparkles" size={20} color={C.brand} />
           </Pressable>
-          <Pressable testID="angel-toggle" onPress={toggleAngel} disabled={busy} hitSlop={8} style={styles.angelToggle}>
-            <Ionicons name="accessibility-outline" size={18} color={C.brand} />
+          {/* GUARDIAN GOLD TOGGLE — top-nav Sentient Switch (Angel Mode entry) */}
+          <Pressable
+            testID="angel-toggle"
+            onPress={toggleAngel}
+            disabled={busy}
+            hitSlop={8}
+            style={[styles.angelToggle, seniorHint && styles.angelToggleGold]}
+          >
+            <Ionicons name="accessibility" size={16} color={seniorHint ? C.onInverse : C.brand} />
+            <Text style={[styles.angelToggleText, seniorHint && { color: C.onInverse }]}>SENIOR</Text>
           </Pressable>
           <Pressable testID="home-profile" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={8}>
             <Ionicons name="settings-outline" size={22} color={C.onS3} />
@@ -128,6 +142,34 @@ export default function Home() {
           <PillarTile testID="pillar-family" icon="people" title="Rodinný štít" sub="Angel Mode · Kúzelná lupa · Voice Echoes · SOS" onPress={() => router.navigate('/(tabs)/family')} />
           <PillarTile testID="pillar-legacy" icon="shield-checkmark" title="Suverénny trezor" sub="Majetok a poistky · Večný odkaz · Bunker mód" onPress={() => router.navigate('/(tabs)/legacy')} />
         </View>
+
+        {/* GUARDIAN GOLD — the prominent Sentient Switch. One tap → simplest UI on the planet. */}
+        <Pressable
+          testID="hub-guardian-gold"
+          onPress={toggleAngel}
+          disabled={busy}
+          style={styles.guardianGold}
+        >
+          <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.guardianGoldBg}>
+            <View style={styles.guardianGoldIcon}>
+              <Ionicons name="accessibility" size={32} color={C.onInverse} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.guardianGoldTitle}>SENIOR REŽIM · GUARDIAN GOLD</Text>
+              <Text style={styles.guardianGoldSub}>
+                {seniorHint
+                  ? 'Odporúčaný pre Vás. Ikony + hlas, žiadne menu. Ťuknite raz.'
+                  : 'Zjednodušené rozhranie — ikony + hlas. Pre rodičov, starých rodičov a hostí.'}
+              </Text>
+              {(user?.birth_year || seniorHint) && (
+                <Text style={styles.guardianGoldStage}>
+                  ETAPA ŽIVOTA: {AGE_LABEL_SK[stage].toUpperCase()}
+                </Text>
+              )}
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={C.onInverse} />
+          </LinearGradient>
+        </Pressable>
 
         <View style={styles.ecoRow}>
           <Pressable testID="home-token" onPress={() => { tap(); router.push('/token'); }} style={({ pressed }) => [styles.ecoTile, pressed && { backgroundColor: C.surface3 }]}>
@@ -343,11 +385,28 @@ function TosGate({ lang, setUser }: any) {
 }
 
 function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
+  const { user } = useAuth();
+  const wakeEnabled = !!(user as any)?.wake_word_enabled;
+  const wakeRecorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const scale = useSharedValue(1);
   useEffect(() => {
     scale.value = withRepeat(withSequence(withTiming(1.07, { duration: 1200 }), withTiming(1, { duration: 1200 })), -1);
   }, [scale]);
   const pulse = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  // WAKE-WORD "JARVIS" — Alexa-style hands-free trigger in Angel Mode.
+  // Fires once → routes to /jarvis (full voice conversation).
+  useEffect(() => {
+    if (!wakeEnabled || Platform.OS === 'web') return;
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      cleanup = await startWakeWord(wakeRecorder, () => {
+        jarvisSpeak('Áno, počúvam.', { voice: 'onyx', speed: 1.0, language: lang });
+        router.push('/jarvis');
+      });
+    })();
+    return () => { try { cleanup?.(); } catch {} stopWakeWord(); };
+  }, [wakeEnabled, wakeRecorder, router, lang]);
 
   // Acoustic Threat Detection — local-only mic metering; on threat: log + Fall-Verify flow
   const acoustic = useAcousticGuard(async (dbLevel: number) => {
@@ -457,7 +516,15 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
   brand: { color: C.fg, fontSize: 22, fontWeight: '900', letterSpacing: 2 },
   brandSub: { color: C.info, fontSize: 10, letterSpacing: 2, marginTop: 2 },
-  angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.sm, paddingHorizontal: S.md, paddingVertical: 8 },
+  angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.md, paddingVertical: 8 },
+  angelToggleGold: { backgroundColor: C.brand, borderColor: C.brand, shadowColor: C.brand, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
+  angelToggleText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1.5 },
+  guardianGold: { marginTop: S.lg, borderRadius: R.md, overflow: 'hidden', shadowColor: C.brand, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
+  guardianGoldBg: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.lg, paddingHorizontal: S.lg, minHeight: 96 },
+  guardianGoldIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
+  guardianGoldTitle: { color: C.onInverse, fontWeight: '900', fontSize: 13, letterSpacing: 1.5 },
+  guardianGoldSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5, lineHeight: 16, marginTop: 3 },
+  guardianGoldStage: { color: C.onInverse, fontWeight: '900', fontSize: 9, letterSpacing: 1.5, marginTop: 6, opacity: 0.85 },
   body: { padding: S.lg, paddingBottom: 120 },
   greeting: { fontSize: 28, fontWeight: '900', color: C.fg, letterSpacing: 0.5, lineHeight: 36 },
   briefIcon: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(212,175,55,0.14)', alignItems: 'center', justifyContent: 'center' },

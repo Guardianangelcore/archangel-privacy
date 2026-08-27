@@ -15,6 +15,7 @@ import { registerForPush } from "@/src/push";
 import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
 import { GA_ORIGIN_MARK } from "@/src/watermark";
+import { BiometricGate } from "@/src/biometric-gate";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
@@ -120,15 +121,17 @@ function RootNav() {
   return (
     <>
       <GuardianMonitor />
-      <Stack screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: C.bg },
-        // 60FPS native-driver transitions (react-native-screens) + memory freeze off-screen
-        animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
-        animationDuration: 240,
-        freezeOnBlur: true,
-        gestureEnabled: true,
-      }} />
+      <BiometricGate>
+        <Stack screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: C.bg },
+          // 60FPS native-driver transitions (react-native-screens) + memory freeze off-screen
+          animation: Platform.OS === 'web' ? 'none' : 'slide_from_right',
+          animationDuration: 240,
+          freezeOnBlur: true,
+          gestureEnabled: true,
+        }} />
+      </BiometricGate>
       {/* Hidden digital watermark — original Guardian Angel build fingerprint */}
       <Text
         accessibilityElementsHidden

@@ -11,6 +11,9 @@ import { ContactSheet } from '@/src/ui/ContactSheet';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { WATERMARK } from '@/src/watermark';
+import { AGE_LABEL_SK, ageFromBirthYear, stageFromAge } from '@/src/age';
+import { speak as jarvisSpeak } from '@/src/voice';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Profile() {
   const { user, signOut, setUser } = useAuth();
@@ -99,6 +102,73 @@ export default function Profile() {
     setUser(u);
   };
 
+  // Sentient UX — Bio-Timeline (age-adaptive UI + medical logic)
+  const [birthYearTxt, setBirthYearTxt] = useState<string>(
+    (user as any)?.birth_year ? String((user as any).birth_year) : ''
+  );
+  useEffect(() => {
+    setBirthYearTxt((user as any)?.birth_year ? String((user as any).birth_year) : '');
+  }, [user]);
+  const [bioMsg, setBioMsg] = useState('');
+  const saveBirthYear = async () => {
+    const by = parseInt(birthYearTxt, 10);
+    if (!by || by < 1900 || by > 2030) {
+      setBioMsg('Zadajte platný rok narodenia (1900–2030).');
+      return;
+    }
+    setBioMsg('');
+    try {
+      await setPref({ birth_year: by });
+      setBioMsg('Bio-Timeline aktualizovaná. Rozhranie sa prispôsobí Vašej etape života.');
+    } catch (e: any) {
+      setBioMsg(String(e.message || e));
+    }
+  };
+  const currentStage = stageFromAge(ageFromBirthYear((user as any)?.birth_year));
+
+  // Sentient UX — Biometric gate toggle (FaceID/Fingerprint on app open)
+  const [bioLabel, setBioLabel] = useState('FaceID / Fingerprint');
+  useEffect(() => {
+    (async () => {
+      try {
+        if (Platform.OS === 'web') return;
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) setBioLabel('FaceID');
+        else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) setBioLabel('Odtlačok prsta');
+        else if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) setBioLabel('Iris');
+      } catch {}
+    })();
+  }, []);
+  const toggleBiometric = async (v: boolean) => {
+    if (v && Platform.OS !== 'web') {
+      // Verify the user is who they say they are before enabling the gate.
+      try {
+        const hasHw = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!hasHw || !enrolled) {
+          setBioMsg('Zariadenie nemá aktivovanú biometriu. Nastavte FaceID/odtlačok v systéme.');
+          return;
+        }
+        const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Potvrďte zapnutie biometrie' });
+        if (!r.success) { setBioMsg('Overenie zrušené.'); return; }
+      } catch {}
+    }
+    await setPref({ biometric_enabled: v });
+  };
+
+  // Sentient UX — Wake-Word "JARVIS" toggle
+  const toggleWakeWord = async (v: boolean) => {
+    await setPref({ wake_word_enabled: v });
+  };
+
+  // Sentient UX — voice-preview button ("Ako znie Jarvis?")
+  const previewVoice = () => {
+    jarvisSpeak(
+      'Dobrý deň. Som Jarvis, váš anjel-strážca. Odteraz vám budem hovoriť ľudským hlasom.',
+      { voice: 'onyx', speed: 0.95, language: lang }
+    );
+  };
+
   return (
     <SafeAreaView testID="profile-screen" style={styles.root} edges={['top']}>
       <View style={styles.header}>
@@ -124,6 +194,89 @@ export default function Profile() {
             </Pressable>
           ))}
         </View>
+
+        {/* ===== SENTIENT UX — the human soul of the OS ===== */}
+        <Text style={styles.section}>SENTIENT UX — DUŠA APLIKÁCIE</Text>
+
+        {/* JARVIS VOICE PREVIEW */}
+        <View style={styles.guardRow}>
+          <Ionicons name="mic-circle" size={24} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>HLAS JARVISA · ONYX</Text>
+            <Text style={styles.guardSub}>Hlboký, ľudský hlas (OpenAI TTS). Vypnutý robotický systémový hlas.</Text>
+          </View>
+          <Pressable testID="prof-voice-preview" onPress={previewVoice} style={styles.previewBtn}>
+            <Ionicons name="volume-high" size={16} color={C.onInverse} />
+            <Text style={styles.previewText}>UKÁŽKA</Text>
+          </Pressable>
+        </View>
+
+        {/* BIO-TIMELINE — the Growth Engine */}
+        <View style={styles.guardRow}>
+          <Ionicons name="calendar-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>BIO-TIMELINE · ROK NARODENIA</Text>
+            <Text style={styles.guardSub}>
+              Rozhranie sa prispôsobí Vašej etape života — od dojčaťa po seniora.
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: S.sm, alignItems: 'center' }}>
+          <TextInput
+            testID="prof-birth-year"
+            value={birthYearTxt}
+            onChangeText={setBirthYearTxt}
+            style={[styles.input, { flex: 1 }]}
+            placeholder="napr. 1958"
+            placeholderTextColor="#999"
+            keyboardType="number-pad"
+            maxLength={4}
+          />
+          <Pressable testID="prof-birth-year-save" onPress={saveBirthYear} style={styles.saveMini}>
+            <Text style={styles.saveMiniText}>ULOŽIŤ</Text>
+          </Pressable>
+        </View>
+        {(user as any)?.birth_year && (
+          <Text testID="prof-stage-label" style={styles.stageLabel}>
+            ETAPA: {AGE_LABEL_SK[currentStage].toUpperCase()}
+          </Text>
+        )}
+
+        {/* BIOMETRIC GATE */}
+        <View style={styles.guardRow}>
+          <Ionicons name="finger-print" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>BIOMETRICKÝ ZÁMOK · {bioLabel.toUpperCase()}</Text>
+            <Text style={styles.guardSub}>
+              Odomknutie osobným signálom pri každom otvorení. Zdravotné údaje ostávajú súkromné.
+            </Text>
+          </View>
+          <Switch
+            testID="prof-biometric"
+            value={!!(user as any)?.biometric_enabled}
+            onValueChange={toggleBiometric}
+            trackColor={{ true: C.brand, false: C.surface3 }}
+          />
+        </View>
+
+        {/* WAKE-WORD */}
+        <View style={styles.guardRow}>
+          <Ionicons name="radio-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>WAKE-WORD „JARVIS“</Text>
+            <Text style={styles.guardSub}>
+              Hands-free spustenie hlasom. Funguje plne až v natívnom builde (nie v Expo Go).
+            </Text>
+          </View>
+          <Switch
+            testID="prof-wake-word"
+            value={!!(user as any)?.wake_word_enabled}
+            onValueChange={toggleWakeWord}
+            trackColor={{ true: C.brand, false: C.surface3 }}
+          />
+        </View>
+        {!!bioMsg && <Text style={styles.geoMsg}>{bioMsg}</Text>}
+        {/* ===== END SENTIENT UX ===== */}
 
         <Text style={styles.section}>{t('guardian_monitoring', lang).toUpperCase()}</Text>
         <View style={styles.guardRow}>
@@ -326,6 +479,11 @@ const styles = StyleSheet.create({
   donorSub: { color: C.brand, fontSize: 11, marginTop: 2 },
   saveBtn: { backgroundColor: C.inverse, paddingVertical: S.lg, alignItems: 'center', marginTop: S.lg },
   saveBtnText: { color: C.onInverse, fontWeight: '900', letterSpacing: 2, fontSize: 15 },
+  previewBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: C.brand, paddingHorizontal: S.md, paddingVertical: 8, borderRadius: 20 },
+  previewText: { color: C.onInverse, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  saveMini: { backgroundColor: C.inverse, paddingHorizontal: S.lg, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginBottom: S.sm },
+  saveMiniText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
+  stageLabel: { color: C.brand, fontSize: 11, letterSpacing: 1.5, fontWeight: '900', marginTop: 4, marginBottom: S.sm },
   qrBtn: { marginTop: S.md, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong, paddingVertical: S.md, backgroundColor: C.bg },
   qrBtnText: { color: C.fg, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
   delBtn: { marginTop: S.xl, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.error, paddingVertical: S.md },

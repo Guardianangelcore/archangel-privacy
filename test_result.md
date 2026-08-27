@@ -252,3 +252,42 @@ PainCurve v /healing (screenshot OK: stĺpce+trend+hint), agent.py pain intent (
 
 ## Iteration 35 (Phase 39: One-tap encouragement + recovery milestones, June 2026)
 fd-encourage E2E OK (Lucka→Jaroslav echo remote:true), milestone check curl OK (floor 4→3 → 🎉), voice path integruje míľnik do reply. ConfettiBurst RN Animated (native driver, bez novej závislosti).
+
+
+## Iteration 36 (SENTIENT UX FORK — the human soul, June 2026)
+NEW backend (routes/auth.py):
+- PrefIn extended: birth_year (1900-2030), biometric_enabled (bool), wake_word_enabled (bool).
+- PATCH /api/me/prefs now accepts these fields; birth_year outside 1900-2030 → 400.
+- Verified curl (Bearer smoketok-fresh-2026):
+  - PATCH {"birth_year":1958,"biometric_enabled":true,"wake_word_enabled":true} → 200 with fields persisted.
+  - PATCH {"birth_year":1800} → 400.
+  - POST /api/voice/tts {"voice":"onyx","language":"sk","speed":0.95} → 200 (11.9KB mp3 cached, key deterministic).
+NEW frontend modules:
+- src/voice.ts — unified Jarvis voice utility, default voice 'onyx' (deep human, Tony-Stark-Jarvis).
+  Single module-level createAudioPlayer instance (no overlap), auto-cleans on stopSpeaking().
+- src/age.ts — Bio-Timeline (Growth Engine): 5 stages infant/child/teen/adult/senior derived from birth_year.
+  Helpers: stageFromUser(), suggestAngelMode(), jarvisToneFor().
+- src/biometric-gate.tsx — full-screen FaceID/Fingerprint gate wrapping the app after login.
+  Soft-fails on web + hardware-less devices. Re-locks on app background >60s.
+  Warm voice greeting on first unlock ("Vitajte späť, {name}. Som Jarvis…") via onyx.
+- src/wake-word.ts — Alexa-style "JARVIS" listener scaffold (metering-based; native only).
+  Auto-pauses in app background. NOTE for founder: full 24/7 background wake-word requires a
+  native build with Porcupine/Snowboy — will not fully work in Expo Go.
+EXISTING files upgraded:
+- app/_layout.tsx — wraps <Stack/> in <BiometricGate>.
+- app/(tabs)/index.tsx — angel-toggle now includes 'SENIOR' label + gold glow when suggested.
+  NEW testID hub-guardian-gold: prominent LinearGradient card under pillar grid, shows
+  "ETAPA ŽIVOTA" chip when birth_year set, senior-adaptive copy.
+  AngelHome auto-starts wake-word listener when wake_word_enabled=true (native only).
+- app/(tabs)/profile.tsx — new SENTIENT UX section with testIDs:
+  - prof-voice-preview (Onyx voice sample button)
+  - prof-birth-year + prof-birth-year-save (Bio-Timeline)
+  - prof-stage-label (auto-computed etapa)
+  - prof-biometric switch (triggers LocalAuthentication.authenticateAsync before enabling)
+  - prof-wake-word switch
+- app/jarvis.tsx — MOOD_VOICE now always 'onyx' (speed modulates emotion). speak() delegates
+  to src/voice.ts. Removed local playerRef (voice.ts owns the player).
+- app/physio.tsx — speakText() delegates to jarvisSpeak with onyx (previously coral).
+Screenshots verified: home shows SENIOR pill + Guardian Gold card with ETAPA ŽIVOTA: SENIOR (65+) after
+birth_year=1958 seed. Profile Sentient UX section renders all four controls in Slovak.
+NEEDS TESTING: all backend PrefIn field flows + TTS onyx roundtrip via testing_agent.

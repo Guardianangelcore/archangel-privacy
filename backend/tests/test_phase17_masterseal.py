@@ -10,7 +10,7 @@ import requests
 
 BASE_URL = (os.environ.get("EXPO_BACKEND_URL")
             or os.environ.get("EXPO_PUBLIC_BACKEND_URL")
-            or "https://angel-os-1.preview.emergentagent.com").rstrip("/")
+            or "https://biometric-onboard-3.preview.emergentagent.com").rstrip("/")
 T1 = "smoketok-fresh-2026"
 T2 = "smoketok-fresh-2026-u2"
 H1 = {"Authorization": f"Bearer {T1}"}

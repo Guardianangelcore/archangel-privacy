@@ -9,7 +9,7 @@ from reportlab.pdfgen import canvas
 
 BASE_URL = (os.environ.get("EXPO_BACKEND_URL")
             or os.environ.get("EXPO_PUBLIC_BACKEND_URL")
-            or "https://angel-os-1.preview.emergentagent.com").rstrip("/")
+            or "https://biometric-onboard-3.preview.emergentagent.com").rstrip("/")
 TOKEN = "smoketok-fresh-2026"
 H = {"Authorization": f"Bearer {TOKEN}"}
 

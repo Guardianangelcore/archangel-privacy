@@ -1,7 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // JARVIS 2.0 — THE LIVING SOUL: breathing AI Orb · Level 1→10 companion · full voice
 // conversation (Whisper→gpt-5.4→emotional TTS) · self-teaching memory · visual thinking.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, Modal, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,13 +10,13 @@ import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring, withSequence, Easing, cancelAnimation,
 } from 'react-native-reanimated';
-import { createAudioPlayer, setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
+import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import { api, API_BASE, getToken } from '@/src/api';
-import { cachedAudioUri } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
 import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
+import { speak as jarvisSpeak, stopSpeaking } from '@/src/voice';
 
 type Mood = 'calm' | 'thinking' | 'alert' | 'energetic' | 'concerned';
 
@@ -27,13 +27,14 @@ const MOOD_CFG: Record<Mood, { color: string; glow: string; dur: number; label: 
   concerned: { color: '#4A90D9', glow: 'rgba(74,144,217,0.4)', dur: 2000, label: 'STAROSTLIVÝ' },
   alert: { color: '#FF453A', glow: 'rgba(255,69,58,0.45)', dur: 700, label: 'POPLACH' },
 };
-// Emotional voice coloring — soothing under stress, bright in the morning
+// Emotional voice coloring — Jarvis has ONE voice ('onyx' — deep, human, Tony Stark).
+// Speed alone modulates emotion (soothing under stress, brisk in the morning).
 const MOOD_VOICE: Record<Mood, { voice: string; speed: number }> = {
-  calm: { voice: 'coral', speed: 0.95 },
-  concerned: { voice: 'sage', speed: 0.9 },
-  energetic: { voice: 'nova', speed: 1.08 },
-  thinking: { voice: 'nova', speed: 1.0 },
-  alert: { voice: 'onyx', speed: 1.0 },
+  calm: { voice: 'onyx', speed: 0.95 },
+  concerned: { voice: 'onyx', speed: 0.9 },
+  energetic: { voice: 'onyx', speed: 1.05 },
+  thinking: { voice: 'onyx', speed: 1.0 },
+  alert: { voice: 'onyx', speed: 1.1 },
 };
 
 const ORB = 190;
@@ -130,7 +131,7 @@ export default function Jarvis() {
   const [auto, setAuto] = useState<any>(null);
   const [traces, setTraces] = useState<Record<string, any>>({});
   const [err, setErr] = useState('');
-  const playerRef = useRef<any>(null);
+  // Voice playback centralised in src/voice.ts (single module-level player, auto-cleanup)
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const toastY = useSharedValue(0);
   const toastStyle = useAnimatedStyle(() => ({ opacity: toastY.value, transform: [{ translateY: (1 - toastY.value) * 12 }] }));
@@ -148,7 +149,7 @@ export default function Jarvis() {
       try { setAuto(await api('/jarvis/actions')); } catch {}
       try { await api('/agent/anomalies'); } catch {}
     })();
-    return () => { try { playerRef.current?.remove?.(); } catch {} };
+    return () => { stopSpeaking(); };
   }, [loadState, loadMems]);
 
   const showXp = (gained: number) => {
@@ -161,14 +162,16 @@ export default function Jarvis() {
     if (!text) return;
     try {
       const v = MOOD_VOICE[m] || MOOD_VOICE.calm;
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 2000), voice: v.voice, speed: v.speed, language: user?.language || 'sk' }) });
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
-      const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
-      try { playerRef.current?.remove?.(); } catch {}
-      const p = createAudioPlayer(src.headers ? { uri: src.uri, headers: src.headers } : { uri: src.uri });
-      playerRef.current = p; p.play();
+      await jarvisSpeak(text.slice(0, 2000), {
+        voice: v.voice as any,
+        speed: v.speed,
+        language: (user?.language as any) || 'sk',
+      });
     } catch (e) { console.log('tts err', e); }
   }, [user?.language]);
+
+  // Stop any ongoing narration when Jarvis unmounts.
+  useEffect(() => () => { stopSpeaking(); }, []);
 
   const sendMessage = useCallback(async (text: string, viaVoice = false) => {
     const q = text.trim();

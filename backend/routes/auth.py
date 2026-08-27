@@ -102,11 +102,21 @@ class PrefIn(BaseModel):
     family_size: Optional[int] = None
     pulse_check_optin: Optional[bool] = None
     acoustic_guard: Optional[bool] = None
+    # Sentient UX preferences (biometrics, wake-word, life-cycle age tracking)
+    birth_year: Optional[int] = None  # 1900..2030 for Bio-Timeline (infant→senior)
+    biometric_enabled: Optional[bool] = None  # FaceID/Fingerprint gate on app open
+    wake_word_enabled: Optional[bool] = None  # Alexa-style "JARVIS" always-listening
 
 @api.patch("/me/prefs")
 async def update_prefs(body: PrefIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "birth_year" in upd:
+        by = int(upd["birth_year"])
+        if by < 1900 or by > 2030:
+            from fastapi import HTTPException
+            raise HTTPException(400, "birth_year must be between 1900 and 2030")
+        upd["birth_year"] = by
     if upd:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": upd})
     return clean(await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0}))

@@ -322,3 +322,30 @@ Pozn.: Hlasový okruh 'bolí ma to na sedem' (Phase 37) je pripravený na test v
 1. POVZBUDENIE — /api/family/recovery-pulse teraz vracia aj email; family-dashboard.tsx karta blízkeho má tlačidlo fd-encourage-{uid} 'POSLAŤ POVZBUDENIE (VOICE ECHO)' → POST /family/echoes/send s prednastavenou správou podľa trendu (worsening: 'Drž sa! zajtra bude lepšie ❤️' / inak: 'Sme na teba hrdí ❤️') → potvrdenie fd-enc-sent. E2E overené ako Lucka (screenshot) + echo doručené seniorovi (remote:true, unheard).
 2. MÍĽNIKY — physio_media.check_pain_milestone: min 3 záznamy/14d, int(avg) porovnaný s db.pain_milestones.best_floor (baseline pri prvom checku); pokles o celý bod → milestone True + správa '🎉 MÍĽNIK ZOTAVENIA! Priemer klesol na X/10'. Napojené na POST /physio/pain (response milestone+milestone_message) AJ hlasový zápis v agent.py (pripojí sa k reply). physio.tsx: ConfettiBurst (18 kúskov, RN Animated bez závislostí, useNativeDriver) + pain-milestone-{guide} text v PainLoggeri. Curl overené: avg 3.8 → milestone True.
 Pozn.: ARCHANGEL MONOLIT (Sovereign Triangle) bol kompletne implementovaný vo Phase 33 (audit 60/60) — user ho re-poslal, žiadne chýbajúce časti nenájdené.
+
+## Phase 40: SENTIENT UX FORK — ULTRA MODE (Feb 2026) — DONE ✅
+Founder command: merge Sovereign Triangle with the Sentient UX Soul — biometric onboarding,
+Onyx voice (no more robot), Guardian Gold Senior Switch on hub+topbar, JARVIS wake-word,
+Bio-Timeline (5 stages).
+
+1. BACKEND (routes/auth.py): PrefIn + birth_year (1900-2030, else 400), biometric_enabled, wake_word_enabled.
+   Fully covered by 30 pytest cases (test_iter30_sentient_ux.py — GREEN).
+2. SENTIENT VOICE (src/voice.ts): unified Jarvis voice utility, DEFAULT_VOICE='onyx' (deep, human, Tony-Stark).
+   Single module-level createAudioPlayer (never doubles up), stopSpeaking() global. jarvis.tsx and physio.tsx
+   both migrated (were on 'coral' / 'nova' — replaced with 'onyx'). TTS onyx roundtrip verified server-side.
+3. BIOMETRIC GATE (src/biometric-gate.tsx): full-screen FaceID/Fingerprint/Iris gate wrapping <Stack/>
+   in _layout.tsx. Soft-fails on web + hardware-less. Re-locks after 60s background. Warm onyx greeting
+   on first unlock ('Vitajte späť, {name}. Som Jarvis, váš anjel-strážca.').
+4. GUARDIAN GOLD (app/(tabs)/index.tsx): angel-toggle in top nav now shows 'SENIOR' pill (gold-glow when
+   suggested). NEW hub-guardian-gold: prominent LinearGradient card under pillar grid — ETAPA ŽIVOTA chip
+   auto-adapts to birth_year (infant→child→teen→adult→senior).
+5. BIO-TIMELINE (src/age.ts): 5 stages derived from birth_year. suggestAngelMode(senior)=true auto-lights
+   the Guardian Gold card. jarvisToneFor() feeds Onyx speed presets per stage.
+6. WAKE-WORD (src/wake-word.ts): Alexa-style 'JARVIS' listener scaffold, activated in AngelHome only when
+   wake_word_enabled. Native only. Auto-pauses in background. Founder must know: real 24/7 wake-word needs
+   Porcupine/Snowboy in a native build; scaffold uses metering threshold until then.
+7. PROFILE (app/(tabs)/profile.tsx): new SENTIENT UX section with 4 controls (voice preview, birth year,
+   biometric switch, wake-word switch) — all persist via PATCH /me/prefs.
+Verified: Home screenshot shows SENIOR pill + Guardian Gold card 'ETAPA ŽIVOTA: SENIOR (65+)' after
+setting birth_year=1958. Profile screenshot shows all four Sentient controls in Slovak.
+Backend: 30/30 pytest green (test_iter30_sentient_ux.py).

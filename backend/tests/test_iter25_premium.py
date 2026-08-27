@@ -96,7 +96,7 @@ class TestBillingCheckout:
     def test_checkout_sentinel_monthly_returns_stripe_url(self, fresh_user):
         payload = {
             "tier": "sentinel", "billing": "monthly",
-            "origin_url": "https://angel-os-1.preview.emergentagent.com",
+            "origin_url": "https://biometric-onboard-3.preview.emergentagent.com",
         }
         r = requests.post(f"{API}/billing/checkout", headers=fresh_user["headers"],
                           json=payload, timeout=20)
@@ -112,7 +112,7 @@ class TestBillingCheckout:
         # Client cannot inject an amount — request body has no such field
         r = requests.post(f"{API}/billing/checkout", headers=fresh_user["headers"],
                           json={"tier": "guardian", "billing": "annual",
-                                "origin_url": "https://angel-os-1.preview.emergentagent.com",
+                                "origin_url": "https://biometric-onboard-3.preview.emergentagent.com",
                                 "amount": 0.01},
                           timeout=20)
         assert r.status_code == 200, r.text

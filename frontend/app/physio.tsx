@@ -6,14 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { api, apiUpload, API_BASE, getToken } from '@/src/api';
-import { cachedAudioUri, cachedVideo, prefetchVideo } from '@/src/media';
+import { cachedVideo, prefetchVideo } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
+import { speak as jarvisSpeak } from '@/src/voice';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -358,9 +358,7 @@ export default function Physio() {
   const [guides, setGuides] = useState<any[]>([]);
   const [catLabels, setCatLabels] = useState<Record<string, string>>({});
   const [openGuide, setOpenGuide] = useState<string | null>(null);
-  const playerRef = useRef<any>(null);
-
-  useEffect(() => () => { try { playerRef.current?.remove?.(); } catch {} }, []);
+  // Note: voice playback is now handled centrally by src/voice.ts (single module-level player).
 
   useEffect(() => {
     (async () => {
@@ -383,17 +381,12 @@ export default function Physio() {
     setBusy(false);
   };
 
-  // Zero-Stutter: TTS is fully downloaded to local cache before playback (no network hiccups)
   const speakText = async (text: string) => {
     if (!text || speaking) return;
     setSpeaking(true);
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text, voice: 'coral', language: lang }) });
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
-      const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
-      try { playerRef.current?.remove?.(); } catch {}
-      const p = createAudioPlayer(src.headers ? { uri: src.uri, headers: src.headers } : { uri: src.uri });
-      playerRef.current = p; p.play();
+      // Sentient voice — Jarvis speaks with the deep, warm 'onyx' timbre.
+      await jarvisSpeak(text, { voice: 'onyx', speed: 0.95, language: lang });
     } catch (e) { console.log(e); }
     setSpeaking(false);
   };

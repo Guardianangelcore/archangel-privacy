@@ -1,0 +1,31 @@
+{
+  "summary": "SENTIENT UX FORK — backend-only contract validated. 30/30 pytest cases GREEN (test_iter30_sentient_ux.py). PrefIn now correctly accepts birth_year (1900..2030 range enforced — 1800→400, 2100→400, 2000→200, 1958→200), biometric_enabled and wake_word_enabled — all three persist and are echoed by GET /api/auth/me. Partial-update semantics preserved: PATCH {biometric_enabled:false} does not clobber wake_word_enabled or birth_year (fields with None are skipped in update_prefs upd dict). Unauth PATCH → 401. TTS: POST /api/voice/tts with voice='onyx' + speed=0.95 accepted for all 14 languages (sk, cs, en, de, fr, es, it, pl, hu, uk, ru, pt, nl, ro) → 200 with deterministic key+url; GET /api/voice/tts/{key}.mp3 streams audio/mpeg (verified >1KB real bytes; sample 'Dobrý deň, som Jarvis' generated ~24KB MP3). Caching: identical (text,voice,speed) hits SHA256 cache and returns same key deterministically. Empty text and whitespace-only text both → 400. Unauth POST → 401. Missing cache key mp3 → 404. Regressions: GET /auth/me (200, user_id=smoketest-user-1), GET /legal/tos (200 with bearer), GET /healing/state (200), POST /agent/chat (200, returns reply/message field) all unchanged. No changes made to any backend source file; only test file added.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter30_sentient_ux.py",
+    "/app/test_reports/pytest/pytest_iter30.xml"
+  ],
+  "action_items": [
+    "None blocking — Sentient UX Fork backend contract is production-ready.",
+    "Optional: expose /api/voice/tts/{key}.mp3 as a signed URL (currently key is a public SHA256 hash — low risk since it's a pure hash of caller's own text+voice+speed, but a public listener who guesses a hash could stream someone else's cached mp3). Consider scoping cache per user_id if that ever matters.",
+    "Optional: _tts_cache is an unbounded in-memory dict. With 14-language onyx caching per phrase, it will grow. Add LRU eviction (e.g. functools.lru_cache-style with maxsize=1024) or move to Redis for horizontal scaling."
+  ],
+  "critical_code_review_comments": [
+    "routes/auth.py:96-108 PrefIn: birth_year/biometric_enabled/wake_word_enabled correctly declared Optional[int]/Optional[bool] so partial PATCH works. ✓",
+    "routes/auth.py:113 upd dict comprehension `{k:v for k,v in body.model_dump().items() if v is not None}` correctly implements partial update — booleans False are preserved (not None), only unset fields skipped. ✓",
+    "routes/auth.py:114-119 birth_year range check 1900..2030 uses 400 HTTPException — matches spec. Cast to int() is safe because Pydantic already coerced to Optional[int].",
+    "routes/health.py:299-322 TTS: voice is a free-form string field defaulting to 'nova' — 'onyx' passes through untouched to OpenAI TTS. Cache key includes voice+speed+text hash so onyx and nova produce distinct entries. ✓",
+    "routes/health.py:314 cache key uses text+voice+speed+tts-1+mp3 — deterministic across calls. Verified in test_tts_caching_deterministic_key.",
+    "routes/health.py:290-295 clean_for_tts strips URLs/markdown/whitespace and truncates to 4000 chars; empty result → 400. Whitespace-only input correctly rejected (test_tts_empty_after_clean_400 passes).",
+    "routes/health.py:324-329 tts_stream is UNAUTHENTICATED — key acts as capability. Low risk (SHA256 of user's own input) but noted in action_items."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter30_sentient_ux.py (new — 30 test cases)"
+  ],
+  "success_rate": {"backend": "100% (30/30 pytest cases)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "None new. Reused existing smoketest-user-1 (token=smoketok-fresh-2026, session valid until 2026-09-23). User already had birth_year=1958 / biometric_enabled=true / wake_word_enabled=true from prior main-agent run — tests explicitly re-set values and use restore-teardowns so state is idempotent.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter 30 (Sentient UX Fork) backend passes 30/30. PrefIn extensions live at routes/auth.py:96-122; TTS at routes/health.py:299-329. Default voice in frontend/src/voice.ts is 'onyx' — backend confirms it works. If future tests need to add more PrefIn fields, follow the same pattern (Optional in PrefIn + range guard block if numeric). Note: /api/legal/tos REQUIRES auth (401 without bearer) — was surprising in this iter, fixed in test. Whisper STT (routes/health.py:335-340) is still MOCKED — real integration deferred to Phase 3 per code comment; do not test as if real."
+}

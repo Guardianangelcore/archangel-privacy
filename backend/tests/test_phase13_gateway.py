@@ -20,7 +20,7 @@ import concurrent.futures as cf
 import requests
 import pytest
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://angel-os-1.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://biometric-onboard-3.preview.emergentagent.com").rstrip("/")
 TOKEN = "smoketok-fresh-2026"
 HEAD = {"Authorization": f"Bearer {TOKEN}"}
 JSON_HEAD = {**HEAD, "Content-Type": "application/json"}
