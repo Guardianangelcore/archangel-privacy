@@ -486,3 +486,48 @@ of real personal names + tag every AI response per EU AI Act Art. 50.
 Phase 46 (P1 — PENDING per founder plan): Dynamic GPS Intelligence, IP fallback,
 manual city picker, Guardian Eye (camera globally), edge-caching. Testing (per founder
 choice) deferred to end of Phase 46.
+
+## Phase 46: DYNAMIC GPS + GUARDIAN EYE + EDGE CACHE + LANG AUTO-SWITCH (Jun 2026) — DONE ✅
+Founder directive: fully sovereign global reality — IP fallback, manual city pick,
+zero-UI camera on every hub, sub-500ms Jarvis briefings, cross-border language nudge.
+
+1. **Dynamic GPS Intelligence** (backend/routes/geo.py rebuilt):
+   - `POST /api/geo/ip-locate` — free keyless ip-api.com, X-Forwarded-For aware, 24h
+     in-memory cache. Private IPs → graceful ip-fallback default (Bratislava).
+   - `POST /api/geo/set-city` — manual override from CITIES index (400 on unsupported).
+   - `POST /api/geo/locate` extended: returns `language_suggestion` whenever the
+     country changes and travel_mode is OFF (never auto-switches without consent).
+   - DEFAULT_GEO changed from Praha → Bratislava (sovereign neutral).
+
+2. **Global Language Auto-Switch** (frontend/src/CityPicker.tsx):
+   - `LanguageSuggestionBanner` — inline card in Profile that appears the moment
+     `/geo/locate` or `/geo/set-city` returns a `language_suggestion`. Two big
+     buttons ÁNO (switch) / NIE (dismiss). Wired to PATCH /me/prefs.
+   - Travel Mode toggle still auto-switches on border crossing when enabled.
+
+3. **Guardian Eye Camera** (frontend/src/GuardianEye.tsx + PillarHub.tsx):
+   - Small always-visible camera FAB (bottom-right, gold-bordered) on all 4 pillar
+     hubs (health/family/legacy/hunter). Tap → haptic + navigation to /lens.
+     testID: `{hubTestID}-eye` (e.g. `hub-health-eye`).
+
+4. **Edge Cache Speedup** (backend/routes/agent.py):
+   - `_edge_get/_edge_set/_edge_invalidate_prefix` — per-worker in-memory LRU with TTL.
+   - `/api/agent/briefing` hot-path: <10ms cache hit before DB round-trip; 600s TTL,
+     invalidated on force=true regen. Two consecutive briefings return identical
+     watermarked payload (testing_agent verified).
+
+5. **Manual City Picker** (frontend/src/CityPicker.tsx):
+   - Bottom-sheet chooser from `/geo/context.supported_cities` (16 EU cities).
+   - Profile: two new buttons `prof-geo-ip` (auto-detect via IP) + `prof-geo-manual`
+     (opens picker). Both persist `geo.source` (ip / manual / gps / ip-fallback).
+
+6. **Tests**:
+   - New `backend/tests/test_phase45_46_anonymity_geo.py`: 16/16 GREEN.
+   - Existing test_iter24_human_first assertion updated to accept Bratislava default.
+   - Regression: /geo/travel-mode, /geo/locate Prague, /me/prefs all still 200.
+
+Code-review notes fixed: duplicate 'päť' key removed from PAIN_NUM_WORDS. Non-blocking:
+in-memory cache is per-worker (Redis planned when scaling >4 workers); ip-api.com free
+tier over plain HTTP (paid tier for HTTPS post-launch).
+
+Test users: smoketest-user-1 (smoketok-fresh-2026, TOS accepted).

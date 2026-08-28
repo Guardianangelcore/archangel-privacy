@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { ContactSheet } from '@/src/ui/ContactSheet';
+import { CityPicker, LanguageSuggestionBanner } from '@/src/CityPicker';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { WATERMARK } from '@/src/watermark';
@@ -29,20 +30,49 @@ export default function Profile() {
   const [demoMsg, setDemoMsg] = useState('');
   const [geo, setGeo] = useState<any>(null);
   const [geoMsg, setGeoMsg] = useState('');
+  const [cityPick, setCityPick] = useState(false);
+  const [langSuggest, setLangSuggest] = useState<any>(null);
+
+  const applyLangSuggestion = async () => {
+    if (!langSuggest) return;
+    try {
+      await setPref({ language: langSuggest.to });
+      setGeoMsg(`Jazyk prepnutý na ${langSuggest.to.toUpperCase()} podľa ${langSuggest.city}.`);
+    } catch (e: any) { setGeoMsg(String(e.message || e)); }
+    finally { setLangSuggest(null); }
+  };
+
+  const tryIpFallback = async () => {
+    setGeoMsg('Skúšam IP-based lokalizáciu…');
+    try {
+      const r: any = await api('/geo/ip-locate', { method: 'POST' });
+      setGeo(r.geo);
+      if (r.language_suggestion) setLangSuggest(r.language_suggestion);
+      setGeoMsg(r.geo.source === 'ip-fallback'
+        ? `IP lokalizácia nedostupná — vyberte mesto ručne. (${r.geo.city})`
+        : `IP: ${r.geo.city} · ${r.geo.country}`);
+      const me: any = await api('/auth/me');
+      if (me?.user) setUser(me.user);
+    } catch (e: any) { setGeoMsg(String(e.message || e)); }
+  };
 
   const toggleTravel = async (v: boolean) => {
-    setGeoMsg('');
+    setGeoMsg(''); setLangSuggest(null);
     try {
       if (v && Platform.OS !== 'web') {
         const p = await Location.getForegroundPermissionsAsync();
         if (!p.granted) {
           if (!p.canAskAgain) {
-            setGeoMsg('Poloha je zablokovaná — povoľte ju v Nastaveniach telefónu.');
+            setGeoMsg('Poloha zablokovaná — skúšam IP fallback. Ak treba, otvorte manuálny výber mesta.');
+            await tryIpFallback();
             return;
           }
           const r = await Location.requestForegroundPermissionsAsync();
           if (!r.granted) {
-            setGeoMsg(r.canAskAgain ? 'Bez polohy sa mesto neprispôsobí automaticky.' : 'Poloha je zablokovaná — povoľte ju v Nastaveniach telefónu.');
+            setGeoMsg(r.canAskAgain
+              ? 'Bez GPS — skúšam IP fallback.'
+              : 'Poloha zablokovaná — skúšam IP fallback, potom môžete vybrať mesto ručne.');
+            await tryIpFallback();
             return;
           }
         }
@@ -54,9 +84,15 @@ export default function Profile() {
           const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           const loc: any = await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
           setGeo(loc.geo);
-          if (loc.language_switched) setGeoMsg(`Jazyk prepnutý podľa polohy: ${loc.geo.city} (${loc.language.toUpperCase()})`);
+          if (loc.language_switched) setGeoMsg(`Jazyk auto-prepnutý: ${loc.geo.city} (${loc.language.toUpperCase()})`);
+          else if (loc.language_suggestion) { setGeoMsg(`Poloha: ${loc.geo.city} · ${loc.geo.country}`); setLangSuggest(loc.language_suggestion); }
           else setGeoMsg(`Poloha: ${loc.geo.city} · ${loc.geo.country}`);
-        } catch {}
+        } catch {
+          await tryIpFallback();
+        }
+      } else if (v && Platform.OS === 'web') {
+        // Web preview — GPS API unreliable, use IP fallback directly.
+        await tryIpFallback();
       }
       const me: any = await api('/auth/me');
       if (me?.user) setUser(me.user);
@@ -346,10 +382,34 @@ export default function Profile() {
           <Ionicons name="airplane-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>CESTOVNÝ REŽIM (GEO)</Text>
-            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}` : '📍 Automatická lokalita (GPS/IP) — povoľte polohu'} — automatické mesto, jazyk a predpisy podľa GPS</Text>
+            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}${geo.source ? ` · ${String(geo.source).toUpperCase()}` : ''}` : '📍 Automatická lokalita (GPS/IP) — povoľte polohu'} — automatické mesto, jazyk a predpisy podľa GPS</Text>
           </View>
           <Switch testID="prof-travel-mode" value={!!(user as any)?.travel_mode} onValueChange={toggleTravel} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
+        <LanguageSuggestionBanner
+          suggestion={langSuggest}
+          onAccept={applyLangSuggestion}
+          onDismiss={() => setLangSuggest(null)}
+        />
+        <View style={{ flexDirection: 'row', gap: S.sm }}>
+          <Pressable testID="prof-geo-ip" onPress={tryIpFallback} style={[styles.pickBtn, { flex: 1 }]}>
+            <Ionicons name="globe-outline" size={16} color={C.brand} />
+            <Text style={styles.pickBtnText}>IP LOKALIZÁCIA</Text>
+          </Pressable>
+          <Pressable testID="prof-geo-manual" onPress={() => setCityPick(true)} style={[styles.pickBtn, { flex: 1 }]}>
+            <Ionicons name="map-outline" size={16} color={C.brand} />
+            <Text style={styles.pickBtnText}>VYBRAŤ MESTO</Text>
+          </Pressable>
+        </View>
+        <CityPicker
+          visible={cityPick}
+          onClose={() => setCityPick(false)}
+          onPicked={(r) => {
+            setGeo(r.geo);
+            if (r.language_suggestion) setLangSuggest(r.language_suggestion);
+            setGeoMsg(`Ručne: ${r.geo.city} · ${r.geo.country}`);
+          }}
+        />
         {!!geoMsg && <Text style={styles.geoMsg}>{geoMsg}</Text>}
         {!!(user as any)?.inactivity_guard && (
           <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>

@@ -3,16 +3,15 @@
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 """GEOGRAPHIC FLUIDITY — dynamic proximity & language context.
 
-Default context: Prague, Czech Republic (founder's location). All searches for
-doctors, clinics and pharmacies prioritize the user's geo city. Travel Mode:
-when GPS coordinates move to another supported city, the OS re-indexes local
-providers and (optionally) switches the UI + voice language to the local tongue.
+Globally sovereign — no static city. Every user's context is resolved
+dynamically from GPS → IP fallback → manual pick. The UI + Jarvis voice
+follow the resolved locale (with Travel Mode auto-language switch).
 """
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Header, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
-import math
+import math, httpx, time
 
 from core import api, db, get_current_user, clean
 
@@ -36,12 +35,15 @@ CITIES = [
     {"city": "Kyjev", "country": "UA", "lang": "uk", "lat": 50.4501, "lng": 30.5234, "tz": "Europe/Kyiv"},
 ]
 
-DEFAULT_GEO = {"city": "Praha", "country": "CZ", "lang": "cs", "tz": "Europe/Prague",
-               "lat": 50.0755, "lng": 14.4378, "source": "default"}
+# Sovereign default — Bratislava is a neutral EU-central fallback used only when
+# NO signal at all (no GPS, no IP, no manual). Every user is expected to converge
+# on a real geo within seconds of opening the app.
+DEFAULT_GEO = {"city": "Bratislava", "country": "SK", "lang": "sk", "tz": "Europe/Bratislava",
+               "lat": 48.1486, "lng": 17.1077, "source": "default"}
 
 
 def geo_of(user: dict) -> dict:
-    """Current geo context of a user — defaults to Prague, CZ."""
+    """Current geo context of a user — falls back to DEFAULT_GEO only when unset."""
     g = user.get("geo") or {}
     return {**DEFAULT_GEO, **g} if g else dict(DEFAULT_GEO)
 
@@ -62,6 +64,8 @@ def nearest_city(lat: float, lng: float) -> dict:
             best, best_d = c, d
     return {**best, "distance_km": round(best_d, 1)}
 
+
+# ---------- CONTEXT & MANUAL ----------
 
 @api.get("/geo/context")
 async def geo_context(authorization: Optional[str] = Header(None)):
@@ -86,26 +90,125 @@ class LocateIn(BaseModel):
     lng: float
 
 
-@api.post("/geo/locate")
-async def geo_locate(body: LocateIn, authorization: Optional[str] = Header(None)):
-    """GPS → nearest supported city. Updates the user's geo context; with Travel
-    Mode ON it also switches the UI/voice language to the local tongue."""
-    user = await get_current_user(authorization)
-    if not (-90 <= body.lat <= 90 and -180 <= body.lng <= 180):
-        raise HTTPException(400, "invalid coordinates")
-    near = nearest_city(body.lat, body.lng)
+async def _apply_geo(user: dict, near: dict, source: str) -> dict:
+    """Persist geo update, optionally auto-switch language when Travel Mode ON, and
+    always surface a language suggestion when the country changed regardless."""
     prev = geo_of(user)
     geo = {"city": near["city"], "country": near["country"], "lang": near["lang"],
            "tz": near["tz"], "lat": near["lat"], "lng": near["lng"],
-           "source": "gps", "located_at": datetime.now(timezone.utc).isoformat()}
+           "source": source, "located_at": datetime.now(timezone.utc).isoformat()}
     update: dict = {"geo": geo}
+    current_lang = (user.get("language") or "sk")
     language_switched = False
-    if user.get("travel_mode") and near["lang"] != (user.get("language") or "sk"):
+    lang_suggestion = None
+    country_changed = prev.get("country") != near["country"]
+    if user.get("travel_mode") and near["lang"] != current_lang:
         update["language"] = near["lang"]
         language_switched = True
+    elif country_changed and near["lang"] != current_lang:
+        lang_suggestion = {"from": current_lang, "to": near["lang"], "city": near["city"], "country": near["country"]}
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": update})
     return {"geo": clean(geo), "previous_city": prev.get("city"),
             "city_changed": prev.get("city") != near["city"],
-            "language": update.get("language", user.get("language") or "sk"),
+            "country_changed": country_changed,
+            "language": update.get("language", current_lang),
             "language_switched": language_switched,
-            "distance_km": near["distance_km"]}
+            "language_suggestion": lang_suggestion,
+            "distance_km": near.get("distance_km", 0)}
+
+
+@api.post("/geo/locate")
+async def geo_locate(body: LocateIn, authorization: Optional[str] = Header(None)):
+    """GPS → nearest supported city. Updates the user's geo; with Travel Mode ON
+    auto-switches language, else surfaces a `language_suggestion` when crossing borders."""
+    user = await get_current_user(authorization)
+    if not (-90 <= body.lat <= 90 and -180 <= body.lng <= 180):
+        raise HTTPException(400, "invalid coordinates")
+    return await _apply_geo(user, nearest_city(body.lat, body.lng), "gps")
+
+
+# ---------- IP FALLBACK ----------
+
+_IP_CACHE: dict = {}   # ip -> (ts, {city, country, lat, lng})
+_IP_TTL = 24 * 3600    # 24 h — IPs rarely move fast enough to matter
+
+
+def _client_ip(req: Request) -> Optional[str]:
+    xff = req.headers.get("x-forwarded-for")
+    if xff:
+        ip = xff.split(",")[0].strip()
+        if ip:
+            return ip
+    xreal = req.headers.get("x-real-ip")
+    if xreal:
+        return xreal.strip()
+    try:
+        return req.client.host if req.client else None
+    except Exception:
+        return None
+
+
+async def _ip_to_coords(ip: str) -> Optional[dict]:
+    """Free keyless IP geolocation (ip-api.com — 45 req/min, no signup)."""
+    now = time.time()
+    cached = _IP_CACHE.get(ip)
+    if cached and (now - cached[0]) < _IP_TTL:
+        return cached[1]
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as cli:
+            r = await cli.get(f"http://ip-api.com/json/{ip}",
+                              params={"fields": "status,country,countryCode,city,lat,lon"})
+        d = r.json()
+        if d.get("status") != "success":
+            return None
+        row = {"city": d.get("city") or "", "country": d.get("countryCode") or "",
+               "lat": float(d["lat"]), "lng": float(d["lon"])}
+        _IP_CACHE[ip] = (now, row)
+        return row
+    except Exception:
+        return None
+
+
+@api.post("/geo/ip-locate")
+async def geo_ip_locate(request: Request, authorization: Optional[str] = Header(None)):
+    """IP-based fallback when GPS is unavailable/denied. Uses X-Forwarded-For (behind
+    ingress). Falls back to Bratislava default if IP is private or lookup fails."""
+    user = await get_current_user(authorization)
+    ip = _client_ip(request)
+    resolved = None
+    if ip and not _is_private_ip(ip):
+        resolved = await _ip_to_coords(ip)
+    if not resolved:
+        # Graceful default — still persist as "ip-fallback" so UI knows to prompt manual pick.
+        return await _apply_geo(user, {**DEFAULT_GEO, "distance_km": 0.0}, "ip-fallback")
+    near = nearest_city(resolved["lat"], resolved["lng"])
+    return {**(await _apply_geo(user, near, "ip")), "raw_ip_city": resolved["city"], "raw_ip_country": resolved["country"]}
+
+
+def _is_private_ip(ip: str) -> bool:
+    if not ip or ip in ("localhost", "127.0.0.1", "::1"):
+        return True
+    try:
+        parts = ip.split(".")
+        if len(parts) != 4:
+            return False
+        a, b = int(parts[0]), int(parts[1])
+        return a == 10 or (a == 172 and 16 <= b <= 31) or (a == 192 and b == 168) or a == 127
+    except Exception:
+        return False
+
+
+# ---------- MANUAL CITY PICK ----------
+
+class ManualCityIn(BaseModel):
+    city: str
+
+
+@api.post("/geo/set-city")
+async def geo_set_city(body: ManualCityIn, authorization: Optional[str] = Header(None)):
+    """Manual override — the user picks a city from the supported index."""
+    user = await get_current_user(authorization)
+    target = next((c for c in CITIES if c["city"].lower() == body.city.strip().lower()), None)
+    if not target:
+        raise HTTPException(400, f"unsupported_city: pick one of {[c['city'] for c in CITIES]}")
+    return await _apply_geo(user, {**target, "distance_km": 0.0}, "manual")

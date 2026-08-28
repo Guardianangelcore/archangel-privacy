@@ -421,3 +421,41 @@ Backend tests: 25/25 GREEN (test_iter34_perfection.py). Total Sentient UX suite:
 Screenshots verified: pantry list + scan CTA, impact hero + timeline, home nav chips.
 Code review note applied: replaced hasattr(motor_db, name) (always True) with a safe try/except
 _safe_count helper in impact.py.
+
+## Iteration 36 (Phase 45+46 GPS & Anonymity, Jun 2026)
+NEW backend (all curl-verifiable, no key required):
+- routes/geo.py rebuilt: DEFAULT_GEO=Bratislava/SK (no more static Prague). NEW endpoints:
+  * POST /api/geo/ip-locate — IP fallback via free ip-api.com (X-Forwarded-For / x-real-ip),
+    24h in-memory IP cache. Private IPs → ip-fallback with default city + prompt manual pick.
+  * POST /api/geo/set-city — manual city override from CITIES index (400 on unsupported).
+  * POST /api/geo/locate now also returns `language_suggestion` when country changes AND
+    travel_mode is off (never auto-switches without consent).
+- backend/core.py NEW: `apply_watermark(text)` idempotent EU AI Act Art. 50 watermark
+  ("— AI Content · Sovereign Protocol"), `did_hash(user_id)` SHA-256 log helper.
+- routes/agent.py: watermark applied to chat/pain/briefing/analyze; NEW _edge_get/set
+  in-memory hot-cache (600s TTL) fast-path for /agent/briefing (target p95 <500ms).
+
+NEW frontend:
+- src/GuardianEye.tsx — always-visible camera FAB, opens /lens with haptic. Mounted in
+  PillarHub → appears on every hub (health/family/legacy/hunter). testID `{testID}-eye`.
+- src/CityPicker.tsx — bottom-sheet city selector + LanguageSuggestionBanner component.
+- src/voice.ts — strips watermark suffix before TTS (Onyx never reads watermark aloud).
+- app/(tabs)/profile.tsx — CESTOVNÝ REŽIM upgraded: tryIpFallback() when GPS denied,
+  `prof-geo-ip` + `prof-geo-manual` buttons, LanguageSuggestionBanner shown on
+  country change even without travel-mode.
+
+ANONYMITY (Phase 45): all visible occurrences of Tomáš/Lucka/Jaroslav removed from
+frontend (onboarding, monolith, voice-signature, voice-echoes, healthcare-proxy, dignity,
+panic-gesture) and backend routes (demo.py family_pulse, agent.py briefing example).
+test_phase19_grand_finale.py assert updated to "Strážca". test_iter24_human_first.py
+default-city assert accepts Bratislava.
+
+NEEDS TESTING (backend + frontend):
+- /api/geo/ip-locate happy path (private IP → default), /geo/set-city (200 valid, 400 invalid),
+  /geo/locate language_suggestion when country changes without travel_mode.
+- /agent/briefing hot cache (2nd request faster than 1st, force=true bypasses cache).
+- Every Jarvis response (chat, briefing, analyze, pain) contains "AI Content · Sovereign Protocol".
+- Frontend: Guardian Eye FAB visible on all 4 pillar hubs → tap navigates to /lens.
+  Profile: CityPicker opens, "Bratislava" pick works; IP button triggers /geo/ip-locate.
+
+Auth for tests: user smoketest-user-1, Bearer smoketok-fresh-2026 (as before).

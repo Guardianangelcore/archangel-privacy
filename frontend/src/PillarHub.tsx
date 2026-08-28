@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { C, S, R } from './theme';
+import { GuardianEyeFAB } from './GuardianEye';
 
 export type HubChoice = { icon: any; label: string; sub?: string; route?: string; onPress?: () => void };
 export type HubItem = { testID: string; icon: any; title: string; subtitle: string; route?: string; onPress?: () => void; choices?: HubChoice[] };
@@ -77,6 +78,9 @@ export default function PillarHub({ title, subtitle, icon, items, sections, hero
           </View>
         ))}
       </ScrollView>
+
+      {/* GUARDIAN EYE — always-visible camera FAB (zero-UI OCR from any pillar). */}
+      <GuardianEyeFAB testID={`${testID}-eye`} />
 
       {/* SMART CHOICE MODAL — interactive options instead of a static jump */}
       <Modal visible={!!sheet} transparent animationType="fade" onRequestClose={() => setSheet(null)}>

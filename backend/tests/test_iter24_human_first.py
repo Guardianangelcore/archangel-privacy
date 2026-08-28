@@ -27,7 +27,9 @@ class TestGeo:
         r = s.get(f"{BASE_URL}/api/geo/context", timeout=15)
         assert r.status_code == 200, r.text
         d = r.json()
-        assert d["geo"]["city"] in ("Praha", "Paríž"), d
+        # Post-anonymity seal (Phase 45): default is sovereign Bratislava; Prague/Paris
+        # still valid when previously located there.
+        assert d["geo"]["city"] in ("Praha", "Paríž", "Bratislava"), d
         assert len(d["supported_cities"]) >= 10
 
     def test_travel_mode_paris_language_switch(self, s):

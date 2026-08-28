@@ -307,7 +307,7 @@ class AgentChatIn(BaseModel):
 # ---- VOICE PAIN LOGGING — "bolí ma to na sedem" → pain diary, no LLM needed ----
 PAIN_NUM_WORDS = {
     "jeden": 1, "jedna": 1, "jednu": 1, "dva": 2, "dve": 2, "dvě": 2, "tri": 3, "tři": 3,
-    "štyri": 4, "styri": 4, "čtyři": 4, "ctyri": 4, "päť": 5, "pat": 5, "päť": 5, "pět": 5, "pet": 5,
+    "štyri": 4, "styri": 4, "čtyři": 4, "ctyri": 4, "päť": 5, "pat": 5, "pět": 5, "pet": 5,
     "šesť": 6, "sest": 6, "šest": 6, "sedem": 7, "sedm": 7, "osem": 8, "osm": 8,
     "deväť": 9, "devat": 9, "devět": 9, "desať": 10, "desat": 10, "deset": 10,
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -447,16 +447,51 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
 # =========================================================================
 # MORNING BRIEFING — proactive daily soul (weather · meds · memory follow-up)
 # =========================================================================
+# =========================================================================
+# EDGE CACHE — in-memory hot fast-path (per-worker) to bring p95 <500ms.
+# Briefing & state are user-scoped daily reads that hit MongoDB otherwise.
+# =========================================================================
+_EDGE_CACHE: dict = {}   # key -> (expires_epoch, payload)
+
+
+def _edge_get(key: str):
+    import time as _t
+    rec = _EDGE_CACHE.get(key)
+    if not rec:
+        return None
+    if rec[0] < _t.time():
+        _EDGE_CACHE.pop(key, None)
+        return None
+    return rec[1]
+
+
+def _edge_set(key: str, payload, ttl_s: int = 300):
+    import time as _t
+    _EDGE_CACHE[key] = (_t.time() + ttl_s, payload)
+
+
+def _edge_invalidate_prefix(prefix: str):
+    for k in list(_EDGE_CACHE.keys()):
+        if k.startswith(prefix):
+            _EDGE_CACHE.pop(k, None)
+
+
 @api.get("/agent/briefing")
 async def agent_briefing(language: str = "sk", force: bool = False,
                          authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     today = datetime.now(timezone.utc).date().isoformat()
+    cache_key = f"brief:{uid}:{today}"
     if not force:
+        hit = _edge_get(cache_key)   # <10ms per-worker LRU fast path
+        if hit is not None:
+            return hit
         cached = await db.agent_briefings.find_one({"user_id": uid, "date": today}, {"_id": 0})
         if cached:
-            return clean(cached)
+            payload = clean(cached)
+            _edge_set(cache_key, payload, ttl_s=600)  # 10 min hot cache
+            return payload
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
     weather = await _weather(user)
@@ -518,7 +553,9 @@ async def agent_briefing(language: str = "sk", force: bool = False,
     xp = await _award_once_daily(uid, 10, "briefing_daily")
     doc["xp_gained"] = xp["gained"]
     doc["level_up"] = xp["level_up"]
-    return clean(doc)
+    payload = clean(doc)
+    _edge_set(cache_key, payload, ttl_s=600)  # warm cache after regen
+    return payload
 
 # =========================================================================
 # VISUAL THINKING — deep analysis with visible reasoning steps (Orb rays)
