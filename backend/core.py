@@ -120,6 +120,25 @@ AI_COMPLIANCE_NOTE = (
     "End with one short disclaimer sentence in the user's language stating this is AI-generated informational content."
 )
 
+# EU AI Act Art. 50 watermark — every AI-generated response is marked
+AI_WATERMARK = "AI Content · Sovereign Protocol"
+
+def apply_watermark(text: str) -> str:
+    """Append the Sovereign Protocol watermark once (idempotent)."""
+    if not text:
+        return text
+    t = str(text).rstrip()
+    if AI_WATERMARK in t:
+        return t
+    # Discreet single-line footer, separated by newline
+    return f"{t}\n\n— {AI_WATERMARK}"
+
+def did_hash(user_id: str) -> str:
+    """Deterministic short DID hash for logs/metadata (no PII leak)."""
+    if not user_id:
+        return "did:0"
+    return "did:" + hashlib.sha256(str(user_id).encode()).hexdigest()[:12]
+
 
 async def send_push(recipients: List[str], data: dict, idempotency_key: Optional[str] = None) -> None:
     if not recipients:

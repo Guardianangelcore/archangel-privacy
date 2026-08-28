@@ -23,7 +23,7 @@ export default function PharmacyHunter() {
   const [scanBusy, setScanBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
 
-  // Geographic Fluidity — region follows the user's geo context (Prague/CZ default)
+  // Geographic Fluidity — region follows the user's geo context (dynamic, GPS/IP-based)
   useEffect(() => {
     (async () => {
       try {

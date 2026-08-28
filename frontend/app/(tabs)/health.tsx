@@ -14,7 +14,7 @@ export default function HealthHub() {
         { title: '⚙️ KOLOTOČ UZDRAVENIA — JADRO', items: [
           { testID: 'hh-healing', icon: 'sync-outline', title: 'Kolotoč uzdravenia', subtitle: 'Úraz → peniaze hneď → doktor → PN → fyzio', route: '/healing' },
           { testID: 'hh-translate', icon: 'language-outline', title: 'Žiadanka a AI Prekladač', subtitle: 'Sken výmenného lístka · OCR → ľudská reč', route: '/translate' },
-          { testID: 'hh-waitlist', icon: 'calendar-outline', title: 'Lovec termínov', subtitle: 'Automatický lov a rezervácia · Praha', route: '/(tabs)/waitlist' },
+          { testID: 'hh-waitlist', icon: 'calendar-outline', title: 'Lovec termínov', subtitle: 'Automatický lov a rezervácia · podľa vašej polohy (GPS)', route: '/(tabs)/waitlist' },
           { testID: 'hh-arbitrage', icon: 'airplane-outline', title: 'Globálna arbitráž', subtitle: 'Operácie v 🇵🇱 🇭🇺 🇹🇷 · predikcia účtov', route: '/arbitrage' },
           { testID: 'hh-recovery', icon: 'bed-outline', title: 'Moje zotavenie (PN)', subtitle: 'ePN · vychádzky · kalkulačka nemocenského', route: '/my-recovery' },
           { testID: 'hh-physio', icon: 'body-outline', title: 'Physio-AI rehabilitácia', subtitle: 'Expertné video sprievodce · rutiny na mieru', route: '/physio' },

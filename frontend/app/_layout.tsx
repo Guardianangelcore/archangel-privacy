@@ -17,6 +17,7 @@ import { C } from "@/src/theme";
 import { GA_ORIGIN_MARK } from "@/src/watermark";
 import { BiometricGate } from "@/src/biometric-gate";
 import { OnboardingTour } from "@/src/onboarding-tour";
+import { startPanicGesture } from "@/src/panic-gesture";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
@@ -62,6 +63,24 @@ function RootNav() {
   useEffect(() => {
     if (user?.user_id) registerForPush(user.user_id);
   }, [user?.user_id]);
+
+  // SILENT WITNESS PANIC GESTURE — global back-of-phone tap listener.
+  // Only armed when a real user is logged in (avoid firing on login screen).
+  useEffect(() => {
+    if (!user?.user_id) return;
+    const cleanup = startPanicGesture(async () => {
+      try {
+        // 1) Open a Silent Witness session immediately (silent — no confirm)
+        const { api } = await import('@/src/api');
+        const opened: any = await api('/silent-witness/session', { method: 'POST' });
+        // 2) Route to the Silent Witness screen so recording UI can start
+        router.push(`/silent-witness?panic=1&sid=${opened.session_id}`);
+      } catch {
+        router.push('/silent-witness?panic=1');
+      }
+    });
+    return cleanup;
+  }, [user?.user_id, router]);
 
   // Push: tap handlers + denied-permission nudge
   useEffect(() => {

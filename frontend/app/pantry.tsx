@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
+import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } from 'expo-audio';
 import { api, apiUpload } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S, R, GOLD } from '@/src/theme';
@@ -62,6 +63,10 @@ export default function Pantry() {
   const [newLoc, setNewLoc] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanCat, setScanCat] = useState('food');
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceHeard, setVoiceHeard] = useState<string>('');
+  const voiceRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -125,6 +130,45 @@ export default function Pantry() {
   const remove = async (id: string) => {
     try { await api(`/pantry/${id}`, { method: 'DELETE' }); await load(); }
     catch (e) { console.log(e); }
+  };
+
+  // VOICE-FIRST ADD — Whisper → LLM parse → insert. Zero typing for seniors.
+  const startVoice = async () => {
+    setVoiceOpen(true); setVoiceHeard('');
+    if (Platform.OS === 'web') return;
+    try {
+      let perm = await AudioModule.getRecordingPermissionsAsync();
+      if (!perm.granted) {
+        perm = await AudioModule.requestRecordingPermissionsAsync();
+        if (!perm.granted) return;
+      }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true } as any);
+      await voiceRecorder.prepareToRecordAsync();
+      voiceRecorder.record();
+      jarvisSpeak('Počúvam. Povedzte, čo pridať do zásob.', {
+        voice: 'onyx', speed: 1.0, language: (user?.language as any) || 'sk',
+      });
+    } catch (e) { console.log('voice start', e); }
+  };
+
+  const stopVoice = async () => {
+    if (Platform.OS === 'web') { setVoiceOpen(false); return; }
+    setVoiceBusy(true);
+    try {
+      await voiceRecorder.stop();
+      const uri = voiceRecorder.uri;
+      if (!uri) { setVoiceOpen(false); setVoiceBusy(false); return; }
+      const name = uri.endsWith('.m4a') ? 'pantry.m4a' : 'pantry.webm';
+      const ct = uri.endsWith('.m4a') ? 'audio/m4a' : 'audio/webm';
+      const parsed: any = await apiUpload('/pantry/voice', uri, name, ct, {});
+      setVoiceHeard(`${parsed.quantity}× „${parsed.name}"${parsed.location ? ` v „${parsed.location}"` : ''}`);
+      jarvisSpeak(`Pridané: ${parsed.quantity} kusov ${parsed.name}${parsed.location ? `, v ${parsed.location}` : ''}.`, {
+        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+      });
+      await load();
+      setTimeout(() => setVoiceOpen(false), 2000);
+    } catch (e: any) { console.log('voice stop', e); setVoiceOpen(false); }
+    setVoiceBusy(false);
   };
 
   return (
@@ -218,6 +262,19 @@ export default function Pantry() {
           </LinearGradient>
         </Pressable>
 
+        {/* VOICE-FIRST — nula ťukania, iba hlas */}
+        <Pressable
+          testID="pantry-voice"
+          onPress={startVoice}
+          style={styles.voiceCta}
+        >
+          <Ionicons name="mic-circle" size={26} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.voiceCtaTitle}>DIKTOVAŤ JARVISOVI</Text>
+              <Text style={styles.voiceCtaSub}>„Mám tri konzervy fazule v bunkri A.“ — a je to.</Text>
+          </View>
+        </Pressable>
+
         {/* Category chip picker for the next scan */}
         <Text style={styles.section}>KATEGÓRIA PRE ĎALŠIE SKENOVANIE</Text>
         <View style={styles.catRow}>
@@ -234,6 +291,32 @@ export default function Pantry() {
           ))}
         </View>
       </ScrollView>
+
+      {/* VOICE OVERLAY — the "listening…" modal */}
+      <Modal visible={voiceOpen} transparent animationType="fade" onRequestClose={() => setVoiceOpen(false)}>
+        <View style={styles.voiceBg}>
+          <View style={styles.voiceCard}>
+            <View style={styles.voiceRing}>
+              <Ionicons name="mic" size={64} color={C.brand} />
+            </View>
+            <Text style={styles.voiceTitle}>{voiceBusy ? 'ROZPOZNÁVAM…' : 'HOVORTE'}</Text>
+            <Text style={styles.voiceHint}>
+              {voiceBusy ? 'Jarvis rozumie Vášmu jazyku.' : 'Napr.: „Mám tri konzervy fazule v bunkri A."'}
+            </Text>
+            {!!voiceHeard && <Text testID="pantry-voice-heard" style={styles.voiceHeard}>✓ {voiceHeard}</Text>}
+            {!voiceBusy && (
+              <Pressable testID="pantry-voice-stop" onPress={stopVoice} style={styles.voiceStopBtn}>
+                <Ionicons name="stop-circle" size={22} color={C.onInverse} />
+                <Text style={styles.voiceStopText}>UKONČIŤ · ULOŽIŤ</Text>
+              </Pressable>
+            )}
+            {voiceBusy && <ActivityIndicator color={C.brand} size="large" />}
+            <Pressable onPress={() => { try { voiceRecorder.stop(); } catch {}; setVoiceOpen(false); }} hitSlop={12}>
+              <Text style={styles.voiceCancel}>Zrušiť</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Manual add modal */}
       <Modal visible={addOpen} transparent animationType="slide" onRequestClose={() => setAddOpen(false)}>
@@ -307,4 +390,16 @@ const styles = StyleSheet.create({
   mBtnGhostText: { color: C.info, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   mBtnPrimary: { backgroundColor: C.brand },
   mBtnPrimaryText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 2 },
+  voiceCta: { flexDirection: 'row', gap: S.md, alignItems: 'center', backgroundColor: C.surface2, borderRadius: R.md, padding: S.md, marginTop: S.md, borderWidth: 1.5, borderColor: C.brand, minHeight: 64 },
+  voiceCtaTitle: { color: C.brand, fontWeight: '900', fontSize: 13, letterSpacing: 2 },
+  voiceCtaSub: { color: C.info, fontSize: 11, lineHeight: 15, marginTop: 3 },
+  voiceBg: { flex: 1, backgroundColor: 'rgba(6,6,10,0.95)', alignItems: 'center', justifyContent: 'center', padding: S.xl },
+  voiceCard: { alignSelf: 'stretch', backgroundColor: C.surface2, borderRadius: R.lg, borderWidth: 2, borderColor: C.brand, padding: S.xl, gap: S.md, alignItems: 'center' },
+  voiceRing: { width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: C.brand, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(212,175,55,0.08)' },
+  voiceTitle: { color: C.brand, fontWeight: '900', fontSize: 16, letterSpacing: 3 },
+  voiceHint: { color: C.info, fontSize: 12, lineHeight: 17, textAlign: 'center' },
+  voiceHeard: { color: C.brand, fontSize: 14, fontWeight: '900', textAlign: 'center', marginTop: S.md },
+  voiceStopBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: C.brand, borderRadius: R.pill, minHeight: 54, paddingHorizontal: S.xxl, marginTop: S.md },
+  voiceStopText: { color: C.onInverse, fontWeight: '900', fontSize: 13, letterSpacing: 2 },
+  voiceCancel: { color: C.info, fontSize: 12, marginTop: S.sm, textDecorationLine: 'underline' },
 });

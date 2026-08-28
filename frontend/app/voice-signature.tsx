@@ -64,7 +64,7 @@ export default function VoiceSignature() {
 
   const start = async () => {
     setErr(''); setOkMsg('');
-    if (!label.trim()) { setErr('Napíšte, ako sa voláte (napr. Tomáš).'); return; }
+    if (!label.trim()) { setErr('Napíšte, ako sa voláte alebo označte vzťah (napr. Strážca).'); return; }
     if (Platform.OS === 'web') { setErr('Nahrávanie voice printu funguje v natívnej aplikácii (Expo Go / build).'); return; }
     try {
       let perm = await AudioModule.getRecordingPermissionsAsync();
@@ -134,7 +134,7 @@ export default function VoiceSignature() {
           value={label}
           onChangeText={setLabel}
           style={styles.input}
-          placeholder="napr. Tomáš"
+          placeholder="napr. Strážca"
           placeholderTextColor="#999"
           maxLength={40}
         />

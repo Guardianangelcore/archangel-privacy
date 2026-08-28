@@ -19,7 +19,7 @@ from emergentintegrations.llm.openai import OpenAISpeechToText
 
 from core import (
     api, db, logger, clean, get_current_user, send_push,
-    AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY,
+    AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY, apply_watermark,
 )
 from routes.neural import _gather_context
 
@@ -368,15 +368,16 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
             reply = (f"Zapísal som bolesť {pain_lvl}/10 — nízka, telo sa pekne hojí. Krivka pokroku rastie v Kolotoči uzdravenia. 💛"
                      if sk else f"Logged pain {pain_lvl}/10 — low, you're healing well. See your progress curve in the Healing Carousel. 💛")
             mood = "calm"
+        from routes.physio_media import check_pain_milestone
+        milestone, m_msg = await check_pain_milestone(uid)
+        if milestone:
+            reply = f"{reply} {m_msg}"
+        reply = apply_watermark(reply)
         await db.agent_conversations.insert_many([
             {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": body.message[:1000], "at": now},
             {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply, "mood": mood, "at": now},
         ])
         await db.agent_state.update_one({"user_id": uid}, {"$set": {"mood": mood}})
-        from routes.physio_media import check_pain_milestone
-        milestone, m_msg = await check_pain_milestone(uid)
-        if milestone:
-            reply = f"{reply} {m_msg}"
         xp = await award_xp(uid, 5, "pain_log")
         return {"reply": reply, "mood": mood, "pain_logged": pain_lvl, "milestone": milestone,
                 "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
@@ -431,6 +432,7 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     except Exception:
         pass
     now = datetime.now(timezone.utc)
+    reply = apply_watermark(reply)
     await db.agent_conversations.insert_many([
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": body.message[:1000], "at": now},
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply[:2000], "mood": mood, "at": now},
@@ -488,7 +490,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
         f" Compose a warm, personal daily briefing STRICTLY in {_lang_name(user)} (5-8 short sentences) from the JSON data: "
         "greet by name and part of day, mention weather (if present), pending meds, upcoming appointments, "
         "and IMPORTANTLY ask a caring follow-up question about any recent memory "
-        "(e.g. 'Včera si spomínal, že Tomáša boleli žily — ako mu je dnes?'). "
+        "(e.g. 'Včera si spomínal, že tvojmu blízkemu boleli žily — ako mu je dnes?'). "
         "If health alerts exist, warn clearly. End with one encouraging sentence. "
         "No markdown, plain text only." + AI_COMPLIANCE_NOTE
     )
@@ -507,7 +509,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
                 (f"Dnes vás čaká {pend} liekov. " if pend else "Všetky lieky máte užité. ") +
                 "Prajem pokojný deň — som tu pre vás.")
     mood = "concerned" if anomalies else "energetic" if part == "ráno" else "calm"
-    doc = {"user_id": uid, "date": today, "briefing": str(text), "mood": mood,
+    doc = {"user_id": uid, "date": today, "briefing": apply_watermark(str(text)), "mood": mood,
            "weather": weather, "meds_today": meds_today[:6],
            "upcoming_exams": clean(cal), "alerts": anomalies,
            "followups": [m["text"] for m in recent_mem],
@@ -556,7 +558,7 @@ async def agent_analyze(authorization: Optional[str] = Header(None)):
         insight = ("Vaše dáta sú v bezpečí a pod dohľadom. " +
                    (anomalies[0]["text"] if anomalies else "Žiadne anomálie — pokračujte v skvelej starostlivosti."))
     xp = await _award_once_daily(uid, 15, "deep_analysis")
-    return {"steps": steps, "insight": str(insight), "alerts": anomalies,
+    return {"steps": steps, "insight": apply_watermark(str(insight)), "alerts": anomalies,
             "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"]}
 
 # =========================================================================

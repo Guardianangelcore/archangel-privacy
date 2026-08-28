@@ -66,8 +66,8 @@ export default function HealthcareProxy() {
       <View style={styles.sub}><Text style={styles.subText}>POWER OF ATTORNEY · PRÁVNE UZNANIE PARTNERA · DID-ANCHORED</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.lbl}>MENO SPLNOMOCNENCA (napr. Tomáš)</Text>
-        <TextInput testID="hp-name" value={f.proxy_full_name} onChangeText={(v: string) => setF({ ...f, proxy_full_name: v })} style={styles.input} placeholder="Tomáš Novák" placeholderTextColor="#999" />
+        <Text style={styles.lbl}>MENO SPLNOMOCNENCA</Text>
+        <TextInput testID="hp-name" value={f.proxy_full_name} onChangeText={(v: string) => setF({ ...f, proxy_full_name: v })} style={styles.input} placeholder="Meno a priezvisko" placeholderTextColor="#999" />
         <Pressable testID="hp-pick-contact" onPress={() => setPickOpen(true)} style={styles.pickBtn}>
           <Ionicons name="people-outline" size={16} color={C.brand} />
           <Text style={styles.pickBtnText}>{t('pick_from_contacts', lang)}</Text>
@@ -87,7 +87,7 @@ export default function HealthcareProxy() {
         <Text style={styles.lbl}>TELEFÓN</Text>
         <TextInput testID="hp-phone" value={f.proxy_phone} onChangeText={(v: string) => setF({ ...f, proxy_phone: v })} keyboardType="phone-pad" style={styles.input} placeholder="+421…" placeholderTextColor="#999" />
         <Text style={styles.lbl}>E-MAIL</Text>
-        <TextInput testID="hp-email" value={f.proxy_email} onChangeText={(v: string) => setF({ ...f, proxy_email: v })} keyboardType="email-address" style={styles.input} placeholder="tomas@…" placeholderTextColor="#999" />
+        <TextInput testID="hp-email" value={f.proxy_email} onChangeText={(v: string) => setF({ ...f, proxy_email: v })} keyboardType="email-address" style={styles.input} placeholder="email@…" placeholderTextColor="#999" />
 
         <Text style={styles.lbl}>ROZSAH OPRÁVNENIA</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>

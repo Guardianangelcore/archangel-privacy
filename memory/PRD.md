@@ -453,3 +453,36 @@ Backend: 25/25 pytest green (test_iter34_perfection.py). Total: 97 tests. Code s
 impact.py (hasattr on Motor db) fixed after testing_agent code review.
 Frontend: pantry, impact, silent-witness, angel-pulse screens all render; freeze + blazing
 integrated into Home. Slovak throughout. Lint-clean.
+
+## Phase 45: ANONYMITY SEAL + EU AI ACT WATERMARK (Jun 2026) — DONE ✅
+Founder directive: "GLOBAL SOVEREIGN REALITY — GPS & ANONYMITY SEAL" — scrub codebase
+of real personal names + tag every AI response per EU AI Act Art. 50.
+
+1. ANONYMITY SCRUB (frontend + backend routes):
+   - Removed all user-visible occurrences of "Tomáš", "Lucka", "Jaroslav" from:
+     frontend/app/{onboarding,monolith,voice-signature,voice-echoes,healthcare-proxy,dignity}.tsx
+     frontend/src/panic-gesture.ts (comment)
+     backend/routes/demo.py (family_pulse seed), agent.py (briefing example prompt).
+   - Replacements: "Strážca", "Guardian Angel", "Guardian Circle", or neutral placeholders.
+   - Backend fixture in test_phase19_grand_finale.py updated to match new demo seed.
+
+2. STATIC LOCATION SCRUB (Prague de-prioritized):
+   - frontend/app/(tabs)/health.tsx: Lovec termínov subtitle → "podľa vašej polohy (GPS)"
+   - frontend/app/(tabs)/profile.tsx: Travel Mode fallback → "📍 Automatická lokalita (GPS/IP)"
+   - frontend/app/pharmacy-hunter.tsx: comment updated (region follows dynamic GPS/IP)
+   Note: backend geo.py DEFAULT_GEO=Praha kept for now (dynamic per-user geo already implemented);
+   Phase 46 will add IP-based fallback + manual picker.
+
+3. AI CONTENT WATERMARK (EU AI Act Art. 50):
+   - backend/core.py: new `apply_watermark(text)` idempotent helper appends "— AI Content · Sovereign Protocol"
+     and `did_hash(user_id)` for anonymized log DIDs (SHA-256 prefix).
+   - backend/routes/agent.py: watermark applied to chat reply, pain-diary auto-reply, morning briefing,
+     analyze insight.
+   - frontend/src/voice.ts: strips watermark suffix before sending to TTS (voice never reads watermark aloud).
+
+4. VERIFIED: python import OK, watermark helper returns expected suffix, backend restarted clean,
+   frontend renders login (screenshot).
+
+Phase 46 (P1 — PENDING per founder plan): Dynamic GPS Intelligence, IP fallback,
+manual city picker, Guardian Eye (camera globally), edge-caching. Testing (per founder
+choice) deferred to end of Phase 46.

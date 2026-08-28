@@ -34,7 +34,7 @@ class TestDemoMode:
         seeded = r.json()["seeded"]
         assert "150 €" in seeded["refund_claim"]
         assert "slot_found" in seeded["waitlist_hunt"]
-        assert "Tomáš" in seeded["family_pulse"]
+        assert "Strážca" in seeded["family_pulse"]
         # visible in real dashboards:
         wl = _get("/waitlist").json()
         assert any(w.get("demo") and w.get("status") == "slot_found" for w in wl)

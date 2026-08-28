@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } from 'expo-audio';
@@ -21,6 +21,7 @@ type Session = { session_id: string; opened_at: string; closed_at?: string | nul
 
 export default function SilentWitness() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ panic?: string; sid?: string }>();
   const { user } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [chunkIndex, setChunkIndex] = useState(0);
@@ -43,6 +44,17 @@ export default function SilentWitness() {
     } catch (e) { console.log(e); }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  // PANIC GESTURE AUTO-START — the deep link ?panic=1 arrives when the user
+  // taps 19× on the back of the phone. Start recording without another tap.
+  useEffect(() => {
+    if (params.panic === '1' && !recording && !sessionId) {
+      // Small delay to let the screen mount before triggering mic permission
+      const t = setTimeout(() => { startSession(); }, 400);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.panic]);
 
   useEffect(() => {
     if (recording) {

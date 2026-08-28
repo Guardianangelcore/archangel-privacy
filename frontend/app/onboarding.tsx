@@ -57,7 +57,7 @@ export default function Onboarding() {
 
         {step === 0 && (
           <View>
-            <Text style={st.body}>Strážca je člen rodiny, ktorému dôverujete — napríklad <Text style={st.bold}>Tomáš</Text>. Keď sa čokoľvek stane, dostane okamžitú správu. A keby ste zabudli heslo, pomôže vám bezpečne obnoviť účet.</Text>
+            <Text style={st.body}>Strážca je člen rodiny, ktorému dôverujete — <Text style={st.bold}>Váš Guardian Angel</Text>. Keď sa čokoľvek stane, dostane okamžitú správu. A keby ste zabudli heslo, pomôže vám bezpečne obnoviť účet.</Text>
             {linked ? (
               <View style={st.okBox}>
                 <Ionicons name="checkmark-circle" size={22} color="#5FA779" />
@@ -65,9 +65,9 @@ export default function Onboarding() {
               </View>
             ) : (
               <>
-                <Text style={st.lbl}>E-MAIL STRÁŽCU (NAPR. TOMÁŠA)</Text>
+                <Text style={st.lbl}>E-MAIL STRÁŽCU</Text>
                 <View style={{ flexDirection: 'row', gap: S.sm }}>
-                  <TextInput testID="ob-contact" value={contact} onChangeText={setContact} placeholder="tomas@rodina.sk"
+                  <TextInput testID="ob-contact" value={contact} onChangeText={setContact} placeholder="strazca@rodina.sk"
                     autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#999" style={[st.input, { flex: 1 }]} />
                   <Pressable testID="ob-link" onPress={linkGuardian} disabled={busy || !contact.trim()} style={st.linkBtn}>
                     {busy ? <ActivityIndicator color={C.onInverse} size="small" /> : <Ionicons name="link" size={22} color={C.onInverse} />}

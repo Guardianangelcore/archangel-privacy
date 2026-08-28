@@ -60,13 +60,13 @@ async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(
             "booked_slot": (now + timedelta(days=7)).strftime("%Y-%m-%d 09:00"),
             "status": "done", "steps": [{"step": "OCR", "status": "ok", "detail": "demo"}],
             "demo": True, "created_at": now})
-        # 3. Family safety pulse — Tomáš answered 'V PORIADKU'
+        # 3. Family safety pulse — Guardian answered 'V PORIADKU'
         await db.pulse_requests.insert_one({
-            "req_id": uuid.uuid4().hex, "from_user": uid, "from_name": "Tomáš",
+            "req_id": uuid.uuid4().hex, "from_user": uid, "from_name": "Strážca",
             "target_user": uid, "target_did": user["did"], "status": "ok",
             "responded_at": now, "demo": True, "created_at": now})
         seeded = {"waitlist_hunt": "Kardiológia · slot_found +14d",
                   "refund_claim": "Stomatológia → 150 € (Claim My Benefits)",
-                  "family_pulse": "Tomáš · V PORIADKU"}
+                  "family_pulse": "Strážca · V PORIADKU"}
     await db.users.update_one({"user_id": uid}, {"$set": {"demo_mode": body.enabled}})
     return {"demo_mode": body.enabled, "seeded": seeded}

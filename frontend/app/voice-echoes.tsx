@@ -205,7 +205,7 @@ export default function VoiceEchoes() {
             </>)}
             {!target && (<>
               <Text style={st.lbl}>KTO POSIELA?</Text>
-              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="Napr. Vnučka Lucka" placeholderTextColor="#888" />
+              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="Napr. Vnučka / Blízky kruh" placeholderTextColor="#888" />
             </>)}
 
             {/* 🎙 REAL VOICE RECORDING — own voice instead of Jarvis */}

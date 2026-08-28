@@ -55,6 +55,9 @@ export type SpeakOptions = {
  */
 export async function speak(text: string, opts: SpeakOptions = {}): Promise<void> {
   if (!text || !text.trim()) return;
+  // Strip the visible EU AI Act watermark suffix — the TTS should not read it aloud.
+  const cleanText = String(text).replace(/\n*—?\s*AI Content · Sovereign Protocol\s*$/i, '').trim();
+  if (!cleanText) return;
   const preset = opts.mood ? MOOD_VOICE[opts.mood] : undefined;
   const voice: JarvisVoice = opts.voice || preset?.voice || DEFAULT_VOICE;
   const speed = opts.speed ?? preset?.speed ?? 1.0;
@@ -64,7 +67,7 @@ export async function speak(text: string, opts: SpeakOptions = {}): Promise<void
     // 1) Ask the backend to generate (or fetch cached) audio bytes.
     const res: any = await api('/voice/tts', {
       method: 'POST',
-      body: JSON.stringify({ text: text.slice(0, 3800), voice, speed, language }),
+      body: JSON.stringify({ text: cleanText.slice(0, 3800), voice, speed, language }),
     });
     if (!res?.url) return;
 

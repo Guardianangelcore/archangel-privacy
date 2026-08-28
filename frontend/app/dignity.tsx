@@ -161,7 +161,7 @@ export default function Dignity() {
             </Pressable>
           ))}
         </View>
-        <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? 'Tomáš Novák (auto zo splnomocnenia)' : 'Pohrebná služba, s.r.o.'} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? 'Meno splnomocnenca (auto zo splnomocnenia)' : 'Pohrebná služba, s.r.o.'} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
         <TextInput testID="dg-ben-contact" placeholder="Kontakt / IBAN" value={ben.contact} onChangeText={v => setBen({ ...ben, contact: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
         <Pressable testID="dg-ben-pick" onPress={() => setBenPick(true)} style={[styles.secBtn, { marginTop: S.sm, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }]}>
           <Ionicons name="people-outline" size={16} color={C.brand} />

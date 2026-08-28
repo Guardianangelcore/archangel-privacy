@@ -161,7 +161,7 @@ export default function Monolith() {
   const trainBp = () => run('bp', async () => { const r: any = await api('/legacy/blueprint/train', { method: 'POST' }); setBp(r); });
   const askBp = () => run('bpask', async () => {
     if (!bpQ.trim()) return;
-    const r: any = await api('/legacy/blueprint/ask', { method: 'POST', body: JSON.stringify({ question: bpQ, asker_name: 'Tomáš' }) });
+    const r: any = await api('/legacy/blueprint/ask', { method: 'POST', body: JSON.stringify({ question: bpQ, asker_name: 'Strážca' }) });
     setBpA(r.answer);
   });
 
@@ -388,7 +388,7 @@ export default function Monolith() {
               {(bp.blueprint.decision_rules || []).map((r: string, i: number) => <Text key={i} style={st.cardLine}>• {r}</Text>)}
             </View>
           )}
-          <TextInput testID="mono-bp-q" value={bpQ} onChangeText={setBpQ} placeholder="Tomášova otázka pre digitálne echo…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-bp-q" value={bpQ} onChangeText={setBpQ} placeholder="Otázka pre digitálne echo…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-bp-ask" onPress={askBp} disabled={busy === 'bpask'} style={st.cta}>
             {busy === 'bpask' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>OPÝTAŤ SA DIGITÁLNEHO ECHA</Text>}
           </Pressable>

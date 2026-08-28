@@ -13,6 +13,7 @@ import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_SK, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { getPanicTaps, setPanicTaps } from '@/src/panic-gesture';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Profile() {
@@ -169,6 +170,18 @@ export default function Profile() {
     );
   };
 
+  // Panic gesture threshold (default 19 taps on back of phone)
+  const [panicTapsTxt, setPanicTapsTxt] = useState<string>('19');
+  useEffect(() => { (async () => { const n = await getPanicTaps(); setPanicTapsTxt(String(n)); })(); }, []);
+  const savePanicTaps = async () => {
+    const n = parseInt(panicTapsTxt, 10);
+    if (!n || n < 3 || n > 30) { setBioMsg('Počet klepnutí musí byť medzi 3 a 30.'); return; }
+    await setPanicTaps(n);
+    setPanicTapsTxt(String(Math.max(3, Math.min(30, n))));
+    setBioMsg(`Panic gesture nastavené na ${n} klepnutí na chrbát telefónu.`);
+    jarvisSpeak(`Panic gesture nastavené na ${n} klepnutí.`, { voice: 'onyx', speed: 0.95, language: lang });
+  };
+
   return (
     <SafeAreaView testID="profile-screen" style={styles.root} edges={['top']}>
       <View style={styles.header}>
@@ -275,6 +288,32 @@ export default function Profile() {
             trackColor={{ true: C.brand, false: C.surface3 }}
           />
         </View>
+
+        {/* PANIC GESTURE — Silent Witness back-of-phone tap threshold */}
+        <View style={styles.guardRow}>
+          <Ionicons name="hand-left" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>PANIC GESTURE · SILENT WITNESS</Text>
+            <Text style={styles.guardSub}>
+              Klepnite na chrbát telefónu N-krát v priebehu 10 sekúnd → skryté spustenie Tichého svedka.
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: S.sm, alignItems: 'center' }}>
+          <TextInput
+            testID="prof-panic-taps"
+            value={panicTapsTxt}
+            onChangeText={setPanicTapsTxt}
+            style={[styles.input, { flex: 1 }]}
+            placeholder="19"
+            placeholderTextColor="#999"
+            keyboardType="number-pad"
+            maxLength={2}
+          />
+          <Pressable testID="prof-panic-taps-save" onPress={savePanicTaps} style={styles.saveMini}>
+            <Text style={styles.saveMiniText}>ULOŽIŤ</Text>
+          </Pressable>
+        </View>
         {!!bioMsg && <Text style={styles.geoMsg}>{bioMsg}</Text>}
         {/* ===== END SENTIENT UX ===== */}
 
@@ -307,7 +346,7 @@ export default function Profile() {
           <Ionicons name="airplane-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>CESTOVNÝ REŽIM (GEO)</Text>
-            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}` : '📍 Praha · CZ'} — automatické mesto, jazyk a predpisy podľa GPS</Text>
+            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}` : '📍 Automatická lokalita (GPS/IP) — povoľte polohu'} — automatické mesto, jazyk a predpisy podľa GPS</Text>
           </View>
           <Switch testID="prof-travel-mode" value={!!(user as any)?.travel_mode} onValueChange={toggleTravel} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
