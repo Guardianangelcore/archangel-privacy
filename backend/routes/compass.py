@@ -27,6 +27,97 @@ SURVIVAL_GUIDE = [
 
 EMERGENCY_NUMBERS = {"EU / SK / CZ": "112", "Záchranka SK": "155", "UK": "999", "USA / Kanada": "911"}
 
+
+# ---------------- SOVEREIGN COMPASS BEARING — GPS wiring ----------------
+class BearingIn(BaseModel):
+    lat: float
+    lng: float
+
+
+def _haversine_bearing(lat1, lng1, lat2, lng2):
+    """Return (distance_km, bearing_deg) between two coordinates."""
+    import math
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    dist = 2 * r * math.asin(math.sqrt(a))
+    y = math.sin(dl) * math.cos(p2)
+    x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
+    brng = (math.degrees(math.atan2(y, x)) + 360) % 360
+    return round(dist, 1), round(brng, 1)
+
+
+def _compass_direction(bearing: float) -> str:
+    dirs = ["S", "SV", "V", "JV", "J", "JZ", "Z", "SZ"]
+    idx = int(((bearing + 22.5) % 360) // 45)
+    return dirs[idx]
+
+
+@api.post("/compass/bearing")
+async def compass_bearing(body: BearingIn, authorization: Optional[str] = Header(None)):
+    """Sovereign Compass — from live GPS coords compute distance + bearing to
+    each supported safe-city + to the user's active guardians' Bio-Beacons.
+    Powers the on-device compass needle (Waitlist Hunter proximity + Bio-Beacon direction)."""
+    from routes.geo import CITIES
+    user = await get_current_user(authorization)
+    if not (-90 <= body.lat <= 90 and -180 <= body.lng <= 180):
+        raise HTTPException(400, "invalid coordinates")
+
+    targets = []
+    for c in CITIES:
+        dist, brng = _haversine_bearing(body.lat, body.lng, c["lat"], c["lng"])
+        targets.append({
+            "kind": "safe_city", "label": c["city"], "country": c["country"],
+            "distance_km": dist, "bearing_deg": brng, "direction": _compass_direction(brng),
+        })
+    targets.sort(key=lambda t: t["distance_km"])
+
+    # Active Bio-Beacons of guardians the user is linked with — priority targets
+    guardians = await db.guardians.find({"user_id": user["user_id"]}, {"_id": 0, "guardian_user_id": 1, "guardian_name": 1}).to_list(10)
+    beacon_targets = []
+    for g in guardians:
+        beacon = await db.bio_beacons.find_one({"user_id": g["guardian_user_id"], "active": True},
+                                                {"_id": 0, "location": 1, "did": 1})
+        loc = (beacon or {}).get("location") or {}
+        if loc.get("lat") is not None and loc.get("lng") is not None:
+            dist, brng = _haversine_bearing(body.lat, body.lng, loc["lat"], loc["lng"])
+            beacon_targets.append({
+                "kind": "beacon", "label": g.get("guardian_name") or "Guardian",
+                "did": beacon.get("did"),
+                "distance_km": dist, "bearing_deg": brng, "direction": _compass_direction(brng),
+            })
+    beacon_targets.sort(key=lambda t: t["distance_km"])
+
+    # Waitlist proximity — items with clinic in a known city
+    waitlist_items = await db.waitlist.find(
+        {"user_id": user["user_id"], "status": {"$ne": "expired"}}, {"_id": 0}
+    ).to_list(30)
+    waitlist_targets = []
+    for w in waitlist_items:
+        city = (w.get("city") or "").strip().lower()
+        c = next((x for x in CITIES if x["city"].lower() == city), None)
+        if not c:
+            continue
+        dist, brng = _haversine_bearing(body.lat, body.lng, c["lat"], c["lng"])
+        waitlist_targets.append({
+            "kind": "waitlist", "label": f"{w.get('specialty') or 'Vyšetrenie'} · {c['city']}",
+            "item_id": w["item_id"], "clinic": w.get("clinic"),
+            "status": w.get("status") or "hunting",
+            "distance_km": dist, "bearing_deg": brng, "direction": _compass_direction(brng),
+        })
+    waitlist_targets.sort(key=lambda t: t["distance_km"])
+
+    return {
+        "gps": {"lat": body.lat, "lng": body.lng},
+        "nearest_safe_city": targets[0] if targets else None,
+        "safe_cities": targets[:5],
+        "beacons": beacon_targets[:5],
+        "waitlist_proximity": waitlist_targets[:8],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @api.get("/compass/pack")
 async def compass_pack(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)

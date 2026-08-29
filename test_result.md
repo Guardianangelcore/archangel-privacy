@@ -459,3 +459,97 @@ NEEDS TESTING (backend + frontend):
   Profile: CityPicker opens, "Bratislava" pick works; IP button triggers /geo/ip-locate.
 
 Auth for tests: user smoketest-user-1, Bearer smoketok-fresh-2026 (as before).
+
+## Iteration 37 (Phase 47 GUARDIAN EYE MULTI-MODEL + Contacts/Calendar + GPS Bearing, Feb 2026)
+NEW backend (all curl-verifiable, no key required for /lens/models):
+- routes/lens.py: multi-model Guardian Eye vision analysis. VISION_MODELS = {gpt: openai/gpt-5.4, claude: anthropic/claude-sonnet-5, gemini: gemini/gemini-3.1-pro-preview}.
+  * GET /api/lens/models — returns model chip list + default. NO AUTH REQUIRED.
+  * POST /api/lens/analyze now accepts optional `model` form field (gpt|claude|gemini, default=gpt) + `pillar` (health|hunter|legacy).
+    Returns scan doc with `model` field + summary watermarked with EU AI Act.
+  * POST /api/lens/analyze-consensus — runs all 3 vision providers in parallel via asyncio.gather,
+    merges by majority-vote on `kind`, longest coherent `summary_sk`, dedup warnings + actions.
+    Returns scan doc with `consensus: {agreement_pct, kind_votes, per_model}` block.
+  * POST /api/lens/{scan_id}/to-jarvis — synthesises a Guardian Eye brief into an agent_chat
+    UserMessage, invokes agent_chat() directly (preserves memory + XP), returns Jarvis reply.
+    404 on unknown scan_id/user mismatch. Updates lens_scans with jarvis_sent_at + jarvis_reply.
+- routes/compass.py: SOVEREIGN COMPASS BEARING — GPS wiring for Waitlist Hunter proximity + Bio-Beacon direction.
+  * POST /api/compass/bearing {lat,lng} → distance_km + bearing_deg + 8-way direction (S/SV/V/JV/J/JZ/Z/SZ)
+    to (a) supported safe-cities (top-5 nearest), (b) active guardian bio-beacons, (c) waitlist clinics
+    in known cities (top-8 nearest). 400 on out-of-range coords.
+
+NEW frontend:
+- app/guardian-circle-sync.tsx — Guardian Circle local-first contacts screen:
+  * expo-contacts with contextual permission per handle_permissions_contract (canAskAgain-aware,
+    Open Settings fallback via Linking).
+  * SecureStore-persisted PickedContact ring, max 8, DID = sha-256(name|phone). Search + add/remove.
+  * Zero cloud sync — never leaves device.
+- app/calendar-sync.tsx — Native Calendar bridge (read + write):
+  * expo-calendar with contextual permission. Creates a dedicated "Guardian Angel" calendar
+    (LOCAL source on Android, default source on iOS). Cached calendar id in AsyncStorage.
+  * Reads today's meds from /api/meds/reminders + booked exams from /api/waitlist, builds Items,
+    lets user add/remove each into the native calendar with 10-min alarm.
+  * Bulk "SYNCHRONIZOVAŤ VŠETKY" + 30-day preview of Guardian Angel calendar events.
+- app/lens.tsx: MODEL SELECTOR chips (GPT-5.4 · GEMINI 3.1 · CLAUDE 5 · KONSENZUS ×3) +
+  "POSLAŤ JARVISOVI" action + Jarvis reply block with "OTVORIŤ ROZHOVOR →". Consensus badge
+  shows agreement_pct. `apiUpload` extras pass `model` form field.
+- app/compass.tsx: SOVEREIGN COMPASS section shows nearest safe city + active beacons +
+  waitlist proximity with direction + km. Auto-fetched via getLoc() on mount + refresh button.
+- app/(tabs)/family.tsx: two new tiles in RODINNÁ SYNCHRONIZÁCIA — fs-guardian-circle,
+  fs-calendar-sync. Route to the new screens.
+- app.json: expo-contacts + expo-calendar plugins with iOS usage descriptions (Contacts,
+  Calendars, CalendarsFullAccess, Reminders) + Android permissions (READ_CONTACTS,
+  READ_CALENDAR, WRITE_CALENDAR). Pending native rebuild.
+
+NEEDS TESTING (backend only for testing_agent — frontend contacts/calendar require native build):
+- GET /api/lens/models → 200 with 4 entries + default=gpt.
+- POST /api/lens/analyze with model=gpt|claude|gemini + a small JPEG → 200 with `model` field
+  and watermarked summary_sk. Invalid model → 400.
+- POST /api/lens/analyze-consensus with JPEG → 200 with `consensus.agreement_pct` 0-100 and
+  `consensus.per_model` for all 3 keys.
+- POST /api/lens/{scan_id}/to-jarvis after an analyze → 200 with jarvis.reply present + watermark.
+  Unknown scan_id → 404.
+- POST /api/compass/bearing {lat:48.15,lng:17.10} → 200 with nearest_safe_city + safe_cities[5]
+  + beacons[] + waitlist_proximity[]. Bad coords → 400.
+
+Auth for tests: user smoketest-user-1, Bearer smoketok-fresh-2026 (as before).
+
+## Iteration 38 (Phase 48 COGNITIVE TRIAGE — Crisis HUD, Feb 2026)
+NEW backend routes/triage.py (registered in server.py):
+- GET /api/triage/state — poll-safe crisis snapshot. Classifies bioscan_results (last 15 min)
+  + triage_voice tremor into {calm|elevated|crisis}. Thresholds: HR>=120 or SpO2<92 or
+  voice_tremor>=0.75 → crisis. HR>=100 or stress_level=='high' → elevated. Returns
+  auto_open_hud (bool), instructions[] (5-step SK/CS/EN survival guide), emergency_numbers,
+  reasons[], latest_vitals.
+- POST /api/triage/trigger {reason?,hr?,spo2?,voice_tremor?} — manually raise HUD (persists
+  manual_trigger flag in triage_state collection). Best-effort silent push to Guardian Circle
+  (guardians collection). Bus event triage.crisis.
+- POST /api/triage/dismiss — puts user in 15-min cooldown (manual_dismiss_until in triage_state);
+  during cooldown /triage/state returns crisis_level=calm + source=dismissed regardless of vitals.
+- POST /api/triage/voice {tremor_score,sample_ms} — ingest voice tremor 0..1 into triage_voice
+  collection. 400 out-of-range. Returns state.
+- GET /api/triage/instructions?language=sk|cs|en — localized 5-step instructions + emergency
+  numbers + watermarked header.
+
+NEW frontend src/CrisisHUD.tsx:
+- Full-screen high-contrast overlay (obsidian bg + gold accents). Mounted globally in
+  _layout.tsx inside BiometricGate. Polls /triage/state every 30s and on AppState 'active'.
+- Auto-visible when auto_open_hud=true. Two giant buttons: hud-call (dials 112 via
+  Linking.openURL('tel:112')) + hud-instr (opens instructions sheet with hud-num-EU etc).
+- hud-dismiss calls /triage/dismiss and sets 15-min cooldown. Warning haptic on open.
+- No dependency on frontend polling of bioscans — bioscan_measure already inserts into
+  bioscan_results collection, /triage/state autoscans latest.
+
+NEEDS TESTING (backend):
+- GET /api/triage/state without prior signals → 200 {crisis_level:'calm', auto_open_hud:false}.
+- POST /api/triage/trigger {reason:'test'} → 200 {crisis_level:'crisis', auto_open_hud:true,
+  source:'manual', instructions[5], emergency_numbers}.
+- POST /api/triage/dismiss → 200 {ok:true, cooldown_until:<iso>}; subsequent /triage/state
+  returns source:'dismissed', auto_open_hud:false for ~15 minutes.
+- POST /api/triage/voice {tremor_score:0.9} → 200 (may be 'dismissed' if cooldown active).
+- POST /api/triage/voice {tremor_score:1.5} → 400.
+- GET /api/triage/instructions?language=sk → SK 5 steps. ?language=cs → CS 5 steps.
+  ?language=en → EN 5 steps.
+- Regression: existing bioscan_measure still 200 with vitals; agent chat/briefing still
+  watermarked; lens/models still returns 4 entries.
+
+Auth for tests: user smoketest-user-1, Bearer smoketok-fresh-2026.

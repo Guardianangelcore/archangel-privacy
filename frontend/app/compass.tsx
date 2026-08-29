@@ -39,6 +39,16 @@ export default function Compass() {
   const [sat, setSat] = useState<any[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
+  const [bearing, setBearing] = useState<any>(null);
+
+  const loadBearing = useCallback(async () => {
+    try {
+      const loc = await getLoc();
+      if (loc.lat == null || loc.lng == null) return;
+      const r: any = await api('/compass/bearing', { method: 'POST', body: JSON.stringify(loc) });
+      setBearing(r);
+    } catch {}
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -52,7 +62,7 @@ export default function Compass() {
       if (cached) { setPack(JSON.parse(cached)); setOffline(true); }
     }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); loadBearing(); }, [load, loadBearing]);
 
   const toggleBeacon = async () => {
     setBusy('beacon'); setMsg('');
@@ -111,6 +121,28 @@ export default function Compass() {
               </>}
             </Pressable>
             {beacon && <Text style={st.beaconMeta}>Pingy: {beacon.pings} · tep: {beacon.vitals?.heart_rate ?? '—'} · vyprší o 24 h · strážcovia sledujú</Text>}
+
+            {/* SOVEREIGN COMPASS BEARING */}
+            {bearing && (
+              <View testID="cp-bearing" style={st.bearingBox}>
+                <View style={st.bearingHead}>
+                  <Ionicons name="compass" size={16} color={C.brand} />
+                  <Text style={st.bearingTitle}>SOVEREIGN COMPASS — GPS AKTÍVNY</Text>
+                  <Pressable testID="cp-bearing-refresh" onPress={loadBearing} hitSlop={8}>
+                    <Ionicons name="refresh" size={16} color={C.brand} />
+                  </Pressable>
+                </View>
+                {!!bearing.nearest_safe_city && (
+                  <Text style={st.bearingLine}>NAJBLIŽŠIE BEZP. MESTO · {bearing.nearest_safe_city.label} · {bearing.nearest_safe_city.direction} · {bearing.nearest_safe_city.distance_km} km</Text>
+                )}
+                {(bearing.beacons || []).length > 0 && bearing.beacons.map((b: any, i: number) => (
+                  <Text key={`b${i}`} style={[st.bearingLine, { color: C.error }]}>🚨 {b.label} — {b.direction} · {b.distance_km} km</Text>
+                ))}
+                {(bearing.waitlist_proximity || []).slice(0, 3).map((w: any, i: number) => (
+                  <Text key={`w${i}`} style={st.bearingLine}>📅 {w.label} — {w.direction} · {w.distance_km} km</Text>
+                ))}
+              </View>
+            )}
 
             {/* SATELLITE */}
             <Pressable testID="cp-sat" onPress={sendSat} disabled={busy === 'sat'} style={st.satBtn}>
@@ -220,6 +252,10 @@ const st = StyleSheet.create({
   satNote: { color: C.info, fontSize: 10, lineHeight: 15, marginTop: 6 },
   satRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   satRowText: { color: C.onS3, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  bearingBox: { marginTop: S.md, borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, backgroundColor: C.surface2, borderRadius: 8 },
+  bearingHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  bearingTitle: { color: C.brand, fontSize: 10.5, fontWeight: '900', letterSpacing: 1.5, flex: 1 },
+  bearingLine: { color: C.fg, fontSize: 11, fontWeight: '700', marginTop: 3, letterSpacing: 0.3 },
   msg: { color: C.brand, fontWeight: '800', fontSize: 12, marginTop: S.md, lineHeight: 17 },
   section: { borderWidth: 1.5, borderColor: C.borderStrong, marginTop: S.lg },
   sectionTitle: { backgroundColor: C.inverse, color: C.onInverse, padding: S.md, fontWeight: '900', letterSpacing: 2, fontSize: 12 },

@@ -14,15 +14,24 @@ from fastapi import HTTPException, Header, UploadFile, File, Form
 from fastapi.concurrency import run_in_threadpool
 from typing import Optional
 from datetime import datetime, timezone
-import os, uuid, hashlib, json, base64, re, tempfile, inspect
+import os, uuid, hashlib, json, base64, re, tempfile, inspect, asyncio
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 from emergentintegrations.llm.openai import OpenAISpeechToText
 
 from core import (
     api, db, logger, clean, get_current_user, _aml_ledger_append,
-    APP_NAME, put_object_sync, EMERGENT_LLM_KEY, send_push,
+    APP_NAME, put_object_sync, EMERGENT_LLM_KEY, send_push, apply_watermark,
 )
+
+# GUARDIAN EYE — three sovereign vision providers (multi-model consensus).
+# Each ID matches an entry from the emergentintegrations vision registry.
+VISION_MODELS = {
+    "gpt": ("openai", "gpt-5.4"),
+    "claude": ("anthropic", "claude-sonnet-5"),
+    "gemini": ("gemini", "gemini-3.1-pro-preview"),
+}
+DEFAULT_MODEL_KEY = "gpt"
 
 LENS_SYSTEM = (
     "You are GUARDIAN LENS — a precise medical vision analyst for a Slovak health app. "
@@ -55,7 +64,12 @@ def _parse_lens_json(raw: str) -> dict:
     }
 
 @api.post("/lens/analyze")
-async def lens_analyze(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
+async def lens_analyze(file: UploadFile = File(...),
+                       model: Optional[str] = Form(None),
+                       pillar: Optional[str] = Form(None),
+                       authorization: Optional[str] = Header(None)):
+    """Single-model vision OCR + analysis. `model` = gpt|claude|gemini (default gpt).
+    `pillar` = optional context (health|hunter|legacy) used for downstream auto-routing."""
     user = await get_current_user(authorization)
     data = await file.read()
     if len(data) == 0:
@@ -68,6 +82,11 @@ async def lens_analyze(file: UploadFile = File(...), authorization: Optional[str
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "AI key not configured")
 
+    model_key = (model or DEFAULT_MODEL_KEY).lower()
+    if model_key not in VISION_MODELS:
+        raise HTTPException(400, f"unsupported model: choose {list(VISION_MODELS)}")
+    provider, model_id = VISION_MODELS[model_key]
+
     # keep the photo in the vault-grade storage (for save_to_vault action)
     scan_id = uuid.uuid4().hex
     path = f"{APP_NAME}/lens/{user['user_id']}/{scan_id}.jpg"
@@ -78,35 +97,174 @@ async def lens_analyze(file: UploadFile = File(...), authorization: Optional[str
         path = None
 
     b64 = base64.b64encode(data).decode()
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"lens-{scan_id[:8]}",
-        system_message=LENS_SYSTEM,
-    ).with_model("openai", "gpt-5.4")
-    try:
-        resp = await chat.send_message(UserMessage(
-            text="Analyze this medical artefact photo. Answer with the JSON object only.",
-            file_contents=[ImageContent(image_base64=b64)],
-        ))
-        verdict = _parse_lens_json(resp or "")
-    except json.JSONDecodeError:
-        verdict = {"kind": "other", "name": "Neznámy artefakt",
-                   "summary_sk": (resp or "").strip()[:800] or "Obsah sa nepodarilo spoľahlivo rozpoznať. Skúste ostrejšiu fotku pri lepšom svetle.",
-                   "warnings": [], "specialty": "", "suggested_actions": ["save_to_vault"]}
-    except Exception as e:
-        logger.error(f"lens vision error: {e}")
-        raise HTTPException(502, "AI vision service unavailable")
+    verdict = await _run_vision(provider, model_id, b64, scan_id, seed=f"single-{model_key}")
 
     scan = {
         "scan_id": scan_id, "user_id": user["user_id"],
         "sha256": hashlib.sha256(data).hexdigest(),
         "storage_path": path, "image_size": len(data),
+        "model": f"{provider}/{model_id}", "pillar": (pillar or "").strip()[:20],
         **verdict,
+        "ai_generated": True,
+        "created_at": datetime.now(timezone.utc),
+    }
+    scan["summary_sk"] = apply_watermark(scan.get("summary_sk") or "")
+    await db.lens_scans.insert_one(scan.copy())
+    return clean(scan)
+
+
+async def _run_vision(provider: str, model_id: str, b64: str, scan_id: str, seed: str = "") -> dict:
+    """Run a single vision provider — always returns a normalised verdict dict."""
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"lens-{seed[:8]}-{scan_id[:6]}",
+        system_message=LENS_SYSTEM,
+    ).with_model(provider, model_id)
+    try:
+        resp = await chat.send_message(UserMessage(
+            text="Analyze this medical artefact photo. Answer with the JSON object only.",
+            file_contents=[ImageContent(image_base64=b64)],
+        ))
+        try:
+            return _parse_lens_json(resp or "")
+        except json.JSONDecodeError:
+            return {"kind": "other", "name": "Neznámy artefakt",
+                    "summary_sk": (resp or "").strip()[:800] or
+                                  "Obsah sa nepodarilo spoľahlivo rozpoznať. Skúste ostrejšiu fotku pri lepšom svetle.",
+                    "warnings": [], "specialty": "", "suggested_actions": ["save_to_vault"]}
+    except Exception as e:
+        logger.error(f"lens vision error ({provider}/{model_id}): {e}")
+        return {"kind": "other", "name": "Zlyhanie modelu",
+                "summary_sk": f"Model {provider}/{model_id} nedostupný.",
+                "warnings": [], "specialty": "", "suggested_actions": [],
+                "_error": str(e)[:120]}
+
+
+@api.post("/lens/analyze-consensus")
+async def lens_analyze_consensus(file: UploadFile = File(...),
+                                  pillar: Optional[str] = Form(None),
+                                  authorization: Optional[str] = Header(None)):
+    """Multi-model consensus — runs GPT-5.4 + Claude Sonnet 5 + Gemini 3.1 Pro in parallel.
+    Merges verdicts by majority vote on `kind`, longest coherent `summary_sk` and dedup warnings.
+    Returns `agreement_pct` (0-100) plus per-model breakdown."""
+    user = await get_current_user(authorization)
+    data = await file.read()
+    if len(data) == 0:
+        raise HTTPException(400, "Empty file")
+    if len(data) > 15 * 1024 * 1024:
+        raise HTTPException(400, "Image too large (max 15MB)")
+    ctype = file.content_type or "image/jpeg"
+    if not ctype.startswith("image/"):
+        raise HTTPException(400, "Only images are accepted")
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(500, "AI key not configured")
+
+    scan_id = uuid.uuid4().hex
+    path = f"{APP_NAME}/lens/{user['user_id']}/{scan_id}.jpg"
+    try:
+        await run_in_threadpool(put_object_sync, path, data, ctype)
+    except Exception as e:
+        logger.warning(f"lens storage failed (non-fatal): {e}")
+        path = None
+
+    b64 = base64.b64encode(data).decode()
+    keys = list(VISION_MODELS.keys())
+    results = await asyncio.gather(*[
+        _run_vision(*VISION_MODELS[k], b64=b64, scan_id=scan_id, seed=k) for k in keys
+    ], return_exceptions=False)
+
+    per_model = {k: r for k, r in zip(keys, results)}
+    valid = [r for r in results if not r.get("_error") and r.get("kind") != "other"]
+    # Majority vote on kind
+    kind_votes: dict = {}
+    for r in results:
+        kind_votes[r.get("kind", "other")] = kind_votes.get(r.get("kind", "other"), 0) + 1
+    kind = max(kind_votes.items(), key=lambda kv: kv[1])[0]
+    agreement_pct = round(100 * kind_votes[kind] / max(1, len(results)))
+    # Pick the longest, most detailed summary from a valid provider
+    def _score(r: dict) -> int:
+        return len(r.get("summary_sk", "")) + 50 * len(r.get("warnings", []))
+    best = max(valid, key=_score) if valid else results[0]
+    warnings_all: list = []
+    for r in results:
+        for w in r.get("warnings", []):
+            if w and w not in warnings_all:
+                warnings_all.append(w)
+    actions_all: list = []
+    for r in results:
+        for a in r.get("suggested_actions", []):
+            if a and a not in actions_all:
+                actions_all.append(a)
+
+    merged = {
+        "kind": kind,
+        "name": best.get("name", "Neznámy artefakt"),
+        "summary_sk": best.get("summary_sk", ""),
+        "warnings": warnings_all[:5],
+        "specialty": best.get("specialty", ""),
+        "suggested_actions": actions_all[:6],
+    }
+    merged["summary_sk"] = apply_watermark(merged["summary_sk"])
+
+    scan = {
+        "scan_id": scan_id, "user_id": user["user_id"],
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "storage_path": path, "image_size": len(data),
+        "model": "consensus/3", "pillar": (pillar or "").strip()[:20],
+        "consensus": {"agreement_pct": agreement_pct, "kind_votes": kind_votes,
+                      "per_model": {k: {"kind": v.get("kind"), "name": v.get("name"),
+                                        "error": v.get("_error")} for k, v in per_model.items()}},
+        **merged,
         "ai_generated": True,
         "created_at": datetime.now(timezone.utc),
     }
     await db.lens_scans.insert_one(scan.copy())
     return clean(scan)
+
+@api.get("/lens/models")
+async def lens_models():
+    """List available Guardian Eye vision models — for frontend chip selector."""
+    return {"models": [
+        {"key": "gpt", "label": "GPT-5.4 Vision", "provider": "openai", "model": "gpt-5.4"},
+        {"key": "claude", "label": "Claude Sonnet 5", "provider": "anthropic", "model": "claude-sonnet-5"},
+        {"key": "gemini", "label": "Gemini 3.1 Pro", "provider": "gemini", "model": "gemini-3.1-pro-preview"},
+        {"key": "consensus", "label": "Konsenzus (3 modely)", "provider": "multi", "model": "consensus/3"},
+    ], "default": DEFAULT_MODEL_KEY}
+
+
+@api.post("/lens/{scan_id}/to-jarvis")
+async def lens_to_jarvis(scan_id: str, authorization: Optional[str] = Header(None)):
+    """Send a scan verdict into the Jarvis conversation — the user can then dive
+    deeper conversationally (dosage, interactions, next steps)."""
+    user = await get_current_user(authorization)
+    scan = await db.lens_scans.find_one({"scan_id": scan_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not scan:
+        raise HTTPException(404, "Scan not found")
+    # Compose a synthetic user-side message that Jarvis will react to.
+    parts = [
+        f"[Guardian Eye — {scan.get('kind', 'other').upper()}]",
+        f"Názov: {scan.get('name') or '—'}",
+        f"Zhrnutie: {scan.get('summary_sk') or '—'}",
+    ]
+    if scan.get("warnings"):
+        parts.append("Varovania: " + " · ".join(scan["warnings"][:3]))
+    if scan.get("specialty"):
+        parts.append(f"Odporúčaná špecializácia: {scan['specialty']}")
+    synthetic_msg = "\n".join(parts)[:1200]
+
+    # Delegate to agent chat — preserves memory + XP loop.
+    from routes.agent import agent_chat, AgentChatIn
+    result = await agent_chat(
+        AgentChatIn(message=f"Analyzoval som toto pomocou Guardian Eye. Poraď mi ďalšie kroky:\n{synthetic_msg}",
+                    language=(user.get("language") or "sk")),
+        authorization=authorization,
+    )
+    # Link the Jarvis interaction to the scan for audit/history
+    await db.lens_scans.update_one({"scan_id": scan_id},
+                                   {"$set": {"jarvis_sent_at": datetime.now(timezone.utc),
+                                             "jarvis_reply": (result.get("reply") or "")[:1500]}})
+    return {"ok": True, "scan_id": scan_id, "jarvis": result}
+
 
 @api.get("/lens/history")
 async def lens_history(authorization: Optional[str] = Header(None)):

@@ -9,7 +9,7 @@ from datetime import datetime, timezone, timedelta
 import pytest
 import requests
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://biometric-onboard-3.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://global-compass-hub.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 
 SENIOR_TOKEN = "test-token-abc"      # user_test123 / test@example.com (recipient)

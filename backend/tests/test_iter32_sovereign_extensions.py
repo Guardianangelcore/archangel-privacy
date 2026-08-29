@@ -20,7 +20,7 @@ import requests
 from datetime import datetime, timezone
 from pymongo import MongoClient
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://biometric-onboard-3.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://global-compass-hub.preview.emergentagent.com").rstrip("/")
 TOKEN = "smoketok-fresh-2026"           # smoketest-user-1
 TOKEN2 = "smoketok-fresh-2026-u2"       # smoketest-user-2
 UID = "smoketest-user-1"

@@ -18,6 +18,7 @@ import { GA_ORIGIN_MARK } from "@/src/watermark";
 import { BiometricGate } from "@/src/biometric-gate";
 import { OnboardingTour } from "@/src/onboarding-tour";
 import { startPanicGesture } from "@/src/panic-gesture";
+import { CrisisHUD } from "@/src/CrisisHUD";
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
@@ -153,6 +154,8 @@ function RootNav() {
         }} />
         {/* SENTIENT ONBOARDING — 30-second Sovereign Tour on first launch (Onyx narrated) */}
         <OnboardingTour />
+        {/* COGNITIVE TRIAGE — auto Crisis HUD when biometrics cross distress threshold */}
+        <CrisisHUD />
       </BiometricGate>
       {/* Hidden digital watermark — original Guardian Angel build fingerprint */}
       <Text

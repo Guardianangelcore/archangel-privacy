@@ -29,7 +29,7 @@ pytestmark = pytest.mark.xdist_group(name="iter35_voice_pantry_serial")
 
 BASE_URL = os.environ.get(
     "EXPO_PUBLIC_BACKEND_URL",
-    "https://biometric-onboard-3.preview.emergentagent.com",
+    "https://global-compass-hub.preview.emergentagent.com",
 ).rstrip("/")
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "guardian_health")

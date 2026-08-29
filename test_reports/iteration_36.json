@@ -1,0 +1,35 @@
+{
+  "summary": "Phase 47 (Guardian Eye multi-model + Compass GPS bearing) + Phase 48 (Cognitive Triage / Crisis HUD) — 27/27 backend tests PASSED (100%) in 36.6s against the live preview backend (https://global-compass-hub.preview.emergentagent.com). All three vision providers actually resolved (no graceful-degrade path hit): openai/gpt-5.4, anthropic/claude-sonnet-5 and gemini/gemini-3.1-pro-preview all returned kind='medication' + name='Paralen 500 mg' + Slovak summary_sk with 'AI Content · Sovereign Protocol' watermark for the pill-bottle test JPEG. /api/lens/models returns 4 entries (gpt/claude/gemini/consensus) with default='gpt'. /api/lens/analyze with invalid model → 400. /api/lens/analyze-consensus returns agreement_pct (int 0-100), kind_votes dict, per_model {gpt,claude,gemini}, watermarked merged summary. /api/lens/{scan_id}/to-jarvis → 200 with jarvis.reply containing watermark; unknown scan → 404. Compass bearing at (48.15, 17.10) returns gps + nearest_safe_city + safe_cities[≤5] + beacons + waitlist_proximity, with distance_km/bearing_deg floats and Slovak compass directions {S,SV,V,JV,J,JZ,Z,SZ}. Invalid lat=200 → 400. Cognitive Triage full lifecycle validated: state (calm/dismissed) → trigger (crisis+manual+auto_open_hud+5 SK steps+'ručne aktivované') → state remains crisis → dismiss (cooldown_until ~+15min) → state (source='dismissed', calm) → voice ingest (0.9 accepted, 1.5 and -0.1 → 400). Instructions endpoint returns 5 steps for sk/cs/en with distinct language content (Sadnite/Posaďte/Sit down) and watermarked header. Regressions all green: agent/chat watermark, briefing edge cache (2nd call faster & identical text), geo/context 16 supported cities, bioscan/measure returns 200 for sentinel smoketest-user-1.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase47_48_lens_compass_triage.py",
+    "/app/test_reports/pytest/pytest_phase47_48.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/lens.py:172-174 asyncio.gather uses return_exceptions=False — if any single _run_vision raised (it currently doesn't because it catches), the whole consensus endpoint would 500. _run_vision already returns error dicts so this is safe today; consider return_exceptions=True defensively if _run_vision ever raises.",
+    "routes/triage.py:105 SURVIVAL_INSTRUCTIONS.get(lang, ...['sk']) — the manual trigger path never watermarks the header/instructions; only /triage/instructions endpoint watermarks the header. Not a bug per spec, but worth noting for consistency.",
+    "routes/compass.py:113 nearest_safe_city may be null only when CITIES is empty; consider a fallback message. Non-blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase47_48_lens_compass_triage.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (27/27)",
+    "frontend": "not tested (backend-only run per review request)"
+  },
+  "seed_data_creation": "None. Used existing smoketest-user-1 with token smoketok-fresh-2026. Test image was a synthetic 400x300 feature-rich JPEG of a mock Paralen pill bottle (edges/text/shapes/color), stored transiently at /tmp/pill.jpg for the run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 47/48 backend passes end-to-end at 100%. All three vision providers (openai/gpt-5.4, anthropic/claude-sonnet-5, gemini/gemini-3.1-pro-preview) are live in the emergentintegrations registry — no graceful-degrade fallback path was exercised. Watermark constant = '— AI Content · Sovereign Protocol'. Triage endpoints are stateful per-user in db.triage_state; dismiss sets a 15-min cooldown that suppresses voice-driven re-triggers (expected). Use smoketok-fresh-2026 for smoketest-user-1 (sentinel/founder) so /api/bioscan/measure returns 200; smoketok-fresh-2026-u2 would return 402 (paywall).",
+  "rca_of_issue": "N/A — no issues found. All Phase 47 (Guardian Eye multi-model + Compass GPS bearing) and Phase 48 (Cognitive Triage HUD) endpoints behave exactly as specified in the review request."
+}

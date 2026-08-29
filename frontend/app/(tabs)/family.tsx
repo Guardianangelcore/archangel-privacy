@@ -48,6 +48,8 @@ export default function FamilyShield() {
           { testID: 'fs-onboarding', icon: 'heart-outline', title: 'Sprievodca pre seniorov', subtitle: '3 kroky: strážca · Jarvis · núdzové QR', route: '/onboarding' },
         ] },
         { title: '👨‍👩‍👧 RODINNÁ SYNCHRONIZÁCIA', items: [
+          { testID: 'fs-guardian-circle', icon: 'people-circle-outline', title: 'Guardian Circle', subtitle: 'Kruh dôvery zo zariadenia · lokálne · DID hashy', route: '/guardian-circle-sync' },
+          { testID: 'fs-calendar-sync', icon: 'calendar-outline', title: 'Natívny kalendár', subtitle: 'Lieky + termíny do kalendára telefónu · lokálne', route: '/calendar-sync' },
           { testID: 'fs-pulse', icon: 'pulse-outline', title: 'Rodinný pulz', subtitle: 'Nálada · kroky · alarmy rodiny', route: '/family-dashboard' },
           { testID: 'fs-angel-pulse', icon: 'heart-outline', title: 'Angel Pulse', subtitle: 'Tep srdca cez oceán · bez slov · vibrácia', route: '/angel-pulse' },
           { testID: 'fs-pulsecheck', icon: 'heart-half-outline', title: 'Tichá kontrola', subtitle: 'Ping „si OK?" · prísne opt-in', route: '/pulse-check' },

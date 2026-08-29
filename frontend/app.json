@@ -17,7 +17,11 @@
         "NSLocationWhenInUseUsageDescription": "Send your location to family in emergencies",
         "NSCameraUsageDescription": "Scan medicine labels and record expert rehab videos",
         "NSMicrophoneUsageDescription": "Record family voice messages and talk to Jarvis",
-        "NSPhotoLibraryUsageDescription": "Upload medical documents and rehab videos"
+        "NSPhotoLibraryUsageDescription": "Upload medical documents and rehab videos",
+        "NSContactsUsageDescription": "Pick trusted people for your Guardian Circle",
+        "NSCalendarsUsageDescription": "Sync meds and appointments with your calendar",
+        "NSCalendarsFullAccessUsageDescription": "Add meds and appointments to your calendar",
+        "NSRemindersUsageDescription": "Create local medication reminders"
       }
     },
     "android": {
@@ -32,7 +36,10 @@
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
       ]
     },
     "web": {
@@ -59,7 +66,19 @@
           "motionPermission": "Detect falls and inactivity to keep you safe"
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Pick trusted people for your Guardian Circle"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Sync meds and appointments with your calendar"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

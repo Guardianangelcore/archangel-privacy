@@ -28,7 +28,16 @@ export default function Lens() {
   const [err, setErr] = useState('');
   const [camBlocked, setCamBlocked] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [modelKey, setModelKey] = useState<'gpt' | 'claude' | 'gemini' | 'consensus'>('gpt');
+  const [jarvisReply, setJarvisReply] = useState('');
   const playerRef = useRef<any>(null);
+
+  const MODEL_CHIPS = [
+    { key: 'gpt', label: 'GPT-5.4', icon: 'flash' },
+    { key: 'gemini', label: 'GEMINI 3.1', icon: 'sparkles' },
+    { key: 'claude', label: 'CLAUDE 5', icon: 'shield-checkmark' },
+    { key: 'consensus', label: 'KONSENZUS ×3', icon: 'infinite' },
+  ] as const;
 
   // MAGIC LENS — Jarvis reads the label aloud (high-fidelity TTS for seniors)
   const speak = async (result: any) => {
@@ -78,13 +87,27 @@ export default function Lens() {
 
   const analyze = async () => {
     if (!photo) return;
-    setBusy('analyze'); setErr(''); setMsg('');
+    setBusy('analyze'); setErr(''); setMsg(''); setJarvisReply('');
     try {
-      const r: any = await apiUpload('/lens/analyze', photo.uri, photo.name, photo.type);
+      const endpoint = modelKey === 'consensus' ? '/lens/analyze-consensus' : '/lens/analyze';
+      const extra: Record<string, string> = modelKey === 'consensus' ? {} : { model: modelKey };
+      const r: any = await apiUpload(endpoint, photo.uri, photo.name, photo.type, extra);
       setScan(r);
       tap('success');
       speak(r); // Magic Lens: automatically read the result aloud
     } catch (e: any) { setErr(String(e.message || e)); tap('error'); }
+    finally { setBusy(null); }
+  };
+
+  const askJarvis = async () => {
+    if (!scan?.scan_id) return;
+    setBusy('jarvis'); setMsg('');
+    try {
+      const r: any = await api(`/lens/${scan.scan_id}/to-jarvis`, { method: 'POST' });
+      setJarvisReply(r?.jarvis?.reply || '');
+      setMsg('🤖 Jarvis analyzoval sken a odpovedal nižšie.');
+      tap('success');
+    } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
 
@@ -148,6 +171,17 @@ export default function Lens() {
               <Text style={st.permText}>Kamera je zablokovaná — OTVORIŤ NASTAVENIA</Text>
             </Pressable>
           )}
+          <Text style={st.modelLbl}>ZRAKOVÝ MODEL</Text>
+          <View style={st.modelRow}>
+            {MODEL_CHIPS.map(m => (
+              <Pressable key={m.key} testID={`ln-model-${m.key}`}
+                onPress={() => { tap('light'); setModelKey(m.key as any); }}
+                style={[st.modelChip, modelKey === m.key && st.modelChipActive]}>
+                <Ionicons name={m.icon as any} size={13} color={modelKey === m.key ? C.onInverse : C.brand} />
+                <Text style={[st.modelChipText, modelKey === m.key && { color: C.onInverse }]}>{m.label}</Text>
+              </Pressable>
+            ))}
+          </View>
           <GoldButton testID="ln-analyze" title="ANALYZOVAŤ ŠOŠOVKOU" icon="aperture"
             onPress={analyze} disabled={!photo} loading={busy === 'analyze'} style={{ marginTop: S.md }} />
         </GlassCard>
@@ -163,6 +197,15 @@ export default function Lens() {
         {scan && (
           <GlassCard pad={S.lg} style={{ marginTop: S.lg }} testID="ln-result">
             <View style={st.kindBadge}><Text style={st.kindText}>{KIND_LABEL[scan.kind] || KIND_LABEL.other}</Text></View>
+            {!!scan.consensus && (
+              <View style={st.consensusBadge}>
+                <Ionicons name="infinite" size={12} color={C.info} />
+                <Text style={st.consensusText}>KONSENZUS 3 MODELOV · ZHODA {scan.consensus.agreement_pct}%</Text>
+              </View>
+            )}
+            {!!scan.model && !scan.consensus && (
+              <Text style={st.modelUsed}>{String(scan.model).toUpperCase()}</Text>
+            )}
             <Text style={st.name}>{scan.name}</Text>
             <Text style={st.summary}>{scan.summary_sk}</Text>
             {(scan.warnings || []).map((w: string, i: number) => (
@@ -175,6 +218,7 @@ export default function Lens() {
 
             <Text style={st.actLbl}>OKAMŽITÉ AKCIE</Text>
             <View style={st.actGrid}>
+              <ActionBtn testID="ln-act-jarvis" icon="chatbubble-ellipses" label="POSLAŤ JARVISOVI" busy={busy === 'jarvis'} onPress={askJarvis} />
               <ActionBtn testID="ln-act-speak" icon="volume-high" label="PREČÍTAŤ NAHLAS" busy={speaking} onPress={() => speak(scan)} />
               {(['medical_report', 'prescription', 'lab_results'].includes(scan.kind) || !!scan.specialty) && (
                 <ActionBtn testID="ln-act-healing" icon="sync" label="SPUSTIŤ KOLOTOČ UZDRAVENIA"
@@ -195,6 +239,18 @@ export default function Lens() {
               <ActionBtn testID="ln-act-vault" icon="lock-closed" label="ULOŽIŤ DO TREZORA" busy={busy === 'vault'} onPress={saveVault} />
             </View>
             {!!msg && <Text testID="ln-msg" style={st.msg}>{msg}</Text>}
+            {!!jarvisReply && (
+              <View testID="ln-jarvis-reply" style={st.jarvisBox}>
+                <View style={st.jarvisHead}>
+                  <Ionicons name="sparkles" size={14} color={C.brand} />
+                  <Text style={st.jarvisTitle}>JARVIS ODPOVEDÁ</Text>
+                </View>
+                <Text style={st.jarvisText}>{jarvisReply}</Text>
+                <Pressable testID="ln-jarvis-open" onPress={() => router.push('/jarvis')} style={st.jarvisMore}>
+                  <Text style={st.jarvisMoreText}>OTVORIŤ ROZHOVOR →</Text>
+                </Pressable>
+              </View>
+            )}
           </GlassCard>
         )}
       </ScrollView>
@@ -239,4 +295,18 @@ const st = StyleSheet.create({
   actBtn: { flexDirection: 'row', gap: S.sm, alignItems: 'center', minHeight: 52, paddingHorizontal: S.md, borderRadius: R.pill, borderWidth: 1.5, borderColor: C.borderStrong, flexGrow: 1, justifyContent: 'center' },
   actText: { color: C.fg, fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
   msg: { color: C.brand, fontWeight: '800', fontSize: 12.5, marginTop: S.md, lineHeight: 18 },
+  modelLbl: { color: C.info, fontSize: 9.5, letterSpacing: 2, fontWeight: '900', marginTop: S.md },
+  modelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  modelChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: R.pill, borderWidth: 1.2, borderColor: C.borderStrong, backgroundColor: 'rgba(212,175,55,0.05)' },
+  modelChipActive: { backgroundColor: C.brand, borderColor: C.brand },
+  modelChipText: { color: C.brand, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  modelUsed: { color: C.info, fontSize: 9, letterSpacing: 1, fontWeight: '800', marginTop: 4 },
+  consensusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(90,140,220,0.12)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  consensusText: { color: C.info, fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
+  jarvisBox: { marginTop: S.lg, padding: S.md, borderRadius: R.sm, backgroundColor: 'rgba(212,175,55,0.06)', borderWidth: 1, borderColor: C.borderStrong },
+  jarvisHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  jarvisTitle: { color: C.brand, fontSize: 10, fontWeight: '900', letterSpacing: 2 },
+  jarvisText: { color: C.fg, fontSize: 13.5, lineHeight: 20 },
+  jarvisMore: { marginTop: 8, alignSelf: 'flex-end' },
+  jarvisMoreText: { color: C.brand, fontSize: 10.5, fontWeight: '900', letterSpacing: 1.2 },
 });
