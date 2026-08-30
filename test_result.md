@@ -653,3 +653,13 @@ header 'angel-toggle' SENIOR chip (dup of hub-guardian-gold tile) REMOVED. Audit
 health/family/legacy hubs — no same-screen duplicates found. No TODO/Lorem placeholders exist.
 
 Auth: founder-bypass-btn / POST /api/auth/dev-bypass guardian.angel.core@proton.me.
+
+## Iteration 43 (Phase 50.1 — Twilio SOS SMS ready + GPS in SOS, Jun 2026)
+- routes/family_contacts.py /sos: when TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_FROM_NUMBER
+  in backend/.env are set (currently BLANK — user will paste keys later), a REAL SMS is sent
+  via Twilio (twilio lib, run_in_threadpool). Response adds sms_sent/channel/sms_error.
+  Fallback (no keys): channel:'device', frontend opens prefilled SMS composer (unchanged UX).
+- SOS sms_body now includes Google Maps link from user.geo.lat/lng
+  ('Moja poloha: https://maps.google.com/?q=lat,lng'). VERIFIED via curl.
+- frontend family-contacts.tsx: opens device composer ONLY when sms_sent:false.
+- twilio added to requirements.txt. Perplexity key still pending from user (sonar degraded).

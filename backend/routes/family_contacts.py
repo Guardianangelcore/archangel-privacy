@@ -94,10 +94,42 @@ async def sos_family_contact(contact_id: str, authorization: Optional[str] = Hea
     if not row:
         raise HTTPException(404, "Kontakt sa nenašiel.")
     now = datetime.now(timezone.utc)
+    phone = _view(row)["phone"]
+
+    # SOS message — include a live GPS map link when the user's position is known.
+    who = user.get("name") or "Guardian Angel"
+    geo = user.get("geo") or {}
+    lat, lng = user.get("lat") or geo.get("lat"), user.get("lng") or geo.get("lng")
+    loc = f" Moja poloha: https://maps.google.com/?q={lat},{lng}" if lat and lng else ""
+    sms_body = f"🆘 SOS! Potrebujem pomoc.{loc} — {who} (Guardian Health & Angel)"
+
+    # TWILIO — real SMS when credentials are configured; graceful device-composer
+    # fallback otherwise (keys arrive later → this switches on automatically).
+    sms_sent, channel, sms_error = False, "device", None
+    sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+    tok = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    frm = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
+    if sid and tok and frm:
+        try:
+            from fastapi.concurrency import run_in_threadpool
+            from twilio.rest import Client as TwilioClient
+
+            def _send():
+                to = "+" + re.sub(r"[^0-9]", "", phone) if not phone.strip().startswith("+") \
+                    else "+" + re.sub(r"[^0-9]", "", phone)
+                return TwilioClient(sid, tok).messages.create(to=to, from_=frm, body=sms_body)
+
+            msg = await run_in_threadpool(_send)
+            sms_sent, channel = True, "twilio"
+            logger.info(f"twilio sos sent sid={msg.sid}")
+        except Exception as e:
+            sms_error = str(e)[:200]
+            logger.error(f"twilio sos failed: {e}")
+
     await db.sos_events.insert_one({
         "event_id": uuid.uuid4().hex, "user_id": user["user_id"],
         "contact_id": contact_id, "contact_name": row["name"],
-        "kind": "family_sos", "at": now})
+        "kind": "family_sos", "channel": channel, "sms_sent": sms_sent, "at": now})
     try:
         await send_push([user["user_id"]], {
             "title": "🆘 SOS ODOSLANÉ",
@@ -105,7 +137,8 @@ async def sos_family_contact(contact_id: str, authorization: Optional[str] = Hea
         }, idempotency_key=f"sos-{contact_id}-{now.strftime('%Y%m%d%H%M')}")
     except Exception as e:
         logger.warning(f"sos push failed: {e}")
-    phone = _view(row)["phone"]
+    message = (f"SOS SMS odoslaná {row['name']} cez Twilio." if sms_sent
+               else f"SOS pre {row['name']} zaznamenané. Zavolajte, ak je to možné.")
     return {"ok": True, "contact": row["name"], "phone": phone,
-            "message": f"SOS pre {row['name']} zaznamenané. Zavolajte, ak je to možné.",
-            "sms_body": f"SOS! Potrebujem pomoc. — {user.get('name') or 'Guardian Angel'} (Guardian Health & Angel)"}
+            "sms_sent": sms_sent, "channel": channel, "sms_error": sms_error,
+            "message": message, "sms_body": sms_body}

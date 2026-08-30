@@ -77,9 +77,11 @@ export default function FamilyContacts() {
     try {
       const r: any = await api(`/family-contacts/${c.contact_id}/sos`, { method: 'POST' });
       showToast(`🆘 ${r.message}`);
-      // Best effort: also open a prefilled SMS so the alert reaches the family instantly.
-      const smsUrl = `sms:${c.phone.replace(/[^+0-9]/g, '')}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(r.sms_body)}`;
-      Linking.openURL(smsUrl).catch(() => {});
+      if (!r.sms_sent) {
+        // Twilio not configured yet → open the device composer with the prefilled SOS text.
+        const smsUrl = `sms:${c.phone.replace(/[^+0-9]/g, '')}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(r.sms_body)}`;
+        Linking.openURL(smsUrl).catch(() => {});
+      }
     } catch (e: any) { showToast(String(e?.message || e)); }
     finally { setBusyId(null); }
   };
