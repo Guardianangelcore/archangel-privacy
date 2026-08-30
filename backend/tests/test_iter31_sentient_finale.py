@@ -18,7 +18,7 @@ from pymongo import MongoClient
 
 BASE_URL = os.environ.get(
     "EXPO_PUBLIC_BACKEND_URL",
-    "https://global-compass-hub.preview.emergentagent.com",
+    "https://guardian-vault-13.preview.emergentagent.com",
 ).rstrip("/")
 TOKEN = "smoketok-fresh-2026"
 UID = "smoketest-user-1"

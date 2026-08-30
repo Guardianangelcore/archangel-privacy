@@ -11,7 +11,7 @@ from pathlib import Path
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-BASE_URL = "https://global-compass-hub.preview.emergentagent.com"
+BASE_URL = "https://guardian-vault-13.preview.emergentagent.com"
 MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
 

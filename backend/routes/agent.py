@@ -338,6 +338,65 @@ def _detect_pain_level(text: str) -> Optional[int]:
     return lvl if lvl and 1 <= lvl <= 10 else None
 
 
+# ---- VOICE LIFE-CARD LOGGING — "dnes mi doktor povedal, že mám kiahne" ----
+# Cheap trigger regex first; a small LLM call then classifies into the 5
+# Karta života categories (or rejects → normal chat continues).
+LIFECARD_LABELS = {"vaccine": "Očkovanie", "disease": "Choroba", "surgery": "Operácia",
+                   "injury": "Úraz", "exam": "Prehliadka"}
+LIFECARD_TRIGGER = re.compile(
+    r"(doktor|doktork|lek[áa]r|diagn[óo]z|diagnostik|ochorel|oper[áa]ci|operoval|"
+    r"zao[čc]koval|o[čc]kovan|vakc[íi]n|prehliadk|prevent[íi]vn|"
+    r"[úu]raz|zlomil|zlomenin|vytkol|vyvrtol|pop[áa]lil|porezal|"
+    r"vy[šs]etren|chorob|kiahn|chr[íi]pk|ang[íi]n|covid|"
+    r"diagnos|vaccinat|surger|check-?up|injur)", re.I)
+
+
+def _lifecard_trigger(text: str) -> bool:
+    t = (text or "").strip()
+    return bool(t) and len(t) <= 300 and bool(LIFECARD_TRIGGER.search(t))
+
+
+async def _classify_lifecard(text: str, lang_sk: bool) -> Optional[dict]:
+    """LLM classification of a spoken sentence into a Life Card record. None = not a record."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"lifecard-{uuid.uuid4().hex[:6]}",
+        system_message=(
+            "You classify ONE user sentence into a personal health LIFE CARD record. "
+            'Return ONLY valid JSON, no markdown: {"is_record": true|false, '
+            '"category": "vaccine|disease|surgery|injury|exam", "title": "...", '
+            '"date": "YYYY-MM-DD", "note": "..."}. '
+            "is_record=true ONLY when the user STATES a health event that happened to them: "
+            "a diagnosis/disease (disease), a vaccination (vaccine), a surgery (surgery), "
+            "an injury (injury), or a completed doctor visit / preventive check-up (exam). "
+            'Questions, advice requests and general chat → {"is_record": false}. '
+            f"Today is {today}. Default date = today; resolve relative words "
+            "(včera/yesterday, minulý týždeň/last week) and explicit dates. "
+            "'title' = short name of the disease/vaccine/procedure "
+            + ("in Slovak" if lang_sk else "in the user's language")
+            + " (max 5 words). 'note' = short extra detail or empty string."
+        ),
+    ).with_model("openai", "gpt-5.4")
+    try:
+        resp = await chat.send_message(UserMessage(text=text[:400]))
+        m = re.search(r"\{.*\}", str(resp), re.S)
+        data = json.loads(m.group(0)) if m else {}
+    except Exception as e:
+        logger.error(f"lifecard classify error: {e}")
+        return None
+    if not data.get("is_record"):
+        return None
+    cat = data.get("category")
+    if cat not in LIFECARD_LABELS:
+        return None
+    date = str(data.get("date") or today)
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        date = today
+    title = str(data.get("title") or "").strip()[:140] or LIFECARD_LABELS[cat]
+    return {"category": cat, "title": title, "date": date, "note": str(data.get("note") or "")[:200]}
+
+
 CHAT_PLAIN_RULE = (
     " Reply with PLAIN TEXT only — no JSON, no markdown code fences, no headings. "
     "Warm, senior-friendly, concise (max ~120 words unless asked for detail)."
@@ -415,6 +474,34 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
         return {"reply": reply, "mood": mood, "pain_logged": pain_lvl, "milestone": milestone,
                 "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
                 "level_name": LEVEL_NAMES[xp["level"] - 1], "alerts": []}
+
+    # HANDS-FREE LIFE CARD — "dnes mi doktor povedal, že mám kiahne" → Karta života
+    if _lifecard_trigger(body.message):
+        sk = (user.get("language") or "sk")[:2] in ("sk", "cs")
+        rec = await _classify_lifecard(body.message, sk)
+        if rec:
+            now = datetime.now(timezone.utc)
+            await db.calendar_events.insert_one({
+                "event_id": uuid.uuid4().hex, "user_id": uid,
+                "category": rec["category"], "title": rec["title"],
+                "date": rec["date"], "notes": rec["note"], "booster_due": None,
+                "source": "voice", "created_at": now})
+            label = LIFECARD_LABELS[rec["category"]]
+            reply = (f"Zapísal som do Karty života: {label} — {rec['title']} ({rec['date']}). "
+                     "Nájdete to v Zdravie → Karta života. 💛"
+                     if sk else
+                     f"Logged to your Life Card: {label} — {rec['title']} ({rec['date']}). "
+                     "Find it under Health → Life Card. 💛")
+            reply = apply_watermark(reply)
+            await db.agent_conversations.insert_many([
+                {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": body.message[:1000], "at": now},
+                {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply, "mood": "calm", "at": now},
+            ])
+            await db.agent_state.update_one({"user_id": uid}, {"$set": {"mood": "calm"}})
+            xp = await award_xp(uid, 5, "lifecard_log")
+            return {"reply": reply, "mood": "calm", "lifecard_logged": rec,
+                    "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
+                    "level_name": LEVEL_NAMES[xp["level"] - 1], "alerts": []}
 
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
@@ -870,13 +957,14 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
     q = body.message[:1000]
     sse_headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
 
-    # Deterministic pain-diary intent — reuse the full non-stream logic, emit as one chunk.
-    if _detect_pain_level(body.message):
+    # Deterministic intents (pain diary · life-card voice log) — reuse the full
+    # non-stream logic, emit as one chunk.
+    if _detect_pain_level(body.message) or _lifecard_trigger(body.message):
         res = await agent_chat(body, authorization)
 
         async def gen_pain():
             yield f"data: {json.dumps({'t': res['reply']}, ensure_ascii=False)}\n\n"
-            meta = {k: res.get(k) for k in ("mood", "xp_gained", "level", "level_up", "level_name", "pain_logged", "milestone")}
+            meta = {k: res.get(k) for k in ("mood", "xp_gained", "level", "level_up", "level_name", "pain_logged", "milestone", "lifecard_logged")}
             yield f"data: {json.dumps({'done': True, **meta}, ensure_ascii=False)}\n\n"
         return StreamingResponse(gen_pain(), media_type="text/event-stream", headers=sse_headers)
 

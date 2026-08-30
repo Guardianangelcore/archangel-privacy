@@ -901,9 +901,16 @@ async def health_drop_delete(drop_doc_id: str, authorization: Optional[str] = He
         raise HTTPException(404, "Not found")
     return {"ok": True}
 
-# --------- LIFE-HEALTH CALENDAR (exams · medical history · vaccination tracker) ---------
+# --------- KARTA ŽIVOTA (Life Card) — health axis from birth ---------
+# Categories: vaccine=Očkovania · disease=Choroby · surgery=Operácie ·
+# injury=Úrazy · exam=Prehliadky. Legacy 'history' remains for system rows
+# (vault documents, billing receipts); old MANUAL 'history' records are
+# lazily migrated to 'disease'.
+LIFECARD_CATS = ("vaccine", "disease", "surgery", "injury", "exam")
+BLOOD_TYPES = ("A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-")
+
 class CalendarEventIn(BaseModel):
-    category: str  # exam | history | vaccine
+    category: str  # vaccine | disease | surgery | injury | exam
     title: str
     date: str      # YYYY-MM-DD
     notes: Optional[str] = ""
@@ -912,8 +919,9 @@ class CalendarEventIn(BaseModel):
 @api.post("/calendar/events")
 async def calendar_add(body: CalendarEventIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
-    if body.category not in ("exam", "history", "vaccine"):
-        raise HTTPException(400, "category must be exam|history|vaccine")
+    cat = "disease" if body.category == "history" else body.category  # legacy alias
+    if cat not in LIFECARD_CATS:
+        raise HTTPException(400, "category must be vaccine|disease|surgery|injury|exam")
     try:
         datetime.strptime(body.date, "%Y-%m-%d")
         if body.booster_due:
@@ -922,7 +930,7 @@ async def calendar_add(body: CalendarEventIn, authorization: Optional[str] = Hea
         raise HTTPException(400, "date must be YYYY-MM-DD")
     doc = {
         "event_id": uuid.uuid4().hex, "user_id": user["user_id"],
-        "category": body.category, "title": body.title.strip()[:140],
+        "category": cat, "title": body.title.strip()[:140],
         "date": body.date, "notes": (body.notes or "")[:500],
         "booster_due": body.booster_due, "source": "manual",
         "created_at": datetime.now(timezone.utc),
@@ -930,19 +938,34 @@ async def calendar_add(body: CalendarEventIn, authorization: Optional[str] = Hea
     await db.calendar_events.insert_one(doc.copy())
     return clean(doc)
 
+async def _lifecard_counts(uid: str) -> dict:
+    counts = {c: 0 for c in LIFECARD_CATS}
+    rows = await db.calendar_events.find({"user_id": uid}, {"_id": 0, "category": 1}).to_list(2000)
+    for r in rows:
+        c = r.get("category")
+        if c in counts:
+            counts[c] += 1
+    return counts
+
 @api.get("/calendar/timeline")
 async def calendar_timeline(category: Optional[str] = None, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
-    q: dict = {"user_id": user["user_id"]}
-    if category in ("exam", "history", "vaccine"):
+    uid = user["user_id"]
+    # Lazy migration: old manual 'history' rows ("Choroba / úraz") → disease
+    await db.calendar_events.update_many(
+        {"user_id": uid, "category": "history", "source": "manual"},
+        {"$set": {"category": "disease"}})
+    q: dict = {"user_id": uid}
+    if category in LIFECARD_CATS + ("history",):
         q["category"] = category
-    events = await db.calendar_events.find(q, {"_id": 0}).sort("date", -1).to_list(300)
+    events = await db.calendar_events.find(q, {"_id": 0}).sort("date", -1).to_list(500)
     today = datetime.now(timezone.utc).date().isoformat()
     horizon = (datetime.now(timezone.utc) + timedelta(days=90)).date().isoformat()
     upcoming = [e for e in events if e["category"] == "exam" and e["date"] >= today]
     booster_alerts = [e for e in events if e["category"] == "vaccine" and e.get("booster_due") and e["booster_due"] <= horizon]
     return {"events": events, "upcoming_exams": sorted(upcoming, key=lambda e: e["date"]),
-            "booster_alerts": sorted(booster_alerts, key=lambda e: e["booster_due"]), "today": today}
+            "booster_alerts": sorted(booster_alerts, key=lambda e: e["booster_due"]),
+            "counts": await _lifecard_counts(uid), "today": today}
 
 @api.delete("/calendar/events/{event_id}")
 async def calendar_delete(event_id: str, authorization: Optional[str] = Header(None)):
@@ -951,6 +974,155 @@ async def calendar_delete(event_id: str, authorization: Optional[str] = Header(N
     if res.deleted_count == 0:
         raise HTTPException(404, "Not found")
     return {"ok": True}
+
+# --- Life Card identity (meno · dátum narodenia · krvná skupina — zdroj: rodný list) ---
+async def _lifecard_payload(user: dict) -> dict:
+    uid = user["user_id"]
+    prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
+    birth_date = user.get("birth_date")
+    age = None
+    if birth_date:
+        try:
+            bd = datetime.strptime(birth_date, "%Y-%m-%d").date()
+            t = datetime.now(timezone.utc).date()
+            age = t.year - bd.year - ((t.month, t.day) < (bd.month, bd.day))
+        except ValueError:
+            birth_date = None
+    if age is None and user.get("birth_year"):
+        age = datetime.now(timezone.utc).year - int(user["birth_year"])
+    pred = await db.lifecard_predictions.find_one({"user_id": uid}, {"_id": 0}) or {}
+    return {
+        "full_name": prof.get("full_name") or user.get("name") or "",
+        "birth_date": birth_date, "birth_year": user.get("birth_year"),
+        "blood_type": prof.get("blood_type") or "", "age": age,
+        "counts": await _lifecard_counts(uid),
+        "predictions": pred.get("predictions", []),
+        "predictions_at": pred.get("generated_at"),
+        "today": datetime.now(timezone.utc).date().isoformat(),
+    }
+
+@api.get("/lifecard")
+async def lifecard_get(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return clean(await _lifecard_payload(user))
+
+class LifeCardIn(BaseModel):
+    full_name: Optional[str] = None
+    birth_date: Optional[str] = None  # YYYY-MM-DD — zdroj: rodný list
+    blood_type: Optional[str] = None
+
+@api.put("/lifecard")
+async def lifecard_update(body: LifeCardIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    user_upd, prof_upd = {}, {}
+    if body.birth_date is not None and body.birth_date != "":
+        try:
+            bd = datetime.strptime(body.birth_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(400, "birth_date must be YYYY-MM-DD")
+        if bd.year < 1900 or bd > datetime.now(timezone.utc).date():
+            raise HTTPException(400, "birth_date out of range")
+        user_upd["birth_date"] = body.birth_date
+        user_upd["birth_year"] = bd.year  # keep Bio-Timeline in sync
+    if body.blood_type is not None:
+        if body.blood_type not in BLOOD_TYPES + ("",):
+            raise HTTPException(400, f"blood_type must be one of {'|'.join(BLOOD_TYPES)}")
+        prof_upd["blood_type"] = body.blood_type
+    if body.full_name is not None and body.full_name.strip():
+        prof_upd["full_name"] = body.full_name.strip()[:120]
+    if user_upd:
+        await db.users.update_one({"user_id": uid}, {"$set": user_upd})
+        user = await db.users.find_one({"user_id": uid}, {"_id": 0})
+    if prof_upd:
+        await db.emergency_profiles.update_one(
+            {"user_id": uid}, {"$set": {**prof_upd, "user_id": uid}}, upsert=True)
+    return clean(await _lifecard_payload(user))
+
+# --- PREDIKCIE — Jarvis suggests the next vaccination / preventive check-up ---
+@api.post("/lifecard/predictions")
+async def lifecard_predictions(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    card = await _lifecard_payload(user)
+    events = await db.calendar_events.find(
+        {"user_id": uid, "category": {"$in": list(LIFECARD_CATS)}},
+        {"_id": 0, "category": 1, "title": 1, "date": 1, "booster_due": 1},
+    ).sort("date", -1).to_list(200)
+    today = card["today"]
+    lang = (user.get("language") or "sk")[:2]
+    reason_lang = "Slovak" if lang in ("sk", "cs") else f"the user's app language ({lang})"
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"lifecard-pred-{uuid.uuid4().hex[:6]}",
+        system_message=(
+            "You are a preventive-care planner for Slovakia/Czechia (EU standards). "
+            "Based on the patient's LIFE CARD history you suggest WHEN the next vaccination or "
+            "preventive check-up is due. Use standard adult schedules: tetanus booster every 15 years, "
+            "flu vaccine yearly for 59+, general preventive check-up every 2 years (yearly for 60+), "
+            "dental check-up yearly, and respect explicit booster_due dates in the history. "
+            'Return ONLY valid JSON, no markdown: {"predictions": [{"title": "...", '
+            '"category": "vaccine|exam", "suggested_date": "YYYY-MM-DD", "reason": "..."}]}. '
+            f"Max 4 predictions. suggested_date must be AFTER {today} and within 24 months. "
+            f"'title' and 'reason' (1 short sentence) must be written in {reason_lang}. "
+            "Do not repeat a prediction for something already scheduled after today in the history."
+        ),
+    ).with_model("openai", "gpt-5.4")
+    payload = {
+        "today": today, "age": card["age"], "birth_date": card["birth_date"],
+        "history": events[:100],
+    }
+    try:
+        resp = await chat.send_message(UserMessage(text=json.dumps(payload, ensure_ascii=False, default=str)[:6000]))
+        m = re.search(r"\{.*\}", str(resp), re.S)
+        data = json.loads(m.group(0)) if m else {}
+    except Exception as e:
+        logger.error(f"lifecard predictions error: {e}")
+        raise HTTPException(502, "AI service unavailable")
+    preds = []
+    for p in (data.get("predictions") or [])[:4]:
+        cat = p.get("category")
+        date = str(p.get("suggested_date") or "")
+        if cat not in LIFECARD_CATS or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) or date <= today:
+            continue
+        preds.append({"title": str(p.get("title") or "")[:140], "category": cat,
+                      "suggested_date": date, "reason": str(p.get("reason") or "")[:300]})
+    generated_at = datetime.now(timezone.utc)
+    await db.lifecard_predictions.update_one(
+        {"user_id": uid},
+        {"$set": {"user_id": uid, "predictions": preds, "generated_at": generated_at}},
+        upsert=True)
+    from routes.agent import award_xp
+    await award_xp(uid, 6, "lifecard_predictions")
+    return {"predictions": preds, "generated_at": generated_at, "ai": True}
+
+class PredictionAcceptIn(BaseModel):
+    title: str
+    category: str = "exam"
+    date: str  # YYYY-MM-DD
+    reason: Optional[str] = ""
+
+@api.post("/lifecard/predictions/accept")
+async def lifecard_prediction_accept(body: PredictionAcceptIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    if body.category not in LIFECARD_CATS:
+        raise HTTPException(400, "category must be vaccine|disease|surgery|injury|exam")
+    try:
+        datetime.strptime(body.date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(400, "date must be YYYY-MM-DD")
+    doc = {
+        "event_id": uuid.uuid4().hex, "user_id": uid,
+        "category": body.category, "title": body.title.strip()[:140],
+        "date": body.date, "notes": f"Jarvis predikcia · {(body.reason or '').strip()}"[:500],
+        "booster_due": None, "source": "jarvis",
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.calendar_events.insert_one(doc.copy())
+    await db.lifecard_predictions.update_one(
+        {"user_id": uid}, {"$pull": {"predictions": {"title": body.title}}})
+    return clean(doc)
 
 # --------- MY RECOVERY (Sick Leave / ePN — Hustle Recovery Guard) ---------
 class OutingWindow(BaseModel):

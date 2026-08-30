@@ -11,10 +11,10 @@ import { useRouter } from 'expo-router';
 import * as Calendar from 'expo-calendar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api';
+import { ensureGuardianCalendar } from '@/src/native-calendar';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 
-const CAL_ID_KEY = 'gh_native_calendar_id_v1';
 const SYNCED_KEY = 'gh_native_calendar_synced_v1';
 
 type SyncedMap = Record<string, string>; // guardian-key -> native event id
@@ -23,34 +23,6 @@ async function getSynced(): Promise<SyncedMap> {
   try { const raw = await AsyncStorage.getItem(SYNCED_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
 }
 async function saveSynced(m: SyncedMap) { try { await AsyncStorage.setItem(SYNCED_KEY, JSON.stringify(m)); } catch {} }
-
-async function ensureGuardianCalendar(): Promise<string> {
-  const cached = await AsyncStorage.getItem(CAL_ID_KEY);
-  if (cached) {
-    try {
-      const all = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      if (all.some(c => c.id === cached)) return cached;
-    } catch {}
-  }
-  const all = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-  const existing = all.find(c => c.title === 'Guardian Angel');
-  if (existing) { await AsyncStorage.setItem(CAL_ID_KEY, existing.id); return existing.id; }
-  const defaultCalendarSource = Platform.OS === 'ios'
-    ? (await Calendar.getDefaultCalendarAsync()).source
-    : { isLocalAccount: true, name: 'Guardian Angel', type: Calendar.SourceType.LOCAL } as any;
-  const id = await Calendar.createCalendarAsync({
-    title: 'Guardian Angel',
-    color: '#D4AF37',
-    entityType: Calendar.EntityTypes.EVENT,
-    sourceId: (defaultCalendarSource as any).id,
-    source: defaultCalendarSource as any,
-    name: 'guardian-angel',
-    ownerAccount: 'guardian-angel',
-    accessLevel: Calendar.CalendarAccessLevel.OWNER,
-  });
-  await AsyncStorage.setItem(CAL_ID_KEY, id);
-  return id;
-}
 
 type Item = {
   key: string;

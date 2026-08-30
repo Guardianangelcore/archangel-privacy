@@ -5,7 +5,7 @@ import uuid
 import requests
 import pytest
 
-BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://global-compass-hub.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
 SMOKE_TOKEN = "smoketok-fresh-2026"
 AUTH = {"Authorization": f"Bearer {SMOKE_TOKEN}", "Content-Type": "application/json"}
 

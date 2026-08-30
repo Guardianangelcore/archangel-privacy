@@ -1,15 +1,34 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import PillarHub from '@/src/PillarHub';
 import { sharePdf } from '@/src/pdf';
+import { C, S, R } from '@/src/theme';
+import { tap } from '@/src/ui/glass';
 
 export default function HealthHub() {
+  const router = useRouter();
   return (
     <PillarHub
       testID="hub-health"
       icon="sync"
       title="Moje uzdravovanie"
       subtitle="Pilier 1 · Kolotoč uzdravenia — od žiadanky cez peniaze a doktora až po 100 % fit."
+      hero={
+        /* KARTA ŽIVOTA — jadro aplikácie: zdravotná os od narodenia */
+        <Pressable testID="hh-lifecard-hero" onPress={() => { tap('medium'); router.push('/health-timeline'); }} style={st.lifeHero}>
+          <View style={st.lifeHeroIcon}>
+            <Ionicons name="id-card" size={26} color={C.onInverse} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={st.lifeHeroTitle}>KARTA ŽIVOTA</Text>
+            <Text style={st.lifeHeroSub}>Zdravotná os od narodenia · Očkovania · Choroby · Operácie · Úrazy · Prehliadky</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={C.brand} />
+        </Pressable>
+      }
       sections={[
         { title: '⚙️ KOLOTOČ UZDRAVENIA — JADRO', items: [
           { testID: 'hh-healing', icon: 'sync-outline', title: 'Kolotoč uzdravenia', subtitle: 'Úraz → peniaze hneď → doktor → PN → fyzio', route: '/healing' },
@@ -23,9 +42,8 @@ export default function HealthHub() {
           { testID: 'hh-vault', icon: 'lock-closed-outline', title: 'Zdravotný trezor', subtitle: 'Dokumenty · OCR · AI preklad', choices: [
             { icon: 'folder-open-outline', label: 'Otvoriť trezor', sub: 'Zobraziť a spravovať dokumenty', route: '/(tabs)/vault' },
             { icon: 'camera-outline', label: 'Nahrať dokument + AI preklad', sub: 'Odfotiť / nahrať → ľudská reč', route: '/translate' },
-            { icon: 'time-outline', label: 'Zdravotná časová os', sub: 'Všetky záznamy chronologicky', route: '/health-timeline' },
+            { icon: 'id-card-outline', label: 'Karta života', sub: 'Všetky záznamy chronologicky', route: '/health-timeline' },
           ] },
-          { testID: 'hh-timeline', icon: 'time-outline', title: 'Zdravotná časová os', subtitle: 'Vyšetrenia · história · vakcíny', route: '/health-timeline' },
           { testID: 'hh-lens', icon: 'aperture-outline', title: 'Guardian Lens', subtitle: 'Odfoť liek či nález · AI okamžite koná', route: '/lens' },
           { testID: 'hh-drop', icon: 'cloud-download-outline', title: 'Health Drop — od lekára', subtitle: 'Lekár → trezor · šifrované', route: '/health-drop' },
           { testID: 'hh-clinic-sync', icon: 'wifi-outline', title: 'Synchronizácia s klinikou', subtitle: 'Lekár „beamne" nález do trezora · QR', route: '/clinic-sync' },
@@ -51,3 +69,10 @@ export default function HealthHub() {
     />
   );
 }
+
+const st = StyleSheet.create({
+  lifeHero: { flexDirection: 'row', alignItems: 'center', gap: S.lg, backgroundColor: 'rgba(212,175,55,0.12)', borderRadius: R.lg, padding: S.lg, minHeight: 92, borderWidth: 2, borderColor: C.brand, marginTop: S.lg },
+  lifeHeroIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
+  lifeHeroTitle: { color: C.brand, fontWeight: '900', fontSize: 17, letterSpacing: 2 },
+  lifeHeroSub: { color: C.onS3, fontSize: 11.5, lineHeight: 16, marginTop: 3 },
+});

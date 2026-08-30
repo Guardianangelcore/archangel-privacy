@@ -663,3 +663,46 @@ Auth: founder-bypass-btn / POST /api/auth/dev-bypass guardian.angel.core@proton.
   ('Moja poloha: https://maps.google.com/?q=lat,lng'). VERIFIED via curl.
 - frontend family-contacts.tsx: opens device composer ONLY when sms_sent:false.
 - twilio added to requirements.txt. Perplexity key still pending from user (sonar degraded).
+
+## Iteration 44 (Phase 51 — KARTA ŽIVOTA, Jun 2026)
+User directive: reorganize existing modules only — Life Card = core of the app.
+BACKEND (routes/health.py — replaced LIFE-HEALTH CALENDAR section):
+- calendar_events categories extended: vaccine|disease|surgery|injury|exam ('history' alias→disease
+  on POST; legacy manual 'history' rows lazily migrated to 'disease' on first timeline GET;
+  system 'history' rows from vault/billing kept, displayed as DOKUMENT).
+- GET /calendar/timeline adds counts{} per category; filter supports all 5 + history.
+- NEW GET /api/lifecard → {full_name, birth_date, birth_year, blood_type, age, counts,
+  predictions (cached), predictions_at, today}. full_name/blood_type come from
+  emergency_profiles (shared with Emergency QR); birth_date stored on users (+birth_year sync).
+- NEW PUT /api/lifecard {full_name?, birth_date? (YYYY-MM-DD 1900..today), blood_type? (A+..0-)}.
+- NEW POST /api/lifecard/predictions — gpt-5.4 JSON: max 4 {title, category vaccine|exam,
+  suggested_date>today ≤24mo, reason SK}; cached in db.lifecard_predictions; +6 XP. ~10-20 s.
+- NEW POST /api/lifecard/predictions/accept {title,category,date,reason} → calendar_events
+  (source 'jarvis', notes 'Jarvis predikcia · …') + $pull from cached predictions.
+BACKEND (routes/agent.py):
+- Voice Life-Card intent: LIFECARD_TRIGGER regex (doktor/očkovan/operáci/úraz/choroba/…)
+  → _classify_lifecard (gpt-5.4 JSON {is_record, category, title, date, note}; resolves
+  'včera' etc.) → insert calendar_events (source 'voice') → deterministic SK reply
+  'Zapísal som do Karty života: …' + watermark + 5 XP; response has lifecard_logged{}.
+  Questions/advice → is_record=false → falls through to normal chat (VERIFIED).
+  Stream endpoint: trigger check added next to pain check → one-chunk SSE with
+  lifecard_logged in done-meta (VERIFIED via curl, 'Včera ma zaočkovali proti tetanu'
+  → vaccine, date today-1).
+FRONTEND:
+- app/health-timeline.tsx rebuilt as KARTA ŽIVOTA (same Obsidian/gold design language):
+  identity hero (meno/dátum narodenia SK format/vek/krvná skupina, edit inline via lc-edit →
+  lc-name + lc-birth DateField + lc-blood-{type} chips + lc-save-card), voice hint row →
+  /jarvis, quick-add '+' with 5 category chips + popis (lc-notes), PREDIKCIE·JARVIS box
+  (lc-predict → POST predictions; lc-accept-{i} → accept + native calendar via
+  addToGuardianCalendar), filter chips with counts, timeline rows (5 colors + gray DOKUMENT;
+  source badges 🎙 JARVIS / ✨ PREDIKCIA).
+- NEW src/native-calendar.ts: ensureGuardianCalendar + addToGuardianCalendar (permission
+  contract: contextual ask, canAskAgain-aware, web no-op). calendar-sync.tsx refactored to
+  import it (local copy removed, behavior unchanged).
+- app/(tabs)/health.tsx: gold hero hh-lifecard-hero 'KARTA ŽIVOTA' on top (PillarHub hero
+  prop); duplicate hh-timeline tile removed; vault-choice label renamed to 'Karta života'.
+SELF-TESTED via curl: lifecard GET/PUT, add surgery, invalid category 400, counts,
+voice log (kiahne→disease today), question not logged, predictions (2 SK suggestions),
+accept (source jarvis + pulled from cache), SSE stream intent. Screenshots: hub hero +
+full Life Card screen render correctly.
+Auth: founder-bypass (guardian.angel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.

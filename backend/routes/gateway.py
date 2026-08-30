@@ -217,7 +217,7 @@ async def sentinel_aggregate(authorization: Optional[str] = Header(None)):
 
 # --------- 4. UNIVERSAL FINANCIAL ONRAMP (Stripe Checkout — real when key configured) ---------
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
-FRONTEND_BASE = os.environ.get("FRONTEND_PUBLIC_URL", "https://global-compass-hub.preview.emergentagent.com")
+FRONTEND_BASE = os.environ.get("FRONTEND_PUBLIC_URL", "https://guardian-vault-13.preview.emergentagent.com")
 
 def _stripe_ready() -> bool:
     return STRIPE_API_KEY.startswith("sk_") and STRIPE_API_KEY not in ("sk_test_emergent",)

@@ -24,6 +24,6 @@
   "seed_data_creation": "None. Used existing smoketest-user-1 (smoketok-fresh-2026) as founder + smoketest-user-2 for non-founder demo-toggle 403 assertion.",
   "retest_needed": false,
   "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "Backend token smoketok-fresh-2026 (smoketest-user-1) is founder → /api/demo/toggle 200; smoketok-fresh-2026-u2 → 403. Watermark constant: '— AI Content · Sovereign Protocol' (with em-dash + double newline before it). Edge cache TTL 600s on briefing; use ?force=true to bypass. Frontend web session seeded via localStorage.gh_session_token = 'smoketok-fresh-2026'. Testing agent env: EXPO_PUBLIC_BACKEND_URL=https://global-compass-hub.preview.emergentagent.com.",
+  "context_for_next_testing_agent": "Backend token smoketok-fresh-2026 (smoketest-user-1) is founder → /api/demo/toggle 200; smoketok-fresh-2026-u2 → 403. Watermark constant: '— AI Content · Sovereign Protocol' (with em-dash + double newline before it). Edge cache TTL 600s on briefing; use ?force=true to bypass. Frontend web session seeded via localStorage.gh_session_token = 'smoketok-fresh-2026'. Testing agent env: EXPO_PUBLIC_BACKEND_URL=https://guardian-vault-13.preview.emergentagent.com.",
   "rca_of_issue": "N/A — no issues found. All Phase 45+46 endpoints behave as specified in review request."
 }

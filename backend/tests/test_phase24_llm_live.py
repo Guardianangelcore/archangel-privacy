@@ -6,7 +6,7 @@ import os
 import requests
 import pytest
 
-BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://global-compass-hub.preview.emergentagent.com").rstrip("/")
+BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
 TOKEN = "test-token-abc"
 H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 

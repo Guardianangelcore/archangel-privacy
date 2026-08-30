@@ -44,6 +44,14 @@ A sovereign, faceless, 22nd-century survival OS for individuals + their Guardian
 5. Duplicates removed on Home header: `home-jarvis` sparkles (dup of Orb) + `angel-toggle` SENIOR chip (dup of GUARDIAN GOLD tile).
 6. **Twilio SOS SMS (pripravené)** — `/family-contacts/{id}/sos` posiela reálnu SMS cez Twilio, keď sú v backend/.env vyplnené `TWILIO_ACCOUNT_SID/AUTH_TOKEN/FROM_NUMBER` (zatiaľ prázdne — čaká na kľúče od usera). Fallback: zariadenie otvorí predvyplnenú SMS. SOS správa obsahuje GPS Google Maps odkaz.
 
+## Phase 51 (KARTA ŽIVOTA — June 2026)
+Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je Životná karta:
+1. **Karta života** (`/health-timeline` prestavaná): identity hero (meno · dátum narodenia · krvná skupina — zdroj rodný list; edit inline, PUT /api/lifecard; blood_type zdieľaný s emergency_profiles/QR). GET /api/lifecard (age, counts, cached predictions).
+2. **5 podkategórií** (rozšírené calendar_events): vaccine=Očkovania · disease=Choroby · surgery=Operácie · injury=Úrazy · exam=Prehliadky. Každý záznam: dátum + typ + popis (notes). Legacy manuálne 'history' lazy-migrované na 'disease'; systémové 'history' (vault/billing doklady) ostávajú ako DOKUMENT. Timeline vracia counts.
+3. **Predikcie** — POST /api/lifecard/predictions (gpt-5.4, JSON, max 4, SK): navrhne ďalšie očkovanie/prehliadku podľa histórie a veku; POST /lifecard/predictions/accept → zapíše do calendar_events (source jarvis) + frontend pridá aj do natívneho kalendára „Guardian Angel“ (zdieľaný helper src/native-calendar.ts, permission-contract).
+4. **Hlasové pridávanie** — Jarvis chat/stream intent: trigger regex → LLM klasifikácia → záznam do správnej kategórie s dnešným/relatívnym dátumom („včera“). Otázky nezapíše (is_record=false → normálny chat). Odpoveď: „Zapísal som do Karty života: …“.
+5. Health hub: zlatý hero KARTA ŽIVOTA (hh-lifecard-hero) navrchu; duplicitná dlaždica hh-timeline odstránená; '+' na obrazovke slúži len na rýchle pridanie do 5 kategórií.
+
 ## Integrations
 - Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT, GPT Image 1).
 - Perplexity Sonar (`PERPLEXITY_API_KEY` in backend/.env — blank = graceful fallback).
