@@ -127,8 +127,13 @@ export default function Vault() {
   return (
     <SafeAreaView testID="vault-screen" style={styles.root} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('vault', lang).toUpperCase()}</Text>
-        <Text style={styles.sub}>ŠIFROVANÉ ÚLOŽISKO — LEN VY MÁTE KĽÚČ</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{t('vault', lang).toUpperCase()}</Text>
+          <Text style={styles.sub}>ŠIFROVANÉ ÚLOŽISKO — LEN VY MÁTE KĽÚČ</Text>
+        </View>
+        <Pressable testID="vault-settings" onPress={() => router.push('/(tabs)/profile')} hitSlop={10}>
+          <Ionicons name="settings-outline" size={22} color={C.onInverse} />
+        </Pressable>
       </View>
 
       <FlatList
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
   firstScanTitle: { color: C.onInverse, fontWeight: '900', fontSize: 14, letterSpacing: 2 },
   firstScanSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, lineHeight: 16, marginTop: 3 },
   root: { flex: 1, backgroundColor: C.bg },
-  header: { paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse, borderBottomWidth: 2, borderBottomColor: C.inverse },
+  header: { flexDirection: 'row', alignItems: 'center', gap: S.md, paddingHorizontal: S.lg, paddingVertical: S.md, backgroundColor: C.inverse, borderBottomWidth: 2, borderBottomColor: C.inverse },
   title: { color: C.onInverse, fontSize: 22, fontWeight: '900', letterSpacing: 2 },
   sub: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, marginTop: 2 },
   empty: { alignItems: 'center', paddingVertical: 60, gap: S.md },

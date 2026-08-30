@@ -619,3 +619,37 @@ FRONTEND (app/jarvis.tsx):
   re-injects question+answer+citations into the chat. Trash (jv-hist-del-*) deletes.
 - History auto-refreshes when entering sonar mode and after each new sonar search.
 - SELF-TESTED via screenshot: toggle visible, entry tap re-injected 'Aké je počasie v Bratislave?' Q&A.
+
+## Iteration 42 (Phase 50 — CRITICAL UX BUG FIXES, Jun 2026)
+BUG 1 (settings gear everywhere): Home + PillarHub (health/family/legacy) already had gear.
+ADDED: jarvis.tsx header (testID jv-settings), vault.tsx header (vault-settings),
+family-contacts.tsx (fc-settings). All route to /(tabs)/profile.
+
+BUG 2 (Jarvis streaming): NEW POST /api/agent/chat/stream (SSE). Refactored shared
+_chat_system() prompt builder (json_mode flag) — /agent/chat behavior unchanged (regression-
+sensitive: CHAT_JSON_RULE path). Stream: TextDelta chunks as `data:{"t":...}`, final
+`data:{"done":true,mood,xp_gained,level,...}`. Pain-diary intent reuses agent_chat, streamed
+as one chunk. Frontend jarvis.tsx: expo/fetch ReadableStream reader, TypingDots (jv-typing,
+3 breathing dots) mounts instantly on send, streaming bubble updates per chunk, graceful
+fallback to classic /agent/chat on transport error. VERIFIED via curl: token-by-token SSE.
+
+BUG 3 (phone icon → QR Profil): Angel Mode bottom trio: angel-family (call icon → own
+emergency card) REPLACED by angel-qr-profile (qr-code-outline, label 'QR PROFIL'
+→ /emergency-qr). Labels added: SOS / QR PROFIL / DOKTOR. callFamily removed.
+
+BUG 4 (family contacts): NEW backend routes/family_contacts.py (registered in server.py):
+POST/GET /api/family-contacts, DELETE /api/family-contacts/{id},
+POST /api/family-contacts/{id}/sos. Phones encrypted at rest (Fernet, CONTACTS_ENC_KEY in
+backend/.env). Relations: partner/rodic/surodenec/dieta/priatel/lekar/ine. Max 20. Phone
+regex validated. VERIFIED via curl + mongo (ciphertext at rest, decrypted in API).
+NEW screen app/family-contacts.tsx: fc-add button → modal (fc-name, fc-phone, fc-rel-{id},
+fc-save, fc-cancel), cards fc-card-{id} with fc-call- (tel:), fc-sos- (POST sos + prefilled
+SMS), fc-del- → inline confirm fc-del-yes-/fc-del-no-. LayoutAnimation on add/remove.
+family.tsx hub: prominent gold 'fs-contacts' hero button '+ PRIDAŤ ČLENA RODINY' under Angel hero.
+Existing test contact: Mária +421 900 123 456 (rodic), contact_id d36d87633c0b4b9c9f4fa9eda888d378 (founder).
+
+BUG 5 (duplicates removed on Home): header 'home-jarvis' sparkles (dup of Home Orb) and
+header 'angel-toggle' SENIOR chip (dup of hub-guardian-gold tile) REMOVED. Audited
+health/family/legacy hubs — no same-screen duplicates found. No TODO/Lorem placeholders exist.
+
+Auth: founder-bypass-btn / POST /api/auth/dev-bypass guardian.angel.core@proton.me.

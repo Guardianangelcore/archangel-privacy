@@ -36,6 +36,13 @@ A sovereign, faceless, 22nd-century survival OS for individuals + their Guardian
 3. OpenAI safety rejections on imagine → 400 with friendly Slovak message.
 4. **Sonar História** — `GET/DELETE /api/agent/search/history` + collapsible section in Jarvis (SONAR mode): past searches with source counts, tap re-injects Q&A+citations into chat.
 
+## Phase 50 (CRITICAL UX FIXES — June 2026)
+1. Settings gear (⚙️) visible top-right on ALL main screens: Home, 3 pillar hubs, Jarvis (`jv-settings`), Trezor (`vault-settings`), Rodinné kontakty (`fc-settings`).
+2. **Jarvis LIVE STREAM** — `POST /api/agent/chat/stream` (SSE, gpt-5.4 via `stream_message`); shared `_chat_system()` builder. Frontend: typing dots (51 ms), first tokens ~1 s, progressive bubble, fallback to classic call. Pain-diary intent streams deterministically.
+3. Angel Mode: phone icon → **QR PROFIL** (`angel-qr-profile` → /emergency-qr); labeled trio SOS / QR PROFIL / DOKTOR.
+4. **Rodinné kontakty** — `routes/family_contacts.py`: POST/GET/DELETE + `/sos`; phones Fernet-encrypted at rest (`CONTACTS_ENC_KEY`). Screen `/family-contacts`: add modal (meno/telefón/vzťah chips), cards with Zavolať (tel:), Poslať SOS (event+push+prefilled SMS), delete with inline confirm. Gold `fs-contacts` hero in Family hub.
+5. Duplicates removed on Home header: `home-jarvis` sparkles (dup of Orb) + `angel-toggle` SENIOR chip (dup of GUARDIAN GOLD tile).
+
 ## Integrations
 - Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT, GPT Image 1).
 - Perplexity Sonar (`PERPLEXITY_API_KEY` in backend/.env — blank = graceful fallback).

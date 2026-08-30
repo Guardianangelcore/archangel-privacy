@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring, withSequence, Easing, cancelAnimation,
 } from 'react-native-reanimated';
 import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
+import { fetch as expoFetch } from 'expo/fetch';
 import { api, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
@@ -114,7 +115,7 @@ export default function Jarvis() {
   const { user } = useAuth();
   const [state, setState] = useState<any>(null);
   const [briefing, setBriefing] = useState<any>(null);
-  const [msgs, setMsgs] = useState<{ role: 'user' | 'agent'; text: string; citations?: string[]; image?: string; vaultDocId?: string }[]>([]);
+  const [msgs, setMsgs] = useState<{ role: 'user' | 'agent'; text: string; citations?: string[]; image?: string; vaultDocId?: string; streaming?: boolean }[]>([]);
   const [mode, setMode] = useState<'chat' | 'sonar' | 'imagine'>('chat');
   const [input, setInput] = useState('');
   const [mood, setMood] = useState<Mood>('calm');
@@ -218,14 +219,63 @@ export default function Jarvis() {
           speak(spoken, 'calm');
         }
       } else {
-        const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'sk' }) });
-        setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply }]);
-        const m: Mood = res.mood || 'calm';
-        setMood(m); setStatus('');
-        showXp(res.xp_gained);
-        if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
-        loadState(); loadMems();
-        if (viaVoice) speak(res.reply, m);
+        // LIVE STREAM — first tokens hit the bubble in <0.5 s (SSE via expo/fetch).
+        // Graceful fallback to the classic non-stream call on any transport error.
+        const applyMeta = (meta: any) => {
+          setMood((meta.mood as Mood) || 'calm'); setStatus('');
+          showXp(meta.xp_gained);
+          if (meta.level_up) setLevelUp({ level: meta.level, name: meta.level_name });
+          loadState(); loadMems();
+        };
+        let acc = '';
+        try {
+          const token = await getToken();
+          const resp = await expoFetch(`${API_BASE}/api/agent/chat/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ message: q, language: user?.language || 'sk' }),
+          });
+          if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
+          const reader = (resp.body as any).getReader();
+          const dec = new TextDecoder();
+          let buf = ''; let meta: any = null;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const parts = buf.split('\n\n'); buf = parts.pop() || '';
+            for (const p of parts) {
+              const line = p.trim();
+              if (!line.startsWith('data:')) continue;
+              let d: any; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
+              if (d.t) {
+                acc += d.t;
+                const text = acc;
+                setMsgs(prev => {
+                  const last = prev[prev.length - 1];
+                  if (last && last.role === 'agent' && last.streaming) {
+                    return [...prev.slice(0, -1), { ...last, text }];
+                  }
+                  return [...prev.slice(-8), { role: 'agent', text, streaming: true }];
+                });
+              } else if (d.done) { meta = d; }
+              else if (d.error) { throw new Error(d.error); }
+            }
+          }
+          if (!acc) throw new Error('empty stream');
+          if (meta) { applyMeta(meta); } else { setStatus(''); setMood('calm'); loadState(); loadMems(); }
+          if (viaVoice) speak(acc, (meta?.mood as Mood) || 'calm');
+        } catch (streamErr) {
+          console.log('stream fallback', streamErr);
+          const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'sk' }) });
+          setMsgs(prev => {
+            const last = prev[prev.length - 1];
+            const base = last && last.role === 'agent' && last.streaming ? prev.slice(0, -1) : prev;
+            return [...base.slice(-8), { role: 'agent', text: res.reply }];
+          });
+          applyMeta(res);
+          if (viaVoice) speak(res.reply, (res.mood as Mood) || 'calm');
+        }
       }
     } catch (e: any) { setErr(String(e.message || e)); setMood('calm'); setStatus(''); }
     setBusy(null);
@@ -330,9 +380,14 @@ export default function Jarvis() {
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
         <Text style={st.title}>JARVIS 2.0 · ŽIVÁ DUŠA</Text>
-        <View style={st.streak}>
-          <Ionicons name="flame" size={13} color={C.brand} />
-          <Text style={st.streakText}>{state?.streak_days ?? 0}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <Pressable testID="jv-settings" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={10}>
+            <Ionicons name="settings-outline" size={20} color={C.onS3} />
+          </Pressable>
+          <View style={st.streak}>
+            <Ionicons name="flame" size={13} color={C.brand} />
+            <Text style={st.streakText}>{state?.streak_days ?? 0}</Text>
+          </View>
         </View>
       </View>
 
@@ -405,7 +460,8 @@ export default function Jarvis() {
             )}
           </View>
         ))}
-        {busy === 'chat' && <ActivityIndicator color={cfg.color} style={{ marginTop: S.md }} />}
+        {busy === 'chat' && !msgs[msgs.length - 1]?.streaming && <TypingDots color={cfg.color} />}
+        {busy === 'chat' && mode !== 'chat' && <ActivityIndicator color={cfg.color} style={{ marginTop: S.md }} />}
         {!!err && <Text style={st.err}>{err}</Text>}
 
         {/* JARVIS ULTRA — MODE SELECTOR (Chat · Sonar Web · Vision Forge) */}
@@ -568,6 +624,24 @@ export default function Jarvis() {
         </View>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+/** Typing indicator — three breathing dots, mounts instantly on send. */
+function TypingDots({ color }: { color: string }) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    v.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.linear }), -1, false);
+  }, [v]);
+  const d0 = useAnimatedStyle(() => ({ opacity: 0.25 + 0.75 * Math.abs(Math.sin(v.value * Math.PI)) }));
+  const d1 = useAnimatedStyle(() => ({ opacity: 0.25 + 0.75 * Math.abs(Math.sin((v.value + 0.33) * Math.PI)) }));
+  const d2 = useAnimatedStyle(() => ({ opacity: 0.25 + 0.75 * Math.abs(Math.sin((v.value + 0.66) * Math.PI)) }));
+  return (
+    <View testID="jv-typing" style={[st.bubble, st.bubbleAgent, { flexDirection: 'row', gap: 6, paddingVertical: 14 }]}>
+      {[d0, d1, d2].map((s, i) => (
+        <Animated.View key={i} style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }, s]} />
+      ))}
+    </View>
   );
 }
 

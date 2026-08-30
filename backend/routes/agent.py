@@ -338,6 +338,39 @@ def _detect_pain_level(text: str) -> Optional[int]:
     return lvl if lvl and 1 <= lvl <= 10 else None
 
 
+CHAT_PLAIN_RULE = (
+    " Reply with PLAIN TEXT only — no JSON, no markdown code fences, no headings. "
+    "Warm, senior-friendly, concise (max ~120 words unless asked for detail)."
+)
+
+
+async def _chat_system(user: dict, uid: str, level: int, json_mode: bool):
+    """Shared system-prompt builder for /agent/chat (JSON) and /agent/chat/stream (plain)."""
+    ctx = await _gather_context(user)
+    memories = await _recall_memories(uid)
+    history = await db.agent_conversations.find({"user_id": uid}, {"_id": 0}).sort("at", -1).to_list(6)
+    history.reverse()
+    anomalies = await _detect_anomalies(uid)
+    convo = "\n".join(f"{'USER' if h['role'] == 'user' else 'JARVIS'}: {h['text'][:300]}" for h in history)
+    mem_block = "\n".join(f"- {m['text']} ({m['topic']}, {str(m['created_at'])[:10]})" for m in memories) or "-"
+    sys = (
+        _persona(level, user.get("name", "")) +
+        f" Companion level: {level}/10 ({LEVEL_NAMES[level - 1]}). Answer STRICTLY in {_lang_name(user)} for a senior. "
+        "Never invent data not present in the snapshot or memories. "
+        f"{AI_COMPLIANCE_NOTE}" + (CHAT_JSON_RULE if json_mode else CHAT_PLAIN_RULE) +
+        f"\n\nLONG-TERM MEMORIES:\n{mem_block}" +
+        (f"\n\nACTIVE HEALTH ALERTS:\n" + "\n".join(a["text"] for a in anomalies) if anomalies else "") +
+        f"\n\nRECENT CONVERSATION:\n{convo or '-'}" +
+        f"\n\nLIVE DATA SNAPSHOT (JSON):\n{json.dumps(ctx, ensure_ascii=False, default=str)[:5000]}" +
+        (f"\n\nCRITICAL LANGUAGE RULE: The 'reply' value MUST be written in {_lang_name(user)} — "
+         if json_mode else
+         f"\n\nCRITICAL LANGUAGE RULE: Your reply MUST be written in {_lang_name(user)} — ") +
+        "regardless of the language of the user's message, memories or prior conversation. "
+        "This is the user's chosen app language."
+    )
+    return sys, anomalies
+
+
 @api.post("/agent/chat")
 async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
@@ -385,26 +418,7 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
 
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
-    ctx = await _gather_context(user)
-    memories = await _recall_memories(uid)
-    history = await db.agent_conversations.find({"user_id": uid}, {"_id": 0}).sort("at", -1).to_list(6)
-    history.reverse()
-    anomalies = await _detect_anomalies(uid)
-    convo = "\n".join(f"{'USER' if h['role'] == 'user' else 'JARVIS'}: {h['text'][:300]}" for h in history)
-    mem_block = "\n".join(f"- {m['text']} ({m['topic']}, {str(m['created_at'])[:10]})" for m in memories) or "-"
-    sys = (
-        _persona(level, user.get("name", "")) +
-        f" Companion level: {level}/10 ({LEVEL_NAMES[level - 1]}). Answer STRICTLY in {_lang_name(user)} for a senior. "
-        "Never invent data not present in the snapshot or memories. "
-        f"{AI_COMPLIANCE_NOTE}" + CHAT_JSON_RULE +
-        f"\n\nLONG-TERM MEMORIES:\n{mem_block}" +
-        (f"\n\nACTIVE HEALTH ALERTS:\n" + "\n".join(a["text"] for a in anomalies) if anomalies else "") +
-        f"\n\nRECENT CONVERSATION:\n{convo or '-'}" +
-        f"\n\nLIVE DATA SNAPSHOT (JSON):\n{json.dumps(ctx, ensure_ascii=False, default=str)[:5000]}" +
-        f"\n\nCRITICAL LANGUAGE RULE: The 'reply' value MUST be written in {_lang_name(user)} — "
-        "regardless of the language of the user's message, memories or prior conversation. "
-        "This is the user's chosen app language."
-    )
+    sys, anomalies = await _chat_system(user, uid, level, json_mode=True)
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
         session_id=f"agent-{uid[:8]}-{uuid.uuid4().hex[:6]}",
@@ -836,3 +850,75 @@ async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Hea
             "doc_id": doc_id if saved_to_vault else None, "saved_to_vault": saved_to_vault,
             "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
             "level_name": LEVEL_NAMES[xp["level"] - 1]}
+
+
+# =========================================================================
+# JARVIS LIVE STREAM — instant-feel chat. First tokens hit the client in
+# <500 ms via SSE; convo storage + XP happen after the stream completes.
+# Pain-diary shortcut reuses the deterministic /agent/chat path.
+# =========================================================================
+from fastapi.responses import StreamingResponse
+from emergentintegrations.llm.chat import TextDelta, StreamDone
+
+
+@api.post("/agent/chat/stream")
+async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    if not body.message.strip():
+        raise HTTPException(400, "message required")
+    q = body.message[:1000]
+    sse_headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
+
+    # Deterministic pain-diary intent — reuse the full non-stream logic, emit as one chunk.
+    if _detect_pain_level(body.message):
+        res = await agent_chat(body, authorization)
+
+        async def gen_pain():
+            yield f"data: {json.dumps({'t': res['reply']}, ensure_ascii=False)}\n\n"
+            meta = {k: res.get(k) for k in ("mood", "xp_gained", "level", "level_up", "level_name", "pain_logged", "milestone")}
+            yield f"data: {json.dumps({'done': True, **meta}, ensure_ascii=False)}\n\n"
+        return StreamingResponse(gen_pain(), media_type="text/event-stream", headers=sse_headers)
+
+    st = await _get_state(uid)
+    level = _level_for(st.get("xp", 0))
+    sys, anomalies = await _chat_system(user, uid, level, json_mode=False)
+    mood = "concerned" if anomalies else "calm"
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"agent-s-{uid[:8]}-{uuid.uuid4().hex[:6]}",
+        system_message=sys,
+    ).with_model("openai", "gpt-5.4")
+
+    async def gen():
+        full = ""
+        try:
+            async for ev in chat.stream_message(UserMessage(text=q)):
+                if isinstance(ev, TextDelta) and ev.content:
+                    full += ev.content
+                    yield f"data: {json.dumps({'t': ev.content}, ensure_ascii=False)}\n\n"
+                elif isinstance(ev, StreamDone):
+                    break
+        except Exception as e:
+            logger.error(f"agent stream error: {e}")
+            if not full:
+                yield f"data: {json.dumps({'error': 'AI service unavailable'})}\n\n"
+                return
+        reply = apply_watermark(full)
+        tail = reply[len(full):]
+        if tail:
+            yield f"data: {json.dumps({'t': tail}, ensure_ascii=False)}\n\n"
+        now = datetime.now(timezone.utc)
+        await db.agent_conversations.insert_many([
+            {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": q, "at": now},
+            {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply[:2000], "mood": mood, "at": now},
+        ])
+        await db.agent_state.update_one({"user_id": uid}, {"$set": {"mood": mood}})
+        asyncio.create_task(_extract_memories(uid, q, reply))
+        xp = await award_xp(uid, 5, "chat")
+        meta = {"done": True, "mood": mood, "xp_gained": xp["gained"], "level": xp["level"],
+                "level_up": xp["level_up"], "level_name": LEVEL_NAMES[xp["level"] - 1],
+                "alerts": anomalies}
+        yield f"data: {json.dumps(meta, ensure_ascii=False, default=str)}\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream", headers=sse_headers)

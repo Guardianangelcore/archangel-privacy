@@ -1,0 +1,30 @@
+{
+  "summary": "Iter 39 — All 5 UX bug fixes VERIFIED green (both backend + frontend, mobile 390x844). Backend: 12/12 pytest passed in /app/backend/tests/test_iter38_ux_fixes.py (pytest_iter38.xml). BUG2 streaming SSE: TTFB ~1s, progressive `data: {t:...}` chunks, final `data: {done:true, mood, xp_gained, level, ...}` with watermark. BUG2 non-stream /api/agent/chat contract unchanged (reply/mood/xp_gained/level/level_name/alerts). BUG4 family contacts: existing Mária d36d876... intact, POST creates with decrypted phone + relation_label 'Súrodenec', invalid phone → 400, invalid relation → falls back to 'ine', /sos returns ok+sms_body, DELETE 200 + unknown 404, Mongo docs contain phone_enc (gAAAA... Fernet) and NO plaintext phone field. Regression: /api/triage/state → 200; /api/agent/search still degraded:true (blank PPLX key — expected). Frontend: founder-bypass-btn logs in → founder lands in ANGEL MODE with bottom trio angel-sos + angel-qr-profile + angel-doctor (angel-family completely absent → BUG3 OK); QR-PROFIL tile navigates to /emergency-qr; angel-toggle-back exits to standard home. BUG1 gears verified on 6 screens: home-profile (→/profile), hub-family-profile, hub-legacy-profile, hub-health-profile, jv-settings, vault-settings — all present. BUG5 duplicates: home-jarvis count=0, angel-toggle count=0; hub-guardian-gold + home-orb still present and functional. BUG4 UI: /family shows prominent gold '+ PRIDAŤ ČLENA RODINY' fs-contacts button → opens /family-contacts → fc-add opens modal → fc-name/fc-phone/fc-rel-dieta chip → fc-save creates fc-card-* with DIEŤA badge, phone, ZAVOLAŤ/POSLAŤ SOS/trash → fc-del-* → inline fc-del-yes-* confirm removes the card. BUG2 UI on /jarvis: 'Povedz mi krátky vtip' → jv-typing dots appeared in 51ms, first bubble in 1089ms, progressive growth confirmed, final watermarked reply '— AI Content · Sovereign Protocol' rendered correctly. No red screens, no broken flows.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter38_ux_fixes.py",
+    "/app/test_reports/pytest/pytest_iter38.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/family_contacts.py cleanly encrypts phone via Fernet at rest with CONTACTS_ENC_KEY, decrypts only in _view(); rejects invalid phone via regex; caps at 20 contacts; enforces user_id scoping on GET/DELETE/SOS. Good.",
+    "routes/agent.py /agent/chat/stream: SSE with X-Accel-Buffering:no, uses shared _chat_system(json_mode=False) helper for plain-text stream while /agent/chat keeps JSON contract via json_mode=True. Watermark is applied AFTER stream ends and any tail is emitted before 'done' — sound design.",
+    "agent.py _chat_system reuse across stream and JSON avoids drift — future prompt tweaks stay in one place.",
+    "jarvis.tsx: send button testID is jv-ask (not jv-send). Consider adding jv-send as an alias for future test scripts (minor)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter38_ux_fixes.py (new)"
+  ],
+  "success_rate": { "backend": "100% (12/12)", "frontend": "100% of tested flows" },
+  "seed_data_creation": "None. Used founder auto-seeded account guardian.angel.core@proton.me. Existing Mária contact (d36d87633c0b4b9c9f4fa9eda888d378) verified intact. Test-created TEST_Brat and TEST_Janka contacts were deleted at test end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 5 UX bug fixes are green end-to-end. Reusable test file: /app/backend/tests/test_iter38_ux_fixes.py (12 tests). Frontend testIDs to remember: home-profile, hub-family-profile, hub-legacy-profile, hub-health-profile, jv-settings, vault-settings (gears); fs-contacts (/family → /family-contacts); fc-add / fc-name / fc-phone / fc-rel-{partner|rodic|surodenec|dieta|priatel|lekar|ine} / fc-save / fc-card-{id} / fc-call-{id} / fc-sos-{id} / fc-del-{id} / fc-del-yes-{id} / fc-back; angel-sos / angel-qr-profile / angel-doctor (angel-family REMOVED); jarvis send button is testID='jv-ask' (not jv-send); jv-typing, jv-msg-{i}-{role}. Streaming endpoint POST /api/agent/chat/stream returns SSE with `data: {t:...}` chunks and final `data: {done:true, mood, xp_gained, level, level_up, level_name, alerts}`. Watermark '— AI Content · Sovereign Protocol' is applied server-side after stream completes (tail chunk). PERPLEXITY_API_KEY still blank → sonar degraded:true — intentional.",
+  "rca_of_issue": "N/A — all fixes verified working."
+}

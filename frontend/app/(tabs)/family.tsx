@@ -25,18 +25,31 @@ export default function FamilyShield() {
       title="Rodinný štít"
       subtitle="Pilier 2 · Angel Shield Hub — hrdinská ochrana seniorov a rodinná synchronizácia."
       hero={
-        <Pulse minScale={1} maxScale={1.03} duration={1400} style={{ marginTop: S.lg }}>
-          <Pressable testID="fs-angel" onPress={enableAngel} style={st.angelHero}>
-            <View style={st.angelHeroIcon}>
-              <Ionicons name="accessibility" size={30} color={C.onInverse} />
+        <>
+          <Pulse minScale={1} maxScale={1.03} duration={1400} style={{ marginTop: S.lg }}>
+            <Pressable testID="fs-angel" onPress={enableAngel} style={st.angelHero}>
+              <View style={st.angelHeroIcon}>
+                <Ionicons name="accessibility" size={30} color={C.onInverse} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={st.angelHeroTitle}>ANGEL MODE</Text>
+                <Text style={st.angelHeroSub}>1 ťuk — ultra-jednoduchý Senior OS s Jarvisom, SOS a Kúzelnou lupou</Text>
+              </View>
+              <Ionicons name="power" size={26} color={C.brand} />
+            </Pressable>
+          </Pulse>
+          {/* RODINNÉ KONTAKTY — encrypted emergency phone book, prominent at the top */}
+          <Pressable testID="fs-contacts" onPress={() => { tap('medium'); router.push('/family-contacts'); }} style={st.contactsHero}>
+            <View style={st.contactsHeroIcon}>
+              <Ionicons name="person-add" size={26} color={C.onInverse} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={st.angelHeroTitle}>ANGEL MODE</Text>
-              <Text style={st.angelHeroSub}>1 ťuk — ultra-jednoduchý Senior OS s Jarvisom, SOS a Kúzelnou lupou</Text>
+              <Text style={st.contactsHeroTitle}>+ PRIDAŤ ČLENA RODINY</Text>
+              <Text style={st.contactsHeroSub}>Núdzové čísla rodiny · Zavolať · SOS · šifrované</Text>
             </View>
-            <Ionicons name="power" size={26} color={C.brand} />
+            <Ionicons name="chevron-forward" size={22} color={C.brand} />
           </Pressable>
-        </Pulse>
+        </>
       }
       sections={[
         { title: '👵 HEROIC SENIOR SUITE', items: [
@@ -77,4 +90,8 @@ const st = StyleSheet.create({
   angelHeroIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
   angelHeroTitle: { color: C.brand, fontWeight: '900', fontSize: 18, letterSpacing: 2 },
   angelHeroSub: { color: C.onS3, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  contactsHero: { flexDirection: 'row', alignItems: 'center', gap: S.lg, backgroundColor: C.surface2, borderRadius: R.lg, padding: S.lg, minHeight: 84, borderWidth: 1.5, borderColor: C.brand, marginTop: S.md },
+  contactsHeroIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
+  contactsHeroTitle: { color: C.fg, fontWeight: '900', fontSize: 15, letterSpacing: 1 },
+  contactsHeroSub: { color: C.onS3, fontSize: 11.5, lineHeight: 16, marginTop: 3 },
 });

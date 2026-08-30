@@ -1,7 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // HOME 2026 — Glass/Luxe command center: Guardian Lens FAB, glass pillars, breathing Jarvis
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -170,20 +170,8 @@ export default function Home() {
               <Text style={styles.achChipText}>{achProgress.unlocked}/{achProgress.total}</Text>
             </Pressable>
           )}
-          <Pressable testID="home-jarvis" onPress={() => { tap(); router.push('/jarvis'); }} hitSlop={8}>
-            <Ionicons name="sparkles" size={20} color={C.brand} />
-          </Pressable>
-          {/* GUARDIAN GOLD TOGGLE — top-nav Sentient Switch (Angel Mode entry) */}
-          <Pressable
-            testID="angel-toggle"
-            onPress={toggleAngel}
-            disabled={busy}
-            hitSlop={8}
-            style={[styles.angelToggle, seniorHint && styles.angelToggleGold]}
-          >
-            <Ionicons name="accessibility" size={16} color={seniorHint ? C.onInverse : C.brand} />
-            <Text style={[styles.angelToggleText, seniorHint && { color: C.onInverse }]}>SENIOR</Text>
-          </Pressable>
+          {/* DUP-CLEAN: header Jarvis + SENIOR chips removed — the Home Orb and the
+              GUARDIAN GOLD tile below are the single, more prominent entry points. */}
           <Pressable testID="home-profile" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={8}>
             <Ionicons name="settings-outline" size={22} color={C.onS3} />
           </Pressable>
@@ -502,16 +490,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
     router.push('/fall-verify');
   });
 
-  const callFamily = async () => {
-    try {
-      const prof: any = await api('/emergency-profile');
-      if (prof?.emergency_contact_phone) {
-        Linking.openURL(`tel:${prof.emergency_contact_phone}`);
-        return;
-      }
-    } catch {}
-    router.push('/emergency-qr');
-  };
+  // (phone icon removed — replaced by QR PROFIL button, see angel-qr-profile)
 
   return (
     <View testID="angel-home" style={{ flex: 1, backgroundColor: C.bg }}>
@@ -582,15 +561,25 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
             </ScrollView>
 
             <View style={styles.angelBottom}>
-              <Pressable testID="angel-sos" onPress={() => router.push('/fall-verify')} style={[styles.angelEmg, { backgroundColor: C.error }]}>
-                <Ionicons name="alert" size={44} color={C.onError} />
-              </Pressable>
-              <Pressable testID="angel-family" onPress={callFamily} style={styles.angelEmg}>
-                <Ionicons name="call" size={44} color={C.brand} />
-              </Pressable>
-              <Pressable testID="angel-doctor" onPress={() => router.navigate('/(tabs)/hunter')} style={styles.angelEmg}>
-                <Ionicons name="medkit" size={44} color={C.brand} />
-              </Pressable>
+              <View style={styles.angelEmgWrap}>
+                <Pressable testID="angel-sos" onPress={() => router.push('/fall-verify')} style={[styles.angelEmg, { backgroundColor: C.error }]}>
+                  <Ionicons name="alert" size={44} color={C.onError} />
+                </Pressable>
+                <Text style={styles.angelEmgLabel}>SOS</Text>
+              </View>
+              {/* QR PROFIL — shareable emergency profile QR (replaced the confusing phone icon) */}
+              <View style={styles.angelEmgWrap}>
+                <Pressable testID="angel-qr-profile" onPress={() => { tap('medium'); router.push('/emergency-qr'); }} style={styles.angelEmg}>
+                  <Ionicons name="qr-code-outline" size={44} color={C.brand} />
+                </Pressable>
+                <Text style={styles.angelEmgLabel}>QR PROFIL</Text>
+              </View>
+              <View style={styles.angelEmgWrap}>
+                <Pressable testID="angel-doctor" onPress={() => router.navigate('/(tabs)/hunter')} style={styles.angelEmg}>
+                  <Ionicons name="medkit" size={44} color={C.brand} />
+                </Pressable>
+                <Text style={styles.angelEmgLabel}>DOKTOR</Text>
+              </View>
             </View>
           </SafeAreaView>
         </View>
@@ -687,6 +676,8 @@ const styles = StyleSheet.create({
   healSub: { color: C.info, fontSize: 10.5, marginTop: S.md, lineHeight: 15 },
   angelBrief: { flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 2, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.xl, minHeight: 56, backgroundColor: 'rgba(10,10,15,0.5)' },
   angelBriefText: { color: C.brand, fontWeight: '900', fontSize: 15, letterSpacing: 2 },
-  angelBottom: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', paddingBottom: S.xxl, paddingTop: S.lg },
+  angelBottom: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'flex-start', paddingBottom: S.xxl, paddingTop: S.lg },
+  angelEmgWrap: { alignItems: 'center', gap: 6 },
+  angelEmgLabel: { color: C.fg, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
   angelEmg: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(22,22,30,0.9)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.borderStrong },
 });
