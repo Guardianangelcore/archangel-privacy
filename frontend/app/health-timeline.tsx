@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { api, apiUpload } from '@/src/api';
@@ -20,14 +20,22 @@ const CATS: any = {
   surgery: { label: 'OPERÁCIA', plural: 'OPERÁCIE', icon: 'cut-outline', color: '#FF453A', hint: 'Operácia (napr. Slepé črevo)' },
   injury: { label: 'ÚRAZ', plural: 'ÚRAZY', icon: 'bandage-outline', color: '#FF9F0A', hint: 'Úraz (napr. Zlomenina)' },
   exam: { label: 'PREHLIADKA', plural: 'PREHLIADKY', icon: 'medkit-outline', color: '#D4AF37', hint: 'Prehliadka (napr. Kardiológia)' },
+  dental: { label: 'ZUBÁR', plural: 'ZUBÁR', icon: 'tooth-outline', mci: true, color: '#64D2FF', hint: 'Zákrok (napr. Plomba)' },
   history: { label: 'DOKUMENT', plural: 'DOKUMENTY', icon: 'document-text-outline', color: '#8E8E93', hint: '' },
 };
-const CAT_KEYS = ['vaccine', 'disease', 'surgery', 'injury', 'exam'];
+const CAT_KEYS = ['vaccine', 'disease', 'surgery', 'injury', 'exam', 'dental'];
 const BLOOD = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'];
 const fmtDate = (iso?: string | null) => {
   if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || '—';
   const [y, m, d] = iso.split('-');
   return `${parseInt(d, 10)}. ${parseInt(m, 10)}. ${y}`;
+};
+
+const CatIcon = ({ cat, size, color }: { cat: string; size: number; color: string }) => {
+  const ui = CATS[cat] || CATS.exam;
+  return ui.mci
+    ? <MaterialCommunityIcons name={ui.icon} size={size} color={color} />
+    : <Ionicons name={ui.icon} size={size} color={color} />;
 };
 
 export default function LifeCard() {
@@ -37,6 +45,10 @@ export default function LifeCard() {
   const [filter, setFilter] = useState<string>('all');
   const [err, setErr] = useState('');
 
+  // karty detí (Karta pre dieťa)
+  const [children, setChildren] = useState<any[]>([]);
+  const [activeChild, setActiveChild] = useState<any>(null); // null = moja karta
+
   // quick add (+)
   const [adding, setAdding] = useState(false);
   const [cat, setCat] = useState('vaccine');
@@ -44,13 +56,17 @@ export default function LifeCard() {
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
   const [booster, setBooster] = useState('');
+  const [tooth, setTooth] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // identity edit
+  // identity edit (+ nová karta dieťaťa)
   const [editing, setEditing] = useState(false);
+  const [addingChild, setAddingChild] = useState(false);
+  const [delChild, setDelChild] = useState(false);
   const [eName, setEName] = useState('');
   const [eBirth, setEBirth] = useState('');
   const [eBlood, setEBlood] = useState('');
+  const [eSex, setESex] = useState('');
   const [cardBusy, setCardBusy] = useState(false);
 
   // predictions
@@ -58,11 +74,12 @@ export default function LifeCard() {
   const [accepting, setAccepting] = useState<string>('');
   const [predMsg, setPredMsg] = useState('');
 
-  // OCR rodného listu + PDF export
+  // OCR rodného listu + PDF export + očkovací preukaz EÚ
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrMsg, setOcrMsg] = useState('');
   const [camBlocked, setCamBlocked] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [vaxBusy, setVaxBusy] = useState(false);
 
   // rodinné karty (Guardian Circle)
   const [fam, setFam] = useState<any>(null);
@@ -70,30 +87,84 @@ export default function LifeCard() {
   const [famTl, setFamTl] = useState<any>(null);
   const [famBusy, setFamBusy] = useState(false);
 
-  const load = async (f = filter) => {
+  const tlQuery = (f: string, child: any) => {
+    const p: string[] = [];
+    if (f !== 'all') p.push(`category=${f}`);
+    if (child) p.push(`child_id=${child.child_id}`);
+    return p.length ? `?${p.join('&')}` : '';
+  };
+
+  const load = async (f = filter, child = activeChild) => {
     try {
-      const [c, t, fm] = await Promise.all([
+      const [c, t, kids, fm] = await Promise.all([
         api('/lifecard'),
-        api(`/calendar/timeline${f !== 'all' ? `?category=${f}` : ''}`),
+        api(`/calendar/timeline${tlQuery(f, child)}`),
+        api('/lifecard/children').catch(() => null),
         api('/lifecard/family').catch(() => null),
       ]);
       setCard(c); setData(t); if (fm) setFam(fm);
+      if (kids) {
+        setChildren(kids.children || []);
+        if (child) {
+          const fresh = (kids.children || []).find((k: any) => k.child_id === child.child_id);
+          if (fresh) setActiveChild(fresh);
+        }
+      }
     } catch (e: any) { setErr(String(e.message || e)); }
   };
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setF = (f: string) => { setFilter(f); api(`/calendar/timeline${f !== 'all' ? `?category=${f}` : ''}`).then(setData).catch(() => {}); };
+  const setF = (f: string) => { setFilter(f); api(`/calendar/timeline${tlQuery(f, activeChild)}`).then(setData).catch(() => {}); };
+
+  const switchCard = (child: any) => {
+    setActiveChild(child); setFilter('all'); setEditing(false); setAddingChild(false); setDelChild(false);
+    setPredMsg(''); setOcrMsg(''); setData(null);
+    api(`/calendar/timeline${tlQuery('all', child)}`).then(setData).catch(() => {});
+  };
 
   const openEdit = () => {
-    setEName(card?.full_name || ''); setEBirth(card?.birth_date || ''); setEBlood(card?.blood_type || '');
-    setEditing(true);
+    const src = activeChild || card;
+    setEName((activeChild ? activeChild.name : card?.full_name) || '');
+    setEBirth(src?.birth_date || ''); setEBlood(src?.blood_type || '');
+    setESex(activeChild?.sex || '');
+    setAddingChild(false); setDelChild(false); setEditing(true);
+  };
+
+  const openAddChild = () => {
+    setEName(''); setEBirth(''); setEBlood(''); setESex('');
+    setEditing(false); setDelChild(false); setOcrMsg(''); setAddingChild(true);
   };
 
   const saveCard = async () => {
+    setErr('');
+    if (addingChild && (!eName.trim() || !eBirth)) { setErr('Zadajte meno dieťaťa a dátum narodenia.'); return; }
+    setCardBusy(true);
+    try {
+      if (addingChild) {
+        const ch = await api('/lifecard/children', { method: 'POST', body: JSON.stringify({ name: eName.trim(), birth_date: eBirth, blood_type: eBlood, sex: eSex }) });
+        setAddingChild(false);
+        setChildren(prev => [...prev, ch]);
+        switchCard(ch);
+      } else if (activeChild) {
+        const ch = await api(`/lifecard/children/${activeChild.child_id}`, { method: 'PUT', body: JSON.stringify({ name: eName.trim() || null, birth_date: eBirth || null, blood_type: eBlood, sex: eSex }) });
+        setActiveChild(ch);
+        setChildren(prev => prev.map(k => (k.child_id === ch.child_id ? ch : k)));
+        setEditing(false);
+      } else {
+        const c = await api('/lifecard', { method: 'PUT', body: JSON.stringify({ full_name: eName.trim() || null, birth_date: eBirth || null, blood_type: eBlood }) });
+        setCard(c); setEditing(false);
+      }
+    } catch (e: any) { setErr(String(e.message || e)); }
+    finally { setCardBusy(false); }
+  };
+
+  const removeChild = async () => {
+    if (!activeChild) return;
     setCardBusy(true); setErr('');
     try {
-      const c = await api('/lifecard', { method: 'PUT', body: JSON.stringify({ full_name: eName.trim() || null, birth_date: eBirth || null, blood_type: eBlood }) });
-      setCard(c); setEditing(false);
+      await api(`/lifecard/children/${activeChild.child_id}`, { method: 'DELETE' });
+      setChildren(prev => prev.filter(k => k.child_id !== activeChild.child_id));
+      switchCard(null);
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setCardBusy(false); }
   };
@@ -102,8 +173,8 @@ export default function LifeCard() {
     if (!title.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { setErr('Zadajte názov a vyberte dátum v kalendári.'); return; }
     setBusy(true); setErr('');
     try {
-      await api('/calendar/events', { method: 'POST', body: JSON.stringify({ category: cat, title: title.trim(), date, notes: notes.trim(), booster_due: cat === 'vaccine' && booster ? booster : null }) });
-      setTitle(''); setDate(''); setNotes(''); setBooster(''); setAdding(false);
+      await api('/calendar/events', { method: 'POST', body: JSON.stringify({ category: cat, title: title.trim(), date, notes: notes.trim(), booster_due: cat === 'vaccine' && booster ? booster : null, child_id: activeChild?.child_id || null, tooth: cat === 'dental' && tooth.trim() ? tooth.trim() : null }) });
+      setTitle(''); setDate(''); setNotes(''); setBooster(''); setTooth(''); setAdding(false);
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(false); }
@@ -145,9 +216,17 @@ export default function LifeCard() {
   // PDF Karty života — jedným ťukom pre lekára / rodinu
   const exportPdf = async () => {
     setPdfBusy(true); setErr('');
-    try { await sharePdf('/lifecard/report.pdf', 'guardian_karta_zivota.pdf'); }
+    try { await sharePdf(`/lifecard/report.pdf${activeChild ? `?child_id=${activeChild.child_id}` : ''}`, 'guardian_karta_zivota.pdf'); }
     catch (e: any) { setErr(String(e.message || e)); }
     finally { setPdfBusy(false); }
+  };
+
+  // Očkovací preukaz EÚ — viacjazyčný certifikát na cesty (14 jazykov)
+  const exportVaxPass = async () => {
+    setVaxBusy(true); setErr('');
+    try { await sharePdf(`/lifecard/vaccine-pass.pdf${activeChild ? `?child_id=${activeChild.child_id}` : ''}`, 'guardian_ockovaci_preukaz_eu.pdf'); }
+    catch (e: any) { setErr(String(e.message || e)); }
+    finally { setVaxBusy(false); }
   };
 
   // Rodinná karta — načítanie očkovaní/prehliadok člena kruhu
@@ -162,8 +241,13 @@ export default function LifeCard() {
   const generatePredictions = async () => {
     setPredBusy(true); setPredMsg(''); setErr('');
     try {
-      const r = await api('/lifecard/predictions', { method: 'POST' });
-      setCard((c: any) => ({ ...c, predictions: r.predictions, predictions_at: r.generated_at }));
+      const r = await api('/lifecard/predictions', { method: 'POST', body: JSON.stringify({ child_id: activeChild?.child_id || null }) });
+      if (activeChild) {
+        setActiveChild((c: any) => ({ ...c, predictions: r.predictions }));
+        setChildren(prev => prev.map(k => (k.child_id === activeChild.child_id ? { ...k, predictions: r.predictions } : k)));
+      } else {
+        setCard((c: any) => ({ ...c, predictions: r.predictions, predictions_at: r.generated_at }));
+      }
       if (!r.predictions?.length) setPredMsg('Jarvis nenašiel žiadne blížiace sa termíny — história je v poriadku.');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setPredBusy(false); }
@@ -172,10 +256,10 @@ export default function LifeCard() {
   const acceptPrediction = async (p: any) => {
     setAccepting(p.title); setPredMsg('');
     try {
-      await api('/lifecard/predictions/accept', { method: 'POST', body: JSON.stringify({ title: p.title, category: p.category, date: p.suggested_date, reason: p.reason }) });
+      await api('/lifecard/predictions/accept', { method: 'POST', body: JSON.stringify({ title: p.title, category: p.category, date: p.suggested_date, reason: p.reason, child_id: activeChild?.child_id || null }) });
       let msg = '✅ Pridané do Karty života.';
       if (Platform.OS !== 'web') {
-        const nat = await addToGuardianCalendar(`🛡️ ${p.title}`, p.suggested_date, `Guardian Angel · Jarvis predikcia\n${p.reason || ''}`);
+        const nat = await addToGuardianCalendar(`🛡️ ${activeChild ? `${activeChild.name} — ` : ''}${p.title}`, p.suggested_date, `Guardian Angel · Jarvis predikcia\n${p.reason || ''}`);
         if (nat.ok) msg = '✅ Pridané do Karty života aj do kalendára telefónu.';
         else if (nat.reason === 'blocked') msg = '✅ Pridané do Karty života. Kalendár telefónu je zablokovaný — povoľte ho v Nastaveniach.';
       }
@@ -186,8 +270,9 @@ export default function LifeCard() {
   };
 
   const events = data?.events || [];
-  const counts = data?.counts || card?.counts || {};
-  const predictions = card?.predictions || [];
+  const counts = data?.counts || (activeChild ? activeChild.counts : card?.counts) || {};
+  const predictions = (activeChild ? activeChild.predictions : card?.predictions) || [];
+  const ident = activeChild || card;
 
   return (
     <SafeAreaView testID="health-timeline-screen" style={styles.root} edges={['top']}>
@@ -205,35 +290,55 @@ export default function LifeCard() {
         <Text style={styles.sub}>Očkovania · choroby · operácie · úrazy · prehliadky — všetko na jednej časovej osi.</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
+        {/* PREPÍNAČ KARIET — moja karta + karty detí */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: S.md }} contentContainerStyle={{ gap: S.sm }}>
+          <Pressable testID="lc-card-me" onPress={() => switchCard(null)} style={[styles.cardChip, !activeChild && styles.cardChipOn]}>
+            <Ionicons name="shield" size={13} color={!activeChild ? C.onInverse : C.brand} />
+            <Text style={[styles.cardChipText, !activeChild && { color: C.onInverse }]}>MOJA KARTA</Text>
+          </Pressable>
+          {children.map(k => (
+            <Pressable key={k.child_id} testID={`lc-card-${k.child_id}`} onPress={() => switchCard(k)} style={[styles.cardChip, activeChild?.child_id === k.child_id && styles.cardChipOn]}>
+              <Ionicons name="happy-outline" size={13} color={activeChild?.child_id === k.child_id ? C.onInverse : C.brand} />
+              <Text style={[styles.cardChipText, activeChild?.child_id === k.child_id && { color: C.onInverse }]}>{(k.name || '').toUpperCase()}</Text>
+            </Pressable>
+          ))}
+          <Pressable testID="lc-add-child" onPress={openAddChild} style={styles.cardChip}>
+            <Ionicons name="add" size={14} color={C.brand} />
+            <Text style={styles.cardChipText}>DIEŤA</Text>
+          </Pressable>
+        </ScrollView>
+
         {/* ZÁKLADNÉ ÚDAJE — zdroj: rodný list */}
         {!card && <ActivityIndicator color={C.brand} style={{ marginTop: S.lg }} />}
         {card && (
           <View testID="lc-identity" style={styles.idCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={styles.idIcon}><Ionicons name="person" size={22} color={C.onInverse} /></View>
+              <View style={styles.idIcon}><Ionicons name={activeChild ? 'happy' : 'person'} size={22} color={C.onInverse} /></View>
               <View style={{ flex: 1, marginLeft: S.md }}>
-                <Text style={styles.idName}>{card.full_name || 'Guardian Angel'}</Text>
-                <Text style={styles.idSrc}>ZÁKLADNÉ ÚDAJE · ZDROJ: RODNÝ LIST</Text>
+                <Text style={styles.idName}>{addingChild ? 'Nová karta dieťaťa' : (activeChild ? activeChild.name : (card.full_name || 'Guardian Angel'))}</Text>
+                <Text style={styles.idSrc}>{activeChild || addingChild ? 'KARTA DIEŤAŤA · ZDROJ: RODNÝ LIST' : 'ZÁKLADNÉ ÚDAJE · ZDROJ: RODNÝ LIST'}</Text>
               </View>
-              <Pressable testID="lc-edit" onPress={() => (editing ? setEditing(false) : openEdit())} hitSlop={10}>
-                <Ionicons name={editing ? 'close-circle-outline' : 'create-outline'} size={22} color={C.brand} />
+              <Pressable testID="lc-edit" onPress={() => (editing || addingChild ? (setEditing(false), setAddingChild(false)) : openEdit())} hitSlop={10}>
+                <Ionicons name={editing || addingChild ? 'close-circle-outline' : 'create-outline'} size={22} color={C.brand} />
               </Pressable>
             </View>
-            <View style={styles.idRow}>
-              <View style={styles.idCell}>
-                <Text style={styles.idLabel}>DÁTUM NARODENIA</Text>
-                <Text style={styles.idValue}>{card.birth_date ? fmtDate(card.birth_date) : (card.birth_year ? String(card.birth_year) : '—')}</Text>
+            {!addingChild && (
+              <View style={styles.idRow}>
+                <View style={styles.idCell}>
+                  <Text style={styles.idLabel}>DÁTUM NARODENIA</Text>
+                  <Text style={styles.idValue}>{ident?.birth_date ? fmtDate(ident.birth_date) : (!activeChild && card.birth_year ? String(card.birth_year) : '—')}</Text>
+                </View>
+                <View style={styles.idCell}>
+                  <Text style={styles.idLabel}>VEK</Text>
+                  <Text style={styles.idValue}>{ident?.age != null ? `${ident.age} r.` : '—'}</Text>
+                </View>
+                <View style={styles.idCell}>
+                  <Text style={styles.idLabel}>KRVNÁ SKUPINA</Text>
+                  <Text style={[styles.idValue, { color: C.error }]}>{ident?.blood_type || '—'}</Text>
+                </View>
               </View>
-              <View style={styles.idCell}>
-                <Text style={styles.idLabel}>VEK</Text>
-                <Text style={styles.idValue}>{card.age != null ? `${card.age} r.` : '—'}</Text>
-              </View>
-              <View style={styles.idCell}>
-                <Text style={styles.idLabel}>KRVNÁ SKUPINA</Text>
-                <Text style={[styles.idValue, { color: C.error }]}>{card.blood_type || '—'}</Text>
-              </View>
-            </View>
-            {editing && (
+            )}
+            {(editing || addingChild) && (
               <View style={styles.editBox}>
                 <View style={{ flexDirection: 'row', gap: S.sm }}>
                   <Pressable testID="lc-ocr-cam" onPress={() => runOcr(true)} disabled={ocrBusy} style={styles.ocrBtn}>
@@ -256,7 +361,7 @@ export default function LifeCard() {
                   </Pressable>
                 )}
                 {!!ocrMsg && <Text testID="lc-ocr-msg" style={styles.predMsg}>{ocrMsg}</Text>}
-                <TextInput testID="lc-name" style={styles.input} placeholder="Meno a priezvisko" placeholderTextColor={C.info} value={eName} onChangeText={setEName} />
+                <TextInput testID="lc-name" style={styles.input} placeholder={activeChild || addingChild ? 'Meno dieťaťa' : 'Meno a priezvisko'} placeholderTextColor={C.info} value={eName} onChangeText={setEName} />
                 <DateField testID="lc-birth" title="DÁTUM NARODENIA" value={eBirth} onChange={setEBirth} placeholder="Dátum narodenia" style={styles.input} />
                 <Text style={styles.idLabel}>KRVNÁ SKUPINA</Text>
                 <View style={styles.bloodRow}>
@@ -266,32 +371,83 @@ export default function LifeCard() {
                     </Pressable>
                   ))}
                 </View>
+                {(activeChild || addingChild) && (
+                  <>
+                    <Text style={styles.idLabel}>POHLAVIE (pre WHO rastové percentily)</Text>
+                    <View style={{ flexDirection: 'row', gap: S.sm }}>
+                      <Pressable testID="lc-sex-m" onPress={() => setESex(eSex === 'm' ? '' : 'm')} style={[styles.bloodChip, { flex: 1 }, eSex === 'm' && { backgroundColor: C.brand, borderColor: C.brand }]}>
+                        <Text style={[styles.bloodChipText, eSex === 'm' && { color: C.onInverse }]}>👦 CHLAPEC</Text>
+                      </Pressable>
+                      <Pressable testID="lc-sex-f" onPress={() => setESex(eSex === 'f' ? '' : 'f')} style={[styles.bloodChip, { flex: 1 }, eSex === 'f' && { backgroundColor: C.brand, borderColor: C.brand }]}>
+                        <Text style={[styles.bloodChipText, eSex === 'f' && { color: C.onInverse }]}>👧 DIEVČA</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
                 <Pressable testID="lc-save-card" onPress={saveCard} disabled={cardBusy} style={styles.cta}>
-                  {cardBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ULOŽIŤ ÚDAJE</Text>}
+                  {cardBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{addingChild ? 'VYTVORIŤ KARTU DIEŤAŤA' : 'ULOŽIŤ ÚDAJE'}</Text>}
                 </Pressable>
+                {editing && activeChild && !delChild && (
+                  <Pressable testID="lc-del-child" onPress={() => setDelChild(true)} style={styles.delBtn}>
+                    <Ionicons name="trash-outline" size={14} color={C.error} />
+                    <Text style={styles.delBtnText}>ODSTRÁNIŤ KARTU DIEŤAŤA</Text>
+                  </Pressable>
+                )}
+                {editing && activeChild && delChild && (
+                  <View style={{ flexDirection: 'row', gap: S.sm }}>
+                    <Pressable testID="lc-del-child-yes" onPress={removeChild} style={[styles.delBtn, { flex: 1, backgroundColor: C.error, borderColor: C.error }]}>
+                      <Text style={[styles.delBtnText, { color: C.onInverse }]}>ÁNO, ODSTRÁNIŤ AJ ZÁZNAMY</Text>
+                    </Pressable>
+                    <Pressable testID="lc-del-child-no" onPress={() => setDelChild(false)} style={[styles.delBtn, { flex: 1 }]}>
+                      <Text style={[styles.delBtnText, { color: C.fg }]}>ZRUŠIŤ</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
             )}
           </View>
         )}
 
-        {/* PDF PRE LEKÁRA / RODINU — 1 ťuk */}
+        {/* PDF · PREUKAZ EÚ · TRENDY · RAST — 1 ťuk */}
         {card && (
-          <Pressable testID="lc-pdf" onPress={exportPdf} disabled={pdfBusy} style={styles.pdfBtn}>
-            {pdfBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
-              <>
-                <Ionicons name="print-outline" size={18} color={C.brand} />
-                <Text style={styles.pdfText}>PDF KARTY ŽIVOTA — PRE LEKÁRA / RODINU</Text>
-              </>
+          <View style={styles.btnRow}>
+            <Pressable testID="lc-pdf" onPress={exportPdf} disabled={pdfBusy} style={styles.pdfBtn}>
+              {pdfBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
+                <>
+                  <Ionicons name="print-outline" size={16} color={C.brand} />
+                  <Text style={styles.pdfText}>PDF PRE LEKÁRA</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable testID="lc-vaxpass" onPress={exportVaxPass} disabled={vaxBusy} style={styles.pdfBtn}>
+              {vaxBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
+                <>
+                  <Ionicons name="airplane-outline" size={16} color={C.brand} />
+                  <Text style={styles.pdfText}>OČKOVACÍ PREUKAZ EÚ</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable testID="lc-trends" onPress={() => router.push({ pathname: '/health-trends', params: activeChild ? { child_id: activeChild.child_id, name: activeChild.name } : {} } as any)} style={styles.pdfBtn}>
+              <Ionicons name="bar-chart-outline" size={16} color={C.brand} />
+              <Text style={styles.pdfText}>TRENDY ZDRAVIA</Text>
+            </Pressable>
+            {activeChild && (
+              <Pressable testID="lc-growth" onPress={() => router.push({ pathname: '/child-growth', params: { child_id: activeChild.child_id } } as any)} style={styles.pdfBtn}>
+                <Ionicons name="trending-up-outline" size={16} color={C.brand} />
+                <Text style={styles.pdfText}>RASTOVÁ KRIVKA</Text>
+              </Pressable>
             )}
-          </Pressable>
+          </View>
         )}
 
-        {/* HLASOVÉ PRIDÁVANIE cez Jarvisa */}
-        <Pressable testID="lc-voice-hint" onPress={() => router.push('/jarvis')} style={styles.voiceHint}>
-          <Ionicons name="mic-outline" size={20} color={C.brand} />
-          <Text style={styles.voiceHintText}>Povedzte Jarvisovi: „Dnes mi doktor povedal, že mám kiahne“ — zaradí to sem automaticky.</Text>
-          <Ionicons name="chevron-forward" size={16} color={C.info} />
-        </Pressable>
+        {/* HLASOVÉ PRIDÁVANIE cez Jarvisa — len pre moju kartu */}
+        {!activeChild && (
+          <Pressable testID="lc-voice-hint" onPress={() => router.push('/jarvis')} style={styles.voiceHint}>
+            <Ionicons name="mic-outline" size={20} color={C.brand} />
+            <Text style={styles.voiceHintText}>Povedzte Jarvisovi: „Dnes mi doktor povedal, že mám kiahne“ — zaradí to sem automaticky.</Text>
+            <Ionicons name="chevron-forward" size={16} color={C.info} />
+          </Pressable>
+        )}
 
         {(data?.booster_alerts || []).length > 0 && (
           <View style={styles.alertBox}>
@@ -311,7 +467,7 @@ export default function LifeCard() {
             <View style={styles.catWrap}>
               {CAT_KEYS.map(k => (
                 <Pressable key={k} testID={`ht-cat-${k}`} onPress={() => setCat(k)} style={[styles.catChip, cat === k && { backgroundColor: CATS[k].color, borderColor: CATS[k].color }]}>
-                  <Ionicons name={CATS[k].icon} size={13} color={cat === k ? C.onInverse : CATS[k].color} />
+                  <CatIcon cat={k} size={13} color={cat === k ? C.onInverse : CATS[k].color} />
                   <Text style={[styles.catChipText, cat === k && { color: C.onInverse }]}>{CATS[k].label}</Text>
                 </Pressable>
               ))}
@@ -321,6 +477,9 @@ export default function LifeCard() {
             <TextInput testID="lc-notes" style={styles.input} placeholder="Popis (voliteľné)" placeholderTextColor={C.info} value={notes} onChangeText={setNotes} />
             {cat === 'vaccine' && (
               <DateField testID="ht-booster" title="BOOSTER DO" value={booster} onChange={setBooster} placeholder="Booster do (voliteľné)" style={styles.input} />
+            )}
+            {cat === 'dental' && (
+              <TextInput testID="lc-tooth" style={styles.input} placeholder="Zub č. (voliteľné, napr. 36)" placeholderTextColor={C.info} keyboardType="number-pad" maxLength={4} value={tooth} onChangeText={setTooth} />
             )}
             <Pressable testID="ht-save" onPress={add} disabled={busy} style={styles.cta}>
               {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ULOŽIŤ ZÁZNAM</Text>}
@@ -338,14 +497,14 @@ export default function LifeCard() {
               {predBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.predBtnText}>{predictions.length ? 'OBNOVIŤ' : 'NAVRHNÚŤ'}</Text>}
             </Pressable>
           </View>
-          <Text style={styles.predSub}>Jarvis podľa histórie navrhne, kedy je ďalšie očkovanie alebo prehliadka.</Text>
+          <Text style={styles.predSub}>{activeChild ? `Jarvis navrhne ďalšie očkovanie alebo prehliadku pre ${activeChild.name} podľa detského očkovacieho kalendára.` : 'Jarvis podľa histórie navrhne, kedy je ďalšie očkovanie alebo prehliadka.'}</Text>
           {!!predMsg && <Text testID="lc-pred-msg" style={styles.predMsg}>{predMsg}</Text>}
           {predictions.map((p: any, i: number) => {
             const ui = CATS[p.category] || CATS.exam;
             return (
               <View key={`${p.title}-${i}`} testID={`lc-pred-${i}`} style={styles.predCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
-                  <Ionicons name={ui.icon} size={15} color={ui.color} />
+                  <CatIcon cat={p.category} size={15} color={ui.color} />
                   <Text style={[styles.tlCat, { color: ui.color }]}>{ui.label} · {p.suggested_date}</Text>
                 </View>
                 <Text style={styles.predCardTitle}>{p.title}</Text>
@@ -364,7 +523,8 @@ export default function LifeCard() {
           {predictions.length > 0 && <Text style={styles.aiMark}>AI Content · Sovereign Protocol</Text>}
         </View>
 
-        {/* RODINNÉ KARTY — Guardian Circle (len očkovania + prehliadky) */}
+        {/* RODINNÉ KARTY — Guardian Circle (len očkovania + prehliadky) — len pre moju kartu */}
+        {!activeChild && (
         <View testID="lc-family" style={styles.famBox}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
             <Ionicons name="people" size={16} color={C.brand} />
@@ -393,7 +553,7 @@ export default function LifeCard() {
                   {famTl && (famTl.events || []).length === 0 && <Text style={styles.hint}>Žiadne očkovania ani prehliadky.</Text>}
                   {(famTl?.events || []).map((e: any) => (
                     <View key={e.event_id} style={styles.famEvRow}>
-                      <Ionicons name={(CATS[e.category] || CATS.exam).icon} size={13} color={(CATS[e.category] || CATS.exam).color} />
+                      <CatIcon cat={e.category} size={13} color={(CATS[e.category] || CATS.exam).color} />
                       <Text style={styles.famEvText}>{fmtDate(e.date)} — {e.title}{e.booster_due ? ` (booster do ${fmtDate(e.booster_due)})` : ''}</Text>
                     </View>
                   ))}
@@ -403,6 +563,7 @@ export default function LifeCard() {
             </View>
           ))}
         </View>
+        )}
 
         {/* FILTRE — 5 kategórií s počtami */}
         <View style={styles.filterRow}>
@@ -419,6 +580,25 @@ export default function LifeCard() {
         {!data && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
         {data && events.length === 0 && <Text style={styles.hint}>Žiadne záznamy. Pridajte prvý cez + alebo to povedzte Jarvisovi.</Text>}
 
+        {/* KARTA ZUBÁRA — história podľa zubov (pri filtri ZUBÁR) */}
+        {filter === 'dental' && events.length > 0 && (
+          <View testID="lc-dental-card" style={styles.dentalBox}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+              <MaterialCommunityIcons name="tooth-outline" size={16} color="#64D2FF" />
+              <Text style={[styles.predTitle, { color: '#64D2FF' }]}>KARTA ZUBÁRA — PODĽA ZUBOV</Text>
+            </View>
+            {(() => {
+              const byTooth: any = {};
+              events.filter((e: any) => e.tooth).forEach((e: any) => { (byTooth[e.tooth] = byTooth[e.tooth] || []).push(e); });
+              const teeth = Object.keys(byTooth).sort();
+              if (!teeth.length) return <Text style={styles.hint}>Tip: pri zázname vyplňte číslo zuba a uvidíte históriu ošetrení podľa zubov.</Text>;
+              return teeth.map(t => (
+                <Text key={t} style={styles.dentalRow}>🦷 Zub {t}: {byTooth[t].map((e: any) => `${e.title} (${fmtDate(e.date)})`).join(' · ')}</Text>
+              ));
+            })()}
+          </View>
+        )}
+
         {/* ČASOVÁ OS */}
         <View style={{ marginTop: S.lg }}>
           {events.map((e: any, i: number) => {
@@ -432,7 +612,7 @@ export default function LifeCard() {
                 </View>
                 <View style={[styles.tlCard, future && { borderColor: C.brand }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
-                    <Ionicons name={ui.icon} size={16} color={ui.color} />
+                    <CatIcon cat={e.category} size={16} color={ui.color} />
                     <Text style={[styles.tlCat, { color: ui.color }]}>{ui.label}{future ? ' · NADCHÁDZA' : ''}{e.source === 'voice' ? ' · 🎙 JARVIS' : e.source === 'jarvis' ? ' · ✨ PREDIKCIA' : ''}</Text>
                     <View style={{ flex: 1 }} />
                     <Pressable testID={`ht-del-${e.event_id}`} onPress={() => del(e.event_id)} hitSlop={8}>
@@ -440,7 +620,7 @@ export default function LifeCard() {
                     </Pressable>
                   </View>
                   <Text style={styles.tlTitle}>{e.title}</Text>
-                  <Text style={styles.tlDate}>{e.date}{e.booster_due ? ` · booster: ${e.booster_due}` : ''}{e.notes ? ` · ${e.notes}` : ''}</Text>
+                  <Text style={styles.tlDate}>{e.date}{e.tooth ? ` · zub ${e.tooth}` : ''}{e.booster_due ? ` · booster: ${e.booster_due}` : ''}{e.notes ? ` · ${e.notes}` : ''}</Text>
                 </View>
               </View>
             );
@@ -457,6 +637,12 @@ const styles = StyleSheet.create({
   title: { color: C.fg, fontWeight: '900', letterSpacing: 3, fontSize: 14 },
   h1: { fontSize: 24, fontWeight: '900', color: C.fg },
   sub: { marginTop: S.sm, fontSize: 13, color: C.onS3, lineHeight: 19 },
+  // card switcher (moja karta / deti)
+  cardChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.pill, paddingVertical: 9, paddingHorizontal: 14, minHeight: 38 },
+  cardChipOn: { backgroundColor: C.brand, borderColor: C.brand },
+  cardChipText: { color: C.brand, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
+  delBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: C.error, borderRadius: R.sm, minHeight: 42 },
+  delBtnText: { color: C.error, fontWeight: '900', fontSize: 10, letterSpacing: 0.5 },
   // identity card (rodný list)
   idCard: { marginTop: S.lg, backgroundColor: 'rgba(212,175,55,0.10)', borderRadius: R.lg, borderWidth: 1.5, borderColor: C.brand, padding: S.lg },
   idIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
@@ -475,8 +661,11 @@ const styles = StyleSheet.create({
   ocrBtnText: { color: C.brand, fontWeight: '900', fontSize: 9.5, letterSpacing: 0.5 },
   settingsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: C.warn, borderRadius: R.sm, minHeight: 40, paddingHorizontal: 10 },
   settingsText: { color: C.onWarn, fontWeight: '900', fontSize: 10 },
-  pdfBtn: { marginTop: S.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.md, minHeight: 48, backgroundColor: C.surface2 },
-  pdfText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  btnRow: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.md },
+  pdfBtn: { flexGrow: 1, flexBasis: '47%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.md, minHeight: 48, backgroundColor: C.surface2 },
+  pdfText: { color: C.brand, fontWeight: '900', fontSize: 10.5, letterSpacing: 0.8 },
+  dentalBox: { marginTop: S.lg, backgroundColor: 'rgba(100,210,255,0.07)', borderRadius: R.md, borderWidth: 1, borderColor: '#64D2FF', padding: S.md },
+  dentalRow: { color: C.onS3, fontSize: 12, marginTop: S.sm, lineHeight: 17 },
   // rodinné karty
   famBox: { marginTop: S.lg, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: S.md },
   famEmpty: { marginTop: S.xs },

@@ -58,6 +58,15 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 3. **Rodinné karty** — GET /api/lifecard/family (+/{member}/timeline): členovia Guardian Circle (db.guardians, obojsmerne) — zo súkromia len očkovania+prehliadky (403 mimo kruhu). Sekcia lc-family; empty state → /recovery-suite.
 4. **Booster Guard** — nový swarm agent (1h interval): booster_due o 30 a 7 dní → push + proaktívna Jarvis správa (raz na fázu, flagy na evente).
 
+## Phase 51.2 (Očkovací preukaz EÚ + Karta pre dieťa — June 2026)
+1. **Očkovací preukaz EÚ** — GET /api/lifecard/vaccine-pass(.pdf): bilingválny datablok + zoznam očkovaní + vyhlásenia v 14 jazykoch + SHA-256 DID podpis; tlačidlo lc-vaxpass (funguje aj pre kartu dieťaťa cez ?child_id=).
+2. **Karta pre dieťa** — db.lifecard_children (max 10, CRUD, DELETE kaskáduje záznamy+predikcie). calendar_events nesú child_id; detská karta má vlastnú časovú os/počty/filtre, pediatrické Jarvis predikcie (detský očkovací kalendár), PDF aj preukaz. Booster Guard menuje dieťa. Adult dáta (IPS, border, kompas, briefing, rodinné karty) child záznamy vylučujú. UI: horizontálny prepínač kariet (lc-card-me / lc-card-{id} / lc-add-child), formulár novej karty, mazanie s potvrdením; hlasový hint a Rodinné karty len na mojej karte.
+
+## Phase 51.3 (Rastová krivka + Trendy zdravia + Karta zubára — June 2026)
+1. **Rastová krivka** — db.growth_logs + WHO percentily (výška 0-18r normal, váha 0-10r lognormal, orientačné tabuľky v health.py); deti majú pohlavie (m/f); obrazovka /child-growth (SVG graf P3/P50/P97 + merania s percentilmi), tlačidlo lc-growth na detskej karte.
+2. **Trendy zdravia** — GET /api/lifecard/trends (ročné počty 6 kategórií, aj pre dieťa) + POST /trends/summary (Jarvis SK súhrn s watermarkom); obrazovka /health-trends (stacked ročné stĺpce + legenda + Jarvis súhrn), tlačidlo lc-trends.
+3. **Karta zubára** — 6. kategória dental (ZUBÁR, cyan, tooth ikona) všade (validácie, filtre, počty, PDF sekcia, predikcie, hlasový intent „bol som u zubára"); voliteľné číslo zuba (FDI) pri zázname; box KARTA ZUBÁRA (história podľa zubov) pri dental filtri.
+
 ## Integrations
 - Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT, GPT Image 1).
 - Perplexity Sonar (`PERPLEXITY_API_KEY` in backend/.env — blank = graceful fallback).

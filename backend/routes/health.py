@@ -7,7 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
-import os, uuid, hashlib, json, io, re, base64, httpx, asyncio
+import os, uuid, hashlib, json, io, re, base64, httpx, asyncio, math
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
@@ -903,44 +903,54 @@ async def health_drop_delete(drop_doc_id: str, authorization: Optional[str] = He
 
 # --------- KARTA ŽIVOTA (Life Card) — health axis from birth ---------
 # Categories: vaccine=Očkovania · disease=Choroby · surgery=Operácie ·
-# injury=Úrazy · exam=Prehliadky. Legacy 'history' remains for system rows
-# (vault documents, billing receipts); old MANUAL 'history' records are
-# lazily migrated to 'disease'.
-LIFECARD_CATS = ("vaccine", "disease", "surgery", "injury", "exam")
+# injury=Úrazy · exam=Prehliadky · dental=Zubár. Legacy 'history' remains for
+# system rows (vault/billing) shown as documents; old MANUAL 'history' rows
+# are lazily migrated to 'disease'.
+LIFECARD_CATS = ("vaccine", "disease", "surgery", "injury", "exam", "dental")
 BLOOD_TYPES = ("A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-")
 
 class CalendarEventIn(BaseModel):
-    category: str  # vaccine | disease | surgery | injury | exam
+    category: str  # vaccine | disease | surgery | injury | exam | dental
     title: str
     date: str      # YYYY-MM-DD
     notes: Optional[str] = ""
     booster_due: Optional[str] = None  # YYYY-MM-DD (vaccines)
+    child_id: Optional[str] = None     # record on a child's Life Card
+    tooth: Optional[str] = None        # FDI tooth number (dental — karta zubára)
 
 @api.post("/calendar/events")
 async def calendar_add(body: CalendarEventIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     cat = "disease" if body.category == "history" else body.category  # legacy alias
     if cat not in LIFECARD_CATS:
-        raise HTTPException(400, "category must be vaccine|disease|surgery|injury|exam")
+        raise HTTPException(400, "category must be vaccine|disease|surgery|injury|exam|dental")
     try:
         datetime.strptime(body.date, "%Y-%m-%d")
         if body.booster_due:
             datetime.strptime(body.booster_due, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(400, "date must be YYYY-MM-DD")
+    child_id = None
+    if body.child_id:
+        await _get_child(user["user_id"], body.child_id)
+        child_id = body.child_id
     doc = {
         "event_id": uuid.uuid4().hex, "user_id": user["user_id"],
         "category": cat, "title": body.title.strip()[:140],
         "date": body.date, "notes": (body.notes or "")[:500],
         "booster_due": body.booster_due, "source": "manual",
+        "child_id": child_id,
+        "tooth": (body.tooth or "").strip()[:4] or None,
         "created_at": datetime.now(timezone.utc),
     }
     await db.calendar_events.insert_one(doc.copy())
     return clean(doc)
 
-async def _lifecard_counts(uid: str) -> dict:
+async def _lifecard_counts(uid: str, child_id: Optional[str] = None) -> dict:
     counts = {c: 0 for c in LIFECARD_CATS}
-    rows = await db.calendar_events.find({"user_id": uid}, {"_id": 0, "category": 1}).to_list(2000)
+    # child_id=None matches both missing and null → adult card excludes child records
+    rows = await db.calendar_events.find({"user_id": uid, "child_id": child_id},
+                                         {"_id": 0, "category": 1}).to_list(2000)
     for r in rows:
         c = r.get("category")
         if c in counts:
@@ -948,14 +958,18 @@ async def _lifecard_counts(uid: str) -> dict:
     return counts
 
 @api.get("/calendar/timeline")
-async def calendar_timeline(category: Optional[str] = None, authorization: Optional[str] = Header(None)):
+async def calendar_timeline(category: Optional[str] = None, child_id: Optional[str] = None,
+                            authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
-    # Lazy migration: old manual 'history' rows ("Choroba / úraz") → disease
-    await db.calendar_events.update_many(
-        {"user_id": uid, "category": "history", "source": "manual"},
-        {"$set": {"category": "disease"}})
-    q: dict = {"user_id": uid}
+    if child_id:
+        await _get_child(uid, child_id)
+    else:
+        # Lazy migration: old manual 'history' rows ("Choroba / úraz") → disease
+        await db.calendar_events.update_many(
+            {"user_id": uid, "category": "history", "source": "manual"},
+            {"$set": {"category": "disease"}})
+    q: dict = {"user_id": uid, "child_id": child_id}
     if category in LIFECARD_CATS + ("history",):
         q["category"] = category
     events = await db.calendar_events.find(q, {"_id": 0}).sort("date", -1).to_list(500)
@@ -965,7 +979,7 @@ async def calendar_timeline(category: Optional[str] = None, authorization: Optio
     booster_alerts = [e for e in events if e["category"] == "vaccine" and e.get("booster_due") and e["booster_due"] <= horizon]
     return {"events": events, "upcoming_exams": sorted(upcoming, key=lambda e: e["date"]),
             "booster_alerts": sorted(booster_alerts, key=lambda e: e["booster_due"]),
-            "counts": await _lifecard_counts(uid), "today": today}
+            "counts": await _lifecard_counts(uid, child_id), "today": today}
 
 @api.delete("/calendar/events/{event_id}")
 async def calendar_delete(event_id: str, authorization: Optional[str] = Header(None)):
@@ -976,21 +990,26 @@ async def calendar_delete(event_id: str, authorization: Optional[str] = Header(N
     return {"ok": True}
 
 # --- Life Card identity (meno · dátum narodenia · krvná skupina — zdroj: rodný list) ---
+def _age_from(birth_date: Optional[str]) -> Optional[int]:
+    if not birth_date:
+        return None
+    try:
+        bd = datetime.strptime(birth_date, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    t = datetime.now(timezone.utc).date()
+    return t.year - bd.year - ((t.month, t.day) < (bd.month, bd.day))
+
 async def _lifecard_payload(user: dict) -> dict:
     uid = user["user_id"]
     prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
     birth_date = user.get("birth_date")
-    age = None
-    if birth_date:
-        try:
-            bd = datetime.strptime(birth_date, "%Y-%m-%d").date()
-            t = datetime.now(timezone.utc).date()
-            age = t.year - bd.year - ((t.month, t.day) < (bd.month, bd.day))
-        except ValueError:
-            birth_date = None
-    if age is None and user.get("birth_year"):
-        age = datetime.now(timezone.utc).year - int(user["birth_year"])
-    pred = await db.lifecard_predictions.find_one({"user_id": uid}, {"_id": 0}) or {}
+    age = _age_from(birth_date)
+    if age is None:
+        birth_date = None
+        if user.get("birth_year"):
+            age = datetime.now(timezone.utc).year - int(user["birth_year"])
+    pred = await db.lifecard_predictions.find_one({"user_id": uid, "child_id": None}, {"_id": 0}) or {}
     return {
         "full_name": prof.get("full_name") or user.get("name") or "",
         "birth_date": birth_date, "birth_year": user.get("birth_year"),
@@ -1039,38 +1058,364 @@ async def lifecard_update(body: LifeCardIn, authorization: Optional[str] = Heade
             {"user_id": uid}, {"$set": {**prof_upd, "user_id": uid}}, upsert=True)
     return clean(await _lifecard_payload(user))
 
-# --- PREDIKCIE — Jarvis suggests the next vaccination / preventive check-up ---
-@api.post("/lifecard/predictions")
-async def lifecard_predictions(authorization: Optional[str] = Header(None)):
+# --- KARTA PRE DIEŤA — parent keeps separate children's Life Cards from birth ---
+async def _get_child(uid: str, child_id: str) -> dict:
+    ch = await db.lifecard_children.find_one({"child_id": child_id, "user_id": uid}, {"_id": 0})
+    if not ch:
+        raise HTTPException(404, "Child not found")
+    return ch
+
+async def _child_view(uid: str, ch: dict) -> dict:
+    pred = await db.lifecard_predictions.find_one(
+        {"user_id": uid, "child_id": ch["child_id"]}, {"_id": 0}) or {}
+    return {
+        "child_id": ch["child_id"], "name": ch["name"],
+        "birth_date": ch.get("birth_date"), "blood_type": ch.get("blood_type") or "",
+        "sex": ch.get("sex") or "",
+        "age": _age_from(ch.get("birth_date")),
+        "counts": await _lifecard_counts(uid, ch["child_id"]),
+        "predictions": pred.get("predictions", []),
+    }
+
+class ChildIn(BaseModel):
+    name: str
+    birth_date: str  # YYYY-MM-DD — zdroj: rodný list
+    blood_type: Optional[str] = ""
+    sex: Optional[str] = ""  # m | f (pre WHO rastové percentily)
+
+class ChildUpdateIn(BaseModel):
+    name: Optional[str] = None
+    birth_date: Optional[str] = None
+    blood_type: Optional[str] = None
+    sex: Optional[str] = None
+
+def _validate_birth(birth_date: str):
+    try:
+        bd = datetime.strptime(birth_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(400, "birth_date must be YYYY-MM-DD")
+    if bd.year < 1900 or bd > datetime.now(timezone.utc).date():
+        raise HTTPException(400, "birth_date out of range")
+
+@api.get("/lifecard/children")
+async def children_list(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    rows = await db.lifecard_children.find(
+        {"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", 1).to_list(20)
+    return {"children": [clean(await _child_view(user["user_id"], ch)) for ch in rows]}
+
+@api.post("/lifecard/children")
+async def child_add(body: ChildIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
-    card = await _lifecard_payload(user)
+    if not body.name.strip():
+        raise HTTPException(400, "name required")
+    _validate_birth(body.birth_date)
+    if body.blood_type not in BLOOD_TYPES + ("", None):
+        raise HTTPException(400, f"blood_type must be one of {'|'.join(BLOOD_TYPES)}")
+    if body.sex not in ("m", "f", "", None):
+        raise HTTPException(400, "sex must be m|f")
+    if await db.lifecard_children.count_documents({"user_id": uid}) >= 10:
+        raise HTTPException(400, "Maximum 10 children")
+    ch = {
+        "child_id": uuid.uuid4().hex, "user_id": uid,
+        "name": body.name.strip()[:80], "birth_date": body.birth_date,
+        "blood_type": body.blood_type or "",
+        "sex": body.sex or "",
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.lifecard_children.insert_one(ch.copy())
+    return clean(await _child_view(uid, ch))
+
+@api.put("/lifecard/children/{child_id}")
+async def child_update(child_id: str, body: ChildUpdateIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    await _get_child(uid, child_id)
+    upd = {}
+    if body.name is not None and body.name.strip():
+        upd["name"] = body.name.strip()[:80]
+    if body.birth_date is not None and body.birth_date != "":
+        _validate_birth(body.birth_date)
+        upd["birth_date"] = body.birth_date
+    if body.blood_type is not None:
+        if body.blood_type not in BLOOD_TYPES + ("",):
+            raise HTTPException(400, f"blood_type must be one of {'|'.join(BLOOD_TYPES)}")
+        upd["blood_type"] = body.blood_type
+    if body.sex is not None:
+        if body.sex not in ("m", "f", ""):
+            raise HTTPException(400, "sex must be m|f")
+        upd["sex"] = body.sex
+    if upd:
+        await db.lifecard_children.update_one({"child_id": child_id, "user_id": uid}, {"$set": upd})
+    return clean(await _child_view(uid, await _get_child(uid, child_id)))
+
+@api.delete("/lifecard/children/{child_id}")
+async def child_delete(child_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    await _get_child(uid, child_id)
+    await db.calendar_events.delete_many({"user_id": uid, "child_id": child_id})
+    await db.lifecard_predictions.delete_many({"user_id": uid, "child_id": child_id})
+    await db.growth_logs.delete_many({"user_id": uid, "child_id": child_id})
+    await db.lifecard_children.delete_one({"child_id": child_id, "user_id": uid})
+    return {"ok": True}
+
+# --- RASTOVÁ KRIVKA — WHO growth percentiles (height-for-age 0-18y,
+# --- weight-for-age 0-10y). Approximate WHO medians+SD, linear interpolation.
+# --- Height-for-age is normal (WHO L=1): z=(v-M)/SD. Weight ~lognormal: z=ln(v/M)/S.
+WHO_HEIGHT = {  # (months, median_cm, sd_cm)
+    "m": [(0, 49.9, 1.9), (6, 67.6, 2.3), (12, 75.7, 2.7), (18, 82.3, 3.0), (24, 87.1, 3.3),
+          (36, 96.1, 3.7), (48, 103.3, 4.1), (60, 110.0, 4.5), (72, 116.0, 4.9), (84, 121.7, 5.3),
+          (96, 127.3, 5.7), (108, 132.6, 6.0), (120, 137.8, 6.4), (132, 143.1, 6.8), (144, 149.1, 7.3),
+          (156, 156.0, 7.9), (168, 163.2, 8.0), (180, 169.0, 7.6), (192, 172.9, 7.1), (204, 175.2, 6.8), (216, 176.1, 6.7)],
+    "f": [(0, 49.1, 1.9), (6, 65.7, 2.3), (12, 74.0, 2.6), (18, 80.7, 2.9), (24, 85.7, 3.2),
+          (36, 95.1, 3.6), (48, 102.7, 4.0), (60, 109.4, 4.3), (72, 115.1, 4.7), (84, 120.8, 5.1),
+          (96, 126.6, 5.5), (108, 132.5, 5.9), (120, 138.6, 6.3), (132, 145.0, 6.7), (144, 151.2, 6.9),
+          (156, 156.4, 6.8), (168, 159.8, 6.6), (180, 161.7, 6.4), (192, 162.5, 6.3), (204, 163.0, 6.3), (216, 163.2, 6.3)],
+}
+WHO_WEIGHT = {  # (months, median_kg, s_lognormal)
+    "m": [(0, 3.3, 0.13), (6, 7.9, 0.11), (12, 9.6, 0.11), (18, 10.9, 0.11), (24, 12.2, 0.11),
+          (36, 14.3, 0.12), (48, 16.3, 0.13), (60, 18.3, 0.14), (72, 20.5, 0.15), (84, 22.9, 0.16),
+          (96, 25.4, 0.17), (108, 28.1, 0.18), (120, 31.2, 0.19)],
+    "f": [(0, 3.2, 0.14), (6, 7.3, 0.12), (12, 8.9, 0.12), (18, 10.2, 0.12), (24, 11.5, 0.12),
+          (36, 13.9, 0.13), (48, 16.1, 0.14), (60, 18.2, 0.15), (72, 20.2, 0.16), (84, 22.4, 0.17),
+          (96, 25.0, 0.18), (108, 28.2, 0.19), (120, 31.9, 0.20)],
+}
+Z_P3, Z_P97 = -1.8808, 1.8808
+
+def _who_interp(table: list, months: float):
+    if months <= table[0][0]:
+        return table[0][1], table[0][2]
+    if months >= table[-1][0]:
+        return None if months > table[-1][0] + 12 else (table[-1][1], table[-1][2])
+    for i in range(len(table) - 1):
+        m0, v0, s0 = table[i]
+        m1, v1, s1 = table[i + 1]
+        if m0 <= months <= m1:
+            t = (months - m0) / (m1 - m0)
+            return v0 + t * (v1 - v0), s0 + t * (s1 - s0)
+    return None
+
+def _pct_from_z(z: float) -> float:
+    return round(50.0 * (1.0 + math.erf(z / math.sqrt(2))), 1)
+
+def _height_percentile(sex: str, months: float, cm: float) -> Optional[float]:
+    r = _who_interp(WHO_HEIGHT.get(sex, []), months) if sex in ("m", "f") else None
+    if not r:
+        return None
+    m, sd = r
+    return _pct_from_z((cm - m) / sd)
+
+def _weight_percentile(sex: str, months: float, kg: float) -> Optional[float]:
+    if months > 121 or sex not in ("m", "f"):
+        return None  # WHO weight-for-age ends at 10 y — ďalej sa sleduje BMI
+    r = _who_interp(WHO_WEIGHT[sex], months)
+    if not r:
+        return None
+    m, s = r
+    return _pct_from_z(math.log(kg / m) / s)
+
+def _growth_curves(sex: str, max_months: float) -> dict:
+    out = {"height": [], "weight": []}
+    if sex not in ("m", "f"):
+        return out
+    for table, key in ((WHO_HEIGHT[sex], "height"), (WHO_WEIGHT[sex], "weight")):
+        for m, med, s in table:
+            if m > max_months:
+                break
+            if key == "height":
+                lo, hi = med + Z_P3 * s, med + Z_P97 * s
+            else:
+                lo, hi = med * math.exp(Z_P3 * s), med * math.exp(Z_P97 * s)
+            out[key].append({"m": m, "p3": round(lo, 1), "p50": round(med, 1), "p97": round(hi, 1)})
+    return out
+
+class GrowthIn(BaseModel):
+    date: str  # YYYY-MM-DD
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+
+def _growth_months(birth_date: Optional[str], date: str) -> Optional[float]:
+    if not birth_date:
+        return None
+    try:
+        bd = datetime.strptime(birth_date, "%Y-%m-%d")
+        d = datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return max(0.0, (d - bd).days / 30.4375)
+
+def _growth_view(log: dict, child: dict) -> dict:
+    months = _growth_months(child.get("birth_date"), log["date"])
+    sex = child.get("sex") or ""
+    v = {**log, "age_months": round(months, 1) if months is not None else None,
+         "height_percentile": None, "weight_percentile": None}
+    if months is not None:
+        if log.get("height_cm"):
+            v["height_percentile"] = _height_percentile(sex, months, log["height_cm"])
+        if log.get("weight_kg"):
+            v["weight_percentile"] = _weight_percentile(sex, months, log["weight_kg"])
+    return v
+
+@api.post("/lifecard/children/{child_id}/growth")
+async def growth_add(child_id: str, body: GrowthIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    ch = await _get_child(uid, child_id)
+    try:
+        datetime.strptime(body.date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(400, "date must be YYYY-MM-DD")
+    if body.height_cm is None and body.weight_kg is None:
+        raise HTTPException(400, "height_cm or weight_kg required")
+    if body.height_cm is not None and not (30 <= body.height_cm <= 220):
+        raise HTTPException(400, "height_cm out of range (30-220)")
+    if body.weight_kg is not None and not (1 <= body.weight_kg <= 150):
+        raise HTTPException(400, "weight_kg out of range (1-150)")
+    log = {
+        "log_id": uuid.uuid4().hex, "user_id": uid, "child_id": child_id,
+        "date": body.date,
+        "height_cm": round(body.height_cm, 1) if body.height_cm is not None else None,
+        "weight_kg": round(body.weight_kg, 1) if body.weight_kg is not None else None,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.growth_logs.insert_one(log.copy())
+    return clean(_growth_view(log, ch))
+
+@api.get("/lifecard/children/{child_id}/growth")
+async def growth_list(child_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    ch = await _get_child(uid, child_id)
+    logs = await db.growth_logs.find({"user_id": uid, "child_id": child_id},
+                                     {"_id": 0}).sort("date", 1).to_list(300)
+    views = [_growth_view(l, ch) for l in logs]
+    ages = [v["age_months"] for v in views if v["age_months"] is not None]
+    max_m = max(ages + [24.0]) + 12
+    sex = ch.get("sex") or ""
+    return {"child": {"child_id": child_id, "name": ch["name"], "sex": sex,
+                      "birth_date": ch.get("birth_date"), "age": _age_from(ch.get("birth_date"))},
+            "logs": views, "curves": _growth_curves(sex, max_m),
+            "sex_required": sex not in ("m", "f"),
+            "note": "Orientačné percentily podľa rastových štandardov WHO. Váhové percentily do 10 rokov (ďalej sa sleduje BMI)."}
+
+@api.delete("/lifecard/growth/{log_id}")
+async def growth_delete(log_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    res = await db.growth_logs.delete_one({"log_id": log_id, "user_id": user["user_id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+# --- TRENDY ZDRAVIA — yearly counts per category + Jarvis summary ---
+@api.get("/lifecard/trends")
+async def lifecard_trends(child_id: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    if child_id:
+        await _get_child(uid, child_id)
     events = await db.calendar_events.find(
-        {"user_id": uid, "category": {"$in": list(LIFECARD_CATS)}},
+        {"user_id": uid, "child_id": child_id, "category": {"$in": list(LIFECARD_CATS)}},
+        {"_id": 0, "category": 1, "date": 1}).to_list(2000)
+    by_year: dict = {}
+    for e in events:
+        y = str(e.get("date") or "")[:4]
+        if not y.isdigit():
+            continue
+        row = by_year.setdefault(y, {c: 0 for c in LIFECARD_CATS})
+        row[e["category"]] += 1
+    years = [{"year": y, "counts": c, "total": sum(c.values())}
+             for y, c in sorted(by_year.items())]
+    return {"years": years, "total": sum(r["total"] for r in years)}
+
+class TrendSummaryIn(BaseModel):
+    child_id: Optional[str] = None
+
+@api.post("/lifecard/trends/summary")
+async def lifecard_trends_summary(body: Optional[TrendSummaryIn] = None,
+                                  authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    child_id = body.child_id if body else None
+    subject = "the user"
+    if child_id:
+        ch = await _get_child(uid, child_id)
+        subject = f"the user's child ({_age_from(ch.get('birth_date'))} y old)"
+    events = await db.calendar_events.find(
+        {"user_id": uid, "child_id": child_id, "category": {"$in": list(LIFECARD_CATS)}},
+        {"_id": 0, "category": 1, "date": 1, "title": 1}).sort("date", -1).to_list(300)
+    if not events:
+        return {"summary": "Zatiaľ nie sú žiadne záznamy na vyhodnotenie trendov. Pridajte prvé záznamy do Karty života.", "ai": False}
+    lang = (user.get("language") or "sk")[:2]
+    out_lang = "Slovak" if lang in ("sk", "cs") else f"the user's app language ({lang})"
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"lifecard-trends-{uuid.uuid4().hex[:6]}",
+        system_message=(
+            f"You are Jarvis, a warm health companion. You get {subject}'s Life Card records "
+            "(category, date, title). Write a YEARLY TREND SUMMARY: how diseases, injuries, "
+            "check-ups and dental visits evolve over time, which year stood out, and ONE "
+            "practical, gentle recommendation. No diagnosis, no alarmism. "
+            f"Write in {out_lang}, plain text, max 5 sentences."
+        ),
+    ).with_model("openai", "gpt-5.4")
+    try:
+        resp = await chat.send_message(UserMessage(
+            text=json.dumps(events[:200], ensure_ascii=False, default=str)[:6000]))
+        summary = str(resp).strip()[:1200]
+    except Exception as e:
+        logger.error(f"trends summary error: {e}")
+        raise HTTPException(502, "AI service unavailable")
+    return {"summary": summary + "\n\n⎯ AI Content · Sovereign Protocol", "ai": True}
+
+# --- PREDIKCIE — Jarvis suggests the next vaccination / preventive check-up ---
+class PredictIn(BaseModel):
+    child_id: Optional[str] = None
+
+@api.post("/lifecard/predictions")
+async def lifecard_predictions(body: Optional[PredictIn] = None, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    child_id = body.child_id if body else None
+    if child_id:
+        ch = await _get_child(uid, child_id)
+        age, birth_date = _age_from(ch.get("birth_date")), ch.get("birth_date")
+    else:
+        card = await _lifecard_payload(user)
+        age, birth_date = card["age"], card["birth_date"]
+    events = await db.calendar_events.find(
+        {"user_id": uid, "child_id": child_id, "category": {"$in": list(LIFECARD_CATS)}},
         {"_id": 0, "category": 1, "title": 1, "date": 1, "booster_due": 1},
     ).sort("date", -1).to_list(200)
-    today = card["today"]
+    today = datetime.now(timezone.utc).date().isoformat()
     lang = (user.get("language") or "sk")[:2]
     reason_lang = "Slovak" if lang in ("sk", "cs") else f"the user's app language ({lang})"
+    child_rule = (
+        "The patient is a CHILD — use the standard EU/Slovak childhood immunization schedule "
+        "(hexavalent series, MMR at 15-18 months, boosters at 5-6 and 12-13 years, etc.) and "
+        "paediatric preventive check-ups (roughly yearly). "
+        if (child_id and (age is None or age < 18)) else "")
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
         session_id=f"lifecard-pred-{uuid.uuid4().hex[:6]}",
         system_message=(
             "You are a preventive-care planner for Slovakia/Czechia (EU standards). "
             "Based on the patient's LIFE CARD history you suggest WHEN the next vaccination or "
-            "preventive check-up is due. Use standard adult schedules: tetanus booster every 15 years, "
+            "preventive check-up is due. " + child_rule +
+            "Use standard adult schedules: tetanus booster every 15 years, "
             "flu vaccine yearly for 59+, general preventive check-up every 2 years (yearly for 60+), "
             "dental check-up yearly, and respect explicit booster_due dates in the history. "
             'Return ONLY valid JSON, no markdown: {"predictions": [{"title": "...", '
-            '"category": "vaccine|exam", "suggested_date": "YYYY-MM-DD", "reason": "..."}]}. '
+            '"category": "vaccine|exam|dental", "suggested_date": "YYYY-MM-DD", "reason": "..."}]}. '
             f"Max 4 predictions. suggested_date must be AFTER {today} and within 24 months. "
             f"'title' and 'reason' (1 short sentence) must be written in {reason_lang}. "
             "Do not repeat a prediction for something already scheduled after today in the history."
         ),
     ).with_model("openai", "gpt-5.4")
     payload = {
-        "today": today, "age": card["age"], "birth_date": card["birth_date"],
-        "history": events[:100],
+        "today": today, "age": age, "birth_date": birth_date,
+        "is_child": bool(child_id), "history": events[:100],
     }
     try:
         resp = await chat.send_message(UserMessage(text=json.dumps(payload, ensure_ascii=False, default=str)[:6000]))
@@ -1089,18 +1434,20 @@ async def lifecard_predictions(authorization: Optional[str] = Header(None)):
                       "suggested_date": date, "reason": str(p.get("reason") or "")[:300]})
     generated_at = datetime.now(timezone.utc)
     await db.lifecard_predictions.update_one(
-        {"user_id": uid},
-        {"$set": {"user_id": uid, "predictions": preds, "generated_at": generated_at}},
+        {"user_id": uid, "child_id": child_id},
+        {"$set": {"user_id": uid, "child_id": child_id,
+                  "predictions": preds, "generated_at": generated_at}},
         upsert=True)
     from routes.agent import award_xp
     await award_xp(uid, 6, "lifecard_predictions")
-    return {"predictions": preds, "generated_at": generated_at, "ai": True}
+    return {"predictions": preds, "generated_at": generated_at, "child_id": child_id, "ai": True}
 
 class PredictionAcceptIn(BaseModel):
     title: str
     category: str = "exam"
     date: str  # YYYY-MM-DD
     reason: Optional[str] = ""
+    child_id: Optional[str] = None
 
 @api.post("/lifecard/predictions/accept")
 async def lifecard_prediction_accept(body: PredictionAcceptIn, authorization: Optional[str] = Header(None)):
@@ -1112,17 +1459,94 @@ async def lifecard_prediction_accept(body: PredictionAcceptIn, authorization: Op
         datetime.strptime(body.date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(400, "date must be YYYY-MM-DD")
+    child_id = None
+    if body.child_id:
+        await _get_child(uid, body.child_id)
+        child_id = body.child_id
     doc = {
         "event_id": uuid.uuid4().hex, "user_id": uid,
         "category": body.category, "title": body.title.strip()[:140],
         "date": body.date, "notes": f"Jarvis predikcia · {(body.reason or '').strip()}"[:500],
-        "booster_due": None, "source": "jarvis",
+        "booster_due": None, "source": "jarvis", "child_id": child_id,
         "created_at": datetime.now(timezone.utc),
     }
     await db.calendar_events.insert_one(doc.copy())
     await db.lifecard_predictions.update_one(
-        {"user_id": uid}, {"$pull": {"predictions": {"title": body.title}}})
+        {"user_id": uid, "child_id": child_id}, {"$pull": {"predictions": {"title": body.title}}})
     return clean(doc)
+
+# --- OČKOVACÍ PREUKAZ EÚ — multilingual vaccination certificate for EU travel ---
+VAXPASS_LANGS = [
+    ("en", "English", "This certificate lists the holder's vaccinations as recorded in their sovereign Guardian Life Card. Issued for travel within the EU/EEA. Authenticity is verifiable via the DID signature below."),
+    ("sk", "Slovenčina", "Tento preukaz uvádza očkovania držiteľa podľa jeho suverénnej Guardian Karty života. Vydané na cesty v rámci EÚ/EHP. Pravosť overíte pomocou DID podpisu nižšie."),
+    ("cs", "Čeština", "Tento průkaz uvádí očkování držitele dle jeho suverénní Guardian Karty života. Vydáno pro cesty v rámci EU/EHP. Pravost ověříte pomocí DID podpisu níže."),
+    ("de", "Deutsch", "Dieser Ausweis führt die Impfungen des Inhabers gemäß seiner souveränen Guardian-Lebenskarte auf. Ausgestellt für Reisen innerhalb der EU/des EWR. Die Echtheit ist über die untenstehende DID-Signatur überprüfbar."),
+    ("fr", "Français", "Ce certificat répertorie les vaccinations du titulaire telles qu'enregistrées dans sa Carte de Vie Guardian souveraine. Délivré pour les voyages au sein de l'UE/EEE. L'authenticité est vérifiable via la signature DID ci-dessous."),
+    ("es", "Español", "Este certificado enumera las vacunas del titular según su Tarjeta de Vida Guardian soberana. Emitido para viajes dentro de la UE/EEE. La autenticidad es verificable mediante la firma DID a continuación."),
+    ("it", "Italiano", "Questo certificato elenca le vaccinazioni del titolare come registrate nella sua Carta della Vita Guardian sovrana. Rilasciato per viaggi all'interno dell'UE/SEE. L'autenticità è verificabile tramite la firma DID sottostante."),
+    ("pl", "Polski", "Niniejszy certyfikat zawiera szczepienia posiadacza zapisane w jego suwerennej Karcie Życia Guardian. Wydany na podróże w obrębie UE/EOG. Autentyczność można zweryfikować za pomocą podpisu DID poniżej."),
+    ("hu", "Magyar", "Ez az igazolás a birtokos oltásait sorolja fel a szuverén Guardian Életkártyája alapján. EU/EGT-n belüli utazásra kiállítva. A hitelesség az alábbi DID-aláírással ellenőrizhető."),
+    ("uk", "Українська", "Цей сертифікат містить щеплення власника, записані в його суверенній Картці життя Guardian. Виданий для подорожей у межах ЄС/ЄЕЗ. Справжність можна перевірити за DID-підписом нижче."),
+    ("ru", "Русский", "Данный сертификат содержит прививки владельца, записанные в его суверенной Карте жизни Guardian. Выдан для поездок в пределах ЕС/ЕЭЗ. Подлинность проверяется по DID-подписи ниже."),
+    ("pt", "Português", "Este certificado lista as vacinas do titular registadas no seu Cartão de Vida Guardian soberano. Emitido para viagens na UE/EEE. A autenticidade é verificável através da assinatura DID abaixo."),
+    ("nl", "Nederlands", "Dit certificaat vermeldt de vaccinaties van de houder zoals geregistreerd in zijn soevereine Guardian Levenskaart. Afgegeven voor reizen binnen de EU/EER. De echtheid is verifieerbaar via de onderstaande DID-handtekening."),
+    ("ro", "Română", "Acest certificat enumeră vaccinările titularului, înregistrate în Cardul de Viață Guardian suveran. Emis pentru călătorii în UE/SEE. Autenticitatea poate fi verificată prin semnătura DID de mai jos."),
+]
+
+async def _vaxpass_payload(user: dict, child_id: Optional[str] = None) -> dict:
+    uid = user["user_id"]
+    if child_id:
+        ch = await _get_child(uid, child_id)
+        holder, birth_date, blood = ch["name"], ch.get("birth_date"), ch.get("blood_type") or ""
+    else:
+        prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
+        holder = prof.get("full_name") or user.get("name") or ""
+        birth_date, blood = user.get("birth_date"), prof.get("blood_type") or ""
+    vaccines = await db.calendar_events.find(
+        {"user_id": uid, "child_id": child_id, "category": "vaccine"},
+        {"_id": 0, "title": 1, "date": 1, "booster_due": 1, "notes": 1},
+    ).sort("date", -1).to_list(100)
+    core = {
+        "holder": holder, "birth_date": birth_date, "blood_type": blood,
+        "did": user["did"], "child": bool(child_id),
+        "vaccinations": vaccines,
+        "issued_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    }
+    core["did_signature"] = hashlib.sha256(
+        (user["did"] + json.dumps(core, sort_keys=True, ensure_ascii=False, default=str)).encode()).hexdigest()
+    core["languages"] = [{"code": c, "name": n} for c, n, _ in VAXPASS_LANGS]
+    return core
+
+@api.get("/lifecard/vaccine-pass")
+async def lifecard_vaccine_pass(child_id: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    return await _vaxpass_payload(user, child_id)
+
+@api.get("/lifecard/vaccine-pass.pdf")
+async def lifecard_vaccine_pass_pdf(child_id: Optional[str] = None, token: Optional[str] = None,
+                                    authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    data = await _vaxpass_payload(user, child_id)
+    vax_lines = "\n".join(
+        f"  • {v['date']}   {v['title']}"
+        + (f" — {v['notes']}" if v.get("notes") else "")
+        + (f"   [booster due / preskočkovanie do: {v['booster_due']}]" if v.get("booster_due") else "")
+        for v in data["vaccinations"]) or "  — none recorded / žiadne záznamy"
+    body = (
+        f"Holder / Držiteľ: {data['holder'] or '—'}"
+        + ("   (child / dieťa)" if data["child"] else "") + "\n"
+        f"Date of birth / Dátum narodenia: {data['birth_date'] or '—'}\n"
+        f"Blood type / Krvná skupina: {data['blood_type'] or '—'}\n"
+        f"Guardian DID: {data['did']}\n"
+        f"Issued / Vydané: {data['issued_at']}\n\n"
+        f"VACCINATIONS / OČKOVANIA ({len(data['vaccinations'])}):\n{vax_lines}\n"
+        + "\n" + "=" * 60 + "\n\n"
+        + "\n\n".join(f"[{name} · {code.upper()}]\n{text}" for code, name, text in VAXPASS_LANGS)
+    )
+    footer = f"DID SIGNATURE (SHA-256): {data['did_signature']}\n" + _pdf_footer()
+    pdf = await run_in_threadpool(
+        _make_pdf, "EU VACCINATION CERTIFICATE\nOČKOVACÍ PREUKAZ EÚ — Guardian Life Card", body, footer)
+    return _pdf_response(pdf, "guardian_ockovaci_preukaz_eu.pdf")
 
 # --- OCR RODNÉHO LISTU — Guardian Eye scans a birth certificate / ID and
 # --- prefills the Life Card identity (user confirms before saving).
@@ -1174,24 +1598,31 @@ async def lifecard_ocr(file: UploadFile = File(...), authorization: Optional[str
 
 # --- PDF KARTY ŽIVOTA — printable health axis for the doctor / family ---
 LIFECARD_LABELS_SK = {"vaccine": "OČKOVANIA", "disease": "CHOROBY", "surgery": "OPERÁCIE",
-                      "injury": "ÚRAZY", "exam": "PREHLIADKY"}
+                      "injury": "ÚRAZY", "exam": "PREHLIADKY", "dental": "ZUBÁR"}
 
 @api.get("/lifecard/report.pdf")
-async def lifecard_report_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+async def lifecard_report_pdf(child_id: Optional[str] = None, token: Optional[str] = None,
+                              authorization: Optional[str] = Header(None)):
     user = await _auth_pdf(authorization, token)
-    card = await _lifecard_payload(user)
+    if child_id:
+        ch = await _get_child(user["user_id"], child_id)
+        ident = {"full_name": ch["name"], "birth_date": ch.get("birth_date"),
+                 "birth_year": None, "blood_type": ch.get("blood_type") or "",
+                 "age": _age_from(ch.get("birth_date"))}
+    else:
+        ident = await _lifecard_payload(user)
     events = await db.calendar_events.find(
-        {"user_id": user["user_id"], "category": {"$in": list(LIFECARD_CATS)}},
+        {"user_id": user["user_id"], "child_id": child_id, "category": {"$in": list(LIFECARD_CATS)}},
         {"_id": 0}).sort("date", -1).to_list(500)
-    age = f" (vek {card['age']} r.)" if card.get("age") is not None else ""
+    age = f" (vek {ident['age']} r.)" if ident.get("age") is not None else ""
     lines = [
-        f"Meno: {card['full_name'] or '—'}",
-        f"Dátum narodenia: {card['birth_date'] or card['birth_year'] or '—'}{age}",
-        f"Krvná skupina: {card['blood_type'] or '—'}",
+        f"Meno: {ident['full_name'] or '—'}" + ("   (karta dieťaťa)" if child_id else ""),
+        f"Dátum narodenia: {ident['birth_date'] or ident.get('birth_year') or '—'}{age}",
+        f"Krvná skupina: {ident['blood_type'] or '—'}",
         f"DID (Guardian ID): {user['did']}",
         "",
     ]
-    for cat in ("vaccine", "disease", "surgery", "injury", "exam"):
+    for cat in LIFECARD_CATS:
         lines.append(f"{LIFECARD_LABELS_SK[cat]}:")
         rows = [e for e in events if e["category"] == cat]
         if not rows:
@@ -1199,7 +1630,8 @@ async def lifecard_report_pdf(token: Optional[str] = None, authorization: Option
         for e in rows:
             note = f" — {e['notes']}" if e.get("notes") else ""
             extra = f" · booster do {e['booster_due']}" if e.get("booster_due") else ""
-            lines.append(f"   • {e['date']}   {e['title']}{note}{extra}")
+            tooth = f" · zub {e['tooth']}" if e.get("tooth") else ""
+            lines.append(f"   • {e['date']}   {e['title']}{tooth}{note}{extra}")
         lines.append("")
     pdf = await run_in_threadpool(
         _make_pdf,
@@ -1232,7 +1664,7 @@ async def lifecard_family(authorization: Optional[str] = Header(None)):
         if not m:
             continue
         evs = await db.calendar_events.find(
-            {"user_id": mid, "category": {"$in": ["vaccine", "exam"]}},
+            {"user_id": mid, "child_id": None, "category": {"$in": ["vaccine", "exam"]}},
             {"_id": 0, "category": 1, "booster_due": 1}).to_list(500)
         members.append({
             "user_id": mid, "name": m.get("name") or "Člen kruhu",
@@ -1253,7 +1685,7 @@ async def lifecard_family_timeline(member_id: str, authorization: Optional[str] 
     if not m:
         raise HTTPException(404, "Member not found")
     events = await db.calendar_events.find(
-        {"user_id": member_id, "category": {"$in": ["vaccine", "exam"]}},
+        {"user_id": member_id, "child_id": None, "category": {"$in": ["vaccine", "exam"]}},
         {"_id": 0, "event_id": 1, "category": 1, "title": 1, "date": 1, "booster_due": 1, "notes": 1},
     ).sort("date", -1).to_list(200)
     return {"member": {"user_id": member_id, "name": m.get("name") or "Člen kruhu"},
@@ -1276,12 +1708,17 @@ async def booster_guard_sweep() -> int:
         if e.get(flag):
             continue
         days_left = (datetime.strptime(e["booster_due"], "%Y-%m-%d").date() - today).days
-        msg = (f"⏰ Blíži sa preskočkovanie: {e['title']} — booster do {e['booster_due']} "
+        who = ""
+        if e.get("child_id"):
+            ch = await db.lifecard_children.find_one({"child_id": e["child_id"]}, {"_id": 0, "name": 1})
+            if ch:
+                who = f" (dieťa {ch['name']})"
+        msg = (f"⏰ Blíži sa preskočkovanie{who}: {e['title']} — booster do {e['booster_due']} "
                f"(o {days_left} dní). Nájdete to v Karte života. Chcete, aby som pohľadal termín u lekára?")
         try:
             await send_push(recipients=[e["user_id"]], data={
                 "title": "💉 PRESKOČKOVANIE SA BLÍŽI",
-                "message": f"{e['title']} — booster do {e['booster_due']} (o {days_left} dní).",
+                "message": f"{e['title']}{who} — booster do {e['booster_due']} (o {days_left} dní).",
                 "action_url": "/health-timeline"})
         except Exception as ex:
             logger.warning(f"booster push failed: {ex}")

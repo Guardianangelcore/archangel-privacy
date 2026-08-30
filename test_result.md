@@ -736,3 +736,74 @@ Auth: founder-bypass (guardian.angel.core@proton.me). Backend tests: Bearer smok
 Test data left in DB: smoketest-user-2 has vaccine 'Tetanus TEST' (booster_due +20d,
 booster_notified_30d:true) + booster_guard convo. Guardians link user-1↔user-2 pre-existing.
 Founder account is CLEAN (identity reset, no test events).
+
+## Iteration 46 (Phase 51.2 — Očkovací preukaz EÚ + Karta pre dieťa, Jun 2026)
+1) OČKOVACÍ PREUKAZ EÚ:
+- GET /api/lifecard/vaccine-pass (JSON: holder, birth_date, blood_type, did, child flag,
+  vaccinations[], issued_at, did_signature SHA-256, languages[14]) and
+  GET /api/lifecard/vaccine-pass.pdf (?child_id=, ?token=) → bilingual data block +
+  vaccination list + 14-language statements (en sk cs de fr es it pl hu uk ru pt nl ro) +
+  DID signature in footer. VERIFIED: 200 PDF 47KB, JSON holder/langs/sig ok.
+- Frontend: lc-vaxpass button (airplane icon) next to lc-pdf under identity card; works for
+  active child too (child_id query).
+2) KARTA PRE DIEŤA:
+- db.lifecard_children {child_id, user_id(parent), name, birth_date, blood_type, created_at}.
+  CRUD: GET/POST /api/lifecard/children (max 10, birth 1900..today), PUT/DELETE
+  /api/lifecard/children/{child_id} (DELETE cascades child calendar_events + predictions).
+- calendar_events now carry child_id (None for adult). POST /calendar/events accepts
+  child_id (404 if not owner's child); GET /calendar/timeline?child_id= scopes everything
+  (events, counts, boosters); adult timeline EXCLUDES child rows ({"child_id": None} matches
+  missing+null). Data hygiene: IPS/humanitarian/border vaccine queries (globalnet.py),
+  compass boosters/vaccines, agent briefing exams all now filter child_id: None.
+- Predictions child-aware: POST /lifecard/predictions body {child_id} → childhood
+  immunization schedule rule in prompt (VERIFIED: hexa booster + MMR + pediater for
+  4-year-old); accept accepts child_id; caches keyed {user_id, child_id}.
+- Booster Guard includes child name: '⏰ Blíži sa preskočkovanie (dieťa Lukáš): …' VERIFIED.
+- PDF report supports ?child_id= (identity from child doc, '(karta dieťaťa)' marker).
+- Frontend /health-timeline: horizontal card switcher (lc-card-me, lc-card-{child_id},
+  lc-add-child); child identity card (happy icon, KARTA DIEŤAŤA label); new-child form
+  (VYTVORIŤ KARTU DIEŤAŤA via lc-save-card); child edit + delete with inline confirm
+  (lc-del-child, lc-del-child-yes/no); quick-add/+ filters/predictions/PDF/vax-pass all
+  child-scoped; voice hint + RODINNÉ KARTY section hidden on child cards.
+SELF-TESTED via curl (smoketest-user-1): child CRUD, child vaccine add, child timeline
+counts, adult excludes child, bad child 404, vaccine-pass JSON+PDF, child report PDF,
+child predictions (paediatric), accept child, booster guard child msg, cascade delete.
+Test child deleted; founder untouched. Frontend smoke: switcher + child form + both PDF
+buttons render (screenshot).
+
+## Iteration 47 (Phase 51.3 — Rastová krivka + Trendy zdravia + Karta zubára, Jun 2026)
+1) RASTOVÁ KRIVKA (WHO percentily):
+- db.growth_logs {log_id, user_id, child_id, date, height_cm, weight_kg}. Endpoints:
+  POST /api/lifecard/children/{child_id}/growth (validates date, h 30-220, w 1-150, at least
+  one), GET .../growth → logs with age_months + height_percentile (0-18y) +
+  weight_percentile (0-10y only, WHO limit) + curves{height,weight} P3/P50/P97 points +
+  sex_required flag, DELETE /api/lifecard/growth/{log_id}.
+- WHO approx tables in health.py (WHO_HEIGHT normal z=(v-M)/SD, WHO_WEIGHT lognormal
+  z=ln(v/M)/S, erf CDF). Sanity-verified: 36mo girl 95cm/14kg → P48.8/P52.2; 102cm → P97.2.
+- children now have sex ('m'|'f'|'') — ChildIn/ChildUpdateIn validated; child delete cascades
+  growth_logs too.
+- NEW screen /child-growth?child_id= (app/child-growth.tsx): react-native-svg chart
+  (P3 dashed gray, P50 dashed gold, P97 dashed gray, child polyline+dots green), toggle
+  gr-m-height/gr-m-weight, add form gr-date/gr-height/gr-weight/gr-save, sex picker
+  gr-sex-m/gr-sex-f shown when sex_required, log list with P-values + gr-del-{id}.
+  Opened via lc-growth button on child card (only when child active).
+2) TRENDY ZDRAVIA:
+- GET /api/lifecard/trends[?child_id=] → years[{year, counts per 6 cats, total}].
+- POST /api/lifecard/trends/summary {child_id?} → gpt-5.4 Slovak yearly trend summary
+  (max 5 sentences + 1 recommendation) with AI watermark appended. VERIFIED.
+- NEW screen /health-trends[?child_id=&name=] (app/health-trends.tsx): Jarvis summary box
+  (tr-summarize/tr-summary), legend, stacked yearly bars (tr-year-{year}) + breakdown text.
+  Opened via lc-trends button (both my card and child card, passes child params).
+3) KARTA ZUBÁRA:
+- 6th category 'dental' (ZUBÁR, cyan #64D2FF, MaterialCommunityIcons tooth-outline via
+  CatIcon wrapper). Everywhere: validation, counts, filters, PDF section ZUBÁR, predictions
+  (category vaccine|exam|dental), trends. calendar_events new optional field tooth (FDI č.,
+  max 4 chars) — input lc-tooth shown when dental selected; timeline shows '· zub 36'.
+- Voice intent: zubár/zubné/plomb/dentist triggers + classifier category dental. VERIFIED:
+  'Včera som bol u zubára, dostal som plombu' → dental/Plomba/yesterday.
+- KARTA ZUBÁRA box (lc-dental-card) on dental filter: history grouped by tooth number.
+SELF-TESTED via curl: child with sex, growth add/percentiles/invalid 400s/list+curves,
+dental+tooth event, dental filter+counts, trends, trends summary LLM, voice dental.
+Test data cleaned (Nina TEST child cascade, dental events). Founder untouched.
+Screenshots: Karta života with 3 buttons + TRENDY ZDRAVIA screen render correctly.
+NOTE: smoketest-user-1 has ~123 exam events from previous suites (pollution, harmless).

@@ -133,10 +133,10 @@ async def compass_pack(authorization: Optional[str] = Header(None)):
     # Vaccination boosters due within 90 days (Health Calendar)
     horizon = (now + timedelta(days=90)).strftime("%Y-%m-%d")
     boosters = await db.calendar_events.find(
-        {"user_id": uid, "category": "vaccine", "booster_due": {"$ne": None, "$lte": horizon}},
+        {"user_id": uid, "child_id": None, "category": "vaccine", "booster_due": {"$ne": None, "$lte": horizon}},
         {"_id": 0, "title": 1, "booster_due": 1, "date": 1}).sort("booster_due", 1).to_list(10)
     vaccines = await db.calendar_events.find(
-        {"user_id": uid, "category": "vaccine"}, {"_id": 0, "title": 1, "date": 1, "booster_due": 1}
+        {"user_id": uid, "child_id": None, "category": "vaccine"}, {"_id": 0, "title": 1, "date": 1, "booster_due": 1}
     ).sort("date", -1).to_list(10)
     guardians = await db.guardians.find({"user_id": uid}, {"_id": 0, "guardian_name": 1, "guardian_email": 1}).to_list(10)
     beacon = await db.bio_beacons.find_one({"user_id": uid, "active": True}, {"_id": 0})

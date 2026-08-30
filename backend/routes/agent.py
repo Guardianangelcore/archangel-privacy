@@ -342,13 +342,14 @@ def _detect_pain_level(text: str) -> Optional[int]:
 # Cheap trigger regex first; a small LLM call then classifies into the 5
 # Karta života categories (or rejects → normal chat continues).
 LIFECARD_LABELS = {"vaccine": "Očkovanie", "disease": "Choroba", "surgery": "Operácia",
-                   "injury": "Úraz", "exam": "Prehliadka"}
+                   "injury": "Úraz", "exam": "Prehliadka", "dental": "Zubár"}
 LIFECARD_TRIGGER = re.compile(
     r"(doktor|doktork|lek[áa]r|diagn[óo]z|diagnostik|ochorel|oper[áa]ci|operoval|"
     r"zao[čc]koval|o[čc]kovan|vakc[íi]n|prehliadk|prevent[íi]vn|"
     r"[úu]raz|zlomil|zlomenin|vytkol|vyvrtol|pop[áa]lil|porezal|"
     r"vy[šs]etren|chorob|kiahn|chr[íi]pk|ang[íi]n|covid|"
-    r"diagnos|vaccinat|surger|check-?up|injur)", re.I)
+    r"zub[áa]r|zubn[ée]|plomb|"
+    r"diagnos|vaccinat|surger|check-?up|injur|dentist)", re.I)
 
 
 def _lifecard_trigger(text: str) -> bool:
@@ -365,11 +366,12 @@ async def _classify_lifecard(text: str, lang_sk: bool) -> Optional[dict]:
         system_message=(
             "You classify ONE user sentence into a personal health LIFE CARD record. "
             'Return ONLY valid JSON, no markdown: {"is_record": true|false, '
-            '"category": "vaccine|disease|surgery|injury|exam", "title": "...", '
+            '"category": "vaccine|disease|surgery|injury|exam|dental", "title": "...", '
             '"date": "YYYY-MM-DD", "note": "..."}. '
             "is_record=true ONLY when the user STATES a health event that happened to them: "
             "a diagnosis/disease (disease), a vaccination (vaccine), a surgery (surgery), "
-            "an injury (injury), or a completed doctor visit / preventive check-up (exam). "
+            "an injury (injury), a completed doctor visit / preventive check-up (exam), "
+            "or a dentist visit / dental procedure (dental). "
             'Questions, advice requests and general chat → {"is_record": false}. '
             f"Today is {today}. Default date = today; resolve relative words "
             "(včera/yesterday, minulý týždeň/last week) and explicit dates. "
@@ -604,7 +606,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
                   for r in rems for t in (r.get("times") or [])]
     meds_today.sort(key=lambda m: m["time"])
     # upcoming exams
-    cal = await db.calendar_events.find({"user_id": uid, "category": "exam", "date": {"$gte": today}},
+    cal = await db.calendar_events.find({"user_id": uid, "child_id": None, "category": "exam", "date": {"$gte": today}},
                                         {"_id": 0}).sort("date", 1).to_list(3)
     # recent memories worth a follow-up (health/family from last 3 days)
     since = datetime.now(timezone.utc) - timedelta(days=3)

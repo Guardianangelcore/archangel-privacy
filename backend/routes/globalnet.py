@@ -79,7 +79,7 @@ async def _build_ips(user: dict) -> dict:
     uid = user["user_id"]
     prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
     reminders = await db.med_reminders.find({"user_id": uid}, {"_id": 0}).to_list(50)
-    vaccines = await db.calendar_events.find({"user_id": uid, "category": "vaccine"}, {"_id": 0}).sort("date", -1).to_list(30)
+    vaccines = await db.calendar_events.find({"user_id": uid, "child_id": None, "category": "vaccine"}, {"_id": 0}).sort("date", -1).to_list(30)
     now = datetime.now(timezone.utc)
     pid = f"patient-{user['did'].split(':')[-1][:12]}"
 
@@ -176,7 +176,7 @@ async def ips_summary_pdf(token: Optional[str] = None, authorization: Optional[s
     await _ips_entitle(user, authorization or (f"Bearer {token}" if token else None))
     ips = await _build_ips(user)
     prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
-    vaccines = await db.calendar_events.find({"user_id": user["user_id"], "category": "vaccine"},
+    vaccines = await db.calendar_events.find({"user_id": user["user_id"], "child_id": None, "category": "vaccine"},
                                              {"_id": 0}).sort("date", -1).to_list(30)
     lines = [
         f"Patient: {prof.get('full_name') or user.get('name') or '—'}",
@@ -258,7 +258,7 @@ async def humanitarian_profile(authorization: Optional[str] = Header(None)):
     if not ev:
         raise HTTPException(409, "no_verified_catastrophe: Humanitárny štít sa aktivuje až po overení globálnej katastrofy.")
     prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
-    vaccines = await db.calendar_events.find({"user_id": user["user_id"], "category": "vaccine"},
+    vaccines = await db.calendar_events.find({"user_id": user["user_id"], "child_id": None, "category": "vaccine"},
                                              {"_id": 0, "title": 1, "date": 1}).sort("date", -1).to_list(10)
     hid = f"GA-HUM-{uuid.uuid4().hex[:8].upper()}"
     profile = {"hum_id": hid, "user_id": user["user_id"], "did": user["did"],
