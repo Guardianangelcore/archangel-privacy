@@ -13,7 +13,7 @@ import { speak as jarvisSpeak } from '@/src/voice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
-type Doc = { doc_id: string; title: string; file_name: string; content_type: string; size: number; uploaded_at: string; plain_language?: string; extracted_text?: string };
+type Doc = { doc_id: string; title: string; file_name: string; content_type: string; size: number; uploaded_at: string; plain_language?: string; extracted_text?: string; source?: string; prompt?: string };
 
 export default function Vault() {
   const { user, setUser } = useAuth();
@@ -25,6 +25,13 @@ export default function Vault() {
   const [busyDoc, setBusyDoc] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ title: string; uri: string } | null>(null);
+  const [tok, setTok] = useState<string | null>(null);
+  useEffect(() => { getToken().then(setTok).catch(() => {}); }, []);
+
+  // JARVIS ART GALLERY — generated images live separately from medical documents.
+  const art = docs.filter(d => d.source === 'jarvis_art');
+  const files = docs.filter(d => d.source !== 'jarvis_art');
+  const fileUri = (id: string) => `${API_BASE}/api/vault/documents/${id}/file?token=${tok}`;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -125,12 +132,37 @@ export default function Vault() {
       </View>
 
       <FlatList
-        data={docs}
+        data={files}
         keyExtractor={i => i.doc_id}
         contentContainerStyle={{ padding: S.lg, paddingBottom: 160 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
         ListHeaderComponent={
           <>
+            {/* GALÉRIA OBRAZOV — every Jarvis-generated image, forever yours */}
+            {art.length > 0 && !!tok && (
+              <View style={styles.gallery}>
+                <View style={styles.galleryHead}>
+                  <Ionicons name="color-palette" size={15} color={C.brand} />
+                  <Text style={styles.galleryTitle}>GALÉRIA OBRAZOV · JARVIS ({art.length})</Text>
+                </View>
+                <View style={styles.galleryGrid}>
+                  {art.map(a => (
+                    <View key={a.doc_id} style={styles.thumbWrap}>
+                      <Pressable
+                        testID={`art-thumb-${a.doc_id}`}
+                        onPress={() => setPreview({ title: a.title, uri: fileUri(a.doc_id) })}
+                        style={styles.thumbPress}
+                      >
+                        <Image source={{ uri: fileUri(a.doc_id) }} style={styles.thumb} resizeMode="cover" />
+                      </Pressable>
+                      <Pressable testID={`art-del-${a.doc_id}`} onPress={() => remove(a)} hitSlop={8} style={styles.thumbDel}>
+                        <Ionicons name="trash" size={12} color="#fff" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
             {ageToast ? (
               <View testID="vault-age-toast" style={styles.ageToast}>
                 <Ionicons name="sparkles" size={16} color={C.onInverse} />
@@ -154,7 +186,7 @@ export default function Vault() {
           </>
         }
         ListEmptyComponent={
-          !loading ? (
+          !loading && art.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="lock-closed-outline" size={48} color={C.fg} />
               <Text style={styles.emptyText}>{t('no_documents', lang).toUpperCase()}</Text>
@@ -227,6 +259,14 @@ export default function Vault() {
 }
 
 const styles = StyleSheet.create({
+  gallery: { marginBottom: S.lg, borderWidth: 1.5, borderColor: C.brand, padding: S.md, backgroundColor: 'rgba(212,175,55,0.05)' },
+  galleryHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: S.md },
+  galleryTitle: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 2 },
+  galleryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  thumbWrap: { width: '31%', aspectRatio: 1, position: 'relative' },
+  thumbPress: { flex: 1 },
+  thumb: { width: '100%', height: '100%', borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.06)' },
+  thumbDel: { position: 'absolute', top: 4, right: 4, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(0,0,0,0.65)', alignItems: 'center', justifyContent: 'center' },
   ageToast: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.brand, borderRadius: 12, paddingHorizontal: S.md, paddingVertical: S.sm, marginBottom: S.md },
   ageToastText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 0.5, flex: 1 },
   firstScan: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.brand, borderRadius: 16, padding: S.md, marginBottom: S.lg, shadowColor: C.brand, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 },

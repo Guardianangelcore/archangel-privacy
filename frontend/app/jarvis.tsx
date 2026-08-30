@@ -114,7 +114,7 @@ export default function Jarvis() {
   const { user } = useAuth();
   const [state, setState] = useState<any>(null);
   const [briefing, setBriefing] = useState<any>(null);
-  const [msgs, setMsgs] = useState<{ role: 'user' | 'agent'; text: string; citations?: string[]; image?: string }[]>([]);
+  const [msgs, setMsgs] = useState<{ role: 'user' | 'agent'; text: string; citations?: string[]; image?: string; vaultDocId?: string }[]>([]);
   const [mode, setMode] = useState<'chat' | 'sonar' | 'imagine'>('chat');
   const [input, setInput] = useState('');
   const [mood, setMood] = useState<Mood>('calm');
@@ -185,11 +185,17 @@ export default function Jarvis() {
     try {
       if (mode === 'imagine') {
         const res: any = await api('/agent/imagine', { method: 'POST', body: JSON.stringify({ prompt: q }) });
-        setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: 'Váš obraz je pripravený, Guardian Angel.', image: res.image_base64 }]);
+        setMsgs(prev => [...prev.slice(-8), {
+          role: 'agent',
+          text: res.saved_to_vault ? 'Váš obraz je pripravený a uložený v Trezore, Guardian Angel.' : 'Váš obraz je pripravený, Guardian Angel.',
+          image: res.image_base64,
+          vaultDocId: res.doc_id || undefined,
+        }]);
         setMood('energetic'); setStatus('');
         showXp(res.xp_gained);
         if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
         loadState();
+        if (viaVoice) speak('Váš obraz je pripravený a uložený v Trezore.', 'energetic');
       } else if (mode === 'sonar') {
         const res: any = await api('/agent/search', { method: 'POST', body: JSON.stringify({ query: q, language: user?.language || 'sk' }) });
         const note = res.degraded ? '\n\n⚠️ Živé vyhľadávanie je offline (chýba Perplexity kľúč) — odpovedám z internej znalosti.' : '';
@@ -198,7 +204,12 @@ export default function Jarvis() {
         showXp(res.xp_gained);
         if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
         loadState();
-        if (viaVoice) speak(res.reply, 'calm');
+        // VOICE SONAR — the Orb answers in Onyx and announces verified sources.
+        if (viaVoice) {
+          const n = res.citations?.length || 0;
+          const spoken = n > 0 ? `${res.reply} Našiel som ${n === 1 ? 'jeden overený zdroj' : n < 5 ? `${n} overené zdroje` : `${n} overených zdrojov`} — nájdete ich pod odpoveďou.` : res.reply;
+          speak(spoken, 'calm');
+        }
       } else {
         const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'sk' }) });
         setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply }]);
@@ -298,7 +309,7 @@ export default function Jarvis() {
   return (
     <SafeAreaView testID="jarvis-screen" style={st.root} edges={['top']}>
       <View style={st.header}>
-        <Pressable testID="jv-back" onPress={() => { tap(); router.canGoBack() ? router.back() : router.replace('/'); }} hitSlop={12}>
+        <Pressable testID="jv-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
         <Text style={st.title}>JARVIS 2.0 · ŽIVÁ DUŠA</Text>
@@ -358,6 +369,12 @@ export default function Jarvis() {
             <Text style={[st.bubbleText, m.role === 'user' && { color: C.onInverse }]}>{m.text}</Text>
             {!!m.image && (
               <Image source={{ uri: `data:image/png;base64,${m.image}` }} style={st.genImage} contentFit="cover" transition={300} />
+            )}
+            {!!m.vaultDocId && (
+              <Pressable testID={`jv-vault-open-${i}`} onPress={() => { tap('light'); router.push('/(tabs)/vault'); }} style={st.vaultChip}>
+                <Ionicons name="lock-closed" size={12} color={C.brand} />
+                <Text style={st.vaultChipText}>ULOŽENÉ V TREZORE · OTVORIŤ GALÉRIU</Text>
+              </Pressable>
             )}
             {!!m.citations?.length && (
               <View style={st.citeBox}>
@@ -577,6 +594,8 @@ const st = StyleSheet.create({
   modeChipActive: { backgroundColor: C.brand, borderColor: C.brand },
   modeText: { color: C.info, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
   genImage: { width: '100%', aspectRatio: 1, borderRadius: R.sm, marginTop: S.sm, backgroundColor: C.surface3 },
+  vaultChip: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: S.sm, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill, minHeight: 38, paddingHorizontal: S.md, backgroundColor: 'rgba(212,175,55,0.08)' },
+  vaultChipText: { color: C.brand, fontWeight: '900', fontSize: 9.5, letterSpacing: 1 },
   citeBox: { marginTop: S.sm, borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.sm, gap: 2 },
   citeLbl: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 1.5 },
   citeLink: { color: '#4A90D9', fontSize: 11, textDecorationLine: 'underline' },

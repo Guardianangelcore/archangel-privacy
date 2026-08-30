@@ -56,7 +56,16 @@ export type SpeakOptions = {
 export async function speak(text: string, opts: SpeakOptions = {}): Promise<void> {
   if (!text || !text.trim()) return;
   // Strip the visible EU AI Act watermark suffix — the TTS should not read it aloud.
-  const cleanText = String(text).replace(/\n*—?\s*AI Content · Sovereign Protocol\s*$/i, '').trim();
+  // Also strip markdown syntax (Sonar/web answers arrive formatted) so Onyx never
+  // reads "asterisk asterisk" or link URLs out loud.
+  const cleanText = String(text)
+    .replace(/\n*—?\s*AI Content · Sovereign Protocol\s*$/i, '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[*_#`>|]+/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
   if (!cleanText) return;
   const preset = opts.mood ? MOOD_VOICE[opts.mood] : undefined;
   const voice: JarvisVoice = opts.voice || preset?.voice || DEFAULT_VOICE;

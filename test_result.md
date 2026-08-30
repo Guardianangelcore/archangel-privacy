@@ -581,3 +581,26 @@ FIXED (full 661-test suite → all green):
 
 Auth for FE testing: login screen → founder-bypass-btn (POST /api/auth/dev-bypass,
 guardian.angel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.
+
+## Iteration 40 (Phase 49.1 — Vault Art Gallery + Voice Sonar, Jun 2026)
+BACKEND (routes/agent.py /agent/imagine enhanced):
+- Generated PNG now also uploaded to Emergent Object Storage at
+  guardian-health-angel/jarvis_art/{uid}/{doc_id}.png and inserted into db.documents with
+  source:'jarvis_art', prompt, title '🎨 {prompt}'. Response adds doc_id + saved_to_vault:true.
+- OpenAI safety rejections now map to 400 with Slovak-friendly message (was generic 502).
+- VERIFIED via curl: imagine → saved_to_vault:true, GET /vault/documents lists art doc,
+  GET /vault/documents/{id}/file returns 200 PNG (1.9MB).
+
+FRONTEND:
+- app/jarvis.tsx: imagine bubble shows chip 'ULOŽENÉ V TREZORE · OTVORIŤ GALÉRIU'
+  (testID jv-vault-open-{i}) → routes to /(tabs)/vault. Voice Sonar: when Orb voice input is
+  used in sonar mode, reply is spoken in Onyx + appends '...Našiel som N overených zdrojov'.
+  Imagine via voice also announces vault save.
+- src/voice.ts speak(): strips markdown (**, #, links, URLs, code fences) before TTS so Onyx
+  never reads 'asterisk asterisk' — applies to ALL TTS calls (regression-sensitive but safe).
+- app/(tabs)/vault.tsx: new GALÉRIA OBRAZOV · JARVIS section (gold-bordered) above documents.
+  3-col thumbnail grid (art-thumb-{doc_id}), tap → full-screen preview modal (existing
+  doc-preview-image), delete via art-del-{doc_id}. Art docs excluded from document list below.
+- VERIFIED via screenshots: gallery grid renders with thumbnail, preview modal opens full-screen.
+
+Existing art doc for tests: doc_id f1b50e9e705042fe92005b801de2cfc7 (founder user_ac98119726d0).

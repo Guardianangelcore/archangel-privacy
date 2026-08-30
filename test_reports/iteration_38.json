@@ -1,0 +1,36 @@
+{
+  "summary": "Phase 49.1 (GALÉRIA OBRAZOV + HLASOVÝ SONAR + TTS markdown-strip) fully verified end-to-end. Backend 7/7 PASSED (100%, 20.7s, pytest_phase49_1.xml). POST /api/agent/imagine {prompt:'small golden angel wing icon'} → 200 with image_base64 (valid PNG magic bytes, >5KB), saved_to_vault:true and doc_id. GET /api/vault/documents returns the new doc with source:'jarvis_art' + content_type:'image/png'. GET /api/vault/documents/{doc_id}/file returns PNG bytes. DELETE /api/vault/documents/{doc_id} → 200, and the protected pre-existing doc f1b50e9e705042fe92005b801de2cfc7 is left untouched. Regressions all green: /api/agent/search {query:'test'} → 200 degraded:true (blank PERPLEXITY_API_KEY, gpt-5.4 fallback — EXPECTED), /api/agent/chat 'Ahoj' → 200 reply, /api/voice/tts with markdown/link body → 200 url (markdown stripping is client-side in /app/frontend/src/voice.ts as designed). Frontend (mobile 390x844): founder-bypass-btn logs in → /vault renders vault-screen → GALÉRIA OBRAZOV · JARVIS section visible with art-thumb-f1b50e9e705042fe92005b801de2cfc7 → tapping thumbnail opens doc-preview-image full-screen modal (golden triangle emblem rendered correctly) → doc-preview-close dismisses it. The pre-existing art doc does NOT also appear in the file-card list below (locator count = 0 for doc-{id}) — art/files split by source:'jarvis_art' works correctly. Jarvis regression: jv-mode-sonar text question returned reply with expected '...offline...chýba Perplexity kľúč...' notice; jv-mode-chat 'Ahoj' returned watermarked Slovak reply; jv-back returned to '/'. IMAGINE→vault chip UI flow was skipped intentionally per the optional/long note in the review request (image generation ~10-30s per call and the backend end-to-end is already covered by the pytest suite). Code-review of viaVoice sonar branch in /app/frontend/app/jarvis.tsx:207-212 confirmed: Onyx TTS speaks reply + announces citation count with Slovak grammar (1: 'jeden overený zdroj', 2-4: 'N overené zdroje', 5+: 'N overených zdrojov'); TTS in /app/frontend/src/voice.ts:61-68 strips markdown ```code```, [text](url) → text, raw URLs, and *_#`>| symbols before speaking — spec satisfied. No dead buttons or red screens observed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase49_1_gallery_sonar.py",
+    "/app/test_reports/pytest/pytest_phase49_1.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "vault.tsx correctly partitions docs by source:'jarvis_art' into a gallery grid vs the medical-file FlatList, preventing double display. Good.",
+    "voice.ts markdown-strip regex covers fenced code, [text](url), bare https URLs and *_#`>| — matches spec 'strip markdown before speaking'.",
+    "jarvis.tsx sonar viaVoice branch announces citation count with correct Slovak declension (1/2-4/5+). No fallback if res.citations is undefined besides ||0 — fine.",
+    "agent.py /api/agent/imagine correctly returns 400 (Slovak) when OpenAI safety rejects the prompt; uses run_in_threadpool for the blocking put_object_sync — non-blocking. Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase49_1_gallery_sonar.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7)",
+    "frontend": "100% of tested flows (login bypass, vault gallery grid, art thumb tap → full-screen preview → close, sonar w/ offline notice, chat, jv-back)"
+  },
+  "seed_data_creation": "None. Used founder auto-seeded account (guardian.angel.core@proton.me → session via POST /api/auth/dev-bypass). Pre-existing gallery art doc f1b50e9e705042fe92005b801de2cfc7 was preserved (verified still present after our cleanup DELETE).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 49.1 gallery + sonar-voice + tts markdown-strip is fully green. Backend endpoints: POST /api/agent/imagine returns 200 with image_base64, saved_to_vault:true, doc_id; generation takes ~10-30s (safe budget: 120s). GET /api/vault/documents lists art docs with source:'jarvis_art'; frontend vault.tsx filters them into a separate gallery grid (testID art-thumb-{doc_id}) that does NOT double up in the file card list. Full-screen preview modal uses testIDs doc-preview-image and doc-preview-close. The protected pre-existing art doc is f1b50e9e705042fe92005b801de2cfc7 — never delete it. /api/agent/search is still degraded:true (blank PERPLEXITY_API_KEY) — expected. TTS markdown-stripping is client-side (/app/frontend/src/voice.ts) — the /api/voice/tts endpoint itself is unchanged. Founder bypass path (POST /api/auth/dev-bypass {email:'guardian.angel.core@proton.me'}) and login testID founder-bypass-btn continue to work. Iteration 37's low-priority jv-back deep-link warning is still open but not user-visible under normal navigation.",
+  "rca_of_issue": "N/A — no issues found in review request."
+}

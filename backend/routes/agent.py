@@ -745,6 +745,9 @@ class AgentImagineIn(BaseModel):
 @api.post("/agent/imagine")
 async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Header(None)):
     from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+    from fastapi.concurrency import run_in_threadpool
+    from core import APP_NAME, put_object_sync
+    import hashlib
     user = await get_current_user(authorization)
     uid = user["user_id"]
     prompt = (body.prompt or "").strip()
@@ -755,19 +758,44 @@ async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Hea
         images = await gen.generate_images(prompt=prompt[:900], model="gpt-image-1", number_of_images=1)
         if not images:
             raise HTTPException(502, "No image was generated")
-        image_b64 = base64.b64encode(images[0]).decode("utf-8")
+        image_bytes = images[0]
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"agent imagine error: {e}")
+        if "safety" in str(e).lower() or "rejected" in str(e).lower():
+            raise HTTPException(400, "Obraz odmietol bezpečnostný systém — skúste opísať motív inak.")
         raise HTTPException(502, "Image generation unavailable")
+
+    # SOVEREIGN GALLERY — persist every generated image into the Vault (Object Storage,
+    # never base64-in-Mongo) so the founder can return to it anytime.
     now = datetime.now(timezone.utc)
+    doc_id = uuid.uuid4().hex
+    saved_to_vault = False
+    try:
+        path = f"{APP_NAME}/jarvis_art/{uid}/{doc_id}.png"
+        await run_in_threadpool(put_object_sync, path, image_bytes, "image/png")
+        await db.documents.insert_one({
+            "doc_id": doc_id, "user_id": uid,
+            "title": f"🎨 {prompt[:80]}",
+            "file_name": f"jarvis_art_{doc_id[:8]}.png",
+            "content_type": "image/png", "size": len(image_bytes),
+            "storage_path": path, "hash": hashlib.sha256(image_bytes).hexdigest(),
+            "source": "jarvis_art", "prompt": prompt[:500], "uploaded_at": now,
+        })
+        saved_to_vault = True
+    except Exception as e:
+        logger.error(f"imagine vault save failed: {e}")
+
     await db.agent_conversations.insert_many([
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": f"🎨 {prompt[:500]}", "at": now},
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent",
-         "text": "Vygeneroval som obraz.", "mood": "energetic", "source": "imagine", "at": now},
+         "text": "Vygeneroval som obraz." + (" Uložený v Trezore." if saved_to_vault else ""),
+         "mood": "energetic", "source": "imagine", "doc_id": doc_id if saved_to_vault else None, "at": now},
     ])
     xp = await award_xp(uid, 8, "imagine")
     return {"image_base64": image_b64, "mood": "energetic",
+            "doc_id": doc_id if saved_to_vault else None, "saved_to_vault": saved_to_vault,
             "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
             "level_name": LEVEL_NAMES[xp["level"] - 1]}
