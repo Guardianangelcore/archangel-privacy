@@ -80,7 +80,8 @@ class TestStreaksPhysio:
         r = requests.get(f"{BASE_URL}/api/streaks/physio", headers=AUTH)
         assert r.status_code == 200
         data = r.json()
-        assert data == {"current": 0, "best": 0, "tier": 0, "active_today": False}, data
+        # API gained freeze_available/blazing_celebrated in iter33 — assert the core empty-state subset.
+        assert data["current"] == 0 and data["best"] == 0 and data["tier"] == 0 and data["active_today"] is False, data
 
     def test_tier1_ember_4_consecutive(self, db):
         real_count = db.physio_videos.count_documents({"user_id": UID, "seeded_test": {"$ne": True}})

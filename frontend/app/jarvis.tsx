@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
+import { Image } from 'expo-image';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring, withSequence, Easing, cancelAnimation,
 } from 'react-native-reanimated';
@@ -113,7 +114,8 @@ export default function Jarvis() {
   const { user } = useAuth();
   const [state, setState] = useState<any>(null);
   const [briefing, setBriefing] = useState<any>(null);
-  const [msgs, setMsgs] = useState<{ role: 'user' | 'agent'; text: string }[]>([]);
+  const [msgs, setMsgs] = useState<{ role: 'user' | 'agent'; text: string; citations?: string[]; image?: string }[]>([]);
+  const [mode, setMode] = useState<'chat' | 'sonar' | 'imagine'>('chat');
   const [input, setInput] = useState('');
   const [mood, setMood] = useState<Mood>('calm');
   const [busy, setBusy] = useState<string | null>(null);
@@ -177,21 +179,40 @@ export default function Jarvis() {
     const q = text.trim();
     if (!q || busy === 'chat') return;
     setBusy('chat'); setErr(''); setInput('');
-    setMsgs(prev => [...prev.slice(-8), { role: 'user', text: q }]);
-    setMood('thinking'); setStatus('Premýšľam…');
+    setMsgs(prev => [...prev.slice(-8), { role: 'user', text: mode === 'imagine' ? `🎨 ${q}` : q }]);
+    setMood('thinking');
+    setStatus(mode === 'sonar' ? 'Prehľadávam web (Sonar)…' : mode === 'imagine' ? 'Maľujem obraz… (môže trvať až minútu)' : 'Premýšľam…');
     try {
-      const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'sk' }) });
-      setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply }]);
-      const m: Mood = res.mood || 'calm';
-      setMood(m); setStatus('');
-      showXp(res.xp_gained);
-      if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
-      loadState(); loadMems();
-      if (viaVoice) speak(res.reply, m);
+      if (mode === 'imagine') {
+        const res: any = await api('/agent/imagine', { method: 'POST', body: JSON.stringify({ prompt: q }) });
+        setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: 'Váš obraz je pripravený, Guardian Angel.', image: res.image_base64 }]);
+        setMood('energetic'); setStatus('');
+        showXp(res.xp_gained);
+        if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
+        loadState();
+      } else if (mode === 'sonar') {
+        const res: any = await api('/agent/search', { method: 'POST', body: JSON.stringify({ query: q, language: user?.language || 'sk' }) });
+        const note = res.degraded ? '\n\n⚠️ Živé vyhľadávanie je offline (chýba Perplexity kľúč) — odpovedám z internej znalosti.' : '';
+        setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply + note, citations: res.citations }]);
+        setMood('calm'); setStatus('');
+        showXp(res.xp_gained);
+        if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
+        loadState();
+        if (viaVoice) speak(res.reply, 'calm');
+      } else {
+        const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'sk' }) });
+        setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply }]);
+        const m: Mood = res.mood || 'calm';
+        setMood(m); setStatus('');
+        showXp(res.xp_gained);
+        if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
+        loadState(); loadMems();
+        if (viaVoice) speak(res.reply, m);
+      }
     } catch (e: any) { setErr(String(e.message || e)); setMood('calm'); setStatus(''); }
     setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, user?.language, speak, loadState, loadMems]);
+  }, [busy, mode, user?.language, speak, loadState, loadMems]);
 
   // ---- FULL VOICE CONVERSATION (tap Orb: record → Whisper → gpt-5.4 → emotional TTS) ----
   const orbPress = async () => {
@@ -277,7 +298,7 @@ export default function Jarvis() {
   return (
     <SafeAreaView testID="jarvis-screen" style={st.root} edges={['top']}>
       <View style={st.header}>
-        <Pressable testID="jv-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
+        <Pressable testID="jv-back" onPress={() => { tap(); router.canGoBack() ? router.back() : router.replace('/'); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
         <Text style={st.title}>JARVIS 2.0 · ŽIVÁ DUŠA</Text>
@@ -335,16 +356,46 @@ export default function Jarvis() {
         {msgs.map((m, i) => (
           <View key={i} testID={`jv-msg-${i}-${m.role}`} style={[st.bubble, m.role === 'user' ? st.bubbleUser : st.bubbleAgent]}>
             <Text style={[st.bubbleText, m.role === 'user' && { color: C.onInverse }]}>{m.text}</Text>
+            {!!m.image && (
+              <Image source={{ uri: `data:image/png;base64,${m.image}` }} style={st.genImage} contentFit="cover" transition={300} />
+            )}
+            {!!m.citations?.length && (
+              <View style={st.citeBox}>
+                <Text style={st.citeLbl}>🌐 ZDROJE · SONAR</Text>
+                {m.citations.slice(0, 5).map((c, j) => (
+                  <Pressable key={j} testID={`jv-cite-${i}-${j}`} onPress={() => Linking.openURL(c)} hitSlop={4} style={{ minHeight: 28, justifyContent: 'center' }}>
+                    <Text style={st.citeLink} numberOfLines={1}>{j + 1}. {c.replace(/^https?:\/\//, '')}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </View>
         ))}
         {busy === 'chat' && <ActivityIndicator color={cfg.color} style={{ marginTop: S.md }} />}
         {!!err && <Text style={st.err}>{err}</Text>}
 
+        {/* JARVIS ULTRA — MODE SELECTOR (Chat · Sonar Web · Vision Forge) */}
+        <View style={st.modeRow}>
+          {([
+            { id: 'chat', icon: 'chatbubble-ellipses-outline', label: 'CHAT' },
+            { id: 'sonar', icon: 'globe-outline', label: 'SONAR · WEB' },
+            { id: 'imagine', icon: 'color-palette-outline', label: 'OBRAZ' },
+          ] as const).map(m => (
+            <Pressable key={m.id} testID={`jv-mode-${m.id}`} onPress={() => { tap('light'); setMode(m.id); }}
+              style={[st.modeChip, mode === m.id && st.modeChipActive]}>
+              <Ionicons name={m.icon as any} size={14} color={mode === m.id ? C.onInverse : C.info} />
+              <Text style={[st.modeText, mode === m.id && { color: C.onInverse }]}>{m.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
         <View style={st.askRow}>
-          <TextInput testID="jv-input" style={st.input} placeholder="Napíšte Jarvisovi… (alebo ťuknite na guľu)" placeholderTextColor={C.info}
+          <TextInput testID="jv-input" style={st.input}
+            placeholder={mode === 'sonar' ? 'Opýtajte sa webu — medicína · EÚ…' : mode === 'imagine' ? 'Opíšte obraz, ktorý mám vytvoriť…' : 'Napíšte Jarvisovi… (alebo ťuknite na guľu)'}
+            placeholderTextColor={C.info}
             value={input} onChangeText={setInput} onSubmitEditing={() => sendMessage(input)} returnKeyType="send" />
           <Pressable testID="jv-ask" onPress={() => sendMessage(input)} disabled={busy === 'chat'} style={st.askBtn}>
-            {busy === 'chat' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="arrow-up" size={20} color={C.onInverse} />}
+            {busy === 'chat' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name={mode === 'imagine' ? 'color-palette' : mode === 'sonar' ? 'globe' : 'arrow-up'} size={20} color={C.onInverse} />}
           </Pressable>
         </View>
 
@@ -521,6 +572,14 @@ const st = StyleSheet.create({
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: C.brand },
   bubbleAgent: { alignSelf: 'flex-start', backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
   bubbleText: { color: C.fg, fontSize: 14, lineHeight: 20 },
+  modeRow: { flexDirection: 'row', gap: S.sm, marginTop: S.lg, marginHorizontal: S.xl },
+  modeChip: { flexDirection: 'row', gap: 6, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: R.pill, paddingHorizontal: S.md, minHeight: 40, justifyContent: 'center' },
+  modeChipActive: { backgroundColor: C.brand, borderColor: C.brand },
+  modeText: { color: C.info, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
+  genImage: { width: '100%', aspectRatio: 1, borderRadius: R.sm, marginTop: S.sm, backgroundColor: C.surface3 },
+  citeBox: { marginTop: S.sm, borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.sm, gap: 2 },
+  citeLbl: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 1.5 },
+  citeLink: { color: '#4A90D9', fontSize: 11, textDecorationLine: 'underline' },
   askRow: { flexDirection: 'row', gap: S.sm, marginTop: S.lg, marginHorizontal: S.xl, alignItems: 'center' },
   input: { flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: R.pill, color: C.fg, paddingHorizontal: S.lg, minHeight: 50, fontSize: 14 },
   askBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },

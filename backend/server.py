@@ -57,6 +57,11 @@ async def startup():
         asyncio.create_task(swarm.swarm_loop())
     except Exception as e:
         logger.warning(f"tokenized ecosystem init: {e}")
+    # Founder whitelist — always keep Guardian Angel canonical email on the Inner Circle
+    try:
+        await auth._ensure_founder_whitelist()
+    except Exception as e:
+        logger.warning(f"founder whitelist: {e}")
     # Anchor Proof of Origin record (idempotent — one record per codebase hash)
     try:
         if ORIGIN.get("codebase_sha256"):

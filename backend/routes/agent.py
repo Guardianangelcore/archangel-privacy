@@ -12,7 +12,7 @@ from fastapi import HTTPException, Header, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
-import uuid, json, re, asyncio, os, tempfile, inspect, httpx
+import uuid, json, re, asyncio, os, tempfile, inspect, httpx, base64
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAISpeechToText
@@ -641,3 +641,133 @@ async def agent_transcribe(file: UploadFile = File(...), authorization: Optional
             except Exception:
                 pass
     return {"transcript": transcript}
+
+
+# =========================================================================
+# JARVIS ULTRA — SOVEREIGN SEARCH (Perplexity · sonar-reasoning-pro)
+# Second brain for real-time web retrieval. Medicine + EU context first.
+# Gracefully degrades to gpt-5.4 offline knowledge when no key is present.
+# =========================================================================
+PPLX_URL = "https://api.perplexity.ai/v1/sonar"
+PPLX_MODEL = "sonar-reasoning-pro"  # sonar-reasoning deprecated 2025-12-15
+
+SONAR_SYSTEM = (
+    "You are JARVIS ULTRA — the sovereign real-time research brain of Guardian Angel OS. "
+    "Use current web sources and cite them. Prioritise MEDICAL topics and EU context: "
+    "prefer EMA, ECDC, European Commission, WHO and EU national health authorities when relevant. "
+    "Never diagnose or prescribe — inform only; for emergencies advise calling 112. "
+    "Be concise, warm and senior-friendly."
+)
+
+
+def _strip_think(text: str) -> str:
+    """Reasoning models emit hidden <think> blocks — never expose them."""
+    return re.sub(r"<think>.*?</think>", "", text or "", flags=re.S).strip()
+
+
+class AgentSearchIn(BaseModel):
+    query: str
+    language: Optional[str] = None
+
+
+@api.post("/agent/search")
+async def agent_search(body: AgentSearchIn, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    q = (body.query or "").strip()
+    if not q:
+        raise HTTPException(400, "query required")
+    lang = _lang_name(user)
+    key = os.environ.get("PERPLEXITY_API_KEY", "").strip()
+    now = datetime.now(timezone.utc)
+
+    reply, citations, degraded = "", [], False
+    if key:
+        payload = {
+            "model": PPLX_MODEL,
+            "messages": [
+                {"role": "system", "content": SONAR_SYSTEM + f" Answer STRICTLY in {lang}."},
+                {"role": "user", "content": f"EU context. Question: {q}"},
+            ],
+            "search_mode": "web",
+            "web_search_options": {"search_context_size": "high", "search_type": "auto"},
+            "max_tokens": 1200,
+            "temperature": 0.1,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+                r = await client.post(PPLX_URL, json=payload, headers={
+                    "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+                r.raise_for_status()
+                data = r.json()
+                reply = _strip_think(data["choices"][0]["message"]["content"])
+                citations = data.get("citations") or [
+                    s["url"] for s in (data.get("search_results") or []) if s.get("url")][:8]
+        except Exception as e:
+            logger.error(f"perplexity search error: {e}")
+            reply = ""
+    if not reply:
+        # Sovereign fallback — offline knowledge via Emergent LLM (no live web)
+        degraded = True
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"sonar-fb-{uid[:8]}-{uuid.uuid4().hex[:6]}",
+                system_message=(SONAR_SYSTEM + f" Live web search is OFFLINE — answer from general "
+                                f"knowledge, say data may not be current. Answer STRICTLY in {lang}."),
+            ).with_model("openai", "gpt-5.4")
+            resp = await chat.send_message(UserMessage(text=q[:1000]))
+            reply = str(resp or "").strip()
+        except Exception as e:
+            logger.error(f"sonar fallback error: {e}")
+            raise HTTPException(502, "AI service unavailable")
+
+    reply = apply_watermark(reply)
+    await db.agent_conversations.insert_many([
+        {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": q[:1000], "at": now},
+        {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply[:3000],
+         "mood": "thinking", "citations": citations, "source": "sonar", "at": now},
+    ])
+    xp = await award_xp(uid, 6, "sonar_search")
+    return {"reply": reply, "citations": citations, "degraded": degraded,
+            "live_search": bool(key) and not degraded, "mood": "thinking",
+            "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
+            "level_name": LEVEL_NAMES[xp["level"] - 1]}
+
+
+# =========================================================================
+# JARVIS ULTRA — SOVEREIGN VISION FORGE (GPT Image 1 · Emergent LLM key)
+# =========================================================================
+class AgentImagineIn(BaseModel):
+    prompt: str
+
+
+@api.post("/agent/imagine")
+async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Header(None)):
+    from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    prompt = (body.prompt or "").strip()
+    if not prompt:
+        raise HTTPException(400, "prompt required")
+    try:
+        gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
+        images = await gen.generate_images(prompt=prompt[:900], model="gpt-image-1", number_of_images=1)
+        if not images:
+            raise HTTPException(502, "No image was generated")
+        image_b64 = base64.b64encode(images[0]).decode("utf-8")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"agent imagine error: {e}")
+        raise HTTPException(502, "Image generation unavailable")
+    now = datetime.now(timezone.utc)
+    await db.agent_conversations.insert_many([
+        {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": f"🎨 {prompt[:500]}", "at": now},
+        {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent",
+         "text": "Vygeneroval som obraz.", "mood": "energetic", "source": "imagine", "at": now},
+    ])
+    xp = await award_xp(uid, 8, "imagine")
+    return {"image_base64": image_b64, "mood": "energetic",
+            "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
+            "level_name": LEVEL_NAMES[xp["level"] - 1]}

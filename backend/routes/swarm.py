@@ -633,7 +633,7 @@ async def stability_audit(authorization: Optional[str] = Header(None)):
     # 2. Agents — force a run of each, then verify freshness
     for aid in AGENTS:
         await run_agent(aid)
-    agents = await db.swarm_agents.find({}, {"_id": 0}).to_list(10)
+    agents = await db.swarm_agents.find({}, {"_id": 0}).to_list(len(AGENTS) + 10)
     fresh = [a for a in agents if a.get("last_status") == "ok"]
     checks.append({"check": "swarm_agents", "ok": len(fresh) == len(AGENTS),
                    "detail": f"{len(fresh)}/{len(AGENTS)} agentov beží autonómne (loop_active={_loop_started})"})

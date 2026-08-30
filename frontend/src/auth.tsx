@@ -21,6 +21,7 @@ type Ctx = {
   user: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInDev: (email: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   setUser: (u: User | null) => void;
@@ -142,8 +143,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  // Sovereign Bypass — Founder / preview builds only. Skips Google OAuth.
+  const signInDev = useCallback(async (email: string, name?: string) => {
+    const res: any = await api('/auth/dev-bypass', {
+      method: 'POST',
+      body: JSON.stringify({ email, name }),
+    });
+    await saveToken(res.session_token);
+    setUser(res.user);
+  }, []);
+
   return (
-    <AuthCtx.Provider value={{ user, loading, signIn, signOut, refresh, setUser }}>
+    <AuthCtx.Provider value={{ user, loading, signIn, signInDev, signOut, refresh, setUser }}>
       {children}
     </AuthCtx.Provider>
   );

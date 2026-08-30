@@ -1,0 +1,39 @@
+{
+  "summary": "Phase 49 TIMELINE MERGE fully verified end-to-end. Backend 7/7 PASSED (100%, 22s): POST /api/auth/dev-bypass returns session_token + user.inner_circle=true + tier=archangel for founder guardian.angel.core@proton.me; custom email tester@guardian.dev also gets a valid session_token (server lowercases email, expected). POST /api/agent/search with 'Aké sú odporúčania EMA pre ibuprofen?' → 200, Slovak reply, degraded:true (blank PERPLEXITY_API_KEY — gpt-5.4 fallback, EXPECTED), citations=[], xp_gained=6. POST /api/agent/imagine 'zlaté anjelské krídla nad Bratislavou' → 200, image_base64 decodes to a valid PNG (magic bytes verified, size well >10KB). Regressions: GET /api/triage/state → 200 crisis_level=calm (note: field key is crisis_level, not state); GET /api/lens/models → 200 with exactly 4 entries; POST /api/agent/chat 'Ahoj' → 200 watermarked Slovak reply. Frontend (mobile 390x844): /login renders login-screen; founder-bypass-btn logs in and lands on '/' with 'Dobrý deň, Guardian.' greeting in Slovak (SOVEREIGN TOUR modal appeared). Pillar tiles pillar-health/pillar-family/pillar-legacy all visible & tappable — pillar-health navigated to /health. /jarvis renders jarvis-screen with all 3 mode chips (jv-mode-chat/sonar/imagine). Selecting jv-mode-sonar changed input placeholder to 'Opýtajte sa webu — medicína · EÚ…' (superset of spec 'Opýtajte sa webu…'). Sonar question sent via jv-ask returned an agent bubble in ~8s containing detailed Slovak EMA/ibuprofen guidance AND the expected notice '⚠️ Živé vyhľadávanie je offline (chýba Perplexity kľúč) — odpovedám z internej znalosti.' plus watermark '— AI Content · Sovereign Protocol'. CHAT mode regression: 'Ahoj Jarvis' → agent reply in ~3s (watermarked). No dead buttons observed on login/home/jarvis. One minor UX issue: jv-back triggers 'GO_BACK was not handled' when Jarvis is entered as the very first route (no history) — under normal in-app navigation (home→jarvis) it works fine, but a fallback router.replace('/') would harden it. IMAGINE mode not exercised via UI (per review request 'skip if flaky'); backend endpoint already validated to return real PNG.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "jarvis.tsx jv-back", "issue": "router.back() throws 'GO_BACK was not handled' when Jarvis is opened as the first route (e.g. deep-link or hard refresh). Under normal home→jarvis flow it works. Suggested fallback: if (router.canGoBack()) router.back(); else router.replace('/'). Reference: /app/frontend/app/jarvis.tsx:301", "testID": "jv-back", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase49_timeline_merge.py",
+    "/app/test_reports/pytest/pytest_phase49.xml"
+  ],
+  "action_items": [
+    "(Optional/LOW) Harden jv-back: use router.canGoBack() fallback to router.replace('/') in /app/frontend/app/jarvis.tsx so deep-linking directly to /jarvis doesn't strand the user."
+  ],
+  "critical_code_review_comments": [
+    "/api/triage/state response uses key 'crisis_level' (not 'state') — previous iterations/tests were inconsistent about this; keep documented so future tests target the correct key.",
+    "/api/auth/dev-bypass lowercases emails (guardian.angel.core normalization). Not a bug, but tests must compare case-insensitively.",
+    "SOVEREIGN TOUR modal ✕ is a pure Ionicons SVG — hard to target from tests without a testID (e.g., 'tour-close'). Consider adding testID for automated onboarding dismissal."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase49_timeline_merge.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7)",
+    "frontend": "100% of tested flows (login bypass, pillar tiles, jarvis screen, mode chips, sonar reply w/ offline notice, chat reply w/ watermark)"
+  },
+  "seed_data_creation": "None. Used founder auto-seeded account (guardian.angel.core@proton.me → session generated on demand via dev-bypass) and existing smoketest-user-1 token smoketok-fresh-2026 for /api/triage/state + /api/lens/models regressions.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 49 (P0 auth repair + Jarvis Ultra Sonar/Imagine + dead-button sweep) is fully green. Founder Sovereign Bypass path: POST /api/auth/dev-bypass {email:'guardian.angel.core@proton.me',name:'Guardian Angel'} → session_token + user.inner_circle=true + tier=archangel. Frontend /login testIDs: founder-bypass-btn (primary), bypass-toggle+bypass-email+bypass-submit (dev bypass for custom emails). PERPLEXITY_API_KEY is intentionally blank — /api/agent/search returns degraded:true with a gpt-5.4 fallback reply and empty citations (this is CORRECT). /api/agent/imagine takes ~10-30s and returns real PNG base64 (10KB+). SOVEREIGN TOUR onboarding modal opens on first home+jarvis visit; there is no testID for its ✕ close — consider adding one. jv-back's router.back() fails if /jarvis is the first route (dev warning, not a red screen); safe under normal navigation.",
+  "rca_of_issue": "N/A — no issues from review request found. P0 auth repair from prior iteration is holding: /root/.expo/state.json is intact, Metro is serving, login screen renders and Sovereign Bypass path completes end-to-end."
+}

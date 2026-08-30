@@ -297,11 +297,12 @@ class PantryVoiceParseIn(BaseModel):
 
 _CATEGORY_KEYWORDS = {
     "food":    ("konzerv", "fazu", "kukuric", "polievk", "cesto", "múk", "múka", "ryž", "jedl", "chlie", "keksy", "trvanl", "sušenk"),
+    # 'filter' MUST precede 'water': "filtre na vodu" is a filter, not water.
+    "filter":  ("filter", "filtre", "carbon", "uhlík", "brita", "berkey"),
     "water":   ("vod", "pitn", "flaš", "kanist"),
     "battery": ("bat", "aa", "aaa", "akumul", "cr123", "9v", "18650"),
     "gas":     ("plyn", "propan", "propán", "butan", "petrole", "bomb", "kanist"),
     "med":     ("lie", "tablet", "sirup", "ibalgin", "paraceta", "aspirin", "vitam", "obväz", "obvaz"),
-    "filter":  ("filter", "filtre", "carbon", "uhlík", "brita", "berkey"),
     "ammo":    ("nábo", "nabo", "munic", "muníc", "9mm", "ammo"),
     "tool":    ("nôž", "noz", "mačet", "seker", "kladiv", "nára", "nara", "nastr"),
 }

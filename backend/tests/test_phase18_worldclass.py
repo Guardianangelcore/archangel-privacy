@@ -50,8 +50,11 @@ class TestEliteTiers:
         assert r.status_code == 409  # used or already premium
 
     def test_card_payment_still_placeholder(self):
+        # Since iter25 card payments are LIVE via Stripe — /subscription/upgrade
+        # intentionally rejects method=card with 400 pointing to /billing/checkout.
         r = _post("/subscription/upgrade", json={"tier": "archangel", "method": "card"})
-        assert r.status_code == 503
+        assert r.status_code == 400
+        assert "billing/checkout" in r.json().get("detail", "")
 
     def test_invalid_tier_400(self):
         r = _post("/subscription/upgrade", json={"tier": "galactic", "method": "gat"})

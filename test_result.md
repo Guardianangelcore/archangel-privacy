@@ -553,3 +553,31 @@ NEEDS TESTING (backend):
   watermarked; lens/models still returns 4 entries.
 
 Auth for tests: user smoketest-user-1, Bearer smoketok-fresh-2026.
+
+## Iteration 39 (Phase 49 TIMELINE MERGE — Auth Repair + Jarvis Ultra, Jun 2026)
+FIXED P0: Expo bundler crash was caused by corrupted /root/.expo/state.json (empty JSON) — repaired.
+login.tsx code was intact. Sovereign Bypass verified E2E in preview.
+
+NEW backend (routes/agent.py):
+- POST /api/agent/search {query} — JARVIS ULTRA Sonar. Perplexity sonar-reasoning-pro
+  (medicine+EU system prompt, strips <think>, citations[]). PERPLEXITY_API_KEY in backend/.env
+  is BLANK → gracefully degrades to gpt-5.4 offline knowledge, returns degraded:true (EXPECTED).
+  Awards 6 XP. Stores convo with source:'sonar'.
+- POST /api/agent/imagine {prompt} — GPT Image 1 via Emergent LLM key, returns image_base64
+  (PNG, ~2.6MB b64). Can take up to 60s — use long timeouts. Awards 8 XP.
+
+NEW frontend (app/jarvis.tsx):
+- Mode chips above input: jv-mode-chat / jv-mode-sonar / jv-mode-imagine.
+- SONAR mode → /agent/search; renders citations (jv-cite-{i}-{j}, tappable) + degraded notice.
+- OBRAZ mode → /agent/imagine; renders generated image bubble (expo-image, base64 data URI).
+- CHAT mode unchanged (regression-sensitive).
+
+FIXED (full 661-test suite → all green):
+- routes/pantry.py: 'filter' keywords now precede 'water' ("filtre na vodu" → filter).
+- routes/swarm.py stability_audit: to_list(10) capped 13 agents → to_list(len(AGENTS)+10).
+- tests updated to current API contracts: test_iter33 streaks empty-state subset,
+  test_phase18 card payment now 400→/billing/checkout (Stripe live since iter25).
+- DB cleanup: test users named 'Smoke*' renamed to 'Guardian Test' (tokens unchanged).
+
+Auth for FE testing: login screen → founder-bypass-btn (POST /api/auth/dev-bypass,
+guardian.angel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.

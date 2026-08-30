@@ -59,11 +59,15 @@ async def auth_session(body: SessionExchangeIn):
         user_doc = User(user_id=user_id, email=email, name=name, picture=picture, did=did).model_dump()
         await db.users.insert_one(user_doc.copy())
         # Inner Circle whitelist — permanent Archangel status on first login
-        wl = await db.inner_circle.find_one({"email": email})
-        if wl:
+        # (Founder email guardian.angel.core@proton.me is auto-provisioned.)
+        wl = await db.inner_circle.find_one({"email": email.lower()})
+        is_founder = (email.lower() == FOUNDER_EMAIL)
+        if wl or is_founder:
             await db.users.update_one({"user_id": user_id}, {"$set": {
                 "inner_circle": True, "tier": "archangel", "tier_until": None, "tier_paid_with": "inner_circle"}})
-            await db.inner_circle.update_one({"email": email}, {"$set": {"linked_user_id": user_id, "linked_did": did}})
+            await db.inner_circle.update_one({"email": email.lower()},
+                                             {"$set": {"linked_user_id": user_id, "linked_did": did}},
+                                             upsert=True)
         user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
 
     await db.user_sessions.insert_one({
@@ -91,6 +95,83 @@ async def logout(authorization: Optional[str] = Header(None)):
         token = authorization.split(" ", 1)[1].strip()
         await db.user_sessions.delete_one({"session_token": token})
     return {"ok": True}
+
+
+# --------- FOUNDER / DEV BYPASS ---------
+# Guardian Angel's canonical sovereign email. First login with this email is
+# auto-provisioned as the Foundation founder (inner_circle=true, tier=archangel).
+FOUNDER_EMAIL = os.environ.get("FOUNDER_EMAIL", "guardian.angel.core@proton.me").lower()
+
+
+async def _ensure_founder_whitelist():
+    """Idempotent seed: keep the Founder email permanently on the Inner-Circle whitelist."""
+    try:
+        await db.inner_circle.update_one(
+            {"email": FOUNDER_EMAIL},
+            {"$setOnInsert": {"email": FOUNDER_EMAIL, "note": "founder-auto-provision",
+                              "added_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+    except Exception as e:
+        logger.warning(f"founder whitelist seed: {e}")
+
+
+async def _provision_user(email: str, name: Optional[str] = None, picture: Optional[str] = None) -> dict:
+    """Fetch-or-create a user, apply Inner-Circle upgrade if whitelisted."""
+    email_l = email.strip().lower()
+    existing = await db.users.find_one({"email": email_l}, {"_id": 0})
+    if existing:
+        user_id = existing["user_id"]
+        if name or picture:
+            await db.users.update_one({"user_id": user_id},
+                                      {"$set": {k: v for k, v in {"name": name, "picture": picture}.items() if v}})
+        return await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    did = f"did:guardian:{uuid.uuid4().hex[:24]}"
+    doc = User(user_id=user_id, email=email_l, name=name or "Guardian Angel",
+               picture=picture, did=did).model_dump()
+    await db.users.insert_one(doc.copy())
+    wl = await db.inner_circle.find_one({"email": email_l})
+    if wl or email_l == FOUNDER_EMAIL:
+        await db.users.update_one({"user_id": user_id}, {"$set": {
+            "inner_circle": True, "tier": "archangel", "tier_until": None,
+            "tier_paid_with": "inner_circle", "tos_accepted_version": "2026-06.1"}})
+        await db.inner_circle.update_one({"email": email_l},
+                                         {"$set": {"linked_user_id": user_id, "linked_did": did}},
+                                         upsert=True)
+    return await db.users.find_one({"user_id": user_id}, {"_id": 0})
+
+
+class DevBypassIn(BaseModel):
+    email: str
+    name: Optional[str] = None
+
+
+@api.post("/auth/dev-bypass")
+async def auth_dev_bypass(body: DevBypassIn):
+    """SOVEREIGN BYPASS — creates a Guardian session without Google OAuth.
+
+    Always allowed for the Founder email (guardian.angel.core@proton.me).
+    Also allowed for any email when DEV_BYPASS_ENABLED=true (preview builds).
+    Returns the same shape as /auth/session for a drop-in on the login screen."""
+    email_l = body.email.strip().lower()
+    if not email_l or "@" not in email_l:
+        raise HTTPException(400, "invalid email")
+    dev_enabled = os.environ.get("DEV_BYPASS_ENABLED", "true").lower() in ("1", "true", "yes")
+    if email_l != FOUNDER_EMAIL and not dev_enabled:
+        raise HTTPException(403, "dev bypass disabled — use Google Sign-In")
+    await _ensure_founder_whitelist()
+    user_doc = await _provision_user(email_l, body.name)
+    session_token = f"gs-{uuid.uuid4().hex}"
+    await db.user_sessions.insert_one({
+        "session_token": session_token,
+        "user_id": user_doc["user_id"],
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
+        "via": "dev_bypass",
+    })
+    return {"session_token": session_token, "user": clean(user_doc)}
+
 
 # --------- USER PREFS ---------
 class PrefIn(BaseModel):

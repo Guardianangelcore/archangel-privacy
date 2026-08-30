@@ -23,8 +23,16 @@ A sovereign, faceless, 22nd-century survival OS for individuals + their Guardian
 - All names anonymised → "Guardian Angel", "Guardian Circle", "Inner Circle".
 - DID hashes for metadata. Local-first storage for contacts/calendar (SecureStore + AsyncStorage).
 
+## Phase 49 (TIMELINE MERGE — June 2026)
+1. **P0 AUTH REPAIR** — root cause: corrupted `/root/.expo/state.json` crashed Metro. Fixed. Sovereign Bypass on login (`/api/auth/dev-bypass`): "VSTUP AKO GUARDIAN ANGEL (FOUNDER)" button + custom-email developer bypass. Founder `guardian.angel.core@proton.me` auto-seeded (inner_circle, tier archangel).
+2. **JARVIS ULTRA — SONAR** (`/api/agent/search`): Perplexity `sonar-reasoning-pro` (sonar-reasoning deprecated 12/2025), medicine+EU prompt, citations, `<think>` stripped. Graceful degrade → gpt-5.4 offline knowledge when `PERPLEXITY_API_KEY` is blank (it currently IS blank — user must obtain key at https://console.perplexity.ai/api).
+3. **JARVIS ULTRA — VISION FORGE** (`/api/agent/imagine`): GPT Image 1 via Emergent LLM key, returns base64 PNG.
+4. Jarvis UI: mode chips CHAT · SONAR·WEB · OBRAZ, tappable citations, generated-image bubbles.
+5. Integrity audit: Onyx voice, wake-word JARVIS, 3-pillar triangle, Mosaic 16k TPS, UHP, Bio-Digital Twin, Longevity, Satellite Handshake — all confirmed present. No "Smoke" naming found (only "smoker" in Longevity = legit).
+
 ## Integrations
-- Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT).
+- Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT, GPT Image 1).
+- Perplexity Sonar (`PERPLEXITY_API_KEY` in backend/.env — blank = graceful fallback).
 - Stripe test keys (Payments).
 - Emergent Push (native builds only).
-- Emergent Google Auth.
+- Emergent Google Auth + Sovereign dev-bypass.
