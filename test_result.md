@@ -604,3 +604,18 @@ FRONTEND:
 - VERIFIED via screenshots: gallery grid renders with thumbnail, preview modal opens full-screen.
 
 Existing art doc for tests: doc_id f1b50e9e705042fe92005b801de2cfc7 (founder user_ac98119726d0).
+
+## Iteration 41 (Phase 49.2 — Sonar História, Jun 2026)
+BACKEND (routes/agent.py):
+- /agent/search agent-row now also stores query + degraded fields.
+- GET /api/agent/search/history?limit=30 → {items:[{conv_id,query,reply,citations,degraded,at}], total}.
+  Legacy rows (no query field) pair with the user message at the identical timestamp.
+- DELETE /api/agent/search/history/{conv_id} → deletes agent row + paired user question. 404 unknown.
+- SELF-TESTED via curl: list OK (5 items), delete OK (total decreased), unknown id → 404.
+
+FRONTEND (app/jarvis.tsx):
+- In SONAR mode: collapsible '🌐 SONAR HISTÓRIA (n)' section (jv-hist-toggle) under the input.
+  Rows jv-hist-{conv_id}: query + date + source count (Slovak declension). Tap (jv-hist-open-*) →
+  re-injects question+answer+citations into the chat. Trash (jv-hist-del-*) deletes.
+- History auto-refreshes when entering sonar mode and after each new sonar search.
+- SELF-TESTED via screenshot: toggle visible, entry tap re-injected 'Aké je počasie v Bratislave?' Q&A.

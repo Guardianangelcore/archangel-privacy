@@ -129,6 +129,8 @@ export default function Jarvis() {
   const [showMems, setShowMems] = useState(false);
   const [showAbil, setShowAbil] = useState(false);
   const [micDenied, setMicDenied] = useState(false);
+  const [sonarHist, setSonarHist] = useState<any[]>([]);
+  const [showHist, setShowHist] = useState(false);
   const [recording, setRecording] = useState(false);
   const [auto, setAuto] = useState<any>(null);
   const [traces, setTraces] = useState<Record<string, any>>({});
@@ -144,6 +146,10 @@ export default function Jarvis() {
   const loadMems = useCallback(async () => {
     try { const m: any = await api('/agent/memories'); setMemories(m.memories || []); } catch {}
   }, []);
+  const loadHist = useCallback(async () => {
+    try { const h: any = await api('/agent/search/history'); setSonarHist(h.items || []); } catch {}
+  }, []);
+  useEffect(() => { if (mode === 'sonar') loadHist(); }, [mode, loadHist]);
   useEffect(() => {
     loadState(); loadMems();
     (async () => {
@@ -204,6 +210,7 @@ export default function Jarvis() {
         showXp(res.xp_gained);
         if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
         loadState();
+        loadHist();
         // VOICE SONAR — the Orb answers in Onyx and announces verified sources.
         if (viaVoice) {
           const n = res.citations?.length || 0;
@@ -223,7 +230,17 @@ export default function Jarvis() {
     } catch (e: any) { setErr(String(e.message || e)); setMood('calm'); setStatus(''); }
     setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, mode, user?.language, speak, loadState, loadMems]);
+  }, [busy, mode, user?.language, speak, loadState, loadMems, loadHist]);
+
+  // SONAR HISTORY — return to a past web answer (re-injects it into the chat).
+  const openHist = (h: any) => {
+    tap('light');
+    setMsgs(prev => [...prev.slice(-6), { role: 'user', text: h.query }, { role: 'agent', text: h.reply, citations: h.citations }]);
+    setShowHist(false);
+  };
+  const delHist = async (id: string) => {
+    try { await api(`/agent/search/history/${id}`, { method: 'DELETE' }); setSonarHist(prev => prev.filter(x => x.conv_id !== id)); } catch {}
+  };
 
   // ---- FULL VOICE CONVERSATION (tap Orb: record → Whisper → gpt-5.4 → emotional TTS) ----
   const orbPress = async () => {
@@ -416,6 +433,31 @@ export default function Jarvis() {
           </Pressable>
         </View>
 
+        {/* SONAR HISTÓRIA — every web search with its sources, one tap away */}
+        {mode === 'sonar' && sonarHist.length > 0 && (
+          <>
+            <Pressable testID="jv-hist-toggle" onPress={() => { tap('light'); setShowHist(!showHist); }} style={st.sectionRow}>
+              <Text style={st.section}>🌐 SONAR HISTÓRIA ({sonarHist.length})</Text>
+              <Ionicons name={showHist ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
+            </Pressable>
+            {showHist && sonarHist.slice(0, 15).map((h: any) => (
+              <View key={h.conv_id} testID={`jv-hist-${h.conv_id}`} style={st.histRow}>
+                <Pressable testID={`jv-hist-open-${h.conv_id}`} onPress={() => openHist(h)} style={{ flex: 1 }}>
+                  <Text style={st.histQuery} numberOfLines={1}>{h.query || '—'}</Text>
+                  <Text style={st.histMeta}>
+                    {String(h.at).slice(0, 10)} · {h.citations?.length
+                      ? `${h.citations.length} ${h.citations.length === 1 ? 'zdroj' : h.citations.length < 5 ? 'zdroje' : 'zdrojov'}`
+                      : 'bez živých zdrojov'}
+                  </Text>
+                </Pressable>
+                <Pressable testID={`jv-hist-del-${h.conv_id}`} onPress={() => delHist(h.conv_id)} hitSlop={10}>
+                  <Ionicons name="trash-outline" size={15} color={C.info} />
+                </Pressable>
+              </View>
+            ))}
+          </>
+        )}
+
         {/* VISUAL THINKING */}
         <Pressable testID="jv-analyze" onPress={runAnalysis} disabled={busy === 'analyze'} style={st.analyzeBtn}>
           {busy === 'analyze' ? <ActivityIndicator color="#9B6DFF" /> : <Ionicons name="scan-circle-outline" size={18} color="#9B6DFF" />}
@@ -599,6 +641,9 @@ const st = StyleSheet.create({
   citeBox: { marginTop: S.sm, borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.sm, gap: 2 },
   citeLbl: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 1.5 },
   citeLink: { color: '#4A90D9', fontSize: 11, textDecorationLine: 'underline' },
+  histRow: { flexDirection: 'row', gap: S.sm, alignItems: 'center', marginHorizontal: S.xl, marginTop: S.sm, backgroundColor: C.surface2, borderRadius: R.sm, borderWidth: 1, borderColor: C.border, padding: S.md, minHeight: 52 },
+  histQuery: { color: C.fg, fontSize: 12.5, fontWeight: '700' },
+  histMeta: { color: C.info, fontSize: 10, marginTop: 2 },
   askRow: { flexDirection: 'row', gap: S.sm, marginTop: S.lg, marginHorizontal: S.xl, alignItems: 'center' },
   input: { flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border, borderRadius: R.pill, color: C.fg, paddingHorizontal: S.lg, minHeight: 50, fontSize: 14 },
   askBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },

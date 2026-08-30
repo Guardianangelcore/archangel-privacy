@@ -34,6 +34,7 @@ A sovereign, faceless, 22nd-century survival OS for individuals + their Guardian
 1. **Vault Art Gallery** — every `/api/agent/imagine` PNG is uploaded to Emergent Object Storage (`jarvis_art/{uid}/`) + inserted into `documents` (source: `jarvis_art`). Vault tab shows gold-bordered "GALÉRIA OBRAZOV · JARVIS" 3-col grid → full-screen preview, delete. Jarvis image bubble shows "ULOŽENÉ V TREZORE · OTVORIŤ GALÉRIU" chip.
 2. **Voice Sonar** — Orb voice in Sonar mode speaks the reply in Onyx + announces source count (Slovak declension). `voice.ts` strips markdown/URLs before all TTS.
 3. OpenAI safety rejections on imagine → 400 with friendly Slovak message.
+4. **Sonar História** — `GET/DELETE /api/agent/search/history` + collapsible section in Jarvis (SONAR mode): past searches with source counts, tap re-injects Q&A+citations into chat.
 
 ## Integrations
 - Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT, GPT Image 1).

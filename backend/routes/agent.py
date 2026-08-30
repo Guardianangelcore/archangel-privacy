@@ -726,13 +726,50 @@ async def agent_search(body: AgentSearchIn, authorization: Optional[str] = Heade
     await db.agent_conversations.insert_many([
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": q[:1000], "at": now},
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply[:3000],
-         "mood": "thinking", "citations": citations, "source": "sonar", "at": now},
+         "mood": "thinking", "citations": citations, "source": "sonar",
+         "query": q[:1000], "degraded": degraded, "at": now},
     ])
     xp = await award_xp(uid, 6, "sonar_search")
     return {"reply": reply, "citations": citations, "degraded": degraded,
             "live_search": bool(key) and not degraded, "mood": "thinking",
             "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
             "level_name": LEVEL_NAMES[xp["level"] - 1]}
+
+
+# --- SONAR HISTORY — return to any past web answer with its sources ---
+@api.get("/agent/search/history")
+async def agent_search_history(limit: int = 30, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    limit = max(1, min(100, limit))
+    rows = await db.agent_conversations.find(
+        {"user_id": uid, "role": "agent", "source": "sonar"}, {"_id": 0}
+    ).sort("at", -1).to_list(limit)
+    items = []
+    for r in rows:
+        q = r.get("query")
+        if not q:  # legacy rows: pair with the user message inserted at the same instant
+            um = await db.agent_conversations.find_one(
+                {"user_id": uid, "role": "user", "at": r["at"]}, {"_id": 0, "text": 1})
+            q = (um or {}).get("text", "")
+        items.append({"conv_id": r["conv_id"], "query": q, "reply": r["text"],
+                      "citations": r.get("citations") or [],
+                      "degraded": bool(r.get("degraded")), "at": r["at"]})
+    return {"items": items, "total": len(items)}
+
+
+@api.delete("/agent/search/history/{conv_id}")
+async def agent_search_history_delete(conv_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    row = await db.agent_conversations.find_one(
+        {"conv_id": conv_id, "user_id": uid, "source": "sonar"}, {"_id": 0})
+    if not row:
+        raise HTTPException(404, "Not found")
+    await db.agent_conversations.delete_one({"conv_id": conv_id, "user_id": uid})
+    # remove the paired user question (inserted at the identical timestamp)
+    await db.agent_conversations.delete_one({"user_id": uid, "role": "user", "at": row["at"]})
+    return {"ok": True}
 
 
 # =========================================================================
