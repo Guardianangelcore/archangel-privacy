@@ -1,0 +1,33 @@
+{
+  "summary": "Phase 51.1 KARTA ŽIVOTA — 4 EXTENSIONS: ALL GREEN. Backend: 17/17 pytest passed in /app/backend/tests/test_phase51_1_extensions.py (pytest_phase51_1.xml, ~6s parallel). (1) OCR: POST /api/lifecard/ocr with a synthetic rodný list PNG (PIL: 'RODNY LIST' + 'Meno a priezvisko: Jan Novak' + 'Datum narodenia: 14. 05. 1980') → {ai:true, found:true, full_name:'Jan Novak', birth_date:'1980-05-14', blood_type:null}; empty file → 400; solid-gray PNG → {ai:true, found:false}; unauthenticated → 401. (2) PDF: GET /api/lifecard/report.pdf with Bearer → 200 application/pdf, %PDF header, >1KB; ?token=<session> query param works (used by sharePdf); missing auth → 401. (3) FAMILY: user-1 GET /api/lifecard/family lists smoketest-user-2 with counts{vaccine,exam} and booster_soon; timeline endpoint returns ONLY vaccine+exam categories (created a fresh 'disease' event on user-2 and confirmed it is filtered out — cleaned up after); reverse direction (user-2 token) shows user-1; non-circle user id → 403. (4) BOOSTER GUARD: created vaccine event with booster_due T+5d for user-1; POST /api/swarm/run/booster_guard → actions>=1; event now flagged booster_notified_7d:true; second run → 0 new actions (idempotent). Regressions: GET /api/lifecard shape intact; GET /api/swarm/status has booster_guard agent + loop_active:true; POST /api/lifecard/predictions (LLM) + accept still work; POST /api/agent/chat 'Dnes mi doktor povedal, že mám kiahne' still logs lifecard_logged + watermark. FRONTEND (390x844, founder-bypass): /health → hh-lifecard-hero → /health-timeline. Verified lc-pdf button present under identity card and clickable without error (opens in new tab on web, expected). lc-edit opens inline box exposing lc-ocr-cam + lc-ocr-pick buttons (did NOT complete a file picker per instructions — presence only). RODINNÉ KARTY (lc-family): with clean founder circle → lc-fam-empty visible with text 'Žiadni členovia Guardian Circle…' + '+ PRIDAŤ STRÁŽCU →' (verified). Seeded db.guardians link founder↔smoketest-user-2, reloaded /health-timeline → lc-fam-smoketest-user-2 row appears 'Smoke Two · 💉 1 očkovaní · 🩺 0 prehliadok · ⏰ booster do 30 dní'; tap expands inline mini-timeline showing '1. 8. 2026 — Tetanus TEST (booster do 19. 9. 2026)' + privacy note 'Zo súkromia sa v kruhu zdieľajú len očkovania a prehliadky.' Guardians seed cleaned up at test end. No React Native red screens, no console errors (only pre-existing shadow*/pointerEvents/expo-notifications web warnings — not caused by phase 51.1).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase51_1_extensions.py",
+    "/app/test_reports/pytest/pytest_phase51_1.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/health.py OCR endpoint (lines 1139–1173) uses gpt-5.4 vision, 15MB file cap, robust JSON regex extraction, blood_type validated against BLOOD_TYPES tuple, birth_date parsed strictly with 1900/future guards, and found=false if neither name nor birth is present. 502 on LLM failure — good.",
+    "routes/health.py PDF endpoint (1179–1208) uses _auth_pdf() which accepts both Authorization: Bearer and ?token=; SK labels present; uses run_in_threadpool for reportlab CPU work (non-blocking). Good.",
+    "routes/health.py _circle_member_ids() union-of-both-directions is correct; discards self; family timeline endpoint hard-filters category $in ['vaccine','exam'] server-side — privacy leak surface is zero and confirmed by test.",
+    "booster_guard_sweep flags per-stage (booster_notified_7d/30d) making the sweep idempotent; sends push (best-effort) + Jarvis proactive agent_conversations row with watermark + mood:'alert' + source:'booster_guard'. Correctly matches spec.",
+    "swarm.py registration adds booster_guard to AGENTS + AGENT_FUNCS with 3600s interval + Slovak label/desc — visible in /api/swarm/status.",
+    "health-timeline.tsx family section renders lc-family + lc-fam-empty vs lc-fam-{user_id} rows correctly; privacy note is a static string 'Zo súkromia sa v kruhu zdieľajú len očkovania a prehliadky.' — good compliance.",
+    "OCR buttons (lc-ocr-cam / lc-ocr-pick) live inside the lc-edit collapsible; a third lc-ocr-settings escape hatch is provided in case of permission denial. Good UX."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase51_1_extensions.py (new — 17 tests)"
+  ],
+  "success_rate": { "backend": "100% (17/17)", "frontend": "100% of tested flows" },
+  "seed_data_creation": "Backend tests: added a disease event for user-2 (TEST_FAMILY_PRIVACY_disease) → deleted by class-scope teardown; vaccine event for user-1 (TEST_BOOSTER_SWEEP with booster_due T+5) → deleted by class-scope teardown; a jarvis prediction accepted event → deleted at test end; a voice-triggered disease record → deleted at test end. Frontend test: inserted db.guardians link founder→smoketest-user-2 (test_seed:true) → DELETED at end via /tmp/seed_founder_guardian.py clean. Founder circle is now clean. smoketest-user-2's pre-existing 'Tetanus TEST' vaccine (booster_notified_30d:true) was reused for the family expansion assertion — NOT modified or deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Reusable pytest: /app/backend/tests/test_phase51_1_extensions.py (17 tests, ~6s parallel). Generates PIL synthetic rodný list on the fly for OCR — no external fixtures. TOKEN1=smoketok-fresh-2026 (user-1), TOKEN2=smoketok-fresh-2026-u2 (user-2). Frontend testIDs relevant to 51.1: lc-pdf, lc-edit (toggles), lc-ocr-cam/lc-ocr-pick/lc-ocr-settings/lc-ocr-msg, lc-family, lc-fam-empty, lc-fam-{user_id}. Family member row on tap expands inline mini-timeline (no separate testID for each row). Privacy note is plain text (not testID'd). PDF button on web opens in new tab via window.open(url+'?token=…') — Playwright should NOT wait for navigation, just verify click doesn't throw. Booster Guard is registered as swarm agent booster_guard with interval 3600s. If you re-seed a guardians link for founder testing, use /tmp/seed_founder_guardian.py (seed|clean) — it uses email lookup so it survives fork/user-id changes.",
+  "rca_of_issue": "N/A — Phase 51.1 Karta života extensions (OCR / PDF / Family / Booster Guard) are fully verified. All 4 extensions + regressions pass end-to-end."
+}

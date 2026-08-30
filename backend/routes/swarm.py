@@ -79,6 +79,8 @@ AGENTS = {
                           "desc": "Každú nedeľu uloží týždenný report uzdravenia priamo do Zdravotného trezora"},
     "physio_coach":      {"interval": 900, "label": "Physio Coach (Večerná pripomienka)",
                           "desc": "Večer pripomenie, keď dnešný deň týždenného plánu zotavenia nie je odškrtnutý"},
+    "booster_guard":     {"interval": 3600, "label": "Booster Guard (Preskočkovanie)",
+                          "desc": "Stráži boostery vakcín — Jarvis sa ohlási 30 a 7 dní pred termínom"},
 }
 
 async def _agent_waitlist_hunter() -> int:
@@ -489,6 +491,11 @@ async def _agent_physio_coach() -> int:
     return await physio_reminder_sweep()
 
 
+async def _agent_booster_guard() -> int:
+    from routes.health import booster_guard_sweep
+    return await booster_guard_sweep()
+
+
 _AGENT_FN = {
     "waitlist_hunter": _agent_waitlist_hunter,
     "marketplace": _agent_marketplace,
@@ -503,6 +510,7 @@ _AGENT_FN = {
     "companion_care": _agent_companion_care,
     "weekly_reporter": _agent_weekly_reporter,
     "physio_coach": _agent_physio_coach,
+    "booster_guard": _agent_booster_guard,
 }
 
 async def run_agent(agent_id: str) -> dict:

@@ -52,6 +52,12 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 4. **Hlasové pridávanie** — Jarvis chat/stream intent: trigger regex → LLM klasifikácia → záznam do správnej kategórie s dnešným/relatívnym dátumom („včera“). Otázky nezapíše (is_record=false → normálny chat). Odpoveď: „Zapísal som do Karty života: …“.
 5. Health hub: zlatý hero KARTA ŽIVOTA (hh-lifecard-hero) navrchu; duplicitná dlaždica hh-timeline odstránená; '+' na obrazovke slúži len na rýchle pridanie do 5 kategórií.
 
+## Phase 51.1 (Life Card Extensions — June 2026)
+1. **OCR rodného listu** — POST /api/lifecard/ocr (gpt-5.4 vision): fotka dokladu → predvyplní meno/dátum narodenia/krvnú skupinu v edit boxe (user potvrdí uložením). Kamera s permission-contract + Open Settings.
+2. **PDF Karty života** — GET /api/lifecard/report.pdf: identita + 5 sekcií záznamov; tlačidlo lc-pdf (sharePdf) na obrazovke.
+3. **Rodinné karty** — GET /api/lifecard/family (+/{member}/timeline): členovia Guardian Circle (db.guardians, obojsmerne) — zo súkromia len očkovania+prehliadky (403 mimo kruhu). Sekcia lc-family; empty state → /recovery-suite.
+4. **Booster Guard** — nový swarm agent (1h interval): booster_due o 30 a 7 dní → push + proaktívna Jarvis správa (raz na fázu, flagy na evente).
+
 ## Integrations
 - Emergent LLM Key (OpenAI, Anthropic, Gemini text/vision, TTS, Whisper STT, GPT Image 1).
 - Perplexity Sonar (`PERPLEXITY_API_KEY` in backend/.env — blank = graceful fallback).

@@ -3,11 +3,13 @@
 // 5 kategórií (Očkovania · Choroby · Operácie · Úrazy · Prehliadky),
 // časová os, Jarvis predikcie → kalendár, hlasové pridávanie cez Jarvisa.
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { api } from '@/src/api';
+import * as ImagePicker from 'expo-image-picker';
+import { api, apiUpload } from '@/src/api';
+import { sharePdf } from '@/src/pdf';
 import { DateField } from '@/src/ui/fields';
 import { addToGuardianCalendar } from '@/src/native-calendar';
 import { C, S, R } from '@/src/theme';
@@ -56,13 +58,26 @@ export default function LifeCard() {
   const [accepting, setAccepting] = useState<string>('');
   const [predMsg, setPredMsg] = useState('');
 
+  // OCR rodného listu + PDF export
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrMsg, setOcrMsg] = useState('');
+  const [camBlocked, setCamBlocked] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  // rodinné karty (Guardian Circle)
+  const [fam, setFam] = useState<any>(null);
+  const [famSel, setFamSel] = useState<string>('');
+  const [famTl, setFamTl] = useState<any>(null);
+  const [famBusy, setFamBusy] = useState(false);
+
   const load = async (f = filter) => {
     try {
-      const [c, t] = await Promise.all([
+      const [c, t, fm] = await Promise.all([
         api('/lifecard'),
         api(`/calendar/timeline${f !== 'all' ? `?category=${f}` : ''}`),
+        api('/lifecard/family').catch(() => null),
       ]);
-      setCard(c); setData(t);
+      setCard(c); setData(t); if (fm) setFam(fm);
     } catch (e: any) { setErr(String(e.message || e)); }
   };
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -96,6 +111,52 @@ export default function LifeCard() {
 
   const del = async (id: string) => {
     try { await api(`/calendar/events/${id}`, { method: 'DELETE' }); await load(); } catch {}
+  };
+
+  // OCR rodného listu — Guardian Eye prefills the identity form (user confirms save)
+  const runOcr = async (fromCamera: boolean) => {
+    setErr(''); setOcrMsg(''); setCamBlocked(false);
+    try {
+      let res: any;
+      if (fromCamera && Platform.OS !== 'web') {
+        const p = await ImagePicker.getCameraPermissionsAsync();
+        if (!p.granted) {
+          if (!p.canAskAgain) { setCamBlocked(true); return; }
+          const r = await ImagePicker.requestCameraPermissionsAsync();
+          if (!r.granted) { if (!r.canAskAgain) setCamBlocked(true); return; }
+        }
+        res = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: false });
+      } else {
+        res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      }
+      if (res.canceled || !res.assets?.length) return;
+      const a = res.assets[0];
+      setOcrBusy(true);
+      const r: any = await apiUpload('/lifecard/ocr', a.uri, a.fileName || 'rodny-list.jpg', a.mimeType || 'image/jpeg');
+      if (!r.found) { setOcrMsg('Na fotke sa nepodarilo rozpoznať doklad. Skúste ostrejšiu fotku pri lepšom svetle.'); return; }
+      if (r.full_name) setEName(r.full_name);
+      if (r.birth_date) setEBirth(r.birth_date);
+      if (r.blood_type) setEBlood(r.blood_type);
+      setOcrMsg('📄 Údaje načítané z dokladu — skontrolujte a stlačte ULOŽIŤ ÚDAJE.');
+    } catch (e: any) { setErr(String(e.message || e)); }
+    finally { setOcrBusy(false); }
+  };
+
+  // PDF Karty života — jedným ťukom pre lekára / rodinu
+  const exportPdf = async () => {
+    setPdfBusy(true); setErr('');
+    try { await sharePdf('/lifecard/report.pdf', 'guardian_karta_zivota.pdf'); }
+    catch (e: any) { setErr(String(e.message || e)); }
+    finally { setPdfBusy(false); }
+  };
+
+  // Rodinná karta — načítanie očkovaní/prehliadok člena kruhu
+  const openMember = async (m: any) => {
+    if (famSel === m.user_id) { setFamSel(''); setFamTl(null); return; }
+    setFamSel(m.user_id); setFamTl(null); setFamBusy(true);
+    try { setFamTl(await api(`/lifecard/family/${m.user_id}/timeline`)); }
+    catch (e: any) { setErr(String(e.message || e)); }
+    finally { setFamBusy(false); }
   };
 
   const generatePredictions = async () => {
@@ -174,6 +235,27 @@ export default function LifeCard() {
             </View>
             {editing && (
               <View style={styles.editBox}>
+                <View style={{ flexDirection: 'row', gap: S.sm }}>
+                  <Pressable testID="lc-ocr-cam" onPress={() => runOcr(true)} disabled={ocrBusy} style={styles.ocrBtn}>
+                    {ocrBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
+                      <>
+                        <Ionicons name="camera-outline" size={15} color={C.brand} />
+                        <Text style={styles.ocrBtnText}>ODFOTIŤ RODNÝ LIST</Text>
+                      </>
+                    )}
+                  </Pressable>
+                  <Pressable testID="lc-ocr-pick" onPress={() => runOcr(false)} disabled={ocrBusy} style={styles.ocrBtn}>
+                    <Ionicons name="image-outline" size={15} color={C.brand} />
+                    <Text style={styles.ocrBtnText}>Z GALÉRIE</Text>
+                  </Pressable>
+                </View>
+                {camBlocked && (
+                  <Pressable testID="lc-ocr-settings" onPress={() => Linking.openSettings()} style={styles.settingsBtn}>
+                    <Ionicons name="settings-outline" size={14} color={C.onWarn} />
+                    <Text style={styles.settingsText}>Kamera je zablokovaná — OTVORIŤ NASTAVENIA</Text>
+                  </Pressable>
+                )}
+                {!!ocrMsg && <Text testID="lc-ocr-msg" style={styles.predMsg}>{ocrMsg}</Text>}
                 <TextInput testID="lc-name" style={styles.input} placeholder="Meno a priezvisko" placeholderTextColor={C.info} value={eName} onChangeText={setEName} />
                 <DateField testID="lc-birth" title="DÁTUM NARODENIA" value={eBirth} onChange={setEBirth} placeholder="Dátum narodenia" style={styles.input} />
                 <Text style={styles.idLabel}>KRVNÁ SKUPINA</Text>
@@ -190,6 +272,18 @@ export default function LifeCard() {
               </View>
             )}
           </View>
+        )}
+
+        {/* PDF PRE LEKÁRA / RODINU — 1 ťuk */}
+        {card && (
+          <Pressable testID="lc-pdf" onPress={exportPdf} disabled={pdfBusy} style={styles.pdfBtn}>
+            {pdfBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
+              <>
+                <Ionicons name="print-outline" size={18} color={C.brand} />
+                <Text style={styles.pdfText}>PDF KARTY ŽIVOTA — PRE LEKÁRA / RODINU</Text>
+              </>
+            )}
+          </Pressable>
         )}
 
         {/* HLASOVÉ PRIDÁVANIE cez Jarvisa */}
@@ -270,6 +364,46 @@ export default function LifeCard() {
           {predictions.length > 0 && <Text style={styles.aiMark}>AI Content · Sovereign Protocol</Text>}
         </View>
 
+        {/* RODINNÉ KARTY — Guardian Circle (len očkovania + prehliadky) */}
+        <View testID="lc-family" style={styles.famBox}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+            <Ionicons name="people" size={16} color={C.brand} />
+            <Text style={styles.predTitle}>RODINNÉ KARTY · GUARDIAN CIRCLE</Text>
+          </View>
+          {!fam && <ActivityIndicator size="small" color={C.brand} style={{ marginTop: S.md }} />}
+          {fam && (fam.members || []).length === 0 && (
+            <Pressable testID="lc-fam-empty" onPress={() => router.push('/recovery-suite')} style={styles.famEmpty}>
+              <Text style={styles.hint}>Žiadni členovia Guardian Circle. Pridajte rodinu ako strážcov (Social Recovery) a uvidíte ich očkovania a prehliadky.</Text>
+              <Text style={styles.famEmptyLink}>+ PRIDAŤ STRÁŽCU →</Text>
+            </Pressable>
+          )}
+          {(fam?.members || []).map((m: any) => (
+            <View key={m.user_id}>
+              <Pressable testID={`lc-fam-${m.user_id}`} onPress={() => openMember(m)} style={styles.famRow}>
+                <View style={styles.famAvatar}><Text style={styles.famInitial}>{(m.name || '?').charAt(0).toUpperCase()}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.famName}>{m.name}</Text>
+                  <Text style={styles.famMeta}>💉 {m.counts.vaccine} očkovaní · 🩺 {m.counts.exam} prehliadok{m.booster_soon ? ` · ⏰ booster do 30 dní` : ''}</Text>
+                </View>
+                <Ionicons name={famSel === m.user_id ? 'chevron-up' : 'chevron-down'} size={16} color={C.info} />
+              </Pressable>
+              {famSel === m.user_id && (
+                <View style={styles.famDetail}>
+                  {famBusy && <ActivityIndicator size="small" color={C.brand} />}
+                  {famTl && (famTl.events || []).length === 0 && <Text style={styles.hint}>Žiadne očkovania ani prehliadky.</Text>}
+                  {(famTl?.events || []).map((e: any) => (
+                    <View key={e.event_id} style={styles.famEvRow}>
+                      <Ionicons name={(CATS[e.category] || CATS.exam).icon} size={13} color={(CATS[e.category] || CATS.exam).color} />
+                      <Text style={styles.famEvText}>{fmtDate(e.date)} — {e.title}{e.booster_due ? ` (booster do ${fmtDate(e.booster_due)})` : ''}</Text>
+                    </View>
+                  ))}
+                  {famTl && <Text style={styles.famPrivacy}>Zo súkromia sa v kruhu zdieľajú len očkovania a prehliadky.</Text>}
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+
         {/* FILTRE — 5 kategórií s počtami */}
         <View style={styles.filterRow}>
           <Pressable testID="ht-filter-all" onPress={() => setF('all')} style={[styles.fChip, filter === 'all' && { backgroundColor: C.brand, borderColor: C.brand }]}>
@@ -336,6 +470,26 @@ const styles = StyleSheet.create({
   bloodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm },
   bloodChip: { borderWidth: 1, borderColor: C.borderStrong, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 8, minWidth: 52, alignItems: 'center' },
   bloodChipText: { color: C.fg, fontWeight: '900', fontSize: 12 },
+  // OCR + PDF
+  ocrBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.pill, minHeight: 42, paddingHorizontal: 10 },
+  ocrBtnText: { color: C.brand, fontWeight: '900', fontSize: 9.5, letterSpacing: 0.5 },
+  settingsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: C.warn, borderRadius: R.sm, minHeight: 40, paddingHorizontal: 10 },
+  settingsText: { color: C.onWarn, fontWeight: '900', fontSize: 10 },
+  pdfBtn: { marginTop: S.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.md, minHeight: 48, backgroundColor: C.surface2 },
+  pdfText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
+  // rodinné karty
+  famBox: { marginTop: S.lg, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: S.md },
+  famEmpty: { marginTop: S.xs },
+  famEmptyLink: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1, marginTop: S.sm },
+  famRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.md, minHeight: 52 },
+  famAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.brandTer, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.borderStrong },
+  famInitial: { color: C.brand, fontWeight: '900', fontSize: 16 },
+  famName: { color: C.fg, fontWeight: '800', fontSize: 14 },
+  famMeta: { color: C.info, fontSize: 11, marginTop: 2 },
+  famDetail: { marginTop: S.sm, marginLeft: 52, gap: 6, borderLeftWidth: 2, borderLeftColor: C.border, paddingLeft: S.md, paddingBottom: S.sm },
+  famEvRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  famEvText: { color: C.onS3, fontSize: 12, flex: 1 },
+  famPrivacy: { color: C.info, fontSize: 9.5, marginTop: 4, fontStyle: 'italic' },
   // voice hint
   voiceHint: { marginTop: S.md, flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: S.md },
   voiceHintText: { flex: 1, color: C.onS3, fontSize: 12, lineHeight: 17 },

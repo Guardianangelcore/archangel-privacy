@@ -13,7 +13,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 from core import (
     api, db, logger, clean, get_current_user, send_push, _push_client,
-    AI_COMPLIANCE_NOTE, _aml_ledger_append,
+    AI_COMPLIANCE_NOTE, _aml_ledger_append, apply_watermark,
     AML_UNVERIFIED_DAILY, AML_VERIFIED_DAILY, AML_MAX_TX_PER_DAY,
     _FONT_R, _FONT_B, _make_pdf, _auth_pdf, _pdf_footer, _pdf_response,
     APP_NAME, put_object_sync, get_object_sync, init_storage,
@@ -1123,6 +1123,174 @@ async def lifecard_prediction_accept(body: PredictionAcceptIn, authorization: Op
     await db.lifecard_predictions.update_one(
         {"user_id": uid}, {"$pull": {"predictions": {"title": body.title}}})
     return clean(doc)
+
+# --- OCR RODNÉHO LISTU — Guardian Eye scans a birth certificate / ID and
+# --- prefills the Life Card identity (user confirms before saving).
+LIFECARD_OCR_SYSTEM = (
+    "You extract identity data from a photo of a birth certificate (rodný list), "
+    "ID card or passport (Slovak/Czech/EU). Return ONLY valid JSON, no markdown: "
+    '{"found": true|false, "full_name": string|null, "birth_date": "YYYY-MM-DD"|null, '
+    '"blood_type": "A+|A-|B+|B-|AB+|AB-|0+|0-"|null}. '
+    "found=false when the photo is not an identity document or is unreadable. "
+    "blood_type is usually NOT printed on birth certificates — return null unless explicitly visible. "
+    "full_name = given name + surname of the document holder (the child on a birth certificate)."
+)
+
+@api.post("/lifecard/ocr")
+async def lifecard_ocr(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    data = await file.read()
+    if len(data) == 0:
+        raise HTTPException(400, "Empty file")
+    if len(data) > 15 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 15MB)")
+    b64 = base64.b64encode(data).decode()
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"lifecard-ocr-{uuid.uuid4().hex[:6]}",
+        system_message=LIFECARD_OCR_SYSTEM,
+    ).with_model("openai", "gpt-5.4")
+    try:
+        resp = await chat.send_message(UserMessage(
+            text="Extract the identity fields from this document photo. JSON only.",
+            file_contents=[ImageContent(image_base64=b64)]))
+        m = re.search(r"\{.*\}", str(resp), re.S)
+        d = json.loads(m.group(0)) if m else {}
+    except Exception as e:
+        logger.error(f"lifecard ocr error: {e}")
+        raise HTTPException(502, "AI service unavailable")
+    birth = d.get("birth_date")
+    if birth:
+        try:
+            bd = datetime.strptime(str(birth), "%Y-%m-%d").date()
+            if bd.year < 1900 or bd > datetime.now(timezone.utc).date():
+                birth = None
+        except ValueError:
+            birth = None
+    blood = d.get("blood_type") if d.get("blood_type") in BLOOD_TYPES else None
+    name = str(d.get("full_name") or "").strip()[:120] or None
+    found = bool(d.get("found")) and bool(name or birth)
+    return {"found": found, "full_name": name, "birth_date": birth, "blood_type": blood, "ai": True}
+
+# --- PDF KARTY ŽIVOTA — printable health axis for the doctor / family ---
+LIFECARD_LABELS_SK = {"vaccine": "OČKOVANIA", "disease": "CHOROBY", "surgery": "OPERÁCIE",
+                      "injury": "ÚRAZY", "exam": "PREHLIADKY"}
+
+@api.get("/lifecard/report.pdf")
+async def lifecard_report_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    user = await _auth_pdf(authorization, token)
+    card = await _lifecard_payload(user)
+    events = await db.calendar_events.find(
+        {"user_id": user["user_id"], "category": {"$in": list(LIFECARD_CATS)}},
+        {"_id": 0}).sort("date", -1).to_list(500)
+    age = f" (vek {card['age']} r.)" if card.get("age") is not None else ""
+    lines = [
+        f"Meno: {card['full_name'] or '—'}",
+        f"Dátum narodenia: {card['birth_date'] or card['birth_year'] or '—'}{age}",
+        f"Krvná skupina: {card['blood_type'] or '—'}",
+        f"DID (Guardian ID): {user['did']}",
+        "",
+    ]
+    for cat in ("vaccine", "disease", "surgery", "injury", "exam"):
+        lines.append(f"{LIFECARD_LABELS_SK[cat]}:")
+        rows = [e for e in events if e["category"] == cat]
+        if not rows:
+            lines.append("   — žiadne záznamy")
+        for e in rows:
+            note = f" — {e['notes']}" if e.get("notes") else ""
+            extra = f" · booster do {e['booster_due']}" if e.get("booster_due") else ""
+            lines.append(f"   • {e['date']}   {e['title']}{note}{extra}")
+        lines.append("")
+    pdf = await run_in_threadpool(
+        _make_pdf,
+        "KARTA ŽIVOTA — ZDRAVOTNÁ OS OD NARODENIA\nLIFE CARD — HEALTH TIMELINE",
+        "\n".join(lines), _pdf_footer())
+    return _pdf_response(pdf, "guardian_karta_zivota.pdf")
+
+# --- RODINNÉ KARTY — Guardian Circle members' vaccinations & check-ups.
+# --- Privacy: only vaccine + exam categories are shared inside the circle.
+async def _circle_member_ids(uid: str) -> set:
+    """Guardian Circle = anyone in a guardian relationship (either direction)."""
+    ids: set = set()
+    async for l in db.guardians.find({"user_id": uid}, {"_id": 0, "guardian_user_id": 1}):
+        if l.get("guardian_user_id"):
+            ids.add(l["guardian_user_id"])
+    async for l in db.guardians.find({"guardian_user_id": uid}, {"_id": 0, "user_id": 1}):
+        ids.add(l["user_id"])
+    ids.discard(uid)
+    return ids
+
+@api.get("/lifecard/family")
+async def lifecard_family(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    ids = await _circle_member_ids(user["user_id"])
+    today = datetime.now(timezone.utc).date().isoformat()
+    h30 = (datetime.now(timezone.utc) + timedelta(days=30)).date().isoformat()
+    members = []
+    for mid in ids:
+        m = await db.users.find_one({"user_id": mid}, {"_id": 0, "user_id": 1, "name": 1})
+        if not m:
+            continue
+        evs = await db.calendar_events.find(
+            {"user_id": mid, "category": {"$in": ["vaccine", "exam"]}},
+            {"_id": 0, "category": 1, "booster_due": 1}).to_list(500)
+        members.append({
+            "user_id": mid, "name": m.get("name") or "Člen kruhu",
+            "counts": {"vaccine": sum(1 for e in evs if e["category"] == "vaccine"),
+                       "exam": sum(1 for e in evs if e["category"] == "exam")},
+            "booster_soon": sum(1 for e in evs if e["category"] == "vaccine"
+                                and e.get("booster_due") and today <= e["booster_due"] <= h30),
+        })
+    members.sort(key=lambda x: x["name"])
+    return {"members": members, "privacy": "vaccine+exam only"}
+
+@api.get("/lifecard/family/{member_id}/timeline")
+async def lifecard_family_timeline(member_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    if member_id not in await _circle_member_ids(user["user_id"]):
+        raise HTTPException(403, "Not in your Guardian Circle")
+    m = await db.users.find_one({"user_id": member_id}, {"_id": 0, "user_id": 1, "name": 1})
+    if not m:
+        raise HTTPException(404, "Member not found")
+    events = await db.calendar_events.find(
+        {"user_id": member_id, "category": {"$in": ["vaccine", "exam"]}},
+        {"_id": 0, "event_id": 1, "category": 1, "title": 1, "date": 1, "booster_due": 1, "notes": 1},
+    ).sort("date", -1).to_list(200)
+    return {"member": {"user_id": member_id, "name": m.get("name") or "Člen kruhu"},
+            "events": events, "today": datetime.now(timezone.utc).date().isoformat()}
+
+# --- BOOSTER GUARD — swarm sweep: Jarvis announces boosters 30 & 7 days ahead ---
+async def booster_guard_sweep() -> int:
+    """Once per stage per event: push + proactive Jarvis chat message."""
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    t = today.isoformat()
+    h30 = (today + timedelta(days=30)).isoformat()
+    h7 = (today + timedelta(days=7)).isoformat()
+    acted = 0
+    rows = await db.calendar_events.find(
+        {"category": "vaccine", "booster_due": {"$gte": t, "$lte": h30}}, {"_id": 0}).to_list(500)
+    for e in rows:
+        stage = "7d" if e["booster_due"] <= h7 else "30d"
+        flag = f"booster_notified_{stage}"
+        if e.get(flag):
+            continue
+        days_left = (datetime.strptime(e["booster_due"], "%Y-%m-%d").date() - today).days
+        msg = (f"⏰ Blíži sa preskočkovanie: {e['title']} — booster do {e['booster_due']} "
+               f"(o {days_left} dní). Nájdete to v Karte života. Chcete, aby som pohľadal termín u lekára?")
+        try:
+            await send_push(recipients=[e["user_id"]], data={
+                "title": "💉 PRESKOČKOVANIE SA BLÍŽI",
+                "message": f"{e['title']} — booster do {e['booster_due']} (o {days_left} dní).",
+                "action_url": "/health-timeline"})
+        except Exception as ex:
+            logger.warning(f"booster push failed: {ex}")
+        await db.agent_conversations.insert_one({
+            "conv_id": uuid.uuid4().hex, "user_id": e["user_id"], "role": "agent",
+            "text": apply_watermark(msg), "mood": "alert", "source": "booster_guard", "at": now})
+        await db.calendar_events.update_one({"event_id": e["event_id"]}, {"$set": {flag: True}})
+        acted += 1
+    return acted
 
 # --------- MY RECOVERY (Sick Leave / ePN — Hustle Recovery Guard) ---------
 class OutingWindow(BaseModel):

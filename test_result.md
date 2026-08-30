@@ -706,3 +706,33 @@ voice log (kiahne→disease today), question not logged, predictions (2 SK sugge
 accept (source jarvis + pulled from cache), SSE stream intent. Screenshots: hub hero +
 full Life Card screen render correctly.
 Auth: founder-bypass (guardian.angel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.
+
+## Iteration 45 (Phase 51.1 — Life Card Extensions, Jun 2026)
+4 features on top of Karta života:
+1) OCR RODNÉHO LISTU — POST /api/lifecard/ocr (multipart file, max 15MB) → gpt-5.4 vision
+   returns {found, full_name, birth_date (validated 1900..today), blood_type (A+..0- or null), ai:true}.
+   Frontend: in identity edit box two buttons lc-ocr-cam (camera, permission-contract with
+   canAskAgain + lc-ocr-settings Open Settings when blocked) and lc-ocr-pick (gallery) →
+   apiUpload → PREFILLS lc-name/lc-birth/lc-blood (user must press ULOŽIŤ ÚDAJE to save);
+   lc-ocr-msg shows result. VERIFIED via curl with synthetic rodný list JPG (PIL) →
+   found:true, Jan Novak, 1980-05-14, blood null.
+2) PDF KARTY ŽIVOTA — GET /api/lifecard/report.pdf (auth or ?token=) → fpdf via _make_pdf:
+   identity block + 5 sections (OČKOVANIA/CHOROBY/OPERÁCIE/ÚRAZY/PREHLIADKY) with
+   date·title·notes·booster. Frontend gold-outline button lc-pdf under identity card →
+   sharePdf. VERIFIED 200 application/pdf 35KB.
+3) RODINNÉ KARTY — GET /api/lifecard/family → members[] from db.guardians (BOTH directions,
+   like voice_circle) with counts{vaccine,exam} + booster_soon (≤30d); GET
+   /api/lifecard/family/{member_id}/timeline → ONLY vaccine+exam events (privacy) or 403 if
+   not in circle. Frontend section lc-family under predictions: member rows lc-fam-{uid}
+   (avatar initial, counts) → inline expand with events + privacy note; empty state
+   lc-fam-empty links to /recovery-suite (where guardians are added). VERIFIED: user-1 sees
+   user-2 ('Smoke Two', vaccine 1, booster_soon 1), reverse works, founder gets 403.
+4) BOOSTER GUARD — new swarm agent booster_guard (interval 3600) → routes/health.py
+   booster_guard_sweep(): vaccine events with booster_due within 30d (stage 30d) or 7d
+   (stage 7d) → push + PROACTIVE Jarvis chat message (agent_conversations role:agent,
+   mood:alert, source:booster_guard, watermarked) once per stage per event
+   (flags booster_notified_30d/_7d on the event). VERIFIED: POST /api/swarm/run/booster_guard
+   → actions:1 then actions:0; Jarvis msg present for user-2.
+Test data left in DB: smoketest-user-2 has vaccine 'Tetanus TEST' (booster_due +20d,
+booster_notified_30d:true) + booster_guard convo. Guardians link user-1↔user-2 pre-existing.
+Founder account is CLEAN (identity reset, no test events).
