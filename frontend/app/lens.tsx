@@ -14,8 +14,8 @@ import { C, S, R } from '@/src/theme';
 import { GlassCard, GoldButton, Pulse, tap } from '@/src/ui/glass';
 
 const KIND_LABEL: Record<string, string> = {
-  medication: '💊 LIEK', medical_report: '📄 LEKÁRSKA SPRÁVA', prescription: '📝 RECEPT',
-  lab_results: '🧪 LABORATÓRNE VÝSLEDKY', other: '❔ INÝ ARTEFAKT',
+  medication: '💊 MEDICATION', medical_report: '📄 MEDICAL REPORT', prescription: '📝 PRESCRIPTION',
+  lab_results: '🧪 LAB RESULTS', other: '❔ OTHER ARTIFACT',
 };
 
 export default function Lens() {
@@ -45,7 +45,7 @@ export default function Lens() {
     if (!text) return;
     setSpeaking(true);
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1500), voice: 'nova', speed: 0.92, language: user?.language || 'sk' }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1500), voice: 'nova', speed: 0.92, language: user?.language || 'en' }) });
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
       try { playerRef.current?.remove?.(); } catch {}
@@ -105,7 +105,7 @@ export default function Lens() {
     try {
       const r: any = await api(`/lens/${scan.scan_id}/to-jarvis`, { method: 'POST' });
       setJarvisReply(r?.jarvis?.reply || '');
-      setMsg('🤖 Jarvis analyzoval sken a odpovedal nižšie.');
+      setMsg('🤖 Jarvis analyzed the scan and replied below.');
       tap('success');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -115,7 +115,7 @@ export default function Lens() {
     setBusy('med'); setMsg('');
     try {
       await api('/meds/reminders', { method: 'POST', body: JSON.stringify({ name: scan.name, dose: '', times: ['08:00'], slots: ['breakfast'] }) });
-      setMsg('💊 Liek pridaný do kalendára (S raňajkami · 08:00). Sloty upravíte v Liekoch.');
+      setMsg('💊 Medication added to the calendar (With breakfast · 08:00). Adjust slots in Meds.');
       tap('success');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -125,7 +125,7 @@ export default function Lens() {
     setBusy('vault'); setMsg('');
     try {
       await api(`/lens/${scan.scan_id}/save-to-vault`, { method: 'POST' });
-      setMsg('🔐 Fotka uložená do Zdravotného trezora (SHA-256 pečať).');
+      setMsg('🔐 Photo saved to your Health Vault (SHA-256 seal).');
       tap('success');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -143,7 +143,7 @@ export default function Lens() {
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>ODFOŤ · ZISTI · KONAJ — jedným ťukom</Text>
+        <Text style={st.tag}>SNAP · KNOW · ACT — with one tap</Text>
 
         <GlassCard glow pad={S.lg} style={{ marginTop: S.md }}>
           {photo ? (
@@ -151,27 +151,27 @@ export default function Lens() {
           ) : (
             <View style={st.placeholder}>
               <Pulse><Ionicons name="scan-circle-outline" size={72} color={C.brand} /></Pulse>
-              <Text style={st.placeholderText}>Odfoťte škatuľku lieku, recept alebo lekársku správu.{'\n'}Jarvis okamžite rozpozná obsah a navrhne kroky.</Text>
+              <Text style={st.placeholderText}>Photograph a medicine box, prescription or medical report.{'\n'}Jarvis instantly recognizes the content and suggests next steps.</Text>
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
             {Platform.OS !== 'web' && (
               <Pressable testID="ln-camera" onPress={takePhoto} style={st.srcBtn}>
                 <Ionicons name="camera" size={20} color={C.brand} />
-                <Text style={st.srcText}>ODFOTIŤ</Text>
+                <Text style={st.srcText}>TAKE PHOTO</Text>
               </Pressable>
             )}
             <Pressable testID="ln-gallery" onPress={pickPhoto} style={st.srcBtn}>
               <Ionicons name="images-outline" size={20} color={C.brand} />
-              <Text style={st.srcText}>Z GALÉRIE</Text>
+              <Text style={st.srcText}>FROM GALLERY</Text>
             </Pressable>
           </View>
           {camBlocked && (
             <Pressable testID="ln-settings" onPress={() => Linking.openSettings()} style={st.permBtn}>
-              <Text style={st.permText}>Kamera je zablokovaná — OTVORIŤ NASTAVENIA</Text>
+              <Text style={st.permText}>Camera is blocked — OPEN SETTINGS</Text>
             </Pressable>
           )}
-          <Text style={st.modelLbl}>ZRAKOVÝ MODEL</Text>
+          <Text style={st.modelLbl}>VISION MODEL</Text>
           <View style={st.modelRow}>
             {MODEL_CHIPS.map(m => (
               <Pressable key={m.key} testID={`ln-model-${m.key}`}
@@ -182,14 +182,14 @@ export default function Lens() {
               </Pressable>
             ))}
           </View>
-          <GoldButton testID="ln-analyze" title="ANALYZOVAŤ ŠOŠOVKOU" icon="aperture"
+          <GoldButton testID="ln-analyze" title="ANALYZE WITH LENS" icon="aperture"
             onPress={analyze} disabled={!photo} loading={busy === 'analyze'} style={{ marginTop: S.md }} />
         </GlassCard>
 
         {busy === 'analyze' && (
           <View style={st.scanning}>
             <ActivityIndicator color={C.brand} />
-            <Text style={st.scanningText}>Jarvis číta artefakt…</Text>
+            <Text style={st.scanningText}>Jarvis is reading the artifact…</Text>
           </View>
         )}
         {!!err && <Text testID="ln-err" style={st.err}>{err}</Text>}
@@ -214,40 +214,40 @@ export default function Lens() {
                 <Text style={st.warnText}>{w}</Text>
               </View>
             ))}
-            <Text style={st.aiNote}>AI výstup — len informačný (EU AI Act čl. 50). Overte u lekárnika/lekára.</Text>
+            <Text style={st.aiNote}>AI output — informational only (EU AI Act Art. 50). Verify with a pharmacist/doctor.</Text>
 
-            <Text style={st.actLbl}>OKAMŽITÉ AKCIE</Text>
+            <Text style={st.actLbl}>INSTANT ACTIONS</Text>
             <View style={st.actGrid}>
-              <ActionBtn testID="ln-act-jarvis" icon="chatbubble-ellipses" label="POSLAŤ JARVISOVI" busy={busy === 'jarvis'} onPress={askJarvis} />
-              <ActionBtn testID="ln-act-speak" icon="volume-high" label="PREČÍTAŤ NAHLAS" busy={speaking} onPress={() => speak(scan)} />
+              <ActionBtn testID="ln-act-jarvis" icon="chatbubble-ellipses" label="SEND TO JARVIS" busy={busy === 'jarvis'} onPress={askJarvis} />
+              <ActionBtn testID="ln-act-speak" icon="volume-high" label="READ ALOUD" busy={speaking} onPress={() => speak(scan)} />
               {(['medical_report', 'prescription', 'lab_results'].includes(scan.kind) || !!scan.specialty) && (
-                <ActionBtn testID="ln-act-healing" icon="sync" label="SPUSTIŤ KOLOTOČ UZDRAVENIA"
+                <ActionBtn testID="ln-act-healing" icon="sync" label="START HEALING LOOP"
                   onPress={() => router.push(`/healing?specialty=${encodeURIComponent(scan.specialty || '')}&auto=1` as any)} />
               )}
               {has('add_med_reminder') && (
-                <ActionBtn testID="ln-act-med" icon="alarm" label="DO KALENDÁRA LIEKOV" busy={busy === 'med'} onPress={addMed} />
+                <ActionBtn testID="ln-act-med" icon="alarm" label="ADD TO MED CALENDAR" busy={busy === 'med'} onPress={addMed} />
               )}
               {has('check_interactions') && (
                 <ActionBtn testID="ln-act-inter" icon="git-compare" label="INTERACTION GUARD" onPress={() => router.push('/medicine-cabinet')} />
               )}
               {(has('book_specialist') || !!scan.specialty) && (
-                <ActionBtn testID="ln-act-book" icon="calendar" label={`TERMÍN${scan.specialty ? `: ${scan.specialty.toUpperCase()}` : ''}`} onPress={() => router.push('/(tabs)/waitlist')} />
+                <ActionBtn testID="ln-act-book" icon="calendar" label={`APPOINTMENT${scan.specialty ? `: ${scan.specialty.toUpperCase()}` : ''}`} onPress={() => router.push('/(tabs)/waitlist')} />
               )}
               {has('translate') && (
-                <ActionBtn testID="ln-act-translate" icon="language" label="AI PREKLADAČ" onPress={() => router.push('/translate')} />
+                <ActionBtn testID="ln-act-translate" icon="language" label="AI TRANSLATOR" onPress={() => router.push('/translate')} />
               )}
-              <ActionBtn testID="ln-act-vault" icon="lock-closed" label="ULOŽIŤ DO TREZORA" busy={busy === 'vault'} onPress={saveVault} />
+              <ActionBtn testID="ln-act-vault" icon="lock-closed" label="SAVE TO VAULT" busy={busy === 'vault'} onPress={saveVault} />
             </View>
             {!!msg && <Text testID="ln-msg" style={st.msg}>{msg}</Text>}
             {!!jarvisReply && (
               <View testID="ln-jarvis-reply" style={st.jarvisBox}>
                 <View style={st.jarvisHead}>
                   <Ionicons name="sparkles" size={14} color={C.brand} />
-                  <Text style={st.jarvisTitle}>JARVIS ODPOVEDÁ</Text>
+                  <Text style={st.jarvisTitle}>JARVIS REPLIES</Text>
                 </View>
                 <Text style={st.jarvisText}>{jarvisReply}</Text>
                 <Pressable testID="ln-jarvis-open" onPress={() => router.push('/jarvis')} style={st.jarvisMore}>
-                  <Text style={st.jarvisMoreText}>OTVORIŤ ROZHOVOR →</Text>
+                  <Text style={st.jarvisMoreText}>OPEN CONVERSATION →</Text>
                 </Pressable>
               </View>
             )}

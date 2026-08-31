@@ -21,7 +21,7 @@ export function BlazingCeremony({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     orb.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
     jarvisSpeak(NARRATION, {
-      voice: 'onyx', speed: 0.92, language: (user?.language as any) || 'sk',
+      voice: 'onyx', speed: 0.92, language: (user?.language as any) || 'en',
     });
     return () => { cancelAnimation(orb); stopSpeaking(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

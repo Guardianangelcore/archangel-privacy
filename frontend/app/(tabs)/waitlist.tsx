@@ -11,18 +11,18 @@ import { t, Lang } from '@/src/i18n';
 
 type Item = { item_id: string; specialty: string; clinic: string; city: string; current_date: string; target_before: string; status: string; found_slot?: string; last_check?: string };
 
-const SPECIALTIES = ['Kardiológia', 'Ortopédia', 'Onkológia', 'MRI/CT', 'Neurológia', 'Dermatológia', 'Očné'];
+const SPECIALTIES = ['Cardiology', 'Orthopedics', 'Oncology', 'MRI/CT', 'Neurology', 'Dermatology', 'Ophthalmology'];
 
 export default function Waitlist() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(false);
   const [scanId, setScanId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('ALL');
 
-  const [f, setF] = useState({ specialty: 'Kardiológia', clinic: '', city: 'Bratislava', current_date: '', target_before: '' });
+  const [f, setF] = useState({ specialty: 'Cardiology', clinic: '', city: 'Bratislava', current_date: '', target_before: '' });
   const [sheet, setSheet] = useState<'spec' | 'current' | 'target' | null>(null);
 
   const load = useCallback(async () => {
@@ -36,7 +36,7 @@ export default function Waitlist() {
     if (!f.clinic || !f.current_date || !f.target_before) return;
     await api('/waitlist', { method: 'POST', body: JSON.stringify(f) });
     setModal(false);
-    setF({ specialty: 'Kardiológia', clinic: '', city: 'Bratislava', current_date: '', target_before: '' });
+    setF({ specialty: 'Cardiology', clinic: '', city: 'Bratislava', current_date: '', target_before: '' });
     load();
   };
 
@@ -142,13 +142,13 @@ export default function Waitlist() {
               <Text style={styles.lbl}>{t('current_date', lang).toUpperCase()}</Text>
               <Pressable testID="wl-current" onPress={() => setSheet('current')} style={styles.pickerField}>
                 <Ionicons name="calendar-outline" size={18} color={C.brand} />
-                <Text style={[styles.pickerValue, !f.current_date && { color: '#999' }]}>{f.current_date || 'Vybrať dátum…'}</Text>
+                <Text style={[styles.pickerValue, !f.current_date && { color: '#999' }]}>{f.current_date || 'Pick a date…'}</Text>
                 <Ionicons name="chevron-down" size={18} color={C.info} />
               </Pressable>
               <Text style={styles.lbl}>{t('target_before', lang).toUpperCase()}</Text>
               <Pressable testID="wl-target" onPress={() => setSheet('target')} style={styles.pickerField}>
                 <Ionicons name="flag-outline" size={18} color={C.brand} />
-                <Text style={[styles.pickerValue, !f.target_before && { color: '#999' }]}>{f.target_before || 'Vybrať dátum…'}</Text>
+                <Text style={[styles.pickerValue, !f.target_before && { color: '#999' }]}>{f.target_before || 'Pick a date…'}</Text>
                 <Ionicons name="chevron-down" size={18} color={C.info} />
               </Pressable>
             </ScrollView>
@@ -159,13 +159,13 @@ export default function Waitlist() {
         </View>
       </Modal>
 
-      <OptionSheet testID="wl-spec-sheet" visible={sheet === 'spec'} onClose={() => setSheet(null)} title="ŠPECIALIZÁCIA"
+      <OptionSheet testID="wl-spec-sheet" visible={sheet === 'spec'} onClose={() => setSheet(null)} title="SPECIALTY"
         options={SPECIALTIES.map(s => ({ label: s, value: s, icon: 'medkit-outline' }))}
         selected={f.specialty} onSelect={v => setF({ ...f, specialty: v })} />
       <DateSheet testID="wl-current-sheet" visible={sheet === 'current'} onClose={() => setSheet(null)}
-        title="AKTUÁLNY TERMÍN" initial={f.current_date} onSelect={v => setF({ ...f, current_date: v })} />
+        title="CURRENT APPOINTMENT" initial={f.current_date} onSelect={v => setF({ ...f, current_date: v })} />
       <DateSheet testID="wl-target-sheet" visible={sheet === 'target'} onClose={() => setSheet(null)}
-        title="CHCEM TERMÍN DO" initial={f.target_before} onSelect={v => setF({ ...f, target_before: v })} />
+        title="WANT A SLOT BEFORE" initial={f.target_before} onSelect={v => setF({ ...f, target_before: v })} />
     </SafeAreaView>
   );
 }

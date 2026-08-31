@@ -24,14 +24,14 @@ from routes.hunter import _simulate_slot
 
 STEP_KEYS = ["intake", "financial_shield", "access", "bureaucracy", "recovery"]
 STEP_META = {
-    "intake": {"title": "Príjem", "icon": "scan", "sub": "Sken žiadanky / zápis úrazu"},
-    "financial_shield": {"title": "Finančný štít", "icon": "umbrella", "sub": "Poistka → peniaze hneď"},
-    "access": {"title": "Prístup", "icon": "search", "sub": "Lovec termínov → doktor"},
-    "bureaucracy": {"title": "Papierovačky", "icon": "document-text", "sub": "Neschopenka · vychádzky"},
-    "recovery": {"title": "Zotavenie", "icon": "body", "sub": "Physio-AI · 100 % fit"},
+    "intake": {"title": "Intake", "icon": "scan", "sub": "Scan referral / log injury"},
+    "financial_shield": {"title": "Financial Shield", "icon": "umbrella", "sub": "Insurance → instant money"},
+    "access": {"title": "Access", "icon": "search", "sub": "Appointment Hunter → doctor"},
+    "bureaucracy": {"title": "Paperwork", "icon": "document-text", "sub": "Sick leave · outings"},
+    "recovery": {"title": "Recovery", "icon": "body", "sub": "Physio-AI · 100 % fit"},
 }
 
-KIND_LABEL = {"injury": "Úraz", "illness": "Choroba"}
+KIND_LABEL = {"injury": "Injury", "illness": "Illness"}
 
 
 def _now():
@@ -44,7 +44,7 @@ async def _active_journey(uid: str) -> Optional[dict]:
 
 class InjuryEventIn(BaseModel):
     kind: str = "injury"           # injury | illness
-    specialty: str = "Všeobecný lekár"
+    specialty: str = "General practitioner"
     body_part: Optional[str] = None
     note: Optional[str] = ""
 
@@ -60,7 +60,7 @@ async def _fire_insurance_claim(uid: str, event: dict) -> dict:
     claim = {
         "claim_id": uuid.uuid4().hex, "user_id": uid,
         "journey_id": event["journey_id"],
-        "provider": (pol or {}).get("provider") or "— doplňte poistku —",
+        "provider": (pol or {}).get("provider") or "— add your policy —",
         "policy_id": (pol or {}).get("policy_id"),
         "policy_found": bool(pol),
         "claimant_name": prof.get("full_name") or "",
@@ -90,7 +90,7 @@ async def _fire_waitlist_hunter(uid: str, event: dict) -> dict:
     await db.calendar_events.insert_one({
         "event_id": uuid.uuid4().hex, "user_id": uid, "category": "exam",
         "title": f"{event['specialty']} — {slot['clinic']}", "date": slot["date"],
-        "notes": f"Kolotoč uzdravenia · {slot['time']}", "booster_due": None,
+        "notes": f"Healing Loop · {slot['time']}", "booster_due": None,
         "source": "healing_loop", "created_at": _now(),
     })
     return {"slot": found, "clinic": slot["clinic"], "date": slot["date"], "time": slot["time"]}
@@ -109,7 +109,7 @@ async def healing_injury_event(body: InjuryEventIn, authorization: Optional[str]
             {"journey_id": existing["journey_id"]}, {"$set": {"status": "superseded"}})
     journey_id = uuid.uuid4().hex
     event = {"journey_id": journey_id, "kind": body.kind,
-             "specialty": body.specialty.strip()[:60] or "Všeobecný lekár",
+             "specialty": body.specialty.strip()[:60] or "General practitioner",
              "body_part": (body.body_part or "").strip()[:60] or None,
              "note": (body.note or "")[:300]}
 
@@ -138,8 +138,8 @@ async def healing_injury_event(body: InjuryEventIn, authorization: Optional[str]
     await db.healing_journeys.insert_one(journey.copy())
     try:
         await send_push(recipients=[uid], data={
-            "title": "⚙️ KOLOTOČ UZDRAVENIA SPUSTENÝ",
-            "message": f"{KIND_LABEL[body.kind]} zapísaný · poistná žiadosť predvyplnená ({claim['estimated_total_eur']} €) · termín: {access['slot']}",
+            "title": "⚙️ HEALING LOOP STARTED",
+            "message": f"{KIND_LABEL[body.kind]} logged · insurance claim prefilled (€{claim['estimated_total_eur']}) · appointment: {access['slot']}",
             "action_url": "/healing"})
     except Exception as e:
         logger.warning(f"healing push: {e}")
@@ -203,33 +203,33 @@ async def healing_close(authorization: Optional[str] = Header(None)):
     await db.healing_journeys.update_one(
         {"journey_id": j["journey_id"]},
         {"$set": {"status": "recovered", "steps.recovery": "done", "recovered_at": _now()}})
-    return {"ok": True, "message": "Kolotoč dokončený — ste 100 % fit. Jarvis vám gratuluje."}
+    return {"ok": True, "message": "Loop complete — you are 100% fit. Jarvis congratulates you."}
 
 
 # =========================================================================
 # THE COMPANION — empathetic caregiver check-ins + emotional trends
 # =========================================================================
 
-MOOD_LABEL = {1: "veľmi zle", 2: "slabšie", 3: "ujde to", 4: "dobre", 5: "výborne"}
+MOOD_LABEL = {1: "very bad", 2: "poor", 3: "okay", 4: "good", 5: "great"}
 
 
 def _companion_greeting_text(hour: int, name: str, last_mood: Optional[int]) -> dict:
-    n = (name or "").split(" ")[0] or "priateľu"
+    n = (name or "").split(" ")[0] or "friend"
     if 5 <= hour < 11:
-        q = f"Dobré ráno, {n}. Ako ste sa dnes vyspali? Snívalo sa vám niečo pekné?"
+        q = f"Good morning, {n}. How did you sleep? Any nice dreams?"
         topic = "sleep"
     elif 11 <= hour < 15:
-        q = f"Pekné poludnie, {n}. Už ste dnes obedovali? Čo dobré ste mali?"
+        q = f"Good afternoon, {n}. Have you had lunch yet? What did you enjoy?"
         topic = "meal"
     elif 15 <= hour < 20:
-        q = f"Dobrý podvečer, {n}. Ako sa dnes cíti vaše telo — nebolí vás niečo?"
+        q = f"Good early evening, {n}. How does your body feel today — any pain?"
         topic = "pain"
     else:
-        q = f"Dobrý večer, {n}. Deň sa končí — ako sa cítite? Nezabudnite na večerné lieky."
+        q = f"Good evening, {n}. The day is ending — how do you feel? Do not forget your evening meds."
         topic = "evening"
     care = ""
     if last_mood is not None and last_mood <= 2:
-        care = "Naposledy ste sa necítili najlepšie — dnes som tu pre vás o to viac. 💛"
+        care = "You did not feel your best last time — I am here for you all the more today. 💛"
     return {"question": q, "topic": topic, "care_note": care}
 
 
@@ -263,17 +263,17 @@ async def companion_checkin(body: CheckinIn, authorization: Optional[str] = Head
            "created_at": _now()}
     await db.companion_checkins.insert_one(doc.copy())
     if body.mood <= 2:
-        reply = "Ďakujem, že ste mi to povedali. Nie ste v tom sami — ak to potrvá, spolu zavoláme rodine alebo lekárovi. 💛"
+        reply = "Thank you for telling me. You are not alone — if it lasts, we will call your family or doctor together. 💛"
         try:
             await send_push(recipients=[user["user_id"]], data={
-                "title": "💛 JARVIS PRI VÁS", "message": "Zaznamenal som horší deň — rodina má vedieť, že vám má zavolať.",
+                "title": "💛 JARVIS BY YOUR SIDE", "message": "I logged a rougher day — your family should know to call you.",
                 "action_url": "/wellness"})
         except Exception:
             pass
     elif body.mood == 3:
-        reply = "Rozumiem, taký stredný deň. Krátka prechádzka alebo odkaz od rodiny vždy pomôže — mám ich pripravené."
+        reply = "I understand, an average day. A short walk or a family message always helps — I have them ready."
     else:
-        reply = "To rád počujem! Krásny deň, nech vám vydrží. Keby čokoľvek, som tu."
+        reply = "Glad to hear that! Have a beautiful day. If anything comes up, I am here."
     return {"ok": True, "reply": reply, "checkin": clean(doc)}
 
 
@@ -324,8 +324,8 @@ async def echoes_add(body: EchoIn, authorization: Optional[str] = Header(None)):
     await db.voice_echoes.insert_one(doc.copy())
     try:
         await send_push(recipients=[user["user_id"]], data={
-            "title": "💌 NOVÝ ODKAZ OD RODINY",
-            "message": f"{doc['from_name']}: ťuknite a Jarvis vám ho prečíta.",
+            "title": "💌 NEW FAMILY MESSAGE",
+            "message": f"{doc['from_name']}: tap and Jarvis will read it to you.",
             "action_url": "/voice-echoes"})
     except Exception:
         pass
@@ -351,9 +351,9 @@ def _pain_trend_of(levels: list) -> str:
 
 
 _PULSE_MSG = {
-    "improving": "Bolesť klesá — zotavenie ide dobre 💛",
-    "worsening": "Bolesť rastie — zavolajte a povzbuďte 📞",
-    "stable": "Stav je stabilný — drží sa 💪",
+    "improving": "Pain is falling — recovery is going well 💛",
+    "worsening": "Pain is rising — call and encourage them 📞",
+    "stable": "Condition is stable — holding up 💪",
 }
 
 
@@ -385,7 +385,7 @@ async def family_recovery_pulse(authorization: Optional[str] = Header(None)):
             "user_id": u["user_id"], "name": u.get("name") or u["email"], "email": u["email"],
             "pain_levels": levels[-7:], "pain_avg_14d": round(sum(levels) / len(levels), 1) if levels else None,
             "pain_trend": trend if levels else None,
-            "message": _PULSE_MSG[trend] if levels else "Zatiaľ žiadne záznamy bolesti",
+            "message": _PULSE_MSG[trend] if levels else "No pain records yet",
             "healing_active": bool(j), "healing_progress_pct": progress,
             "healing_label": f"{j['kind_label']} · {j['specialty']}" if j else None,
             "last_mood": (checkin or {}).get("mood"), "last_mood_label": (checkin or {}).get("mood_label"),
@@ -435,11 +435,11 @@ async def echoes_send_remote(body: RemoteEchoIn, authorization: Optional[str] = 
         raise HTTPException(400, "message required")
     recipient = await db.users.find_one({"email": body.to_email.strip().lower()}, {"_id": 0})
     if not recipient:
-        raise HTTPException(404, "Príjemca s týmto e-mailom neexistuje v Guardian OS.")
+        raise HTTPException(404, "No recipient with this e-mail exists in Guardian OS.")
     if recipient["user_id"] == sender["user_id"]:
-        raise HTTPException(400, "Odkaz sebe pošlite cez bežné pridanie.")
+        raise HTTPException(400, "Send a message to yourself via the regular add flow.")
     if not await _may_send_to(sender, recipient):
-        raise HTTPException(403, "Nemáte oprávnenie — príjemca si vás musí pridať ako strážcu (Sovereign Recovery), alebo musíte byť vo Vnútornom kruhu.")
+        raise HTTPException(403, "Not authorized — the recipient must add you as a guardian (Sovereign Recovery), or you must be in the Inner Circle.")
     doc = {"echo_id": uuid.uuid4().hex, "user_id": recipient["user_id"],
            "from_name": sender.get("name") or sender.get("email") or "Rodina",
            "sender_user_id": sender["user_id"], "remote": True,
@@ -448,8 +448,8 @@ async def echoes_send_remote(body: RemoteEchoIn, authorization: Optional[str] = 
     await db.voice_echoes.insert_one(doc.copy())
     try:
         await send_push(recipients=[recipient["user_id"]], data={
-            "title": "💌 NOVÝ ODKAZ OD RODINY",
-            "message": f"{doc['from_name']}: ťuknite a Jarvis vám ho prečíta.",
+            "title": "💌 NEW FAMILY MESSAGE",
+            "message": f"{doc['from_name']}: tap and Jarvis will read it to you.",
             "action_url": "/voice-echoes"})
     except Exception:
         pass
@@ -464,9 +464,9 @@ async def _resolve_echo_recipient(sender: dict, to_email: Optional[str]) -> dict
         return sender
     recipient = await db.users.find_one({"email": to_email.strip().lower()}, {"_id": 0})
     if not recipient:
-        raise HTTPException(404, "Príjemca s týmto e-mailom neexistuje v Guardian OS.")
+        raise HTTPException(404, "No recipient with this e-mail exists in Guardian OS.")
     if recipient["user_id"] != sender["user_id"] and not await _may_send_to(sender, recipient):
-        raise HTTPException(403, "Nemáte oprávnenie — príjemca si vás musí pridať ako strážcu (Sovereign Recovery), alebo musíte byť vo Vnútornom kruhu.")
+        raise HTTPException(403, "Not authorized — the recipient must add you as a guardian (Sovereign Recovery), or you must be in the Inner Circle.")
     return recipient
 
 
@@ -493,14 +493,14 @@ async def echoes_add_audio(
     doc = {"echo_id": echo_id, "user_id": recipient["user_id"],
            "from_name": (sender.get("name") if remote else from_name.strip()[:60]) or "Rodina",
            "sender_user_id": sender["user_id"], "remote": remote,
-           "message": "🎙 Hlasová nahrávka", "audio": True,
+           "message": "🎙 Voice recording", "audio": True,
            "storage_path": path, "content_type": ctype, "size": len(data),
            "heard": False, "created_at": _now()}
     await db.voice_echoes.insert_one(doc.copy())
     try:
         await send_push(recipients=[recipient["user_id"]], data={
-            "title": "🎙 HLASOVÝ ODKAZ OD RODINY",
-            "message": f"{doc['from_name']} vám nahral(a) odkaz vlastným hlasom.",
+            "title": "🎙 VOICE MESSAGE FROM FAMILY",
+            "message": f"{doc['from_name']} recorded a message in their own voice.",
             "action_url": "/voice-echoes"})
     except Exception:
         pass

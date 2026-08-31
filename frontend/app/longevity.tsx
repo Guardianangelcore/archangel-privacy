@@ -15,7 +15,7 @@ import { Lang } from '@/src/i18n';
 
 export default function Longevity() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [locked, setLocked] = useState<string | null>(null);

@@ -16,29 +16,29 @@ const TOUR_STEPS = [
   {
     icon: 'sync-circle' as const,
     title: 'MOJE UZDRAVOVANIE',
-    subtitle: 'Kolotoč: žiadanka → peniaze → doktor → fyzio.',
-    tts: 'Naľavo máte svoje Uzdravovanie.',
+    subtitle: 'Loop: referral → money → doctor → physio.',
+    tts: 'On the left is your Healing.',
     duration: 5000,
   },
   {
     icon: 'people' as const,
-    title: 'RODINNÝ ŠTÍT',
-    subtitle: 'Angel režim, Kúzelná lupa, hlasové odkazy, SOS.',
-    tts: 'V strede váš Rodinný štít.',
+    title: 'FAMILY SHIELD',
+    subtitle: 'Angel Mode, Magic Lens, voice messages, SOS.',
+    tts: 'In the middle, your Family Shield.',
     duration: 5000,
   },
   {
     icon: 'shield-checkmark' as const,
-    title: 'SUVERÉNNY TREZOR',
-    subtitle: 'Majetok, večný odkaz a bunker mód.',
-    tts: 'A napravo váš Suverénny trezor.',
+    title: 'SOVEREIGN VAULT',
+    subtitle: 'Wealth, eternal legacy and bunker mode.',
+    tts: 'And on the right, your Sovereign Vault.',
     duration: 5500,
   },
   {
     icon: 'mic-circle' as const,
-    title: 'STAČÍ MA OSLOVIŤ',
-    subtitle: 'Kedykoľvek povedzte „JARVIS" a som pripravený.',
-    tts: 'Ak čomukoľvek nerozumiete, stačí ma osloviť menom Jarvis.',
+    title: 'JUST SAY MY NAME',
+    subtitle: 'Say JARVIS any time and I am ready.',
+    tts: 'If anything is unclear, just call me by my name, Jarvis.',
     duration: 6500,
   },
 ];
@@ -64,11 +64,11 @@ export function OnboardingTour() {
     const displayName = (user?.name && user.name.trim() && user.name.trim() !== user?.email)
       ? user.name.split(' ')[0]
       : 'Guardian Angel';
-    const lang = ((user?.language as any) || 'sk');
+    const lang = ((user?.language as any) || 'en');
 
     // Speak the intro line then walk through the pillars.
     (async () => {
-      await speak(`Vitajte doma, ${displayName}. Som váš Jarvis.`, { mood: 'onboarding', language: lang });
+      await speak(`Welcome home, ${displayName}. I am your Jarvis.`, { mood: 'onboarding', language: lang });
       for (let i = 0; i < TOUR_STEPS.length; i++) {
         // Slight delay before advancing so the previous line finishes.
         await new Promise((r) => setTimeout(r, i === 0 ? 2500 : 300));
@@ -133,10 +133,10 @@ export function OnboardingTour() {
         {step === TOUR_STEPS.length - 1 ? (
           <Pressable testID="onboarding-done" onPress={finish} style={styles.cta}>
             <Ionicons name="checkmark" size={18} color={C.onInverse} />
-            <Text style={styles.ctaText}>ROZUMIEM · POKRAČOVAŤ</Text>
+            <Text style={styles.ctaText}>GOT IT · CONTINUE</Text>
           </Pressable>
         ) : (
-          <Text style={styles.hint}>Jarvis Vás sprevádza… (ťuknite ✕ pre preskočenie)</Text>
+          <Text style={styles.hint}>Jarvis is guiding you… (tap ✕ to skip)</Text>
         )}
       </View>
     </View>

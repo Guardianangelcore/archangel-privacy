@@ -20,12 +20,12 @@ const TIME_CHIPS = ['06:00', '08:00', '12:00', '15:00', '18:00', '20:00', '22:00
 
 // Angel Mode 2.0 — flexible day-part slots with big Sun/Moon icons
 const SLOTS: { key: string; label: string; icon: any; time: string | null }[] = [
-  { key: 'upon_waking', label: 'PO PREBUDENÍ', icon: 'partly-sunny', time: '07:00' },
-  { key: 'breakfast', label: 'S RAŇAJKAMI', icon: 'sunny-outline', time: '08:00' },
+  { key: 'upon_waking', label: 'UPON WAKING', icon: 'partly-sunny', time: '07:00' },
+  { key: 'breakfast', label: 'WITH BREAKFAST', icon: 'sunny-outline', time: '08:00' },
   { key: 'lunch', label: 'NA OBED', icon: 'sunny', time: '12:00' },
-  { key: 'evening', label: 'VEČER', icon: 'moon-outline', time: '18:00' },
-  { key: 'night', label: 'PRED SPANÍM', icon: 'moon', time: '22:00' },
-  { key: 'as_needed', label: 'PODĽA POTREBY', icon: 'medkit', time: null },
+  { key: 'evening', label: 'EVENING', icon: 'moon-outline', time: '18:00' },
+  { key: 'night', label: 'BEFORE SLEEP', icon: 'moon', time: '22:00' },
+  { key: 'as_needed', label: 'AS NEEDED', icon: 'medkit', time: null },
 ];
 const SLOT_LABEL: Record<string, string> = Object.fromEntries(SLOTS.map(s => [s.key, s.label]));
 
@@ -49,7 +49,7 @@ async function rescheduleLocal(reminders: Reminder[]) {
 
 export default function Meds() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [today, setToday] = useState<TodayItem[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -145,7 +145,7 @@ export default function Meds() {
           <View style={[styles.statusBanner, pending === 0 && { backgroundColor: C.brandTer, borderColor: C.brand }]}>
             <Ionicons name={pending === 0 ? 'checkmark-circle' : 'time'} size={26} color={pending === 0 ? C.brand : C.onWarn} />
             <Text style={[styles.statusText, pending === 0 && { color: C.brand }]}>
-              {pending === 0 ? t('all_taken', lang).toUpperCase() + ' ✓' : `${pending}× DNES EŠTE UŽIŤ`}
+              {pending === 0 ? t('all_taken', lang).toUpperCase() + ' ✓' : `${pending}× STILL TO TAKE TODAY`}
             </Text>
           </View>
         )}
@@ -198,7 +198,7 @@ export default function Meds() {
             ))}
           </>
         )}
-        {Platform.OS !== 'web' && <Text style={styles.hint}>🔔 PRIPOMIENKY CHODIA AKO NOTIFIKÁCIE KAŽDÝ DEŇ V NASTAVENÝCH ČASOCH</Text>}
+        {Platform.OS !== 'web' && <Text style={styles.hint}>🔔 REMINDERS ARRIVE AS DAILY NOTIFICATIONS AT YOUR SET TIMES</Text>}
       </ScrollView>
 
       <Pressable testID="md-add-btn" onPress={() => setModal(true)} style={styles.fab}>
@@ -216,7 +216,7 @@ export default function Meds() {
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 460 }}>
               <TextInput testID="md-name" placeholder="Euthyrox" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
               <TextInput testID="md-dose" placeholder={`${t('dose', lang)} (1 tbl / 50 mg)`} value={f.dose} onChangeText={v => setF({ ...f, dose: v })} style={styles.input} placeholderTextColor="#999" />
-              <Text style={styles.lbl}>KEDY UŽÍVAŤ</Text>
+              <Text style={styles.lbl}>WHEN TO TAKE</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {SLOTS.map(sl => {
                   const on = f.slots.includes(sl.key);
@@ -230,7 +230,7 @@ export default function Meds() {
                   );
                 })}
               </View>
-              <Text style={styles.lbl}>VLASTNÉ ČASY (VOLITEĽNÉ)</Text>
+              <Text style={styles.lbl}>CUSTOM TIMES (OPTIONAL)</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {TIME_CHIPS.map(tm => (
                   <Pressable testID={`md-time-${tm}`} key={tm} onPress={() => toggleTime(tm)} style={[styles.chip, f.times.includes(tm) && styles.chipActive]}>

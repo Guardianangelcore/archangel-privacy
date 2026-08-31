@@ -348,7 +348,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
 
 export default function Physio() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [region, setRegion] = useState('neck');
   const [intensity, setIntensity] = useState('light');

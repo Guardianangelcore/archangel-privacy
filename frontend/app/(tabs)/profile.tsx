@@ -12,15 +12,16 @@ import { CityPicker, LanguageSuggestionBanner } from '@/src/CityPicker';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { WATERMARK } from '@/src/watermark';
-import { AGE_LABEL_SK, ageFromBirthYear, stageFromAge } from '@/src/age';
+import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
 import { getPanicTaps, setPanicTaps } from '@/src/panic-gesture';
+import { useDemoMode, setDemoMode } from '@/src/demo-mode';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Profile() {
   const { user, signOut, setUser } = useAuth();
   const router = useRouter();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const [profile, setProfile] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [ecPick, setEcPick] = useState(false);
@@ -32,24 +33,25 @@ export default function Profile() {
   const [geoMsg, setGeoMsg] = useState('');
   const [cityPick, setCityPick] = useState(false);
   const [langSuggest, setLangSuggest] = useState<any>(null);
+  const demoBadge = useDemoMode();
 
   const applyLangSuggestion = async () => {
     if (!langSuggest) return;
     try {
       await setPref({ language: langSuggest.to });
-      setGeoMsg(`Jazyk prepnutý na ${langSuggest.to.toUpperCase()} podľa ${langSuggest.city}.`);
+      setGeoMsg(`Language switched to ${langSuggest.to.toUpperCase()} based on ${langSuggest.city}.`);
     } catch (e: any) { setGeoMsg(String(e.message || e)); }
     finally { setLangSuggest(null); }
   };
 
   const tryIpFallback = async () => {
-    setGeoMsg('Skúšam IP-based lokalizáciu…');
+    setGeoMsg('Trying IP-based location…');
     try {
       const r: any = await api('/geo/ip-locate', { method: 'POST' });
       setGeo(r.geo);
       if (r.language_suggestion) setLangSuggest(r.language_suggestion);
       setGeoMsg(r.geo.source === 'ip-fallback'
-        ? `IP lokalizácia nedostupná — vyberte mesto ručne. (${r.geo.city})`
+        ? `IP location unavailable — pick your city manually. (${r.geo.city})`
         : `IP: ${r.geo.city} · ${r.geo.country}`);
       const me: any = await api('/auth/me');
       if (me?.user) setUser(me.user);
@@ -63,15 +65,15 @@ export default function Profile() {
         const p = await Location.getForegroundPermissionsAsync();
         if (!p.granted) {
           if (!p.canAskAgain) {
-            setGeoMsg('Poloha zablokovaná — skúšam IP fallback. Ak treba, otvorte manuálny výber mesta.');
+            setGeoMsg('Location blocked — trying IP fallback. If needed, open the manual city picker.');
             await tryIpFallback();
             return;
           }
           const r = await Location.requestForegroundPermissionsAsync();
           if (!r.granted) {
             setGeoMsg(r.canAskAgain
-              ? 'Bez GPS — skúšam IP fallback.'
-              : 'Poloha zablokovaná — skúšam IP fallback, potom môžete vybrať mesto ručne.');
+              ? 'No GPS — trying IP fallback.'
+              : 'Location blocked — trying IP fallback, then you can pick a city manually.');
             await tryIpFallback();
             return;
           }
@@ -84,9 +86,9 @@ export default function Profile() {
           const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           const loc: any = await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
           setGeo(loc.geo);
-          if (loc.language_switched) setGeoMsg(`Jazyk auto-prepnutý: ${loc.geo.city} (${loc.language.toUpperCase()})`);
-          else if (loc.language_suggestion) { setGeoMsg(`Poloha: ${loc.geo.city} · ${loc.geo.country}`); setLangSuggest(loc.language_suggestion); }
-          else setGeoMsg(`Poloha: ${loc.geo.city} · ${loc.geo.country}`);
+          if (loc.language_switched) setGeoMsg(`Language auto-switched: ${loc.geo.city} (${loc.language.toUpperCase()})`);
+          else if (loc.language_suggestion) { setGeoMsg(`Location: ${loc.geo.city} · ${loc.geo.country}`); setLangSuggest(loc.language_suggestion); }
+          else setGeoMsg(`Location: ${loc.geo.city} · ${loc.geo.country}`);
         } catch {
           await tryIpFallback();
         }
@@ -104,7 +106,7 @@ export default function Profile() {
     try {
       const r: any = await api('/demo/toggle', { method: 'POST', body: JSON.stringify({ enabled: v }) });
       setAdmin({ ...admin, demo_mode: r.demo_mode });
-      setDemoMsg(v ? 'DEMO MODE AKTÍVNY — dashboard naplnený ukážkovými dátami (lov termínu, 150 € refundácia, rodinný pulz).' : 'Demo dáta odstránené — čistý produkčný stav.');
+      setDemoMsg(v ? 'DEMO MODE ACTIVE — dashboard filled with showcase data (slot hunt, €150 refund, family pulse).' : 'Demo data removed — clean production state.');
     } catch (e: any) { setDemoMsg(String(e.message || e)); }
     finally { setDemoBusy(false); }
   };
@@ -150,13 +152,13 @@ export default function Profile() {
   const saveBirthYear = async () => {
     const by = parseInt(birthYearTxt, 10);
     if (!by || by < 1900 || by > 2030) {
-      setBioMsg('Zadajte platný rok narodenia (1900–2030).');
+      setBioMsg('Enter a valid birth year (1900–2030).');
       return;
     }
     setBioMsg('');
     try {
       await setPref({ birth_year: by });
-      setBioMsg('Bio-Timeline aktualizovaná. Rozhranie sa prispôsobí Vašej etape života.');
+      setBioMsg('Bio-Timeline updated. The interface will adapt to your stage of life.');
     } catch (e: any) {
       setBioMsg(String(e.message || e));
     }
@@ -171,7 +173,7 @@ export default function Profile() {
         if (Platform.OS === 'web') return;
         const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
         if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) setBioLabel('FaceID');
-        else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) setBioLabel('Odtlačok prsta');
+        else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) setBioLabel('Fingerprint');
         else if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) setBioLabel('Iris');
       } catch {}
     })();
@@ -183,11 +185,11 @@ export default function Profile() {
         const hasHw = await LocalAuthentication.hasHardwareAsync();
         const enrolled = await LocalAuthentication.isEnrolledAsync();
         if (!hasHw || !enrolled) {
-          setBioMsg('Zariadenie nemá aktivovanú biometriu. Nastavte FaceID/odtlačok v systéme.');
+          setBioMsg('This device has no biometrics enrolled. Set up FaceID/fingerprint in system settings.');
           return;
         }
-        const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Potvrďte zapnutie biometrie' });
-        if (!r.success) { setBioMsg('Overenie zrušené.'); return; }
+        const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Confirm enabling biometrics' });
+        if (!r.success) { setBioMsg('Verification cancelled.'); return; }
       } catch {}
     }
     await setPref({ biometric_enabled: v });
@@ -201,7 +203,7 @@ export default function Profile() {
   // Sentient UX — voice-preview button ("Ako znie Jarvis?")
   const previewVoice = () => {
     jarvisSpeak(
-      'Dobrý deň. Som Jarvis, váš anjel-strážca. Odteraz vám budem hovoriť ľudským hlasom.',
+      'Good day. I am Jarvis, your guardian angel. From now on I will speak to you in a human voice.',
       { voice: 'onyx', speed: 0.95, language: lang }
     );
   };
@@ -211,11 +213,11 @@ export default function Profile() {
   useEffect(() => { (async () => { const n = await getPanicTaps(); setPanicTapsTxt(String(n)); })(); }, []);
   const savePanicTaps = async () => {
     const n = parseInt(panicTapsTxt, 10);
-    if (!n || n < 3 || n > 30) { setBioMsg('Počet klepnutí musí byť medzi 3 a 30.'); return; }
+    if (!n || n < 3 || n > 30) { setBioMsg('The tap count must be between 3 and 30.'); return; }
     await setPanicTaps(n);
     setPanicTapsTxt(String(Math.max(3, Math.min(30, n))));
-    setBioMsg(`Panic gesture nastavené na ${n} klepnutí na chrbát telefónu.`);
-    jarvisSpeak(`Panic gesture nastavené na ${n} klepnutí.`, { voice: 'onyx', speed: 0.95, language: lang });
+    setBioMsg(`Panic gesture set to ${n} taps on the back of the phone.`);
+    jarvisSpeak(`Panic gesture set to ${n} taps.`, { voice: 'onyx', speed: 0.95, language: lang });
   };
 
   return (
@@ -235,6 +237,22 @@ export default function Profile() {
           <Text style={styles.identityDid}>{user?.did}</Text>
         </View>
 
+        {/* COMPETITION DEMO BADGE — global "DEMO" pill in the top-right corner */}
+        <Text style={styles.section}>DEMO MODE</Text>
+        <View style={styles.guardRow}>
+          <Ionicons name="pricetag-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>DEMO BADGE</Text>
+            <Text style={styles.guardSub}>Shows a DEMO badge in the top-right corner on every screen.</Text>
+          </View>
+          <Switch
+            testID="prof-demo-badge"
+            value={demoBadge}
+            onValueChange={v => setDemoMode(v)}
+            trackColor={{ true: C.brand, false: C.surface3 }}
+          />
+        </View>
+
         <Text style={styles.section}>LANGUAGE</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {(Object.keys(LANG_NAMES) as Lang[]).map(l => (
@@ -245,18 +263,18 @@ export default function Profile() {
         </View>
 
         {/* ===== SENTIENT UX — the human soul of the OS ===== */}
-        <Text style={styles.section}>SENTIENT UX — DUŠA APLIKÁCIE</Text>
+        <Text style={styles.section}>SENTIENT UX — THE SOUL OF THE APP</Text>
 
         {/* JARVIS VOICE PREVIEW */}
         <View style={styles.guardRow}>
           <Ionicons name="mic-circle" size={24} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>HLAS JARVISA · ONYX</Text>
-            <Text style={styles.guardSub}>Hlboký, ľudský hlas (OpenAI TTS). Vypnutý robotický systémový hlas.</Text>
+            <Text style={styles.guardTitle}>JARVIS VOICE · ONYX</Text>
+            <Text style={styles.guardSub}>Deep human voice (OpenAI TTS). Robotic system voice disabled.</Text>
           </View>
           <Pressable testID="prof-voice-preview" onPress={previewVoice} style={styles.previewBtn}>
             <Ionicons name="volume-high" size={16} color={C.onInverse} />
-            <Text style={styles.previewText}>UKÁŽKA</Text>
+            <Text style={styles.previewText}>PREVIEW</Text>
           </Pressable>
         </View>
 
@@ -264,9 +282,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="calendar-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>BIO-TIMELINE · ROK NARODENIA</Text>
+            <Text style={styles.guardTitle}>BIO-TIMELINE · BIRTH YEAR</Text>
             <Text style={styles.guardSub}>
-              Rozhranie sa prispôsobí Vašej etape života — od dojčaťa po seniora.
+              The interface adapts to your stage of life — from infant to senior.
             </Text>
           </View>
         </View>
@@ -276,18 +294,18 @@ export default function Profile() {
             value={birthYearTxt}
             onChangeText={setBirthYearTxt}
             style={[styles.input, { flex: 1 }]}
-            placeholder="napr. 1958"
+            placeholder="e.g. 1958"
             placeholderTextColor="#999"
             keyboardType="number-pad"
             maxLength={4}
           />
           <Pressable testID="prof-birth-year-save" onPress={saveBirthYear} style={styles.saveMini}>
-            <Text style={styles.saveMiniText}>ULOŽIŤ</Text>
+            <Text style={styles.saveMiniText}>SAVE</Text>
           </Pressable>
         </View>
         {(user as any)?.birth_year && (
           <Text testID="prof-stage-label" style={styles.stageLabel}>
-            ETAPA: {AGE_LABEL_SK[currentStage].toUpperCase()}
+            STAGE: {AGE_LABEL_EN[currentStage].toUpperCase()}
           </Text>
         )}
 
@@ -295,9 +313,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="finger-print" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>BIOMETRICKÝ ZÁMOK · {bioLabel.toUpperCase()}</Text>
+            <Text style={styles.guardTitle}>BIOMETRIC LOCK · {bioLabel.toUpperCase()}</Text>
             <Text style={styles.guardSub}>
-              Odomknutie osobným signálom pri každom otvorení. Zdravotné údaje ostávajú súkromné.
+              Unlock with your personal signal every time the app opens. Health data stays private.
             </Text>
           </View>
           <Switch
@@ -312,9 +330,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="radio-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>WAKE-WORD „JARVIS“</Text>
+            <Text style={styles.guardTitle}>WAKE-WORD JARVIS</Text>
             <Text style={styles.guardSub}>
-              Hands-free spustenie hlasom. Funguje plne až v natívnom builde (nie v Expo Go).
+              Hands-free voice activation. Fully works only in a native build (not Expo Go).
             </Text>
           </View>
           <Switch
@@ -331,7 +349,7 @@ export default function Profile() {
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>PANIC GESTURE · SILENT WITNESS</Text>
             <Text style={styles.guardSub}>
-              Klepnite na chrbát telefónu N-krát v priebehu 10 sekúnd → skryté spustenie Tichého svedka.
+              Tap the back of your phone N times within 10 seconds → hidden Silent Witness launch.
             </Text>
           </View>
         </View>
@@ -347,7 +365,7 @@ export default function Profile() {
             maxLength={2}
           />
           <Pressable testID="prof-panic-taps-save" onPress={savePanicTaps} style={styles.saveMini}>
-            <Text style={styles.saveMiniText}>ULOŽIŤ</Text>
+            <Text style={styles.saveMiniText}>SAVE</Text>
           </Pressable>
         </View>
         {!!bioMsg && <Text style={styles.geoMsg}>{bioMsg}</Text>}
@@ -358,7 +376,7 @@ export default function Profile() {
           <Ionicons name="body-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>{t('fall_guard', lang).toUpperCase()}</Text>
-            <Text style={styles.guardSub}>Akcelerometer · auto Fall-Verify</Text>
+            <Text style={styles.guardSub}>Accelerometer · auto Fall-Verify</Text>
           </View>
           <Switch testID="prof-fall-guard" value={!!(user as any)?.fall_guard} onValueChange={v => setPref({ fall_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -366,7 +384,7 @@ export default function Profile() {
           <Ionicons name="time-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>{t('inactivity_guard', lang).toUpperCase()}</Text>
-            <Text style={styles.guardSub}>08:00–21:00 · alarm rodine</Text>
+            <Text style={styles.guardSub}>08:00–21:00 · alerts your family</Text>
           </View>
           <Switch testID="prof-inactivity-guard" value={!!(user as any)?.inactivity_guard} onValueChange={v => setPref({ inactivity_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -374,15 +392,15 @@ export default function Profile() {
           <Ionicons name="heart-half-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>GUARDIAN PULSE CHECK</Text>
-            <Text style={styles.guardSub}>Tichý ping od rodiny · prísne opt-in, kedykoľvek vypnete</Text>
+            <Text style={styles.guardSub}>A silent ping from family · strictly opt-in, disable any time</Text>
           </View>
           <Switch testID="prof-pulse-optin" value={!!(user as any)?.pulse_check_optin} onValueChange={v => setPref({ pulse_check_optin: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
         <View style={styles.guardRow}>
           <Ionicons name="airplane-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>CESTOVNÝ REŽIM (GEO)</Text>
-            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}${geo.source ? ` · ${String(geo.source).toUpperCase()}` : ''}` : '📍 Automatická lokalita (GPS/IP) — povoľte polohu'} — automatické mesto, jazyk a predpisy podľa GPS</Text>
+            <Text style={styles.guardTitle}>TRAVEL MODE (GEO)</Text>
+            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}${geo.source ? ` · ${String(geo.source).toUpperCase()}` : ''}` : '📍 Automatic location (GPS/IP) — allow location access'} — automatic city, language and regulations by GPS</Text>
           </View>
           <Switch testID="prof-travel-mode" value={!!(user as any)?.travel_mode} onValueChange={toggleTravel} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -394,11 +412,11 @@ export default function Profile() {
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <Pressable testID="prof-geo-ip" onPress={tryIpFallback} style={[styles.pickBtn, { flex: 1 }]}>
             <Ionicons name="globe-outline" size={16} color={C.brand} />
-            <Text style={styles.pickBtnText}>IP LOKALIZÁCIA</Text>
+            <Text style={styles.pickBtnText}>IP LOCATION</Text>
           </Pressable>
           <Pressable testID="prof-geo-manual" onPress={() => setCityPick(true)} style={[styles.pickBtn, { flex: 1 }]}>
             <Ionicons name="map-outline" size={16} color={C.brand} />
-            <Text style={styles.pickBtnText}>VYBRAŤ MESTO</Text>
+            <Text style={styles.pickBtnText}>PICK CITY</Text>
           </Pressable>
         </View>
         <CityPicker
@@ -407,7 +425,7 @@ export default function Profile() {
           onPicked={(r) => {
             setGeo(r.geo);
             if (r.language_suggestion) setLangSuggest(r.language_suggestion);
-            setGeoMsg(`Ručne: ${r.geo.city} · ${r.geo.country}`);
+            setGeoMsg(`Manual: ${r.geo.city} · ${r.geo.country}`);
           }}
         />
         {!!geoMsg && <Text style={styles.geoMsg}>{geoMsg}</Text>}
@@ -426,7 +444,7 @@ export default function Profile() {
 
         <Text style={styles.section}>{t('donor_card', lang).toUpperCase()} + EMERGENCY PROFILE</Text>
         <Text style={styles.lbl}>FULL NAME</Text>
-        <TextInput testID="prof-name" value={profile.full_name || ''} onChangeText={v => setProfile({ ...profile, full_name: v })} style={styles.input} placeholder="Meno Priezvisko" placeholderTextColor="#999" />
+        <TextInput testID="prof-name" value={profile.full_name || ''} onChangeText={v => setProfile({ ...profile, full_name: v })} style={styles.input} placeholder="First Last" placeholderTextColor="#999" />
 
         <Text style={styles.lbl}>{t('blood_type', lang).toUpperCase()}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
@@ -438,7 +456,7 @@ export default function Profile() {
         </View>
 
         <Text style={styles.lbl}>{t('allergies', lang).toUpperCase()}</Text>
-        <TextInput testID="prof-allergies" value={profile.allergies || ''} onChangeText={v => setProfile({ ...profile, allergies: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholder="penicilín, latex…" placeholderTextColor="#999" />
+        <TextInput testID="prof-allergies" value={profile.allergies || ''} onChangeText={v => setProfile({ ...profile, allergies: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholder="penicillin, latex…" placeholderTextColor="#999" />
 
         <Text style={styles.lbl}>MEDICATIONS</Text>
         <TextInput testID="prof-meds" value={profile.medications || ''} onChangeText={v => setProfile({ ...profile, medications: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholderTextColor="#999" />
@@ -447,7 +465,7 @@ export default function Profile() {
         <TextInput testID="prof-conditions" value={profile.conditions || ''} onChangeText={v => setProfile({ ...profile, conditions: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholderTextColor="#999" />
 
         <Text style={styles.lbl}>{t('emergency_contact', lang).toUpperCase()}</Text>
-        <TextInput testID="prof-ec-name" value={profile.emergency_contact_name || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_name: v })} style={styles.input} placeholder="Meno" placeholderTextColor="#999" />
+        <TextInput testID="prof-ec-name" value={profile.emergency_contact_name || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_name: v })} style={styles.input} placeholder="Name" placeholderTextColor="#999" />
         <TextInput testID="prof-ec-phone" value={profile.emergency_contact_phone || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_phone: v })} style={styles.input} placeholder="+421…" keyboardType="phone-pad" placeholderTextColor="#999" />
         <Pressable testID="prof-ec-pick" onPress={() => setEcPick(true)} style={styles.pickBtn}>
           <Ionicons name="people-outline" size={16} color={C.brand} />
@@ -481,7 +499,7 @@ export default function Profile() {
 
         <Pressable testID="onboarding-btn" onPress={() => router.push('/onboarding')} style={styles.qrBtn}>
           <Ionicons name="heart-outline" size={18} color={C.fg} />
-          <Text style={styles.qrBtnText}>SPRIEVODCA PRE RODINU A SENIOROV</Text>
+          <Text style={styles.qrBtnText}>GUIDE FOR FAMILY & SENIORS</Text>
         </Pressable>
 
         <Pressable testID="recovery-suite-btn" onPress={() => router.push('/recovery-suite')} style={styles.qrBtn}>
@@ -496,7 +514,7 @@ export default function Profile() {
 
         <Pressable testID="eternal-vault-btn" onPress={() => router.push('/eternal-vault')} style={styles.qrBtn}>
           <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
-          <Text style={styles.qrBtnText}>VEČNÝ TREZOR · ODKAZ A POSLEDNÁ VÔĽA</Text>
+          <Text style={styles.qrBtnText}>ETERNAL VAULT · LEGACY & LAST WILL</Text>
         </Pressable>
 
         {admin?.is_founder && (
@@ -506,7 +524,7 @@ export default function Profile() {
               <Ionicons name="film-outline" size={22} color="#B8860B" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.guardTitle}>INVESTOR DEMO MODE</Text>
-                <Text style={styles.guardSub}>Ukážkové dáta pre porotu: lov termínu · 150 € refundácia · rodinný pulz</Text>
+                <Text style={styles.guardSub}>Showcase data for the jury: slot hunt · €150 refund · family pulse</Text>
               </View>
               {demoBusy ? <ActivityIndicator color="#B8860B" /> : (
                 <Switch testID="demo-toggle" value={!!admin?.demo_mode} onValueChange={toggleDemo} trackColor={{ true: '#B8860B', false: C.surface3 }} />
@@ -523,17 +541,17 @@ export default function Profile() {
         {!confirmDelete ? (
           <Pressable testID="delete-account-btn" onPress={() => setConfirmDelete(true)} style={styles.delBtn}>
             <Ionicons name="trash-outline" size={18} color={C.error} />
-            <Text style={styles.delBtnText}>VYMAZAŤ ÚČET A VŠETKY DÁTA</Text>
+            <Text style={styles.delBtnText}>DELETE ACCOUNT & ALL DATA</Text>
           </Pressable>
         ) : (
           <View style={styles.delConfirm}>
-            <Text style={styles.delConfirmText}>NAOZAJ VYMAZAŤ ÚČET? TÁTO AKCIA JE NEVRATNÁ — ODSTRÁNIA SA VŠETKY VAŠE DÁTA.</Text>
+            <Text style={styles.delConfirmText}>REALLY DELETE YOUR ACCOUNT? THIS ACTION IS IRREVERSIBLE — ALL YOUR DATA WILL BE REMOVED.</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
               <Pressable testID="delete-account-cancel" onPress={() => setConfirmDelete(false)} style={[styles.delAction, { borderColor: C.borderStrong }]}>
-                <Text style={styles.delActionText}>ZRUŠIŤ</Text>
+                <Text style={styles.delActionText}>CANCEL</Text>
               </Pressable>
               <Pressable testID="delete-account-confirm" onPress={deleteAccount} style={[styles.delAction, { backgroundColor: C.error, borderColor: C.error }]}>
-                <Text style={[styles.delActionText, { color: C.onError }]}>ÁNO, VYMAZAŤ</Text>
+                <Text style={[styles.delActionText, { color: C.onError }]}>YES, DELETE</Text>
               </Pressable>
             </View>
           </View>

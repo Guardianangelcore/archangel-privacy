@@ -5,7 +5,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { C, S } from './theme';
 import { t, Lang } from './i18n';
 
-export default function Art50({ lang = 'sk' }: { lang?: Lang }) {
+export default function Art50({ lang = 'en' }: { lang?: Lang }) {
   return (
     <View testID="art50-waiver" style={st.box}>
       <Text style={st.txt}>{t('art50_waiver', lang)}</Text>

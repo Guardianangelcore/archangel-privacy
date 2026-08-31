@@ -1,5 +1,5 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-// TRENDY ZDRAVIA — ročné súhrny záznamov Karty života + Jarvisov AI súhrn.
+// HEALTH TRENDS — yearly summaries of Life Card records + Jarvis AI summary.
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,12 +9,12 @@ import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 
 const CATS: any = {
-  vaccine: { label: 'Očkovania', color: '#5FA779' },
+  vaccine: { label: 'Vaccinations', color: '#5FA779' },
   disease: { label: 'Choroby', color: '#BF5AF2' },
-  surgery: { label: 'Operácie', color: '#FF453A' },
-  injury: { label: 'Úrazy', color: '#FF9F0A' },
+  surgery: { label: 'Surgeries', color: '#FF453A' },
+  injury: { label: 'Injuries', color: '#FF9F0A' },
   exam: { label: 'Prehliadky', color: '#D4AF37' },
-  dental: { label: 'Zubár', color: '#64D2FF' },
+  dental: { label: 'Dental', color: '#64D2FF' },
 };
 const KEYS = Object.keys(CATS);
 
@@ -54,21 +54,21 @@ export default function HealthTrends() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <Text style={st.h1}>{name ? String(name) : 'Moja karta'}</Text>
-        <Text style={st.sub}>Ako sa vyvíjajú choroby, úrazy, prehliadky a očkovania v čase — rok po roku.</Text>
+        <Text style={st.sub}>How diseases, injuries, check-ups and vaccinations evolve over time — year by year.</Text>
         {!!err && <Text style={st.err}>{err}</Text>}
 
         {/* JARVIS SÚHRN */}
         <View testID="tr-summary-box" style={st.sumBox}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
             <Ionicons name="sparkles" size={16} color={C.brand} />
-            <Text style={st.sumTitle}>ROČNÝ SÚHRN · JARVIS</Text>
+            <Text style={st.sumTitle}>YEARLY SUMMARY · JARVIS</Text>
             <View style={{ flex: 1 }} />
             <Pressable testID="tr-summarize" onPress={genSummary} disabled={sumBusy} style={st.sumBtn}>
-              {sumBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.sumBtnText}>{summary ? 'OBNOVIŤ' : 'VYHODNOTIŤ'}</Text>}
+              {sumBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.sumBtnText}>{summary ? 'REFRESH' : 'EVALUATE'}</Text>}
             </Pressable>
           </View>
           {!!summary && <Text testID="tr-summary" style={st.sumText}>{summary}</Text>}
-          {!summary && <Text style={st.sumHint}>Jarvis vyhodnotí trendy a dá jedno praktické odporúčanie.</Text>}
+          {!summary && <Text style={st.sumHint}>Jarvis evaluates the trends and gives one practical recommendation.</Text>}
         </View>
 
         {/* LEGENDA */}
@@ -83,7 +83,7 @@ export default function HealthTrends() {
 
         {/* ROČNÉ STĹPCE */}
         {!data && <ActivityIndicator color={C.brand} style={{ marginTop: 30 }} />}
-        {data && years.length === 0 && <Text style={st.hint}>Žiadne záznamy. Pridajte ich do Karty života a trendy sa vykreslia.</Text>}
+        {data && years.length === 0 && <Text style={st.hint}>No records yet. Add them to your Life Card and the trends will render.</Text>}
         {[...years].reverse().map((y: any) => (
           <View key={y.year} testID={`tr-year-${y.year}`} style={st.yearRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>

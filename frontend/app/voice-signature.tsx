@@ -100,7 +100,7 @@ export default function VoiceSignature() {
       await load();
       // Confirm audibly
       jarvisSpeak(`Ďakujem, ${label.trim()}. Váš hlasový podpis je zaznamenaný.`,
-        { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk' });
+        { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' });
     } catch (e: any) { setErr(String(e?.message || e)); }
     setBusy(false);
   };

@@ -70,7 +70,7 @@ export async function speak(text: string, opts: SpeakOptions = {}): Promise<void
   const preset = opts.mood ? MOOD_VOICE[opts.mood] : undefined;
   const voice: JarvisVoice = opts.voice || preset?.voice || DEFAULT_VOICE;
   const speed = opts.speed ?? preset?.speed ?? 1.0;
-  const language = opts.language || 'sk';
+  const language = opts.language || 'en';
 
   try {
     // 1) Ask the backend to generate (or fetch cached) audio bytes.

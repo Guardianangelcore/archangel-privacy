@@ -4,7 +4,7 @@ Iteration 33 backend tests — Sovereign Streaks + OCR cache branch consistency.
 Covers:
   - GET /api/streaks/physio (auth, empty, tiers 1/2/3, gap, grace day, cutoff)
   - POST /api/vault/documents/{id}/ocr cached branch returns 4 keys
-  - Regression: /api/achievements returns 8 badges; /api/voice/tts (onyx) works
+  - Regression: /api/voice/tts (onyx) works
 
 Seeded rows are tagged {"seeded_test": True} for safe cleanup. Real user
 physio_videos are left untouched.
@@ -209,17 +209,6 @@ class TestOCRCachedBranch:
 # ---------------- Regressions ----------------
 
 class TestRegressions:
-    def test_achievements_returns_8_badges(self):
-        r = requests.get(f"{BASE_URL}/api/achievements", headers=AUTH)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] == 8, data
-        assert len(data["unlocked"]) + len(data["locked"]) == 8
-        # spot-check some keys
-        keys = {b["key"] for b in data["unlocked"] + data["locked"]}
-        assert "voice_print_first" in keys
-        assert "physio_first_series" in keys
-
     def test_voice_signature_circle(self):
         r = requests.get(f"{BASE_URL}/api/family/voice-signature/circle", headers=AUTH)
         # Endpoint should return 200 (may be empty list or an object)

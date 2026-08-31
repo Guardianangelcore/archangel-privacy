@@ -1,5 +1,5 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-// RASTOVÁ KRIVKA — výška a váha dieťaťa s WHO percentilmi (P3 · P50 · P97).
+// GROWTH CURVE — child height & weight with WHO percentiles (P3 · P50 · P97).
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ const PAD = { l: 34, r: 10, t: 10, b: 22 };
 function GrowthChart({ curves, logs, measure }: { curves: any[]; logs: any[]; measure: 'height' | 'weight' }) {
   const key = measure === 'height' ? 'height_cm' : 'weight_kg';
   const pts = logs.filter((l: any) => l[key] != null && l.age_months != null);
-  if (!curves.length && !pts.length) return <Text style={st.hint}>Zatiaľ žiadne dáta pre graf.</Text>;
+  if (!curves.length && !pts.length) return <Text style={st.hint}>No data for the chart yet.</Text>;
   const allM = [...curves.map(c => c.m), ...pts.map(p => p.age_months)];
   const allV = [...curves.flatMap(c => [c.p3, c.p97]), ...pts.map(p => p[key])];
   const mMax = Math.max(...allM, 24);
@@ -91,7 +91,7 @@ export default function ChildGrowth() {
   const add = async () => {
     const h = height ? parseFloat(height.replace(',', '.')) : null;
     const w = weight ? parseFloat(weight.replace(',', '.')) : null;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (!h && !w)) { setErr('Vyberte dátum a zadajte výšku alebo váhu.'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (!h && !w)) { setErr('Pick a date and enter height or weight.'); return; }
     setBusy(true); setErr('');
     try {
       await api(`/lifecard/children/${child_id}/growth`, { method: 'POST', body: JSON.stringify({ date, height_cm: h, weight_kg: w }) });
@@ -114,7 +114,7 @@ export default function ChildGrowth() {
         <Pressable testID="gr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>RASTOVÁ KRIVKA</Text>
+        <Text style={st.title}>GROWTH CURVE</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
@@ -122,18 +122,18 @@ export default function ChildGrowth() {
         {data && (
           <>
             <Text style={st.h1}>{data.child.name}</Text>
-            <Text style={st.sub}>Výška a váha s orientačnými percentilmi podľa WHO štandardov.</Text>
+            <Text style={st.sub}>Height and weight with indicative percentiles based on WHO standards.</Text>
             {!!err && <Text style={st.err}>{err}</Text>}
 
             {data.sex_required && (
               <View style={st.sexBox}>
-                <Text style={st.sexTitle}>Pre WHO percentily vyberte pohlavie dieťaťa:</Text>
+                <Text style={st.sexTitle}>Select the sex for WHO percentiles:</Text>
                 <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
                   <Pressable testID="gr-sex-m" onPress={() => setSex('m')} disabled={sexBusy} style={st.sexChip}>
                     <Text style={st.sexChipText}>👦 CHLAPEC</Text>
                   </Pressable>
                   <Pressable testID="gr-sex-f" onPress={() => setSex('f')} disabled={sexBusy} style={st.sexChip}>
-                    <Text style={st.sexChipText}>👧 DIEVČA</Text>
+                    <Text style={st.sexChipText}>👧 GIRL</Text>
                   </Pressable>
                 </View>
               </View>
@@ -141,13 +141,13 @@ export default function ChildGrowth() {
 
             {/* ZÁPIS MERANIA */}
             <View style={st.addBox}>
-              <DateField testID="gr-date" title="DÁTUM MERANIA" value={date} onChange={setDate} placeholder="Dátum merania" style={st.input} />
+              <DateField testID="gr-date" title="MEASUREMENT DATE" value={date} onChange={setDate} placeholder="Measurement date" style={st.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
-                <TextInput testID="gr-height" style={[st.input, { flex: 1 }]} placeholder="Výška (cm)" placeholderTextColor={C.info} keyboardType="decimal-pad" value={height} onChangeText={setHeight} />
-                <TextInput testID="gr-weight" style={[st.input, { flex: 1 }]} placeholder="Váha (kg)" placeholderTextColor={C.info} keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
+                <TextInput testID="gr-height" style={[st.input, { flex: 1 }]} placeholder="Height (cm)" placeholderTextColor={C.info} keyboardType="decimal-pad" value={height} onChangeText={setHeight} />
+                <TextInput testID="gr-weight" style={[st.input, { flex: 1 }]} placeholder="Weight (kg)" placeholderTextColor={C.info} keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
               </View>
               <Pressable testID="gr-save" onPress={add} disabled={busy} style={st.cta}>
-                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ZAPÍSAŤ MERANIE</Text>}
+                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>LOG MEASUREMENT</Text>}
               </Pressable>
             </View>
 
@@ -155,10 +155,10 @@ export default function ChildGrowth() {
             <View style={st.chartBox}>
               <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md }}>
                 <Pressable testID="gr-m-height" onPress={() => setMeasure('height')} style={[st.mChip, measure === 'height' && st.mChipOn]}>
-                  <Text style={[st.mChipText, measure === 'height' && { color: C.onInverse }]}>VÝŠKA</Text>
+                  <Text style={[st.mChipText, measure === 'height' && { color: C.onInverse }]}>HEIGHT</Text>
                 </Pressable>
                 <Pressable testID="gr-m-weight" onPress={() => setMeasure('weight')} style={[st.mChip, measure === 'weight' && st.mChipOn]}>
-                  <Text style={[st.mChipText, measure === 'weight' && { color: C.onInverse }]}>VÁHA</Text>
+                  <Text style={[st.mChipText, measure === 'weight' && { color: C.onInverse }]}>WEIGHT</Text>
                 </Pressable>
               </View>
               <GrowthChart curves={curves} logs={logs} measure={measure} />
@@ -167,7 +167,7 @@ export default function ChildGrowth() {
 
             {/* MERANIA */}
             <Text style={st.section}>MERANIA ({logs.length})</Text>
-            {logs.length === 0 && <Text style={st.hint}>Žiadne merania. Zapíšte prvé vyššie.</Text>}
+            {logs.length === 0 && <Text style={st.hint}>No measurements yet. Log the first one above.</Text>}
             {[...logs].reverse().map((l: any) => (
               <View key={l.log_id} testID={`gr-log-${l.log_id}`} style={st.logRow}>
                 <View style={{ flex: 1 }}>

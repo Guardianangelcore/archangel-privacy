@@ -36,7 +36,7 @@ function outingStatus(outings: any[]) {
 export default function MyRecovery() {
   const router = useRouter();
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const [rec, setRec] = useState<any>(null);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -73,20 +73,20 @@ export default function MyRecovery() {
   const status = useMemo(() => outingStatus(outings), [outings, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) { setErr('Vyberte začiatok PN v kalendári.'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) { setErr('Pick the sick-leave start date in the calendar.'); return; }
     setBusy('save'); setErr(''); setInfo('');
     try {
       const r: any = await api('/recovery/epn', {
         method: 'PUT',
         body: JSON.stringify({ start_date: start, end_date: end || null, note, contract_type: contract, monthly_gross: parseFloat(gross) || 0, outings }),
       });
-      setRec(r); setInfo('ePN uložená.');
+      setRec(r); setInfo('eSick-note saved.');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
 
   const addOuting = () => {
-    if (!/^\d{2}:\d{2}$/.test(oFrom) || !/^\d{2}:\d{2}$/.test(oTo)) { setErr('Vyberte čas vychádzky Od a Do.'); return; }
+    if (!/^\d{2}:\d{2}$/.test(oFrom) || !/^\d{2}:\d{2}$/.test(oTo)) { setErr('Pick the outing From and To times.'); return; }
     setOutings([...outings, { from_time: oFrom, to_time: oTo }]);
     setOFrom(''); setOTo(''); setErr('');
   };
@@ -96,17 +96,17 @@ export default function MyRecovery() {
     setBusy('ai'); setErr('');
     try {
       const r: any = await api('/recovery/extract-outings', { method: 'POST', body: JSON.stringify({ text: aiText }) });
-      if (r.found) { setOutings(r.outings); setInfo(`Jarvis našiel ${r.outings.length} vychádzky — skontrolujte a uložte.`); setShowAi(false); }
-      else setErr('Vo vloženom texte sa nenašli žiadne vychádzky.');
+      if (r.found) { setOutings(r.outings); setInfo(`Jarvis found ${r.outings.length} outings — review and save.`); setShowAi(false); }
+      else setErr('No outings found in the pasted text.');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
 
   const scheduleAlerts = async () => {
-    if (Platform.OS === 'web') { setInfo('Upozornenia fungujú na telefóne (Expo Go / natívny build).'); return; }
+    if (Platform.OS === 'web') { setInfo('Alerts work on a phone (Expo Go / native build).'); return; }
     try {
       const perm = await Notifications.requestPermissionsAsync();
-      if (!perm.granted) { setErr('Povolenie na upozornenia zamietnuté.'); return; }
+      if (!perm.granted) { setErr('Notification permission denied.'); return; }
       let n = 0;
       const now = new Date();
       for (const o of outings) {
@@ -114,13 +114,13 @@ export default function MyRecovery() {
         const fire = new Date(now); fire.setHours(th, tm - 15, 0, 0);
         if (fire > now) {
           await Notifications.scheduleNotificationAsync({
-            content: { title: '⏰ Vychádzka sa končí o 15 minút', body: `Okno ${o.from_time}–${o.to_time}. Vráťte sa domov — možná kontrola zo Sociálnej poisťovne.` },
+            content: { title: '⏰ Outing ends in 15 minutes', body: `Window ${o.from_time}–${o.to_time}. Head back home — an inspection is possible.` },
             trigger: fire as any,
           });
           n++;
         }
       }
-      setInfo(n ? `Nastavené ${n} upozornenia na dnešné vychádzky (15 min pred koncom).` : 'Dnešné vychádzky už prebehli — upozornenia sa nastavia zajtra.');
+      setInfo(n ? `Set ${n} alerts for today's outings (15 min before each ends).` : "Today's outings have passed — alerts will be set tomorrow.");
     } catch (e: any) { setErr(String(e.message || e)); }
   };
 
@@ -154,7 +154,7 @@ export default function MyRecovery() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <Text style={styles.h1}>Hustle Recovery Guard</Text>
-        <Text style={styles.sub}>PN/ePN pod kontrolou: vychádzky, nemocenské a hlásenia úradom — bez papierovačiek.</Text>
+        <Text style={styles.sub}>Sick leave under control: outings, sick pay and official reports — zero paperwork.</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         {!!info && <Text style={styles.info}>{info}</Text>}
 
@@ -168,19 +168,19 @@ export default function MyRecovery() {
             <View style={{ flex: 1 }}>
               <Text style={styles.statusTitle}>
                 {status.active
-                  ? (status as any).left <= 15 ? `VRÁŤTE SA DOMOV — koniec o ${(status as any).left} min` : `VYCHÁDZKA AKTÍVNA · zostáva ${(status as any).left} min`
-                  : 'STE V REŽIME DOMA'}
+                  ? (status as any).left <= 15 ? `HEAD BACK HOME — ends in ${(status as any).left} min` : `OUTING ACTIVE · ${(status as any).left} min left`
+                  : 'YOU ARE IN HOME MODE'}
               </Text>
               <Text style={styles.statusSub}>
-                {status.active ? `Okno ${(status as any).window}` : (status as any).next ? `Najbližšia vychádzka: ${(status as any).next}` : 'Dnes už žiadna vychádzka'}
+                {status.active ? `Window ${(status as any).window}` : (status as any).next ? `Next outing: ${(status as any).next}` : 'No more outings today'}
               </Text>
             </View>
           </View>
         )}
 
-        <Text style={styles.section}>ePN ZÁZNAM</Text>
+        <Text style={styles.section}>eSICK-NOTE RECORD</Text>
         <View style={styles.row2}>
-          <DateField testID="mr-start" title="ZAČIATOK PN" value={start} onChange={setStart} placeholder="Začiatok PN" style={[styles.input, { flex: 1 }]} />
+          <DateField testID="mr-start" title="SICK LEAVE START" value={start} onChange={setStart} placeholder="Sick leave start" style={[styles.input, { flex: 1 }]} />
           <DateField testID="mr-end" title="KONIEC PN (ODHAD)" value={end} onChange={setEnd} placeholder="Koniec (odhad)" style={[styles.input, { flex: 1 }]} />
         </View>
         <View style={styles.row2}>
@@ -189,11 +189,11 @@ export default function MyRecovery() {
               <Text style={[styles.chipText, contract === k && { color: C.onInverse }]}>{l}</Text>
             </Pressable>
           ))}
-          <WheelField testID="mr-gross" title="HRUBÁ MZDA €" min={300} max={5000} step={10} unit="€" value={gross} onChange={setGross} placeholder="Hrubá mzda €" style={[styles.input, { flex: 1 }]} />
+          <WheelField testID="mr-gross" title="GROSS SALARY €" min={300} max={5000} step={10} unit="€" value={gross} onChange={setGross} placeholder="Gross salary €" style={[styles.input, { flex: 1 }]} />
         </View>
-        <TextInput testID="mr-note" style={styles.input} placeholder="Poznámka o zotavení (napr. koleno po artroskopii)" placeholderTextColor={C.info} value={note} onChangeText={setNote} />
+        <TextInput testID="mr-note" style={styles.input} placeholder="Recovery note (e.g. knee after arthroscopy)" placeholderTextColor={C.info} value={note} onChangeText={setNote} />
 
-        <Text style={styles.section}>VYCHÁDZKY (POVOLENÉ HODINY)</Text>
+        <Text style={styles.section}>OUTINGS (PERMITTED HOURS)</Text>
         {outings.map((o, i) => (
           <View key={i} style={styles.outRow}>
             <Ionicons name="time-outline" size={16} color={C.brand} />
@@ -205,26 +205,26 @@ export default function MyRecovery() {
           </View>
         ))}
         <View style={styles.row2}>
-          <TimeField testID="mr-out-from" title="VYCHÁDZKA OD" value={oFrom} onChange={setOFrom} placeholder="Od" style={[styles.input, { flex: 1 }]} />
-          <TimeField testID="mr-out-to" title="VYCHÁDZKA DO" value={oTo} onChange={setOTo} placeholder="Do" style={[styles.input, { flex: 1 }]} />
+          <TimeField testID="mr-out-from" title="OUTING FROM" value={oFrom} onChange={setOFrom} placeholder="From" style={[styles.input, { flex: 1 }]} />
+          <TimeField testID="mr-out-to" title="OUTING TO" value={oTo} onChange={setOTo} placeholder="To" style={[styles.input, { flex: 1 }]} />
           <Pressable testID="mr-out-add" onPress={addOuting} style={styles.addBtn}><Ionicons name="add" size={20} color={C.onInverse} /></Pressable>
         </View>
         <Pressable testID="mr-ai-toggle" onPress={() => setShowAi(!showAi)} style={styles.aiToggle}>
           <Ionicons name="sparkles-outline" size={15} color={C.brand} />
-          <Text style={styles.aiToggleText}>JARVIS: VYČÍTAŤ VYCHÁDZKY Z POTVRDENIA</Text>
+          <Text style={styles.aiToggleText}>JARVIS: EXTRACT OUTINGS FROM A CONFIRMATION</Text>
         </Pressable>
         {showAi && (
           <View style={{ gap: S.sm }}>
             <TextInput testID="mr-ai-text" style={[styles.input, { minHeight: 90, textAlignVertical: 'top', paddingTop: S.md }]} multiline placeholder="Vložte text z ePN / potvrdenia lekára…" placeholderTextColor={C.info} value={aiText} onChangeText={setAiText} />
             <Pressable testID="mr-ai-run" onPress={extractAi} disabled={busy === 'ai'} style={styles.ctaOutline}>
-              {busy === 'ai' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>EXTRAHOVAŤ (AI)</Text>}
+              {busy === 'ai' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>EXTRACT (AI)</Text>}
             </Pressable>
           </View>
         )}
 
         <View style={styles.row2}>
           <Pressable testID="mr-save" onPress={save} disabled={busy === 'save'} style={[styles.cta, { flex: 1 }]}>
-            {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ULOŽIŤ ePN</Text>}
+            {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>SAVE eSICK-NOTE</Text>}
           </Pressable>
           <Pressable testID="mr-alerts" onPress={scheduleAlerts} style={[styles.ctaOutline, { flex: 1 }]}>
             <Ionicons name="alarm-outline" size={15} color={C.brand} />
@@ -232,11 +232,11 @@ export default function MyRecovery() {
           </Pressable>
         </View>
 
-        <Text style={styles.section}>KALKULAČKA NEMOCENSKÉHO</Text>
+        <Text style={styles.section}>SICK-PAY CALCULATOR</Text>
         <View style={styles.row2}>
-          <WheelField testID="mr-days" title="POČET DNÍ PN" min={1} max={365} unit="dní" value={days} onChange={setDays} placeholder="Počet dní PN" style={[styles.input, { flex: 1 }]} />
+          <WheelField testID="mr-days" title="SICK LEAVE DAYS" min={1} max={365} unit="days" value={days} onChange={setDays} placeholder="Number of days" style={[styles.input, { flex: 1 }]} />
           <Pressable testID="mr-calc" onPress={runCalc} disabled={busy === 'calc'} style={[styles.cta, { flex: 1 }]}>
-            {busy === 'calc' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>VYPOČÍTAŤ</Text>}
+            {busy === 'calc' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>CALCULATE</Text>}
           </Pressable>
         </View>
         {calc && (
@@ -248,17 +248,17 @@ export default function MyRecovery() {
               </View>
             ))}
             <View style={[styles.calcRow, { borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.sm }]}>
-              <Text style={[styles.calcLabel, { fontWeight: '900', color: C.fg }]}>ODHAD SPOLU ({calc.days} dní)</Text>
+              <Text style={[styles.calcLabel, { fontWeight: '900', color: C.fg }]}>ESTIMATED TOTAL ({calc.days} days)</Text>
               <Text style={[styles.calcVal, { color: C.brand, fontSize: 15 }]}>{calc.total_estimate} €</Text>
             </View>
             <View style={styles.calcRow}>
-              <Text style={styles.calcLabel}>Výpadok príjmu</Text>
+              <Text style={styles.calcLabel}>Income shortfall</Text>
               <Text style={[styles.calcVal, { color: calc.shortfall_pct >= 30 ? C.error : C.fg }]}>−{calc.shortfall} € ({calc.shortfall_pct} %)</Text>
             </View>
             {calc.solidarity_suggested && (
               <Pressable testID="mr-solidarity" onPress={() => router.push('/solidarity')} style={styles.solBox}>
                 <Ionicons name="people-outline" size={16} color={C.onWarn} />
-                <Text style={styles.solText}>Výpadok nad 30 % — zvážte kampaň v Solidarity Hub</Text>
+                <Text style={styles.solText}>Shortfall over 30% — consider a Solidarity Hub campaign</Text>
               </Pressable>
             )}
             {calc.warnings.map((w: string, i: number) => <Text key={i} style={styles.warn}>⚠ {w}</Text>)}
@@ -266,16 +266,16 @@ export default function MyRecovery() {
           </View>
         )}
 
-        <Text style={styles.section}>HLÁSENIA JEDNÝM ŤUKOM (PDF)</Text>
+        <Text style={styles.section}>ONE-TAP REPORTS (PDF)</Text>
         <View style={styles.row2}>
           <Pressable testID="mr-pdf-employer" onPress={() => pdf('employer')} disabled={!rec || busy === 'pdf-employer'} style={[styles.ctaOutline, { flex: 1 }, !rec && { opacity: 0.5 }]}>
-            {busy === 'pdf-employer' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>ZAMESTNÁVATEĽ</Text>}
+            {busy === 'pdf-employer' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>EMPLOYER</Text>}
           </Pressable>
           <Pressable testID="mr-pdf-social" onPress={() => pdf('social')} disabled={!rec || busy === 'pdf-social'} style={[styles.ctaOutline, { flex: 1 }, !rec && { opacity: 0.5 }]}>
-            {busy === 'pdf-social' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>SOC. POISŤOVŇA</Text>}
+            {busy === 'pdf-social' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>SOCIAL INSURANCE</Text>}
           </Pressable>
         </View>
-        <Text style={styles.disclaimer}>Hlásenia sú informačné dokumenty — nenahrádzajú oficiálne tlačivá, kým ich úrad neakceptuje.</Text>
+        <Text style={styles.disclaimer}>Reports are informational documents — they do not replace official forms until accepted by the authority.</Text>
       </ScrollView>
     </SafeAreaView>
   );

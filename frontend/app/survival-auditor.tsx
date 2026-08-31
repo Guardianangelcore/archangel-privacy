@@ -24,7 +24,7 @@ const CATS: { key: string; icon: any; label: string }[] = [
 
 export default function SurvivalAuditor() {
   const { user, setUser } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [runway, setRunway] = useState<Runway | null>(null);

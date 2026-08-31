@@ -15,7 +15,7 @@ import { useAcousticGuard } from '@/src/acoustic';
 import { C, S, R, GOLD } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
-import { stageFromUser, AGE_LABEL_SK, suggestAngelMode } from '@/src/age';
+import { stageFromUser, AGE_LABEL_EN, suggestAngelMode } from '@/src/age';
 import { startWakeWord, stopWakeWord } from '@/src/wake-word';
 import { useAudioRecorder, RecordingPresets } from 'expo-audio';
 import { speak as jarvisSpeak } from '@/src/voice';
@@ -40,25 +40,19 @@ async function fireBeacon() {
 export default function Home() {
   const { user, setUser } = useAuth();
   const router = useRouter();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const angel = !!user?.angel_mode;
   const [busy, setBusy] = useState(false);
   const [beaconSent, setBeaconSent] = useState(false);
   const stage = stageFromUser(user);
   const seniorHint = suggestAngelMode(stage);
-  // SOVEREIGN ACHIEVEMENTS — progress chip in top nav (dopamine hook)
-  const [achProgress, setAchProgress] = useState<{ unlocked: number; total: number } | null>(null);
   // SOVEREIGN STREAK — 7-day gold flame for Physio consistency
   const [streak, setStreak] = useState<{ current: number; tier: number; freeze_available: boolean; blazing_celebrated: boolean } | null>(null);
   const [showBlazing, setShowBlazing] = useState(false);
   const [freezeMsg, setFreezeMsg] = useState('');
   const loadStreak = useCallback(async () => {
     try {
-      const [a, s]: any = await Promise.all([
-        api('/achievements'),
-        api('/streaks/physio'),
-      ]);
-      setAchProgress({ unlocked: a.unlocked_count, total: a.total });
+      const s: any = await api('/streaks/physio');
       setStreak({
         current: s.current,
         tier: s.tier,
@@ -77,16 +71,16 @@ export default function Home() {
     setFreezeMsg('');
     try {
       const r: any = await api('/streaks/freeze', { method: 'POST' });
-      setFreezeMsg(r.message || 'Séria zachránená.');
-      jarvisSpeak(r.message || 'Séria zachránená. Odpočiňte si.', {
-        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+      setFreezeMsg(r.message || 'Streak saved.');
+      jarvisSpeak(r.message || 'Streak saved. Take a rest.', {
+        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       await loadStreak();
       setTimeout(() => setFreezeMsg(''), 4000);
     } catch (e: any) {
       const m = String(e?.message || e);
       if (m.includes('409') || m.toLowerCase().includes('týžde')) {
-        setFreezeMsg('Tento týždeň už máte využitú ochranu.');
+        setFreezeMsg('You have already used your freeze this week.');
       } else {
         setFreezeMsg(m);
       }
@@ -159,17 +153,6 @@ export default function Home() {
               )}
             </Pressable>
           )}
-          {achProgress && (
-            <Pressable
-              testID="home-achievements"
-              onPress={() => { tap(); router.push('/achievements'); }}
-              hitSlop={8}
-              style={styles.achChip}
-            >
-              <Ionicons name="trophy" size={13} color={C.brand} />
-              <Text style={styles.achChipText}>{achProgress.unlocked}/{achProgress.total}</Text>
-            </Pressable>
-          )}
           {/* DUP-CLEAN: header Jarvis + SENIOR chips removed — the Home Orb and the
               GUARDIAN GOLD tile below are the single, more prominent entry points. */}
           <Pressable testID="home-profile" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={8}>
@@ -180,6 +163,15 @@ export default function Home() {
 
       <ScrollView contentContainerStyle={styles.body}>
         <Text style={styles.greeting}>{t('greeting_hello', lang)}{'\n'}<Text style={{ color: C.brand }}>{(user?.name || 'Guardian Angel').split(' ')[0]}.</Text></Text>
+
+        {/* COMPETITION WELCOME BANNER */}
+        <View testID="home-welcome-banner" style={styles.welcomeBanner}>
+          <Ionicons name="shield-checkmark" size={20} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.welcomeTitle}>Guardian Angel OS</Text>
+            <Text style={styles.welcomeSub}>Your Personal Health Guardian</Text>
+          </View>
+        </View>
 
         {/* JARVIS PRESENCE — pulsing AI Orb, the primary welcome interface */}
         <HomeOrb lang={lang} onPress={() => { tap('heavy'); router.push('/jarvis'); }} />
@@ -214,9 +206,9 @@ export default function Home() {
 
         {/* SOVEREIGN TRIANGLE — the three pillars of the OS */}
         <View style={styles.pillarGrid}>
-          <PillarTile testID="pillar-health" icon="sync-circle" title="Moje uzdravovanie" sub="Kolotoč: žiadanka → peniaze → doktor → fyzio" onPress={() => router.navigate('/(tabs)/health')} />
-          <PillarTile testID="pillar-family" icon="people" title="Rodinný štít" sub="Angel Mode · Kúzelná lupa · Voice Echoes · SOS" onPress={() => router.navigate('/(tabs)/family')} />
-          <PillarTile testID="pillar-legacy" icon="shield-checkmark" title="Suverénny trezor" sub="Majetok a poistky · Večný odkaz · Bunker mód" onPress={() => router.navigate('/(tabs)/legacy')} />
+          <PillarTile testID="pillar-health" icon="sync-circle" title="My Healing" sub="Loop: referral → money → doctor → physio" onPress={() => router.navigate('/(tabs)/health')} />
+          <PillarTile testID="pillar-family" icon="people" title="Family Shield" sub="Angel Mode · Magic Lens · Voice Echoes · SOS" onPress={() => router.navigate('/(tabs)/family')} />
+          <PillarTile testID="pillar-legacy" icon="shield-checkmark" title="Sovereign Vault" sub="Wealth & insurance · Eternal legacy · Bunker mode" onPress={() => router.navigate('/(tabs)/legacy')} />
         </View>
 
         {/* GUARDIAN GOLD — the prominent Sentient Switch. One tap → simplest UI on the planet. */}
@@ -231,15 +223,15 @@ export default function Home() {
               <Ionicons name="accessibility" size={32} color={C.onInverse} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.guardianGoldTitle}>SENIOR REŽIM · GUARDIAN GOLD</Text>
+              <Text style={styles.guardianGoldTitle}>SENIOR MODE · GUARDIAN GOLD</Text>
               <Text style={styles.guardianGoldSub}>
                 {seniorHint
-                  ? 'Odporúčaný pre Vás. Ikony + hlas, žiadne menu. Ťuknite raz.'
-                  : 'Zjednodušené rozhranie — ikony + hlas. Pre rodičov, starých rodičov a hostí.'}
+                  ? 'Recommended for you. Icons + voice, no menus. One tap.'
+                  : 'Simplified interface — icons + voice. For parents, grandparents and guests.'}
               </Text>
               {(user?.birth_year || seniorHint) && (
                 <Text style={styles.guardianGoldStage}>
-                  ETAPA ŽIVOTA: {AGE_LABEL_SK[stage].toUpperCase()}
+                  LIFE STAGE: {AGE_LABEL_EN[stage].toUpperCase()}
                 </Text>
               )}
             </View>
@@ -316,11 +308,11 @@ function HomeOrb({ lang, onPress }: { lang: Lang; onPress: () => void }) {
 
 // ---- THE HEALING CAROUSEL STRIP — the engine of the app on the home screen ----
 const HEAL_FALLBACK_META: Record<string, { title: string; icon: string }> = {
-  intake: { title: 'Príjem', icon: 'scan' },
-  financial_shield: { title: 'Peniaze', icon: 'umbrella' },
-  access: { title: 'Doktor', icon: 'search' },
-  bureaucracy: { title: 'PN', icon: 'document-text' },
-  recovery: { title: 'Fyzio', icon: 'body' },
+  intake: { title: 'Intake', icon: 'scan' },
+  financial_shield: { title: 'Money', icon: 'umbrella' },
+  access: { title: 'Doctor', icon: 'search' },
+  bureaucracy: { title: 'Sick Leave', icon: 'document-text' },
+  recovery: { title: 'Physio', icon: 'body' },
 };
 
 function HealingStrip({ router }: any) {
@@ -332,8 +324,8 @@ function HealingStrip({ router }: any) {
   return (
     <GlassCard testID="home-healing" onPress={() => { tap('medium'); router.push('/healing'); }} pad={S.md} style={{ marginTop: S.lg }} glow>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.healTitle}>⚙️ KOLOTOČ UZDRAVENIA</Text>
-        <Text style={styles.healPct}>{hs?.active ? `${hs.progress_pct} %` : 'MOTOR APPKY'}</Text>
+        <Text style={styles.healTitle}>⚙️ HEALING LOOP</Text>
+        <Text style={styles.healPct}>{hs?.active ? `${hs.progress_pct} %` : 'THE ENGINE'}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm, paddingTop: S.md }}>
         {keys.map((k, i) => {
@@ -349,8 +341,8 @@ function HealingStrip({ router }: any) {
       </ScrollView>
       <Text style={styles.healSub}>
         {hs?.active
-          ? `${hs.journey.kind_label} · ${hs.journey.specialty} — Jarvis riadi celú cestu k 100 % fit`
-          : 'Úraz či choroba? 1 ťuk — poistka platí hneď, doktor nájdený, neschopenka strážená.'}
+          ? `${hs.journey.kind_label} · ${hs.journey.specialty} — Jarvis steers the whole journey to 100% fit`
+          : 'Injury or illness? One tap — insurance pays instantly, doctor found, sick leave guarded.'}
       </Text>
     </GlassCard>
   );
@@ -376,7 +368,7 @@ function CompanionCard() {
       {reply ? (
         <Text testID="companion-reply" style={styles.compReply}>💛 {reply}</Text>
       ) : g.answered_today ? (
-        <Text style={styles.compReply}>Dnes ste mi už odpovedali — ďakujem. 💛</Text>
+        <Text style={styles.compReply}>You already answered me today — thank you. 💛</Text>
       ) : (
         <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
           {([[5, '😊'], [3, '😐'], [1, '😞']] as const).map(([m, e]) => (
@@ -401,8 +393,8 @@ function VoiceEchoCard({ router }: any) {
         {unheard > 0 && <View style={styles.echoBadge}><Text style={styles.echoBadgeText}>{unheard}</Text></View>}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.angelBigTitle}>ODKAZY OD RODINY</Text>
-        <Text style={styles.angelBigSub}>{unheard > 0 ? `Máte ${unheard} nové odkazy — ťuknite a vypočujte si ich.` : 'Vypočujte si hlasové odkazy od najbližších.'}</Text>
+        <Text style={styles.angelBigTitle}>FAMILY MESSAGES</Text>
+        <Text style={styles.angelBigSub}>{unheard > 0 ? `You have ${unheard} new messages — tap to listen.` : 'Listen to voice messages from your loved ones.'}</Text>
       </View>
       <Ionicons name="chevron-forward" size={22} color={C.brand} />
     </Pressable>
@@ -448,7 +440,7 @@ function TosGate({ lang, setUser }: any) {
         <Text style={styles.tosHeadText}>{t('tos_title', lang).toUpperCase()} · v2026-06.1</Text>
       </View>
       <View style={styles.tosBanner}>
-        <Text style={styles.tosBannerText}>AI VÝSTUPY SÚ LEN INFORMAČNÉ · POUŽÍVATE ICH NA VLASTNÉ RIZIKO · ÚPLNÉ ZBAVENIE ZODPOVEDNOSTI AUTORA</Text>
+        <Text style={styles.tosBannerText}>AI OUTPUTS ARE INFORMATIONAL ONLY · USE AT YOUR OWN RISK · FULL AUTHOR LIABILITY WAIVER</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg }}>
         {text ? <Text style={styles.tosBody}>{text}</Text> : <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
@@ -477,7 +469,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
     let cleanup: (() => void) | undefined;
     (async () => {
       cleanup = await startWakeWord(wakeRecorder, () => {
-        jarvisSpeak('Áno, počúvam.', { voice: 'onyx', speed: 1.0, language: lang });
+        jarvisSpeak('Yes, I am listening.', { voice: 'onyx', speed: 1.0, language: lang });
         router.push('/jarvis');
       });
     })();
@@ -516,7 +508,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
               >
                 <Ionicons name={acoustic.active ? 'ear' : 'ear-outline'} size={16} color={acoustic.active ? C.onInverse : C.brand} />
                 <Text style={[styles.acousticText, acoustic.active && { color: C.onInverse }]}>
-                  {acoustic.active ? 'STRÁŽIM ZVUK — LOKÁLNE' : 'AKUSTICKÝ STRÁŽCA'}
+                  {acoustic.active ? 'GUARDING SOUND — LOCAL' : 'ACOUSTIC GUARDIAN'}
                 </Text>
               </Pressable>
             </View>
@@ -538,15 +530,15 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                     <Ionicons name="mic" size={52} color={C.onInverse} />
                   </Pressable>
                 </Animated.View>
-                <Text style={styles.jarvisLabel}>HOVORIŤ S JARVISOM</Text>
+                <Text style={styles.jarvisLabel}>TALK TO JARVIS</Text>
               </View>
 
               {/* MAGIC LENS — one tap: photograph a label, Jarvis reads it aloud */}
               <Pressable testID="angel-magic-lens" onPress={() => { tap('heavy'); router.push('/lens'); }} style={styles.angelBigCard}>
                 <View style={styles.angelBigIcon}><Ionicons name="aperture" size={32} color={C.onInverse} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.angelBigTitle}>KÚZELNÁ LUPA</Text>
-                  <Text style={styles.angelBigSub}>Odfoťte krabičku lieku či noviny — prečítam vám to nahlas.</Text>
+                  <Text style={styles.angelBigTitle}>MAGIC LENS</Text>
+                  <Text style={styles.angelBigSub}>Photograph a medicine box or newspaper — I will read it aloud.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={22} color={C.brand} />
               </Pressable>
@@ -556,7 +548,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
 
               <Pressable testID="angel-daily-brief" onPress={() => { tap(); router.push('/daily-brief'); }} style={[styles.angelBrief, { alignSelf: 'center', marginTop: S.md }]}>
                 <Ionicons name="sunny" size={22} color={C.brand} />
-                <Text style={styles.angelBriefText}>MÔJ DEŇ</Text>
+                <Text style={styles.angelBriefText}>MY DAY</Text>
               </Pressable>
             </ScrollView>
 
@@ -572,13 +564,13 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                 <Pressable testID="angel-qr-profile" onPress={() => { tap('medium'); router.push('/emergency-qr'); }} style={styles.angelEmg}>
                   <Ionicons name="qr-code-outline" size={44} color={C.brand} />
                 </Pressable>
-                <Text style={styles.angelEmgLabel}>QR PROFIL</Text>
+                <Text style={styles.angelEmgLabel}>QR PROFILE</Text>
               </View>
               <View style={styles.angelEmgWrap}>
                 <Pressable testID="angel-doctor" onPress={() => router.navigate('/(tabs)/hunter')} style={styles.angelEmg}>
                   <Ionicons name="medkit" size={44} color={C.brand} />
                 </Pressable>
-                <Text style={styles.angelEmgLabel}>DOKTOR</Text>
+                <Text style={styles.angelEmgLabel}>DOCTOR</Text>
               </View>
             </View>
           </SafeAreaView>
@@ -596,8 +588,6 @@ const styles = StyleSheet.create({
   angelToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.md, paddingVertical: 8 },
   angelToggleGold: { backgroundColor: C.brand, borderColor: C.brand, shadowColor: C.brand, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } },
   angelToggleText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1.5 },
-  achChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: 'rgba(212,175,55,0.08)' },
-  achChipText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
   streakChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: 'rgba(212,175,55,0.08)' },
   streakChipHot: { backgroundColor: C.brand, borderColor: C.brand, shadowColor: C.brand, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
   streakChipBlazing: { shadowOpacity: 0.85, shadowRadius: 14 },
@@ -613,6 +603,9 @@ const styles = StyleSheet.create({
   guardianGoldStage: { color: C.onInverse, fontWeight: '900', fontSize: 9, letterSpacing: 1.5, marginTop: 6, opacity: 0.85 },
   body: { padding: S.lg, paddingBottom: 120 },
   greeting: { fontSize: 28, fontWeight: '900', color: C.fg, letterSpacing: 0.5, lineHeight: 36 },
+  welcomeBanner: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.md, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.55)', backgroundColor: 'rgba(212,175,55,0.08)', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm },
+  welcomeTitle: { color: C.brand, fontWeight: '900', fontSize: 14, letterSpacing: 1.5 },
+  welcomeSub: { color: C.fg, fontSize: 11.5, marginTop: 1, letterSpacing: 0.5 },
   briefIcon: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(212,175,55,0.14)', alignItems: 'center', justifyContent: 'center' },
   briefTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   briefSub: { color: C.info, fontSize: 10.5, marginTop: 2 },

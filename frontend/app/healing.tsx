@@ -1,5 +1,5 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-// KOLOTOČ UZDRAVENIA — Sovereign Healing Loop: Úraz → Peniaze hneď → Doktor → Papiere → Fyzio
+// HEALING LOOP — Sovereign Healing Loop: Injury → Instant money → Doctor → Papers → Physio
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,16 +10,16 @@ import { sharePdf } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 
-const SPECIALTIES = ['Ortopéd', 'Chirurg', 'Zubár', 'Neurológ', 'Kardiológ', 'Fyzioterapia', 'Všeobecný lekár'];
-const BODY_PARTS = ['Koleno', 'Rameno', 'Chrbát', 'Ruka', 'Noha', 'Hlava', 'Zub', 'Iné'];
+const SPECIALTIES = ['Orthopedist', 'Surgeon', 'Dentist', 'Neurologist', 'Cardiologist', 'Physiotherapy', 'General practitioner'];
+const BODY_PARTS = ['Knee', 'Shoulder', 'Back', 'Arm', 'Leg', 'Head', 'Tooth', 'Other'];
 
 const STEP_ROUTES: Record<string, string> = {
   intake: '/translate', financial_shield: '/insurance', access: '/(tabs)/hunter',
   bureaucracy: '/my-recovery', recovery: '/physio',
 };
 const STEP_CTA: Record<string, string> = {
-  intake: 'Skenovať žiadanku / správu', financial_shield: 'Moje poistky', access: 'Otvoriť Lovca termínov',
-  bureaucracy: 'Neschopenka a vychádzky', recovery: 'Spustiť Physio-AI cviky',
+  intake: 'Scan referral / report', financial_shield: 'My insurance', access: 'Open Appointment Hunter',
+  bureaucracy: 'Sick leave & outings', recovery: 'Start Physio-AI exercises',
 };
 
 /** PAIN CURVE — proof of progress toward 100% fit, fed by the pain diary (incl. voice logs). */
@@ -28,8 +28,8 @@ function PainCurve() {
   useEffect(() => { (async () => { try { setT(await api('/physio/pain/trends')); } catch (e) { console.log(e); } })(); }, []);
   if (!t?.entries?.length) return null;
   const last = t.entries.slice(-14);
-  const label = t.trend === 'improving' ? '↘ BOLESŤ KLESÁ — HOJENIE'
-    : t.trend === 'worsening' ? '↗ BOLESŤ RASTIE — POZOR' : '→ STABILNÁ';
+  const label = t.trend === 'improving' ? '↘ PAIN FALLING — HEALING'
+    : t.trend === 'worsening' ? '↗ PAIN RISING — CAUTION' : '→ STABLE';
   const color = (l: number) => (l >= 8 ? C.error : l >= 5 ? C.warn : C.brand);
   return (
     <View testID="healing-pain-curve" style={pc.card}>
@@ -45,8 +45,8 @@ function PainCurve() {
           </View>
         ))}
       </View>
-      <Text style={pc.sub}>Priemer 14 dní: {t.avg_14d}/10 · {t.count} záznamov · lekár vidí krivku v reporte</Text>
-      <Text style={pc.hint}>🎙 Stačí povedať Jarvisovi: „Bolí ma to na sedem“ — zapíše sa samo.</Text>
+      <Text style={pc.sub}>14-day average: {t.avg_14d}/10 · {t.count} records · your doctor sees the curve in the report</Text>
+      <Text style={pc.hint}>🎙 Just tell Jarvis: My pain is a seven — it logs itself.</Text>
     </View>
   );
 }
@@ -70,7 +70,7 @@ export default function Healing() {
   const [loading, setLoading] = useState(true);
   const [wizard, setWizard] = useState(false);
   const [kind, setKind] = useState<'injury' | 'illness'>('injury');
-  const [spec, setSpec] = useState('Ortopéd');
+  const [spec, setSpec] = useState('Orthopedist');
   const [part, setPart] = useState('Koleno');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -101,7 +101,7 @@ export default function Healing() {
         body: JSON.stringify({ kind, specialty: spec, body_part: kind === 'injury' ? part : null }),
       });
       setWizard(false);
-      setMsg(`⚡ Neural Bus: poistná žiadosť predvyplnená (${res.claim.estimated_total_eur} €) + termín zarezervovaný: ${res.access.slot}`);
+      setMsg(`⚡ Neural Bus: insurance claim prefilled (€${res.claim.estimated_total_eur}) + appointment booked: ${res.access.slot}`);
       await load();
     } catch (e: any) { setMsg(String(e.message || e)); }
     setBusy(false);
@@ -139,7 +139,7 @@ export default function Healing() {
         <Pressable testID="healing-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>KOLOTOČ UZDRAVENIA</Text>
+        <Text style={st.title}>HEALING LOOP</Text>
         <Pressable testID="healing-jarvis" onPress={() => router.push('/jarvis')} hitSlop={10}>
           <Ionicons name="sparkles" size={20} color={C.brand} />
         </Pressable>
@@ -152,8 +152,8 @@ export default function Healing() {
           {!state?.active ? (
             <View>
               <View style={st.heroIcon}><Ionicons name="sync" size={34} color={C.brand} /></View>
-              <Text style={st.heroTitle}>Od úrazu k 100 % fit.{'\n'}Jarvis vybaví všetko.</Text>
-              <Text style={st.heroSub}>Jeden zápis spustí celý kolotoč: peniaze z poistky hneď, najskorší doktor v Prahe, neschopenka pod dozorom a fyzio na mieru.</Text>
+              <Text style={st.heroTitle}>From injury to 100% fit.{'\n'}Jarvis handles everything.</Text>
+              <Text style={st.heroSub}>One entry starts the whole loop: instant insurance money, the earliest doctor, guarded sick leave and tailored physio.</Text>
               <View style={{ marginTop: S.xl, gap: S.sm }}>
                 {keys.map((k, i) => (
                   <View key={k} style={st.previewRow}>
@@ -168,10 +168,10 @@ export default function Healing() {
               </View>
               <Pressable testID="healing-start" onPress={() => { tap('medium'); setWizard(true); }} style={st.startBtn}>
                 <Ionicons name="flash" size={20} color={C.onInverse} />
-                <Text style={st.startText}>SPUSTIŤ KOLOTOČ</Text>
+                <Text style={st.startText}>START THE LOOP</Text>
               </Pressable>
               {!!state?.last_recovered && (
-                <Text style={st.lastNote}>✅ Posledný kolotoč dokončený — {state.last_recovered.specialty} ({state.last_recovered.kind_label})</Text>
+                <Text style={st.lastNote}>✅ Last loop completed — {state.last_recovered.specialty} ({state.last_recovered.kind_label})</Text>
               )}
             </View>
           ) : (
@@ -208,21 +208,21 @@ export default function Healing() {
                           <Text style={st.stepSub}>{meta[k]?.sub}</Text>
                         </View>
                         <Text style={[st.stepStatus, done && { color: C.brand }, action && { color: C.warn }]}>
-                          {done ? 'HOTOVO' : action ? 'DOPLNIŤ' : 'ČAKÁ'}
+                          {done ? 'DONE' : action ? 'COMPLETE' : 'WAITING'}
                         </Text>
                       </View>
 
                       {k === 'financial_shield' && !!state.claim && (
                         <View style={st.claimBox}>
-                          <Text style={st.claimTitle}>💶 POISTNÁ ŽIADOSŤ — PENIAZE HNEĎ</Text>
-                          <Text style={st.claimLine}>Poisťovňa: <Text style={st.claimVal}>{state.claim.provider}</Text></Text>
-                          <Text style={st.claimLine}>Denná dávka: <Text style={st.claimVal}>{state.claim.daily_benefit_eur} € / deň</Text></Text>
-                          <Text style={st.claimLine}>Odhad spolu (21 dní): <Text style={st.claimVal}>{state.claim.estimated_total_eur} €</Text></Text>
+                          <Text style={st.claimTitle}>💶 INSURANCE CLAIM — INSTANT MONEY</Text>
+                          <Text style={st.claimLine}>Insurer: <Text style={st.claimVal}>{state.claim.provider}</Text></Text>
+                          <Text style={st.claimLine}>Daily benefit: <Text style={st.claimVal}>€{state.claim.daily_benefit_eur} / day</Text></Text>
+                          <Text style={st.claimLine}>Estimated total (21 days): <Text style={st.claimVal}>€{state.claim.estimated_total_eur}</Text></Text>
                           <Text style={st.claimLine}>Stav: <Text style={[st.claimVal, { color: state.claim.status === 'submitted' ? C.brand : C.warn }]}>
-                            {state.claim.status === 'prefilled' ? 'PREDVYPLNENÁ — čaká na odoslanie' : state.claim.status === 'submitted' ? 'ODOSLANÁ POISŤOVNI ✓' : state.claim.status.toUpperCase()}</Text></Text>
+                            {state.claim.status === 'prefilled' ? 'PREFILLED — awaiting submission' : state.claim.status === 'submitted' ? 'SENT TO INSURER ✓' : state.claim.status.toUpperCase()}</Text></Text>
                           {state.claim.status === 'prefilled' && (
                             <Pressable testID="claim-submit" onPress={submitClaim} disabled={busy} style={st.claimBtn}>
-                              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.claimBtnText}>ODOSLAŤ ŽIADOSŤ O ODŠKODNÉ</Text>}
+                              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.claimBtnText}>SUBMIT COMPENSATION CLAIM</Text>}
                             </Pressable>
                           )}
                         </View>
@@ -246,7 +246,7 @@ export default function Healing() {
 
               <Pressable testID="healing-close" onPress={closeLoop} disabled={busy} style={st.fitBtn}>
                 <Ionicons name="trophy" size={18} color={C.onInverse} />
-                <Text style={st.fitText}>SOM 100 % FIT — UKONČIŤ KOLOTOČ</Text>
+                <Text style={st.fitText}>I AM 100% FIT — FINISH THE LOOP</Text>
               </Pressable>
             </View>
           )}
@@ -255,8 +255,8 @@ export default function Healing() {
           <Pressable testID="healing-report" onPress={() => { tap(); sharePdf('/healing/report.pdf', 'guardian_healing_report.pdf').catch(() => {}); }} style={st.reportBtn}>
             <Ionicons name="document-attach-outline" size={18} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={st.reportTitle}>TÝŽDENNÝ REPORT UZDRAVENIA (PDF)</Text>
-              <Text style={st.reportSub}>Graf nálady + postup kolotoča — pre lekára aj rodinu</Text>
+              <Text style={st.reportTitle}>WEEKLY HEALING REPORT (PDF)</Text>
+              <Text style={st.reportSub}>Mood chart + loop progress — for your doctor and family</Text>
             </View>
             <Ionicons name="share-outline" size={18} color={C.info} />
           </Pressable>
@@ -270,8 +270,8 @@ export default function Healing() {
           }} style={st.reportBtn}>
             <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={st.reportTitle}>ULOŽIŤ REPORT DO ZDRAVOTNÉHO TREZORA</Text>
-              <Text style={st.reportSub}>AUTO: Jarvis ho ukladá každú nedeľu sám</Text>
+              <Text style={st.reportTitle}>SAVE REPORT TO HEALTH VAULT</Text>
+              <Text style={st.reportSub}>AUTO: Jarvis saves it every Sunday by itself</Text>
             </View>
             {busy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="chevron-forward" size={18} color={C.info} />}
           </Pressable>
@@ -283,16 +283,16 @@ export default function Healing() {
         <Pressable style={st.overlay} onPress={() => setWizard(false)}>
           <Pressable style={st.sheet} onPress={() => {}}>
             <View style={st.sheetHandle} />
-            <Text style={st.sheetTitle}>Čo sa stalo?</Text>
+            <Text style={st.sheetTitle}>What happened?</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
-              {([['injury', '🩹 Úraz'], ['illness', '🤒 Choroba']] as const).map(([v, l]) => (
+              {([['injury', '🩹 Injury'], ['illness', '🤒 Illness']] as const).map(([v, l]) => (
                 <Pressable testID={`healing-kind-${v}`} key={v} onPress={() => { tap(); setKind(v); }} style={[st.bigChip, kind === v && st.bigChipOn]}>
                   <Text style={[st.bigChipText, kind === v && { color: C.onInverse }]}>{l}</Text>
                 </Pressable>
               ))}
             </View>
             {kind === 'injury' && (<>
-              <Text style={st.sheetLbl}>ČO VÁS BOLÍ?</Text>
+              <Text style={st.sheetLbl}>WHAT HURTS?</Text>
               <View style={st.chipWrap}>
                 {BODY_PARTS.map(b => (
                   <Pressable testID={`healing-part-${b}`} key={b} onPress={() => { tap(); setPart(b); }} style={[st.chip, part === b && st.chipOn]}>
@@ -301,7 +301,7 @@ export default function Healing() {
                 ))}
               </View>
             </>)}
-            <Text style={st.sheetLbl}>AKÝ ŠPECIALISTA?</Text>
+            <Text style={st.sheetLbl}>WHICH SPECIALIST?</Text>
             <View style={st.chipWrap}>
               {(SPECIALTIES.includes(spec) ? SPECIALTIES : [spec, ...SPECIALTIES]).map(s => (
                 <Pressable testID={`healing-spec-${s}`} key={s} onPress={() => { tap(); setSpec(s); }} style={[st.chip, spec === s && st.chipOn]}>
@@ -312,7 +312,7 @@ export default function Healing() {
             <Pressable testID="healing-wizard-go" onPress={start} disabled={busy} style={st.goBtn}>
               {busy ? <ActivityIndicator color={C.onInverse} /> : (<>
                 <Ionicons name="flash" size={18} color={C.onInverse} />
-                <Text style={st.goText}>SPUSTIŤ — POISTKA + DOKTOR NARAZ</Text>
+                <Text style={st.goText}>START — INSURANCE + DOCTOR AT ONCE</Text>
               </>)}
             </Pressable>
           </Pressable>

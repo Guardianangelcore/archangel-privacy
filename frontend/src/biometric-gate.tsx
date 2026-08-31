@@ -58,8 +58,8 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
     try {
       const res = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Odomknite Guardian Angel',
-        cancelLabel: 'Zrušiť',
-        fallbackLabel: 'Použiť PIN',
+        cancelLabel: 'Cancel',
+        fallbackLabel: 'Use PIN',
         disableDeviceFallback: false,
       });
       if (res.success) {
@@ -73,14 +73,14 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
           const displayName = (user?.name && user.name.trim() && user.name.trim() !== user?.email)
             ? user.name.split(' ')[0]
             : 'Guardian Angel';
-          speak(`Vitajte doma, ${displayName}. Som váš Jarvis.`, {
+          speak(`Welcome home, ${displayName}. I am your Jarvis.`, {
             mood: jarvisToneFor(stage),
-            language: (user?.language as any) || 'sk',
+            language: (user?.language as any) || 'en',
           });
         }
       } else {
         // User cancelled or failed — stay locked; show retry.
-        setErr(res.error ? 'Overenie sa nepodarilo. Skúste znova.' : 'Odomknutie zrušené.');
+        setErr(res.error ? 'Verification failed. Try again.' : 'Unlock cancelled.');
       }
     } catch (e: any) {
       setErr(String(e?.message || e));
@@ -131,19 +131,19 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
         <Ionicons name={label === 'FaceID' ? 'scan-outline' : 'finger-print'} size={72} color={C.brand} />
       </View>
       <Text style={styles.brand}>GUARDIAN</Text>
-      <Text style={styles.tag}>ODOMKNITE OSOBNÝM SIGNÁLOM</Text>
+      <Text style={styles.tag}>UNLOCK WITH YOUR PERSONAL SIGNAL</Text>
       <Text style={styles.method}>{label.toUpperCase()}</Text>
       {!!err && <Text style={styles.err}>{err}</Text>}
       <Pressable testID="biometric-unlock" onPress={authenticate} disabled={prompting} style={styles.cta}>
         {prompting ? <ActivityIndicator color={C.onInverse} /> : (
           <>
             <Ionicons name="lock-open" size={18} color={C.onInverse} />
-            <Text style={styles.ctaText}>ODOMKNÚŤ</Text>
+            <Text style={styles.ctaText}>UNLOCK</Text>
           </>
         )}
       </Pressable>
       <Pressable testID="biometric-signout" onPress={signOut} style={styles.ghost}>
-        <Text style={styles.ghostText}>Prihlásiť sa iným účtom</Text>
+        <Text style={styles.ghostText}>Sign in with another account</Text>
       </Pressable>
       {Platform.OS !== 'web' && (
         <Pressable onPress={() => Linking.openSettings()} hitSlop={10}>

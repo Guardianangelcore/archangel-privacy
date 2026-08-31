@@ -20,7 +20,7 @@ const CAT_LABELS: Record<string, string> = { massage: 'MASÁŽ', consultation: '
 
 export default function Marketplace() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [tab, setTab] = useState<'services' | 'bookings'>('services');
   const [items, setItems] = useState<Svc[]>([]);

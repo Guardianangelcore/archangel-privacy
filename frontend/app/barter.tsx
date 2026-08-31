@@ -18,7 +18,7 @@ const CAT_LABELS: Record<string, string> = { health: 'ZDRAVIE', legal: 'PRÁVO',
 
 export default function Barter() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [me, setMe] = useState<Me | null>(null);

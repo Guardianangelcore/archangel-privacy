@@ -73,3 +73,12 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 - Stripe test keys (Payments).
 - Emergent Push (native builds only).
 - Emergent Google Auth + Sovereign dev-bypass.
+
+## Competition Demo Prep (June 2026)
+1. **Demo seed** — POST /api/demo/seed (idempotent, marker db.demo_seed): founder Life Card = DOB 1985-03-15, blood A+, 3 vaccinations (Flu 2023-10-15, Tetanus 2021-05-20, COVID-19 booster 2022-04-10), 2 surgeries (Knee arthroscopy 2019-08-12, Appendectomy 2012-03-25), 2 labs 2024-01-15 (glucose 5.2, cholesterol 4.8 — normal), Jarvis prediction "Annual physical examination due September 2026". SEEDED for founder; sets founder language=en.
+2. **English UI polish** — default lang fallback 'sk'→'en' globally; hardcoded Slovak translated to English in: tabs layout, home, profile, health/family/legacy hubs, health-timeline, jarvis, healing, lens, daily-brief, child-growth, health-trends, my-recovery, translate, meds, login, hunter, vault, waitlist, emergency-qr, family-dashboard, CrisisHUD, onboarding-tour, biometric-gate + backend routes/healing.py (steps meta, companion, KIND_LABEL). Long-tail secondary screens (monolith, subscription, pantry, partners, compass, protocol, dignity, legal, token…) still contain Slovak strings.
+3. **Welcome banner** — home testID home-welcome-banner: "Guardian Angel OS — Your Personal Health Guardian".
+4. **DEMO badge** — global gold pill top-right (testID demo-badge, src/demo-mode.ts AsyncStorage pub/sub, default ON) + Settings toggle testID prof-demo-badge in profile (visible to all users).
+
+## Achievements Removal (June 2026)
+- Achievement badge system removed entirely per user request: deleted /app/frontend/app/achievements.tsx, home trophy chip (home-achievements), backend routes/achievements.py (catalog + GET /api/achievements → now 404). Streaks endpoints moved intact to routes/streaks.py (/api/streaks/*). Achievement tests removed from test_iter32/33/34 (41 pass). No DB collections existed (derived on-demand). Kept: DEMO badge (demo requirement), unread-count/label badges, streak flame, Jarvis ability unlocks (separate systems).

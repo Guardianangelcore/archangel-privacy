@@ -15,7 +15,7 @@ import { Lang } from '@/src/i18n';
 
 export default function RecoverySuite() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [status, setStatus] = useState<any>(null);
   const [guardians, setGuardians] = useState<any[]>([]);

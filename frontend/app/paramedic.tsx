@@ -13,7 +13,7 @@ import { Lang } from '@/src/i18n';
 
 export default function Paramedic() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [locks, setLocks] = useState<any[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);

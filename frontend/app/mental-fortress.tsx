@@ -14,7 +14,7 @@ const LANGS = [['sk', 'SK'], ['cs', 'CZ'], ['en', 'EN'], ['de', 'DE']];
 export default function MentalFortress() {
   const router = useRouter();
   const { user } = useAuth();
-  const [lang, setLang] = useState<string>(['sk', 'cs', 'en', 'de'].includes(user?.language || '') ? (user?.language as string) : 'sk');
+  const [lang, setLang] = useState<string>(['sk', 'cs', 'en', 'de'].includes(user?.language || '') ? (user?.language as string) : 'en');
   const [data, setData] = useState<any>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState<string | null>(null);

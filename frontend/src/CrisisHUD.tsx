@@ -66,33 +66,33 @@ export function CrisisHUD() {
       <View style={styles.root} accessibilityViewIsModal>
         <View style={styles.headerRow}>
           <Ionicons name="warning" size={26} color="#FFD447" />
-          <Text style={styles.title}>KRÍZOVÝ REŽIM</Text>
+          <Text style={styles.title}>CRISIS MODE</Text>
           <Pressable testID="hud-dismiss" onPress={dismiss} hitSlop={16} disabled={dismissing} style={styles.close}>
             {dismissing ? <ActivityIndicator color="#FFD447" /> : <Ionicons name="close" size={26} color="#FFD447" />}
           </Pressable>
         </View>
         <Text style={styles.reason}>
-          {(state.reasons || []).length ? (state.reasons || []).join(' · ') : 'Guardian Angel detekoval biologický stres.'}
+          {(state.reasons || []).length ? (state.reasons || []).join(' · ') : 'Guardian Angel detected biological stress.'}
         </Text>
-        <Text style={styles.guide}>Zostaňte v pokoji. Dýchajte pomaly. Vyberte jedno.</Text>
+        <Text style={styles.guide}>Stay calm. Breathe slowly. Pick one.</Text>
 
         <Pressable testID="hud-call" onPress={callEmergency} style={styles.callBtn}>
           <Ionicons name="call" size={42} color="#0A0A0F" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.callTitle}>VOLAŤ 112</Text>
-            <Text style={styles.callSub}>Núdzová linka · rýchla odpoveď</Text>
+            <Text style={styles.callTitle}>CALL 112</Text>
+            <Text style={styles.callSub}>Emergency line · fast response</Text>
           </View>
         </Pressable>
 
         <Pressable testID="hud-instr" onPress={() => setShowInstructions(true)} style={styles.instrBtn}>
           <Ionicons name="list" size={38} color="#FFD447" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.instrTitle}>OKAMŽITÉ POKYNY</Text>
-            <Text style={styles.instrSub}>5-krokový sprievodca prežitia</Text>
+            <Text style={styles.instrTitle}>INSTANT INSTRUCTIONS</Text>
+            <Text style={styles.instrSub}>5-step survival guide</Text>
           </View>
         </Pressable>
 
-        <Text style={styles.footer}>Guardian Circle bol tiché varovanie odoslané.  ·  AI Content · Sovereign Protocol</Text>
+        <Text style={styles.footer}>A silent alert was sent to your Guardian Circle.  ·  AI Content · Sovereign Protocol</Text>
       </View>
 
       <Modal visible={showInstructions} transparent animationType="slide" onRequestClose={() => setShowInstructions(false)}>
@@ -100,7 +100,7 @@ export function CrisisHUD() {
           <View style={styles.sheet}>
             <View style={styles.sheetHead}>
               <Ionicons name="medkit" size={22} color="#FFD447" />
-              <Text style={styles.sheetTitle}>POKYNY PREŽITIA</Text>
+              <Text style={styles.sheetTitle}>SURVIVAL INSTRUCTIONS</Text>
               <Pressable testID="hud-instr-close" onPress={() => setShowInstructions(false)} hitSlop={16}>
                 <Ionicons name="close" size={24} color="#FFD447" />
               </Pressable>
@@ -112,7 +112,7 @@ export function CrisisHUD() {
                 </View>
               ))}
               <View style={styles.numbers}>
-                <Text style={styles.numbersTitle}>NÚDZOVÉ ČÍSLA</Text>
+                <Text style={styles.numbersTitle}>EMERGENCY NUMBERS</Text>
                 {Object.entries(state.emergency_numbers || {}).map(([k, v]) => (
                   <Pressable key={k} testID={`hud-num-${k}`} onPress={() => Linking.openURL(`tel:${v}`)} style={styles.numRow}>
                     <Text style={styles.numLabel}>{k}</Text>
@@ -123,7 +123,7 @@ export function CrisisHUD() {
             </ScrollView>
             <Pressable testID="hud-instr-call" onPress={callEmergency} style={styles.sheetCall}>
               <Ionicons name="call" size={22} color="#0A0A0F" />
-              <Text style={styles.sheetCallText}>VOLAŤ 112 TERAZ</Text>
+              <Text style={styles.sheetCallText}>CALL 112 NOW</Text>
             </Pressable>
           </View>
         </View>

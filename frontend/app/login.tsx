@@ -14,7 +14,7 @@ const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
 
 export default function Login() {
   const { signIn, signInDev } = useAuth();
-  const [lang, setLang] = useState<Lang>('sk');
+  const [lang, setLang] = useState<Lang>('en');
   const [busy, setBusy] = useState<'google' | 'dev' | null>(null);
   const [showBypass, setShowBypass] = useState(false);
   const [bypassEmail, setBypassEmail] = useState(FOUNDER_EMAIL);
@@ -100,7 +100,7 @@ export default function Login() {
               ? <ActivityIndicator color={C.brand} />
               : <>
                   <Ionicons name="key" size={18} color={C.brand} />
-                  <Text style={styles.founderText}>VSTUP AKO GUARDIAN ANGEL (FOUNDER)</Text>
+                  <Text style={styles.founderText}>ENTER AS GUARDIAN ANGEL (FOUNDER)</Text>
                 </>}
           </Pressable>
 
@@ -110,7 +110,7 @@ export default function Login() {
             hitSlop={8}
             style={styles.linkBtn}
           >
-            <Text style={styles.linkText}>{showBypass ? 'ZAVRIEŤ' : 'INÝ EMAIL · DEVELOPER BYPASS'}</Text>
+            <Text style={styles.linkText}>{showBypass ? 'CLOSE' : 'OTHER EMAIL · DEVELOPER BYPASS'}</Text>
           </Pressable>
 
           {showBypass && (
@@ -132,7 +132,7 @@ export default function Login() {
                 disabled={busy !== null || !bypassEmail.includes('@')}
                 style={styles.bypassSubmit}
               >
-                <Text style={styles.bypassSubmitText}>{busy === 'dev' ? '…' : 'VSTÚPIŤ'}</Text>
+                <Text style={styles.bypassSubmitText}>{busy === 'dev' ? '…' : 'ENTER'}</Text>
               </Pressable>
             </View>
           )}

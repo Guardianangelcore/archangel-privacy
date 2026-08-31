@@ -1,0 +1,39 @@
+{
+  "summary": "Iter 44 Competition Demo + Achievements Removal — ALL GREEN. Backend 12/12 pytest passed (pytest_iter44.xml). Fixed one Slovak leak in routes/healing.py (STEP_META recovery.title 'Zotavenie' → 'Recovery'). Verified: (1) POST /api/auth/dev-bypass returns session_token, /api/auth/me shows language='en' for founder. (2) POST /api/demo/seed → {ok:true, seeded:false} (idempotent as expected — already seeded). (3) GET /api/lifecard shows birth_date=1985-03-15, blood_type=A+; GET /api/emergency-profile blood_type=A+. (4) GET /api/calendar/timeline returns all 8 seeded records with EXACT English titles + dates: Flu vaccine 2023-10-15, Tetanus booster 2021-05-20, COVID-19 booster 2022-04-10, Knee arthroscopy 2019-08-12, Appendectomy 2012-03-25, Lab: Blood glucose 5.2 mmol/L 2024-01-15, Lab: Total cholesterol 4.8 mmol/L 2024-01-15, Annual physical examination 2026-09-15 (source=jarvis). (5) Lifecard predictions box contains {title:'Annual physical examination', suggested_date:'2026-09-15'}. (6) GET /api/achievements → 404 ✓ (system removed). (7) GET /api/streaks/physio → 200 with current/tier/freeze_available fields (moved module still registered). (8) GET /api/healing/state → journey.kind_label='Illness', steps_meta EN titles: Intake, Financial Shield, Access, Paperwork, Recovery. FRONTEND (390x844 web preview): (a) Login /login shows testID founder-bypass-btn; single tap logs in and routes to /(tabs). (b) Home: testID home-welcome-banner renders 'Guardian Angel OS · Your Personal Health Guardian'; testID demo-badge (top-right gold pill 'DEMO') visible by default; NO home-achievements testID present ✓; English labels confirmed on home: HEALING LOOP, DAILY BRIEFING, GUARDIAN LENS, tab bar HEALING / FAMILY SHIELD / VAULT, and Healing Loop steps INTAKE / FINANCIAL SHIELD / ACCESS / PAPERWORK / RECOVERY plus journey line 'Illness · General practitioner — Jarvis steers …'. (c) Tap pillar-health → hh-lifecard-hero → /health-timeline: header 'LIFE CARD', filter chips 'VACCINATION · DISEASE · SURGERY · INJURY · CHECK-UP' visible; all 8 seeded timeline entries present including 'Annual physical examination' rendered with '✨ PREDICTION' marker. (d) Profile: testID prof-demo-badge switch present in 'DEMO MODE' section; toggling OFF removes demo-badge overlay immediately; toggling ON restores it (AsyncStorage pub/sub verified via useDemoMode). (e) /achievements route not reachable — no trophy chip or navigation entry on home. Preserved warnings (pre-existing, unrelated): shadow*→boxShadow, expo-notifications web, props.pointerEvents. NOTE: On the /health-timeline (LIFE CARD) screen — which IS in the demo-critical path — some Slovak strings remain: 'MOJA KARTA' (chip), 'VEK', '41 r.' (age), 'TRENDY ZDRAVIA' button, 'PREDIKCIE · JARVIS' section header. These are the ONLY residual Slovak strings on demo-critical screens; main agent should polish for a fully English jury demo.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "health-timeline", "issue": "Slovak strings on demo-critical LIFE CARD screen: 'MOJA KARTA', 'VEK', '41 r.', 'TRENDY ZDRAVIA', 'PREDIKCIE · JARVIS' — should be English for the jury (MY CARD, AGE, 41 y., HEALTH TRENDS, PREDICTIONS · JARVIS)", "testID": "hh-lifecard-hero → /health-timeline", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter44_competition_demo.py",
+    "/app/test_reports/pytest/pytest_iter44.xml"
+  ],
+  "action_items": [
+    "OPTIONAL polish: translate the residual Slovak labels on /health-timeline (MOJA KARTA, VEK, '41 r.', TRENDY ZDRAVIA, PREDIKCIE · JARVIS) to English so the demo-critical Life Card is fully in English for the jury. All other demo-critical flows are already English."
+  ],
+  "critical_code_review_comments": [
+    "routes/healing.py L31: STEP_META['recovery'].title was 'Zotavenie' (Slovak) — fixed to 'Recovery'. Rest of STEP_META already English (Intake/Financial Shield/Access/Paperwork). KIND_LABEL already {'injury':'Injury','illness':'Illness'}.",
+    "routes/demo.py demo_seed_lifecard: idempotency guard via db.demo_seed marker collection is clean; sets users.language='en' + birth_date='1985-03-15' + emergency_profiles.blood_type='A+' + inserts 7 calendar_events with demo:true tag + 1 jarvis prediction event + upserts lifecard_predictions. Reversible via 'demo:true' tag but no unseed endpoint (fine — competition seed is one-way).",
+    "routes/streaks.py: /streaks/physio and /streaks/freeze correctly registered on shared `api` router from `core`; module import path works (registered at startup via server.py include).",
+    "frontend/app/_layout.tsx DemoBadge: uses useDemoMode() hook + AsyncStorage pub/sub; pointerEvents='none' so it does not intercept touches; z-index 9999 ensures it stays on top. Verified in Playwright: toggle OFF hides immediately, ON restores.",
+    "frontend/src/demo-mode.ts: default value = true when AsyncStorage key gh_demo_mode_v1 is missing — matches spec 'default ON'.",
+    "frontend/app/(tabs)/index.tsx welcomeBanner testID='home-welcome-banner' with 'Guardian Angel OS' + 'Your Personal Health Guardian' — matches spec exactly. Also lang fallback correctly uses 'en' when user.language is falsy.",
+    "frontend/app/(tabs)/profile.tsx: DEMO MODE section w/ prof-demo-badge Switch is above LANGUAGE section, no confirmation dialog — matches instant-toggle spec.",
+    "No trophy/achievements chip anywhere in (tabs)/index.tsx — trophy removal is clean; no dead route imports found for /achievements."
+  ],
+  "updated_files": [
+    "/app/backend/routes/healing.py (STEP_META recovery.title 'Zotavenie' → 'Recovery')",
+    "/app/backend/tests/test_iter44_competition_demo.py (new — 12 tests, pytest_iter44.xml)"
+  ],
+  "success_rate": { "backend": "100% (12/12)", "frontend": "100% of tested demo-critical flows (login, home banner, DEMO badge on/off, Life Card timeline w/ all 8 seeded entries + prediction, tab labels English, achievements removed)" },
+  "seed_data_creation": "No new seed data created. Founder demo data was already seeded (POST /api/demo/seed returned seeded:false as expected — do NOT re-seed). Preserved: 8 calendar_events (7 records + 1 jarvis prediction), 1 lifecard_predictions doc, users.birth_date=1985-03-15 + language=en, emergency_profiles.blood_type=A+.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Founder bypass: POST /api/auth/dev-bypass {\"email\":\"guardian.angel.core@proton.me\",\"name\":\"Guardian Angel\"} → session_token. Test suite: /app/backend/tests/test_iter44_competition_demo.py (12 tests, ~2s parallel via xdist LoadScope). Endpoints verified: /auth/dev-bypass, /auth/me, /demo/seed (POST, idempotent), /lifecard (GET), /emergency-profile (GET), /calendar/timeline (GET — NOT /calendar/events which is POST only, returns 405 on GET), /achievements (GET → 404 by design), /streaks/physio (GET), /healing/state (GET). Frontend testIDs: founder-bypass-btn, home-welcome-banner, demo-badge (root layout, top-right, default ON), prof-demo-badge (Profile→DEMO MODE Switch), hh-lifecard-hero, pillar-health, home-profile. AsyncStorage key gh_demo_mode_v1 controls badge (=='1' or null → ON, '0' → OFF).",
+  "rca_of_issue": "One backend Slovak leak found + fixed: /api/healing/state steps_meta['recovery'].title was 'Zotavenie' → changed to 'Recovery' in routes/healing.py L31. All other spec strings (Intake/Financial Shield/Access/Paperwork/Illness) were already English. No other backend issues. Frontend residual Slovak on /health-timeline flagged as a MEDIUM polish item for main agent (not blocking — home/login/profile/tabs are all English)."
+}

@@ -56,7 +56,7 @@ export default function VoiceEchoes() {
       // SENTIENT ANNOUNCEMENT — Jarvis (Onyx) says the sender's name FIRST, so babička
       // knows who is speaking before their real voice starts playing.
       const senderLabel = (e.from_name || 'rodinný člen').trim();
-      const langNow = (user?.language as any) || 'sk';
+      const langNow = (user?.language as any) || 'en';
       await jarvisSpeak(`Máte novú správu od ${senderLabel}.`, { voice: 'onyx', speed: 0.95, language: langNow });
       // Small pause so the intro is clearly heard before the real echo starts.
       await new Promise(r => setTimeout(r, 2200));

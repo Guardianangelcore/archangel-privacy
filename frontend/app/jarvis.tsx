@@ -23,10 +23,10 @@ import { speak as jarvisSpeak, stopSpeaking } from '@/src/voice';
 type Mood = 'calm' | 'thinking' | 'alert' | 'energetic' | 'concerned';
 
 const MOOD_CFG: Record<Mood, { color: string; glow: string; dur: number; label: string }> = {
-  calm: { color: '#D4AF37', glow: 'rgba(212,175,55,0.35)', dur: 2600, label: 'POKOJNÝ' },
-  energetic: { color: '#FFD75E', glow: 'rgba(255,215,94,0.4)', dur: 1200, label: 'ENERGICKÝ' },
-  thinking: { color: '#9B6DFF', glow: 'rgba(155,109,255,0.4)', dur: 900, label: 'PREMÝŠĽAM…' },
-  concerned: { color: '#4A90D9', glow: 'rgba(74,144,217,0.4)', dur: 2000, label: 'STAROSTLIVÝ' },
+  calm: { color: '#D4AF37', glow: 'rgba(212,175,55,0.35)', dur: 2600, label: 'CALM' },
+  energetic: { color: '#FFD75E', glow: 'rgba(255,215,94,0.4)', dur: 1200, label: 'ENERGETIC' },
+  thinking: { color: '#9B6DFF', glow: 'rgba(155,109,255,0.4)', dur: 900, label: 'THINKING…' },
+  concerned: { color: '#4A90D9', glow: 'rgba(74,144,217,0.4)', dur: 2000, label: 'CARING' },
   alert: { color: '#FF453A', glow: 'rgba(255,69,58,0.45)', dur: 700, label: 'POPLACH' },
 };
 // Emotional voice coloring — Jarvis has ONE voice ('onyx' — deep, human, Tony Stark).
@@ -43,10 +43,10 @@ const ORB = 190;
 const RING_R = ORB / 2 + 14;
 
 const CHAINS = [
-  { id: 'healing', icon: 'medkit-outline', title: 'Healing Chain', sub: 'Žiadanka → Hunter → rezervácia → kalendár', body: { specialty: 'Ortopédia' } },
-  { id: 'safety', icon: 'shield-outline', title: 'Safety Chain', sub: 'Pád/hluk → núdzová slučka → info pre záchranárov', body: { trigger: 'manual' } },
-  { id: 'recovery', icon: 'walk-outline', title: 'Recovery Chain', sub: 'Nízky pohyb → Physio-AI → kontrola vychádzok', body: {} },
-  { id: 'supply', icon: 'cube-outline', title: 'Supply Chain', sub: 'Chýbajúci liek → lekárne → barter → trasa', body: { med_name: 'Ibalgin' } },
+  { id: 'healing', icon: 'medkit-outline', title: 'Healing Chain', sub: 'Referral → Hunter → booking → calendar', body: { specialty: 'Orthopedics' } },
+  { id: 'safety', icon: 'shield-outline', title: 'Safety Chain', sub: 'Fall/noise → emergency loop → info for paramedics', body: { trigger: 'manual' } },
+  { id: 'recovery', icon: 'walk-outline', title: 'Recovery Chain', sub: 'Low movement → Physio-AI → outing checks', body: {} },
+  { id: 'supply', icon: 'cube-outline', title: 'Supply Chain', sub: 'Missing medication → pharmacies → barter → route', body: { med_name: 'Ibalgin' } },
 ];
 
 /** Breathing Orb — the living heart of Jarvis. Tap = voice conversation. */
@@ -174,7 +174,7 @@ export default function Jarvis() {
       await jarvisSpeak(text.slice(0, 2000), {
         voice: v.voice as any,
         speed: v.speed,
-        language: (user?.language as any) || 'sk',
+        language: (user?.language as any) || 'en',
       });
     } catch (e) { console.log('tts err', e); }
   }, [user?.language]);
@@ -188,13 +188,13 @@ export default function Jarvis() {
     setBusy('chat'); setErr(''); setInput('');
     setMsgs(prev => [...prev.slice(-8), { role: 'user', text: mode === 'imagine' ? `🎨 ${q}` : q }]);
     setMood('thinking');
-    setStatus(mode === 'sonar' ? 'Prehľadávam web (Sonar)…' : mode === 'imagine' ? 'Maľujem obraz… (môže trvať až minútu)' : 'Premýšľam…');
+    setStatus(mode === 'sonar' ? 'Searching the web (Sonar)…' : mode === 'imagine' ? 'Painting your image… (can take up to a minute)' : 'Thinking…');
     try {
       if (mode === 'imagine') {
         const res: any = await api('/agent/imagine', { method: 'POST', body: JSON.stringify({ prompt: q }) });
         setMsgs(prev => [...prev.slice(-8), {
           role: 'agent',
-          text: res.saved_to_vault ? 'Váš obraz je pripravený a uložený v Trezore, Guardian Angel.' : 'Váš obraz je pripravený, Guardian Angel.',
+          text: res.saved_to_vault ? 'Your image is ready and stored in the Vault, Guardian Angel.' : 'Your image is ready, Guardian Angel.',
           image: res.image_base64,
           vaultDocId: res.doc_id || undefined,
         }]);
@@ -202,10 +202,10 @@ export default function Jarvis() {
         showXp(res.xp_gained);
         if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
         loadState();
-        if (viaVoice) speak('Váš obraz je pripravený a uložený v Trezore.', 'energetic');
+        if (viaVoice) speak('Your image is ready and stored in the Vault.', 'energetic');
       } else if (mode === 'sonar') {
-        const res: any = await api('/agent/search', { method: 'POST', body: JSON.stringify({ query: q, language: user?.language || 'sk' }) });
-        const note = res.degraded ? '\n\n⚠️ Živé vyhľadávanie je offline (chýba Perplexity kľúč) — odpovedám z internej znalosti.' : '';
+        const res: any = await api('/agent/search', { method: 'POST', body: JSON.stringify({ query: q, language: user?.language || 'en' }) });
+        const note = res.degraded ? '\n\n⚠️ Live search is offline (Perplexity key missing) — answering from internal knowledge.' : '';
         setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply + note, citations: res.citations }]);
         setMood('calm'); setStatus('');
         showXp(res.xp_gained);
@@ -215,7 +215,7 @@ export default function Jarvis() {
         // VOICE SONAR — the Orb answers in Onyx and announces verified sources.
         if (viaVoice) {
           const n = res.citations?.length || 0;
-          const spoken = n > 0 ? `${res.reply} Našiel som ${n === 1 ? 'jeden overený zdroj' : n < 5 ? `${n} overené zdroje` : `${n} overených zdrojov`} — nájdete ich pod odpoveďou.` : res.reply;
+          const spoken = n > 0 ? `${res.reply} I found ${n === 1 ? 'one verified source' : `${n} verified sources`} — you will find them below the answer.` : res.reply;
           speak(spoken, 'calm');
         }
       } else {
@@ -233,7 +233,7 @@ export default function Jarvis() {
           const resp = await expoFetch(`${API_BASE}/api/agent/chat/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-            body: JSON.stringify({ message: q, language: user?.language || 'sk' }),
+            body: JSON.stringify({ message: q, language: user?.language || 'en' }),
           });
           if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
           const reader = (resp.body as any).getReader();
@@ -267,7 +267,7 @@ export default function Jarvis() {
           if (viaVoice) speak(acc, (meta?.mood as Mood) || 'calm');
         } catch (streamErr) {
           console.log('stream fallback', streamErr);
-          const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'sk' }) });
+          const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'en' }) });
           setMsgs(prev => {
             const last = prev[prev.length - 1];
             const base = last && last.role === 'agent' && last.streaming ? prev.slice(0, -1) : prev;
@@ -307,7 +307,7 @@ export default function Jarvis() {
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true } as any);
       await recorder.prepareToRecordAsync();
       recorder.record();
-      setRecording(true); setStatus('Počúvam… ťuknite na guľu pre odoslanie');
+      setRecording(true); setStatus('Listening… tap the orb to send');
     } catch (e) { console.log('rec err', e); }
   };
 
@@ -338,7 +338,7 @@ export default function Jarvis() {
   const runAnalysis = async () => {
     if (busy === 'analyze') return;
     setBusy('analyze'); setErr(''); setInsight(''); setThinkSteps([]); setThinkIdx(-1);
-    setMood('thinking'); setStatus('Hĺbková analýza dát…');
+    setMood('thinking'); setStatus('Deep data analysis…');
     try {
       const res: any = await api('/agent/analyze', { method: 'POST' });
       setThinkSteps(res.steps);
@@ -379,7 +379,7 @@ export default function Jarvis() {
         <Pressable testID="jv-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>JARVIS 2.0 · ŽIVÁ DUŠA</Text>
+        <Text style={st.title}>JARVIS 2.0 · LIVING SOUL</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
           <Pressable testID="jv-settings" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={10}>
             <Ionicons name="settings-outline" size={20} color={C.onS3} />
@@ -399,16 +399,16 @@ export default function Jarvis() {
         </Animated.View>
 
         <View style={{ alignItems: 'center', paddingHorizontal: S.xl }}>
-          <Text style={[st.moodLabel, { color: cfg.color }]}>{recording ? '🎙 POČÚVAM…' : cfg.label}</Text>
+          <Text style={[st.moodLabel, { color: cfg.color }]}>{recording ? '🎙 LISTENING…' : cfg.label}</Text>
           <Text style={st.levelName}>LEVEL {state?.level ?? 1} · {state?.level_name ?? 'ISKRA'}</Text>
           <Text style={st.xpText}>{state?.xp ?? 0} / {state?.xp_next ?? 100} XP · {state?.memories_count ?? 0} spomienok</Text>
-          {!!nextAbility && <Text style={st.nextAbility}>ĎALŠIE ODOMKNUTIE (LVL {nextAbility.level}): {nextAbility.name}</Text>}
+          {!!nextAbility && <Text style={st.nextAbility}>NEXT UNLOCK (LVL {nextAbility.level}): {nextAbility.name}</Text>}
           {!!status && <Text style={st.status}>{status}</Text>}
-          <Text style={st.orbHint}>Ťuknite na guľu a hovorte — Jarvis odpovie hlasom</Text>
+          <Text style={st.orbHint}>Tap the orb and speak — Jarvis replies with voice</Text>
           {micDenied && (
             <Pressable testID="jv-mic-settings" onPress={() => Linking.openSettings()} style={st.settingsBtn}>
               <Ionicons name="settings-outline" size={14} color={C.brand} />
-              <Text style={st.settingsText}>Mikrofón je zablokovaný — otvoriť Nastavenia</Text>
+              <Text style={st.settingsText}>Microphone is blocked — open Settings</Text>
             </Pressable>
           )}
         </View>
@@ -417,7 +417,7 @@ export default function Jarvis() {
         {briefing && (
           <View style={[st.card, { borderColor: cfg.color }]}>
             <View style={st.cardHead}>
-              <Text style={st.cardTitle}>☀️ RANNÝ BRÍFING</Text>
+              <Text style={st.cardTitle}>☀️ MORNING BRIEFING</Text>
               <Pressable testID="jv-brief-play" onPress={() => speak(briefing.briefing, (briefing.mood as Mood) || 'energetic')} hitSlop={8} style={st.playBtn}>
                 <Ionicons name="volume-high" size={16} color={C.onInverse} />
               </Pressable>
@@ -445,7 +445,7 @@ export default function Jarvis() {
             {!!m.vaultDocId && (
               <Pressable testID={`jv-vault-open-${i}`} onPress={() => { tap('light'); router.push('/(tabs)/vault'); }} style={st.vaultChip}>
                 <Ionicons name="lock-closed" size={12} color={C.brand} />
-                <Text style={st.vaultChipText}>ULOŽENÉ V TREZORE · OTVORIŤ GALÉRIU</Text>
+                <Text style={st.vaultChipText}>STORED IN VAULT · OPEN GALLERY</Text>
               </Pressable>
             )}
             {!!m.citations?.length && (
@@ -481,7 +481,7 @@ export default function Jarvis() {
 
         <View style={st.askRow}>
           <TextInput testID="jv-input" style={st.input}
-            placeholder={mode === 'sonar' ? 'Opýtajte sa webu — medicína · EÚ…' : mode === 'imagine' ? 'Opíšte obraz, ktorý mám vytvoriť…' : 'Napíšte Jarvisovi… (alebo ťuknite na guľu)'}
+            placeholder={mode === 'sonar' ? 'Ask the web — medicine · EU…' : mode === 'imagine' ? 'Describe the image to create…' : 'Write to Jarvis… (or tap the orb)'}
             placeholderTextColor={C.info}
             value={input} onChangeText={setInput} onSubmitEditing={() => sendMessage(input)} returnKeyType="send" />
           <Pressable testID="jv-ask" onPress={() => sendMessage(input)} disabled={busy === 'chat'} style={st.askBtn}>
@@ -493,7 +493,7 @@ export default function Jarvis() {
         {mode === 'sonar' && sonarHist.length > 0 && (
           <>
             <Pressable testID="jv-hist-toggle" onPress={() => { tap('light'); setShowHist(!showHist); }} style={st.sectionRow}>
-              <Text style={st.section}>🌐 SONAR HISTÓRIA ({sonarHist.length})</Text>
+              <Text style={st.section}>🌐 SONAR HISTORY ({sonarHist.length})</Text>
               <Ionicons name={showHist ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
             </Pressable>
             {showHist && sonarHist.slice(0, 15).map((h: any) => (
@@ -503,7 +503,7 @@ export default function Jarvis() {
                   <Text style={st.histMeta}>
                     {String(h.at).slice(0, 10)} · {h.citations?.length
                       ? `${h.citations.length} ${h.citations.length === 1 ? 'zdroj' : h.citations.length < 5 ? 'zdroje' : 'zdrojov'}`
-                      : 'bez živých zdrojov'}
+                      : 'no live sources'}
                   </Text>
                 </Pressable>
                 <Pressable testID={`jv-hist-del-${h.conv_id}`} onPress={() => delHist(h.conv_id)} hitSlop={10}>
@@ -517,7 +517,7 @@ export default function Jarvis() {
         {/* VISUAL THINKING */}
         <Pressable testID="jv-analyze" onPress={runAnalysis} disabled={busy === 'analyze'} style={st.analyzeBtn}>
           {busy === 'analyze' ? <ActivityIndicator color="#9B6DFF" /> : <Ionicons name="scan-circle-outline" size={18} color="#9B6DFF" />}
-          <Text style={st.analyzeText}>HĹBKOVÁ ANALÝZA — VIZUÁLNE MYSLENIE</Text>
+          <Text style={st.analyzeText}>DEEP ANALYSIS — VISUAL THINKING</Text>
         </Pressable>
         {thinkSteps.length > 0 && (
           <View style={st.thinkBox}>
@@ -526,11 +526,11 @@ export default function Jarvis() {
             ))}
             {!!insight && (
               <View style={st.insightBox}>
-                <Text style={st.insightLbl}>💡 SYNTÉZA JARVISA</Text>
+                <Text style={st.insightLbl}>💡 JARVIS SYNTHESIS</Text>
                 <Text style={st.insightText}>{insight}</Text>
                 <Pressable testID="jv-insight-play" onPress={() => speak(insight, 'calm')} style={st.speakSmall}>
                   <Ionicons name="volume-medium-outline" size={14} color={C.brand} />
-                  <Text style={st.speakSmallText}>PREHRAŤ</Text>
+                  <Text style={st.speakSmallText}>PLAY</Text>
                 </Pressable>
               </View>
             )}
@@ -539,7 +539,7 @@ export default function Jarvis() {
 
         {/* ABILITIES */}
         <Pressable testID="jv-abil-toggle" onPress={() => { tap('light'); setShowAbil(!showAbil); }} style={st.sectionRow}>
-          <Text style={st.section}>SCHOPNOSTI SPOLOČNÍKA ({state?.abilities?.filter((a: any) => a.unlocked).length ?? 1}/10)</Text>
+          <Text style={st.section}>COMPANION ABILITIES ({state?.abilities?.filter((a: any) => a.unlocked).length ?? 1}/10)</Text>
           <Ionicons name={showAbil ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
         </Pressable>
         {showAbil && (state?.abilities || []).map((a: any) => (
@@ -551,7 +551,7 @@ export default function Jarvis() {
 
         {/* MEMORIES */}
         <Pressable testID="jv-mem-toggle" onPress={() => { tap('light'); setShowMems(!showMems); }} style={st.sectionRow}>
-          <Text style={st.section}>ČO SI PAMÄTÁM ({memories.length})</Text>
+          <Text style={st.section}>WHAT I REMEMBER ({memories.length})</Text>
           <Ionicons name={showMems ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
         </Pressable>
         {showMems && memories.slice(0, 12).map((m: any) => (
@@ -563,20 +563,20 @@ export default function Jarvis() {
             </Pressable>
           </View>
         ))}
-        {showMems && memories.length === 0 && <Text style={st.memEmpty}>Zatiaľ žiadne spomienky — porozprávajte sa so mnou.</Text>}
+        {showMems && memories.length === 0 && <Text style={st.memEmpty}>No memories yet — talk to me.</Text>}
 
         {/* AUTOPILOT + CHAINS */}
         <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.xl }]}>AUTOPILOT — MEDICAL SENTINEL</Text>
         <View style={st.autoRow}>
           <Ionicons name="infinite" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={st.chainTitle}>Automatické spracovanie Trezoru</Text>
-            <Text style={st.chainSub}>Nový dokument → OCR → AI preklad → kalendár → rezervácia. Bez pýtania.</Text>
+            <Text style={st.chainTitle}>Automatic Vault processing</Text>
+            <Text style={st.chainSub}>New document → OCR → AI translation → calendar → booking. No questions asked.</Text>
           </View>
           <Switch testID="jv-autopilot" value={auto?.autopilot !== false} onValueChange={toggleAutopilot} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.lg }]}>SENTIENT REŤAZE</Text>
+        <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.lg }]}>SENTIENT CHAINS</Text>
         {CHAINS.map(c => {
           const tr = traces[c.id];
           return (
@@ -588,7 +588,7 @@ export default function Jarvis() {
                   <Text style={st.chainSub}>{c.sub}</Text>
                 </View>
                 <Pressable testID={`jv-chain-${c.id}`} onPress={() => runChain(c)} disabled={busy === c.id} style={st.runBtn}>
-                  {busy === c.id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.runText}>SPUSTIŤ</Text>}
+                  {busy === c.id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.runText}>RUN</Text>}
                 </Pressable>
               </View>
               {tr && (
@@ -610,11 +610,11 @@ export default function Jarvis() {
           {busy === 'pdf' ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="document-text-outline" size={16} color={C.onInverse} />
-              <Text style={st.ctaText}>TÝŽDENNÝ GUARDIAN PULSE REPORT (PDF)</Text>
+              <Text style={st.ctaText}>WEEKLY GUARDIAN PULSE REPORT (PDF)</Text>
             </>
           )}
         </Pressable>
-        <Text style={st.disclaimer}>AI spoločník — informačný obsah, nie zdravotná starostlivosť (EU AI Act čl. 50). Pamäť môžete kedykoľvek vymazať.</Text>
+        <Text style={st.disclaimer}>AI companion — informational content, not healthcare (EU AI Act Art. 50). You can erase its memory at any time.</Text>
       </ScrollView>
 
       {/* LEVEL-UP OVERLAY */}
@@ -657,9 +657,9 @@ function LevelUpBurst({ level, name, onClose }: { level: number; name: string; o
       <View style={st.lvlBurst}><Ionicons name="sparkles" size={54} color={C.onInverse} /></View>
       <Text style={st.lvlTitle}>LEVEL {level}!</Text>
       {!!name && <Text style={st.lvlName}>{name}</Text>}
-      <Text style={st.lvlSub}>Váš anjel je múdrejší — odomkli ste novú schopnosť.</Text>
+      <Text style={st.lvlSub}>Your angel got wiser — you unlocked a new ability.</Text>
       <Pressable testID="jv-levelup-close" onPress={onClose} style={st.lvlBtn}>
-        <Text style={st.lvlBtnText}>POKRAČOVAŤ</Text>
+        <Text style={st.lvlBtnText}>CONTINUE</Text>
       </Pressable>
     </Animated.View>
   );

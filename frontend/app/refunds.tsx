@@ -14,7 +14,7 @@ import { Lang } from '@/src/i18n';
 
 export default function Refunds() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [claim, setClaim] = useState<any>(null);
   const [busy, setBusy] = useState<string | null>(null);

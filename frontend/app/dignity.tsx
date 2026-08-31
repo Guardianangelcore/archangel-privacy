@@ -21,7 +21,7 @@ const BURIALS = [
 
 export default function Dignity() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [fund, setFund] = useState<any>(null);
   const [loading, setLoading] = useState(false);

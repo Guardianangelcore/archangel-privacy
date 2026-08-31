@@ -1,7 +1,6 @@
 """
 Iteration 32 — Sovereign UX Extensions backend contract tests
 Covers:
-  - /api/achievements (new): catalog of 8 badges, unlock/lock derivation from cross-cutting collections
   - /api/family/voice-signature/circle (new): family circle members + voice-print status
 Regression:
   - /api/ocr/document still returns birth_year_detected + birth_year_applied
@@ -29,12 +28,6 @@ UID2 = "smoketest-user-2"
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "guardian_health")
 
-EXPECTED_KEYS = {
-    "sovereign_onboarded", "bio_timeline_set", "biometric_gate", "voice_print_first",
-    "angel_first_contact", "physio_first_series", "healing_loop_first", "vault_first_doc",
-}
-
-
 @pytest.fixture(scope="session")
 def db():
     client = MongoClient(MONGO_URL)
@@ -52,92 +45,6 @@ def api():
 def _get(path: str, token: str | None = TOKEN):
     h = {"Authorization": f"Bearer {token}"} if token else {}
     return requests.get(f"{BASE_URL}{path}", headers=h, timeout=30)
-
-
-# --- ACHIEVEMENTS ------------------------------------------------------------
-class TestAchievements:
-
-    def test_no_auth_401(self):
-        r = _get("/api/achievements", token=None)
-        assert r.status_code == 401, r.text
-
-    def test_shape_and_totals(self, api):
-        r = api.get(f"{BASE_URL}/api/achievements")
-        assert r.status_code == 200, r.text
-        data = r.json()
-        for k in ("unlocked", "locked", "unlocked_count", "total", "progress"):
-            assert k in data, f"missing key {k}"
-        assert data["total"] == 8
-        assert isinstance(data["unlocked"], list) and isinstance(data["locked"], list)
-        assert len(data["unlocked"]) + len(data["locked"]) == 8
-        assert data["unlocked_count"] == len(data["unlocked"])
-        assert 0 <= data["progress"] <= 100
-        # Field shape on each row
-        for row in data["unlocked"] + data["locked"]:
-            for f in ("key", "title", "hint", "icon", "unlocked", "unlocked_at"):
-                assert f in row, f"row missing field {f}: {row}"
-            assert isinstance(row["unlocked"], bool)
-
-    def test_catalog_contains_exactly_8_expected_keys(self, api):
-        r = api.get(f"{BASE_URL}/api/achievements")
-        assert r.status_code == 200
-        data = r.json()
-        keys = {row["key"] for row in data["unlocked"] + data["locked"]}
-        assert keys == EXPECTED_KEYS, f"catalog mismatch: {keys ^ EXPECTED_KEYS}"
-
-    def test_biometric_gate_unlocks_when_flag_set(self, api, db):
-        # Seed: force biometric_enabled=true
-        prev = db.users.find_one({"user_id": UID}, {"_id": 0, "biometric_enabled": 1})
-        prev_val = (prev or {}).get("biometric_enabled")
-        db.users.update_one({"user_id": UID}, {"$set": {"biometric_enabled": True}})
-        try:
-            r = api.get(f"{BASE_URL}/api/achievements")
-            assert r.status_code == 200
-            data = r.json()
-            unlocked_keys = {row["key"] for row in data["unlocked"]}
-            assert "biometric_gate" in unlocked_keys, unlocked_keys
-        finally:
-            # restore
-            if prev_val is None:
-                db.users.update_one({"user_id": UID}, {"$unset": {"biometric_enabled": ""}})
-            else:
-                db.users.update_one({"user_id": UID}, {"$set": {"biometric_enabled": prev_val}})
-
-    def test_bio_timeline_locked_when_birth_year_unset(self, api, db):
-        prev = db.users.find_one({"user_id": UID}, {"_id": 0, "birth_year": 1})
-        prev_val = (prev or {}).get("birth_year")
-        db.users.update_one({"user_id": UID}, {"$unset": {"birth_year": ""}})
-        try:
-            r = api.get(f"{BASE_URL}/api/achievements")
-            assert r.status_code == 200
-            data = r.json()
-            locked_keys = {row["key"] for row in data["locked"]}
-            assert "bio_timeline_set" in locked_keys, locked_keys
-        finally:
-            if prev_val is not None:
-                db.users.update_one({"user_id": UID}, {"$set": {"birth_year": prev_val}})
-
-    def test_sovereign_onboarded_unlocks_when_flag_set(self, api, db):
-        prev = db.users.find_one({"user_id": UID}, {"_id": 0, "onboarding_completed": 1})
-        prev_val = (prev or {}).get("onboarding_completed")
-        db.users.update_one({"user_id": UID}, {"$set": {"onboarding_completed": True}})
-        try:
-            r = api.get(f"{BASE_URL}/api/achievements")
-            assert r.status_code == 200
-            data = r.json()
-            unlocked_keys = {row["key"] for row in data["unlocked"]}
-            assert "sovereign_onboarded" in unlocked_keys, unlocked_keys
-        finally:
-            if prev_val is None:
-                db.users.update_one({"user_id": UID}, {"$unset": {"onboarding_completed": ""}})
-            else:
-                db.users.update_one({"user_id": UID}, {"$set": {"onboarding_completed": prev_val}})
-
-    def test_progress_calculation_matches_counts(self, api):
-        r = api.get(f"{BASE_URL}/api/achievements")
-        d = r.json()
-        expected = round(d["unlocked_count"] * 100 / d["total"])
-        assert d["progress"] == expected
 
 
 # --- VOICE CIRCLE ------------------------------------------------------------

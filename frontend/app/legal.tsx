@@ -17,7 +17,7 @@ const TOS_VERSION = '2026-06.1';
 
 export default function Legal() {
   const { user, setUser } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [country, setCountry] = useState('SK');
   const [region, setRegion] = useState<any>(null);

@@ -79,7 +79,7 @@ export default function Pantry() {
       setCounts(list.counts || {});
       setAlertLine(alerts.top_line || null);
       if (alerts.top_line) {
-        jarvisSpeak(alerts.top_line, { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk' });
+        jarvisSpeak(alerts.top_line, { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' });
       }
     } catch (e) { console.log(e); }
     setLoading(false);
@@ -121,7 +121,7 @@ export default function Pantry() {
       });
       const stage = pr.extracted_expiry ? 'z etikety' : 'štandardná trvanlivosť';
       jarvisSpeak(`${pr.name} pridané. Spotreba (${stage}): ${pr.expiration_date}.`,
-        { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk' });
+        { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' });
       await load();
     } catch (e) { console.log('scan err', e); }
     finally { setScanning(false); }
@@ -146,7 +146,7 @@ export default function Pantry() {
       await voiceRecorder.prepareToRecordAsync();
       voiceRecorder.record();
       jarvisSpeak('Počúvam. Povedzte, čo pridať do zásob.', {
-        voice: 'onyx', speed: 1.0, language: (user?.language as any) || 'sk',
+        voice: 'onyx', speed: 1.0, language: (user?.language as any) || 'en',
       });
     } catch (e) { console.log('voice start', e); }
   };
@@ -163,7 +163,7 @@ export default function Pantry() {
       const parsed: any = await apiUpload('/pantry/voice', uri, name, ct, {});
       setVoiceHeard(`${parsed.quantity}× „${parsed.name}"${parsed.location ? ` v „${parsed.location}"` : ''}`);
       jarvisSpeak(`Pridané: ${parsed.quantity} kusov ${parsed.name}${parsed.location ? `, v ${parsed.location}` : ''}.`, {
-        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       await load();
       setTimeout(() => setVoiceOpen(false), 2000);
@@ -186,7 +186,7 @@ export default function Pantry() {
       {alertLine && (
         <Pressable
           testID="pantry-alert"
-          onPress={() => jarvisSpeak(alertLine, { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk' })}
+          onPress={() => jarvisSpeak(alertLine, { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' })}
           style={styles.alertRow}
         >
           <Ionicons name="warning" size={20} color={C.onInverse} />

@@ -31,19 +31,19 @@ export default function EmergencyQR() {
 
   const shareProfile = async () => {
     const msg = [
-      '🛡 GUARDIAN ANGEL — NÚDZOVÝ PROFIL',
+      '🛡 GUARDIAN ANGEL — EMERGENCY PROFILE',
       `Meno: ${prof.full_name || user?.name || '—'}`,
-      `Krvná skupina: ${prof.blood_type || '—'}`,
+      `Blood type: ${prof.blood_type || '—'}`,
       `Alergie: ${prof.allergies || '—'}`,
-      `Diagnózy: ${prof.conditions || '—'}`,
+      `Conditions: ${prof.conditions || '—'}`,
       `Lieky: ${prof.medications || '—'}`,
       `ICE kontakt: ${`${prof.emergency_contact_name || ''} ${prof.emergency_contact_phone || ''}`.trim() || '—'}`,
     ].join('\n');
     try {
       if (Platform.OS === 'web') {
-        if ((navigator as any).share) await (navigator as any).share({ title: 'Guardian núdzový profil', text: msg });
+        if ((navigator as any).share) await (navigator as any).share({ title: 'Guardian emergency profile', text: msg });
       } else {
-        await Share.share({ message: msg, title: 'Guardian núdzový profil' });
+        await Share.share({ message: msg, title: 'Guardian emergency profile' });
       }
     } catch {}
   };
@@ -85,7 +85,7 @@ export default function EmergencyQR() {
 
         <Pressable testID="qr-share" onPress={shareProfile} style={styles.shareBtn}>
           <Ionicons name="share-outline" size={18} color="#FFF" />
-          <Text style={styles.shareText}>ZDIEĽAŤ NÚDZOVÝ PROFIL</Text>
+          <Text style={styles.shareText}>SHARE EMERGENCY PROFILE</Text>
         </Pressable>
 
         <Text style={styles.footer}>OFFLINE-CAPABLE · SCANNABLE BY FIRST RESPONDERS</Text>

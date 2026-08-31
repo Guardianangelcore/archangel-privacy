@@ -14,7 +14,7 @@ type Camp = { campaign_id: string; title: string; story: string; goal_amount: nu
 
 export default function Solidarity() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [items, setItems] = useState<Camp[]>([]);
   const [loading, setLoading] = useState(false);

@@ -18,7 +18,7 @@ const CATS = ['painkiller', 'antibiotic', 'chronic', 'supplement', 'first_aid', 
 
 export default function MedicineCabinet() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [tab, setTab] = useState<'stock' | 'exchange'>('stock');
   const [items, setItems] = useState<Item[]>([]);

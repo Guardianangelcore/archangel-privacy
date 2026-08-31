@@ -15,7 +15,7 @@ const TAGS = ['LGBTI+', 'SENIOR-FRIENDLY', 'DISABILITY', 'ROMA', 'MULTILINGUAL',
 
 export default function RespectMap() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [items, setItems] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);

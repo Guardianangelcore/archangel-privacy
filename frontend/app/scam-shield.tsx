@@ -21,7 +21,7 @@ const RISK_COLORS: Record<string, { bg: string; fg: string }> = {
 
 export default function ScamShield() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);

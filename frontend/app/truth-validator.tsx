@@ -19,7 +19,7 @@ const BADGE: Record<string, { text: string; bg: string; fg: string }> = {
 
 export default function TruthValidator() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [claims, setClaims] = useState<any[]>([]);
   const [cats, setCats] = useState<Record<string, string>>({});

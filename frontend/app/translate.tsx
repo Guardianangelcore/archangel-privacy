@@ -20,7 +20,7 @@ import { t, Lang } from '@/src/i18n';
 export default function Translate() {
   const { user } = useAuth();
   const router = useRouter();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const [text, setText] = useState('');
   const [out, setOut] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,11 +57,11 @@ export default function Translate() {
   const processDoc = async (uri: string, name: string, mime: string) => {
     reset(); setBusy(true);
     try {
-      setStage('Ukladám do Zdravotného trezora…');
+      setStage('Saving to your Health Vault…');
       const doc: any = await apiUpload('/vault/documents', uri, name, mime, { title: name });
-      setStage('Čítam dokument (AI OCR)…');
+      setStage('Reading the document (AI OCR)…');
       try { await api(`/vault/documents/${doc.doc_id}/ocr`, { method: 'POST' }); } catch {}
-      setStage('Prekladám do ľudskej reči…');
+      setStage('Translating into plain language…');
       const res: any = await api('/ai/translate-document', { method: 'POST', body: JSON.stringify({ doc_id: doc.doc_id, language: lang }) });
       setOut(res.plain_language);
       setAppt(res.next_appointment || null);
@@ -102,7 +102,7 @@ export default function Translate() {
 
   const run = async () => {
     if (!text.trim()) return;
-    reset(); setBusy(true); setStage('Prekladám do ľudskej reči…');
+    reset(); setBusy(true); setStage('Translating into plain language…');
     try {
       const res: any = await api('/ai/translate', { method: 'POST', body: JSON.stringify({ text, language: lang }) });
       setOut(res.plain_language);
@@ -118,8 +118,8 @@ export default function Translate() {
       await api('/calendar/events', {
         method: 'POST',
         body: JSON.stringify({
-          category: 'exam', title: appt.title || 'Kontrola u lekára', date: appt.date,
-          notes: appt.time ? `Čas: ${appt.time}` : 'Nájdené AI prekladačom',
+          category: 'exam', title: appt.title || 'Doctor check-up', date: appt.date,
+          notes: appt.time ? `Time: ${appt.time}` : 'Found by AI translator',
         }),
       });
       setApptAdded(true); tap('success');
@@ -132,7 +132,7 @@ export default function Translate() {
         <Pressable testID="tr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>AI PREKLADAČ · JARVIS</Text>
+        <Text style={styles.title}>AI TRANSLATOR · JARVIS</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -140,28 +140,28 @@ export default function Translate() {
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           {/* UPLOAD HERO — prominent document/photo entry */}
           <View style={styles.uploadCard}>
-            <Text style={styles.uploadLbl}>NAHRAJTE SPRÁVU OD LEKÁRA</Text>
-            <Text style={styles.uploadSub}>Jarvis ju prečíta a vysvetlí vám ju ľudskou rečou.</Text>
+            <Text style={styles.uploadLbl}>UPLOAD A DOCTOR REPORT</Text>
+            <Text style={styles.uploadSub}>Jarvis reads it and explains it in plain language.</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               <Pressable testID="tr-camera" onPress={takePhoto} disabled={busy} style={[styles.upBtn, styles.upBtnPri]}>
                 <Ionicons name="camera" size={22} color={C.onInverse} />
-                <Text style={styles.upBtnPriText}>ODFOTIŤ{'\n'}DOKUMENT</Text>
+                <Text style={styles.upBtnPriText}>PHOTOGRAPH{'\n'}DOCUMENT</Text>
               </Pressable>
               <Pressable testID="tr-upload" onPress={pickFile} disabled={busy} style={[styles.upBtn, styles.upBtnSec]}>
                 <Ionicons name="cloud-upload-outline" size={22} color={C.brand} />
-                <Text style={styles.upBtnSecText}>NAHRAŤ SÚBOR{'\n'}/ FOTKU</Text>
+                <Text style={styles.upBtnSecText}>UPLOAD FILE{'\n'}/ PHOTO</Text>
               </Pressable>
             </View>
             {camBlocked && (
               <Pressable testID="tr-cam-settings" onPress={() => Linking.openSettings()} style={styles.settingsRow}>
                 <Ionicons name="settings-outline" size={14} color={C.brand} />
-                <Text style={styles.settingsText}>Kamera je zablokovaná — otvoriť Nastavenia</Text>
+                <Text style={styles.settingsText}>Camera is blocked — open Settings</Text>
               </Pressable>
             )}
-            <Text style={styles.uploadNote}>Dokument sa uloží do Trezora a hneď sa zapíše do Zdravotnej časovej osi.</Text>
+            <Text style={styles.uploadNote}>The document is saved to your Vault and instantly logged in your Health Timeline.</Text>
           </View>
 
-          <Text style={styles.divider}>— ALEBO VLOŽTE TEXT —</Text>
+          <Text style={styles.divider}>— OR PASTE TEXT —</Text>
 
           <TextInput
             testID="tr-input"
@@ -176,7 +176,7 @@ export default function Translate() {
             {busy && !stage ? <ActivityIndicator color={C.onInverse} /> : (
               <>
                 <Ionicons name="sparkles-outline" size={16} color={C.onInverse} />
-                <Text style={styles.runText}>PRELOŽIŤ DO ĽUDSKEJ REČI</Text>
+                <Text style={styles.runText}>TRANSLATE INTO PLAIN LANGUAGE</Text>
               </>
             )}
           </Pressable>
@@ -191,11 +191,11 @@ export default function Translate() {
 
           {!!out && (
             <View style={styles.outBox}>
-              <Text style={styles.outLbl}>ĽUDSKÉ VYSVETLENIE</Text>
+              <Text style={styles.outLbl}>HUMAN EXPLANATION</Text>
               <Text style={styles.outText}>{out}</Text>
               <Pressable testID="tr-speak" onPress={speak} disabled={speaking} style={styles.speakBtn}>
                 <Ionicons name={speaking ? 'volume-high' : 'volume-medium-outline'} size={18} color={C.brand} />
-                <Text style={styles.speakBtnText}>PREHRAŤ NAHLAS</Text>
+                <Text style={styles.speakBtnText}>PLAY ALOUD</Text>
               </Pressable>
             </View>
           )}
@@ -203,24 +203,24 @@ export default function Translate() {
           {/* NEXT APPOINTMENT — flagged by AI, one tap to calendar */}
           {appt?.date && (
             <View testID="tr-appt" style={styles.apptBox}>
-              <Text style={styles.apptLbl}>📅 NÁJDENÝ ĎALŠÍ TERMÍN</Text>
+              <Text style={styles.apptLbl}>📅 NEXT APPOINTMENT FOUND</Text>
               <Text style={styles.apptDate}>{appt.date}{appt.time ? ` · ${appt.time}` : ''}</Text>
               <Text style={styles.apptTitle}>{appt.title}</Text>
               {apptAdded ? (
                 <>
                   <View style={styles.apptDone}>
                     <Ionicons name="checkmark-circle" size={20} color={C.brand} />
-                    <Text style={styles.apptDoneText}>ULOŽENÉ V KALENDÁRI</Text>
+                    <Text style={styles.apptDoneText}>SAVED IN CALENDAR</Text>
                   </View>
                   <Pressable testID="tr-open-timeline" onPress={() => router.push('/health-timeline')} style={styles.timelineLink}>
                     <Ionicons name="time-outline" size={16} color={C.brand} />
-                    <Text style={styles.timelineLinkText}>Otvoriť Zdravotnú časovú os</Text>
+                    <Text style={styles.timelineLinkText}>Open Health Timeline</Text>
                   </Pressable>
                 </>
               ) : (
                 <Pressable testID="tr-add-calendar" onPress={addToCalendar} style={styles.apptBtn}>
                   <Ionicons name="calendar" size={20} color={C.onInverse} />
-                  <Text style={styles.apptBtnText}>PRIDAŤ DO KALENDÁRA</Text>
+                  <Text style={styles.apptBtnText}>ADD TO CALENDAR</Text>
                 </Pressable>
               )}
             </View>

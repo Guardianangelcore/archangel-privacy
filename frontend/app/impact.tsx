@@ -43,7 +43,7 @@ export default function Impact() {
   const speakThread = () => {
     if (!data?.top_thread) return;
     jarvisSpeak(data.top_thread.message_sk, {
-      voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+      voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
     });
   };
 

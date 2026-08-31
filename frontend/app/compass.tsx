@@ -31,7 +31,7 @@ async function getLoc(): Promise<{ lat: number | null; lng: number | null }> {
 
 export default function Compass() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [pack, setPack] = useState<any>(null);
   const [offline, setOffline] = useState(false);

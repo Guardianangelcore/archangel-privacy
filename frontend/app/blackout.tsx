@@ -14,7 +14,7 @@ const KEY = 'gh_blackout_snapshot';
 
 export default function Blackout() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [snap, setSnap] = useState<any>(null);
   const [loading, setLoading] = useState(false);

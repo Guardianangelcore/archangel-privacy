@@ -14,8 +14,8 @@ export default function HealthHub() {
     <PillarHub
       testID="hub-health"
       icon="sync"
-      title="Moje uzdravovanie"
-      subtitle="Pilier 1 · Kolotoč uzdravenia — od žiadanky cez peniaze a doktora až po 100 % fit."
+      title="My Healing"
+      subtitle="Pillar 1 · Healing Loop — from referral through money and doctor to 100% fit."
       hero={
         /* KARTA ŽIVOTA — jadro aplikácie: zdravotná os od narodenia */
         <Pressable testID="hh-lifecard-hero" onPress={() => { tap('medium'); router.push('/health-timeline'); }} style={st.lifeHero}>
@@ -23,47 +23,47 @@ export default function HealthHub() {
             <Ionicons name="id-card" size={26} color={C.onInverse} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={st.lifeHeroTitle}>KARTA ŽIVOTA</Text>
-            <Text style={st.lifeHeroSub}>Zdravotná os od narodenia · Očkovania · Choroby · Operácie · Úrazy · Prehliadky</Text>
+            <Text style={st.lifeHeroTitle}>LIFE CARD</Text>
+            <Text style={st.lifeHeroSub}>Health timeline since birth · Vaccinations · Diseases · Surgeries · Injuries · Check-ups</Text>
           </View>
           <Ionicons name="chevron-forward" size={22} color={C.brand} />
         </Pressable>
       }
       sections={[
-        { title: '⚙️ KOLOTOČ UZDRAVENIA — JADRO', items: [
-          { testID: 'hh-healing', icon: 'sync-outline', title: 'Kolotoč uzdravenia', subtitle: 'Úraz → peniaze hneď → doktor → PN → fyzio', route: '/healing' },
-          { testID: 'hh-translate', icon: 'language-outline', title: 'Žiadanka a AI Prekladač', subtitle: 'Sken výmenného lístka · OCR → ľudská reč', route: '/translate' },
-          { testID: 'hh-waitlist', icon: 'calendar-outline', title: 'Lovec termínov', subtitle: 'Automatický lov a rezervácia · podľa vašej polohy (GPS)', route: '/(tabs)/waitlist' },
-          { testID: 'hh-arbitrage', icon: 'airplane-outline', title: 'Globálna arbitráž', subtitle: 'Operácie v 🇵🇱 🇭🇺 🇹🇷 · predikcia účtov', route: '/arbitrage' },
-          { testID: 'hh-recovery', icon: 'bed-outline', title: 'Moje zotavenie (PN)', subtitle: 'ePN · vychádzky · kalkulačka nemocenského', route: '/my-recovery' },
-          { testID: 'hh-physio', icon: 'body-outline', title: 'Physio-AI rehabilitácia', subtitle: 'Expertné video sprievodce · rutiny na mieru', route: '/physio' },
+        { title: '⚙️ HEALING LOOP — THE CORE', items: [
+          { testID: 'hh-healing', icon: 'sync-outline', title: 'Healing Loop', subtitle: 'Injury → instant money → doctor → sick leave → physio', route: '/healing' },
+          { testID: 'hh-translate', icon: 'language-outline', title: 'Referral & AI Translator', subtitle: 'Scan a referral slip · OCR → plain language', route: '/translate' },
+          { testID: 'hh-waitlist', icon: 'calendar-outline', title: 'Appointment Hunter', subtitle: 'Automatic hunting & booking · based on your location (GPS)', route: '/(tabs)/waitlist' },
+          { testID: 'hh-arbitrage', icon: 'airplane-outline', title: 'Global Arbitrage', subtitle: 'Surgeries in 🇵🇱 🇭🇺 🇹🇷 · bill prediction', route: '/arbitrage' },
+          { testID: 'hh-recovery', icon: 'bed-outline', title: 'My Recovery (Sick Leave)', subtitle: 'eSick-note · outings · sick-pay calculator', route: '/my-recovery' },
+          { testID: 'hh-physio', icon: 'body-outline', title: 'Physio-AI Rehabilitation', subtitle: 'Expert video guides · tailored routines', route: '/physio' },
         ] },
-        { title: '🗄 ZDRAVOTNÉ DÁTA', items: [
-          { testID: 'hh-vault', icon: 'lock-closed-outline', title: 'Zdravotný trezor', subtitle: 'Dokumenty · OCR · AI preklad', choices: [
-            { icon: 'folder-open-outline', label: 'Otvoriť trezor', sub: 'Zobraziť a spravovať dokumenty', route: '/(tabs)/vault' },
-            { icon: 'camera-outline', label: 'Nahrať dokument + AI preklad', sub: 'Odfotiť / nahrať → ľudská reč', route: '/translate' },
-            { icon: 'id-card-outline', label: 'Karta života', sub: 'Všetky záznamy chronologicky', route: '/health-timeline' },
+        { title: '🗄 HEALTH DATA', items: [
+          { testID: 'hh-vault', icon: 'lock-closed-outline', title: 'Health Vault', subtitle: 'Documents · OCR · AI translation', choices: [
+            { icon: 'folder-open-outline', label: 'Open vault', sub: 'View and manage documents', route: '/(tabs)/vault' },
+            { icon: 'camera-outline', label: 'Upload document + AI translation', sub: 'Photograph / upload → plain language', route: '/translate' },
+            { icon: 'id-card-outline', label: 'Life Card', sub: 'All records chronologically', route: '/health-timeline' },
           ] },
-          { testID: 'hh-lens', icon: 'aperture-outline', title: 'Guardian Lens', subtitle: 'Odfoť liek či nález · AI okamžite koná', route: '/lens' },
-          { testID: 'hh-drop', icon: 'cloud-download-outline', title: 'Health Drop — od lekára', subtitle: 'Lekár → trezor · šifrované', route: '/health-drop' },
-          { testID: 'hh-clinic-sync', icon: 'wifi-outline', title: 'Synchronizácia s klinikou', subtitle: 'Lekár „beamne" nález do trezora · QR', route: '/clinic-sync' },
-          { testID: 'hh-news', icon: 'flask-outline', title: 'Medicínske novinky', subtitle: 'Prelomy krížené s tvojím trezorom · CZ/SK', route: '/medical-news' },
-          { testID: 'hh-border', icon: 'airplane-outline', title: 'Cestovný certifikát', subtitle: 'Certifikát o liekoch · 14 jazykov', route: '/border-pass' },
-          { testID: 'hh-ips', icon: 'globe-outline', title: 'Zdravotný sumár (IPS)', subtitle: '1 ťuk: HL7 FHIR export · EÚ / UK / USA', onPress: () => { sharePdf('/ips/summary.pdf', 'guardian_ips_summary.pdf').catch(() => {}); } },
-          { testID: 'hh-bible', icon: 'book-outline', title: 'Biblia prežitia', subtitle: 'Jedným ťukom: tlačiteľné PDF kritických dát', onPress: () => { sharePdf('/survival/bible.pdf', 'guardian_survival_bible.pdf').catch(() => {}); } },
+          { testID: 'hh-lens', icon: 'aperture-outline', title: 'Guardian Lens', subtitle: 'Photograph a pill or report · AI acts instantly', route: '/lens' },
+          { testID: 'hh-drop', icon: 'cloud-download-outline', title: 'Health Drop — from your doctor', subtitle: 'Doctor → vault · encrypted', route: '/health-drop' },
+          { testID: 'hh-clinic-sync', icon: 'wifi-outline', title: 'Clinic Sync', subtitle: 'Doctor beams a report into your vault · QR', route: '/clinic-sync' },
+          { testID: 'hh-news', icon: 'flask-outline', title: 'Medical News', subtitle: 'Breakthroughs matched to your vault', route: '/medical-news' },
+          { testID: 'hh-border', icon: 'airplane-outline', title: 'Travel Certificate', subtitle: 'Medication certificate · 14 languages', route: '/border-pass' },
+          { testID: 'hh-ips', icon: 'globe-outline', title: 'Health Summary (IPS)', subtitle: 'One tap: HL7 FHIR export · EU / UK / USA', onPress: () => { sharePdf('/ips/summary.pdf', 'guardian_ips_summary.pdf').catch(() => {}); } },
+          { testID: 'hh-bible', icon: 'book-outline', title: 'Survival Bible', subtitle: 'One tap: printable PDF of critical data', onPress: () => { sharePdf('/survival/bible.pdf', 'guardian_survival_bible.pdf').catch(() => {}); } },
         ] },
-        { title: '💊 LIEKY A TELO', items: [
-          { testID: 'hh-meds', icon: 'alarm-outline', title: 'Lieky dnes', subtitle: 'Pripomienky · sken · interakcie · lekárne', choices: [
-            { icon: 'aperture-outline', label: 'Skenovať obal lieku', sub: 'Guardian Lens — AI rozpozná liek', route: '/lens' },
-            { icon: 'create-outline', label: 'Manuálne pridať / pripomienky', sub: 'Dávkovanie a hlasové upozornenia', route: '/meds' },
-            { icon: 'git-compare-outline', label: 'Skontrolovať interakcie', sub: 'AI kontrola vašej lekárničky', route: '/medicine-cabinet' },
-            { icon: 'flask-outline', label: 'Dostupnosť v lekárňach', sub: 'Lovec liekov — sklady vo vašom meste', route: '/pharmacy-hunter' },
+        { title: '💊 MEDS & BODY', items: [
+          { testID: 'hh-meds', icon: 'alarm-outline', title: 'Meds Today', subtitle: 'Reminders · scan · interactions · pharmacies', choices: [
+            { icon: 'aperture-outline', label: 'Scan medication box', sub: 'Guardian Lens — AI recognizes the drug', route: '/lens' },
+            { icon: 'create-outline', label: 'Add manually / reminders', sub: 'Dosage and voice alerts', route: '/meds' },
+            { icon: 'git-compare-outline', label: 'Check interactions', sub: 'AI check of your medicine cabinet', route: '/medicine-cabinet' },
+            { icon: 'flask-outline', label: 'Pharmacy availability', sub: 'Med Hunter — stock in your city', route: '/pharmacy-hunter' },
           ] },
-          { testID: 'hh-cabinet', icon: 'medkit-outline', title: 'Lekárnička', subtitle: 'Zásoby · expirácie · AI kontrola interakcií', route: '/medicine-cabinet' },
-          { testID: 'hh-pharmacy', icon: 'flask-outline', title: 'Lovec liekov', subtitle: 'Dostupnosť liekov v lekárňach CZ/SK', route: '/pharmacy-hunter' },
-          { testID: 'hh-bioscan', icon: 'scan-outline', title: 'Bio-skener vitálov', subtitle: 'Tep · SpO2 · tlak · stres kamerou', route: '/bioscan' },
-          { testID: 'hh-longevity', icon: 'infinite-outline', title: 'Motor dlhovekosti', subtitle: 'Biologický vek · AI Bio-Hacks', route: '/longevity' },
-          { testID: 'hh-mental', icon: 'shield-outline', title: 'Mentálna pevnosť', subtitle: 'Krízový audio sprievodca · akupresúra', route: '/mental-fortress' },
+          { testID: 'hh-cabinet', icon: 'medkit-outline', title: 'Medicine Cabinet', subtitle: 'Stock · expiry dates · AI interaction check', route: '/medicine-cabinet' },
+          { testID: 'hh-pharmacy', icon: 'flask-outline', title: 'Med Hunter', subtitle: 'Medication availability in pharmacies', route: '/pharmacy-hunter' },
+          { testID: 'hh-bioscan', icon: 'scan-outline', title: 'Vitals Bio-Scanner', subtitle: 'Pulse · SpO2 · pressure · stress via camera', route: '/bioscan' },
+          { testID: 'hh-longevity', icon: 'infinite-outline', title: 'Longevity Engine', subtitle: 'Biological age · AI Bio-Hacks', route: '/longevity' },
+          { testID: 'hh-mental', icon: 'shield-outline', title: 'Mental Fortress', subtitle: 'Crisis audio guide · acupressure', route: '/mental-fortress' },
         ] },
       ]}
     />

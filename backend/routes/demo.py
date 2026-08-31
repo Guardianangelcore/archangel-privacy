@@ -70,3 +70,57 @@ async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(
                   "family_pulse": "Strážca · V PORIADKU"}
     await db.users.update_one({"user_id": uid}, {"$set": {"demo_mode": body.enabled}})
     return {"demo_mode": body.enabled, "seeded": seeded}
+
+# ---- COMPETITION DEMO SEED — pre-fills the Life Card for the demo user ----
+# Idempotent (marker in db.demo_seed). English titles for the Builders' Fest jury.
+DEMO_LIFECARD = [
+    {"category": "vaccine", "title": "Flu vaccine", "date": "2023-10-15", "notes": "Seasonal influenza shot", "booster_due": None},
+    {"category": "vaccine", "title": "Tetanus booster", "date": "2021-05-20", "notes": "Booster dose", "booster_due": "2036-05-20"},
+    {"category": "vaccine", "title": "COVID-19 booster", "date": "2022-04-10", "notes": "mRNA booster dose", "booster_due": None},
+    {"category": "surgery", "title": "Knee arthroscopy", "date": "2019-08-12", "notes": "Right knee, full recovery", "booster_due": None},
+    {"category": "surgery", "title": "Appendectomy", "date": "2012-03-25", "notes": "Appendix removal, no complications", "booster_due": None},
+    {"category": "exam", "title": "Lab: Blood glucose 5.2 mmol/L", "date": "2024-01-15", "notes": "Normal range (3.9–5.5 mmol/L) ✅", "booster_due": None},
+    {"category": "exam", "title": "Lab: Total cholesterol 4.8 mmol/L", "date": "2024-01-15", "notes": "Normal range (< 5.0 mmol/L) ✅", "booster_due": None},
+]
+DEMO_PREDICTION = {
+    "title": "Annual physical examination",
+    "category": "exam",
+    "suggested_date": "2026-09-15",
+    "reason": "Based on your history, your annual physical examination is due in September 2026.",
+}
+
+@api.post("/demo/seed")
+async def demo_seed_lifecard(authorization: Optional[str] = Header(None)):
+    """Seed the competition demo Life Card for the current user (idempotent)."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    if await db.demo_seed.find_one({"user_id": uid, "kind": "lifecard"}):
+        return {"ok": True, "seeded": False, "reason": "already seeded"}
+    now = datetime.now(timezone.utc)
+    # Identity — birth certificate: DOB 1985-03-15, blood type A+
+    await db.users.update_one({"user_id": uid}, {"$set": {"birth_date": "1985-03-15", "birth_year": 1985, "language": "en"}})
+    await db.emergency_profiles.update_one(
+        {"user_id": uid},
+        {"$set": {"user_id": uid, "blood_type": "A+",
+                  "full_name": user.get("name") or "Guardian Angel"}},
+        upsert=True)
+    # Timeline records
+    docs = []
+    for d in DEMO_LIFECARD:
+        docs.append({"event_id": uuid.uuid4().hex, "user_id": uid, "child_id": None,
+                     "source": "manual", "demo": True, "created_at": now, **d})
+    # Jarvis prediction shown in the timeline as an upcoming AI reminder
+    docs.append({"event_id": uuid.uuid4().hex, "user_id": uid, "child_id": None,
+                 "category": "exam", "title": DEMO_PREDICTION["title"],
+                 "date": DEMO_PREDICTION["suggested_date"],
+                 "notes": f"Jarvis prediction · {DEMO_PREDICTION['reason']}",
+                 "booster_due": None, "source": "jarvis", "demo": True, "created_at": now})
+    await db.calendar_events.insert_many(docs)
+    # Prediction card in the PREDICTIONS box
+    await db.lifecard_predictions.update_one(
+        {"user_id": uid, "child_id": None},
+        {"$set": {"user_id": uid, "child_id": None, "generated_at": now,
+                  "predictions": [DEMO_PREDICTION]}},
+        upsert=True)
+    await db.demo_seed.insert_one({"user_id": uid, "kind": "lifecard", "at": now})
+    return {"ok": True, "seeded": True, "records": len(docs)}

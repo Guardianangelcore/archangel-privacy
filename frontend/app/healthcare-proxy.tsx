@@ -21,7 +21,7 @@ const SCOPES = [
 
 export default function HealthcareProxy() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [f, setF] = useState<any>({ proxy_full_name: '', proxy_relationship: 'partner', proxy_phone: '', proxy_email: '', scope: 'full', effective_immediately: true, alternate_name: '', notes: '' });
   const [doc, setDoc] = useState<any>(null);

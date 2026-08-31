@@ -21,7 +21,7 @@ const MOOD_ICONS: Record<number, any> = { 5: 'sunny', 4: 'partly-sunny', 3: 'clo
 
 export default function FamilyDashboard() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [dash, setDash] = useState<Dash | null>(null);
   const [loved, setLoved] = useState<any[]>([]);
@@ -104,14 +104,14 @@ export default function FamilyDashboard() {
 
         {/* RECOVERY PULSE — loved ones' pain curve & healing progress */}
         {loved.length > 0 && (<>
-          <Text style={styles.section}>💛 ZOTAVENIE BLÍZKYCH</Text>
+          <Text style={styles.section}>💛 FAMILY RECOVERY</Text>
           {loved.map(p => (
             <View key={p.user_id} testID={`fd-loved-${p.user_id}`} style={styles.lovedCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="heart" size={16} color={C.brand} />
                 <Text style={styles.lovedName}>{p.name}</Text>
                 {p.healing_active && (
-                  <View style={styles.lovedPill}><Text style={styles.lovedPillText}>KOLOTOČ {p.healing_progress_pct} %</Text></View>
+                  <View style={styles.lovedPill}><Text style={styles.lovedPillText}>LOOP {p.healing_progress_pct} %</Text></View>
                 )}
               </View>
               {!!p.healing_label && <Text style={styles.lovedSub}>{p.healing_label}</Text>}
@@ -124,22 +124,22 @@ export default function FamilyDashboard() {
                 </View>
               ) : null}
               <Text style={[styles.lovedMsg, p.pain_trend === 'worsening' && { color: C.warn }]}>{p.message}</Text>
-              {!!p.last_mood_label && <Text style={styles.lovedSub}>Posledná nálada: {p.last_mood_label}</Text>}
+              {!!p.last_mood_label && <Text style={styles.lovedSub}>Last mood: {p.last_mood_label}</Text>}
               {/* ONE-TAP ENCOURAGEMENT — sends a Voice Echo straight from the card */}
               {encSent[p.user_id] ? (
-                <Text testID={`fd-enc-sent-${p.user_id}`} style={styles.encSent}>✓ Povzbudenie odoslané — Jarvis mu ho prečíta nahlas 💛</Text>
+                <Text testID={`fd-enc-sent-${p.user_id}`} style={styles.encSent}>✓ Encouragement sent — Jarvis will read it aloud to them 💛</Text>
               ) : (
                 <Pressable testID={`fd-encourage-${p.user_id}`} onPress={async () => {
                   try {
                     const msg = p.pain_trend === 'worsening'
-                      ? 'Drž sa! Myslíme na teba — zajtra bude lepšie. Ľúbime ťa. ❤️'
-                      : 'Sme na teba hrdí, zotavenie ti ide skvele! Len tak ďalej. ❤️';
+                      ? 'Hang in there! We are thinking of you — tomorrow will be better. We love you. ❤️'
+                      : 'We are proud of you, your recovery is going great! Keep it up. ❤️';
                     await api('/family/echoes/send', { method: 'POST', body: JSON.stringify({ to_email: p.email, message: msg }) });
                     setEncSent(prev => ({ ...prev, [p.user_id]: true }));
                   } catch (e) { console.log(e); }
                 }} style={styles.encBtn}>
                   <Ionicons name="heart-circle" size={16} color={C.onInverse} />
-                  <Text style={styles.encBtnText}>POSLAŤ POVZBUDENIE (VOICE ECHO)</Text>
+                  <Text style={styles.encBtnText}>SEND ENCOURAGEMENT (VOICE ECHO)</Text>
                 </Pressable>
               )}
             </View>
@@ -210,14 +210,14 @@ export default function FamilyDashboard() {
               <View key={f.event_id} style={[styles.alertRow, f.verified && { borderColor: C.error }]}>
                 <Ionicons name="warning-outline" size={18} color={f.verified ? C.error : C.onS3} />
                 <Text style={styles.alertText}>
-                  {f.cancelled ? 'PÁD — ZRUŠENÝ (OK)' : 'PÁD — ESKALOVANÝ'} · {String(f.triggered_at).slice(0, 16).replace('T', ' ')}
+                  {f.cancelled ? 'FALL — CANCELLED (OK)' : 'FALL — ESCALATED'} · {String(f.triggered_at).slice(0, 16).replace('T', ' ')}
                 </Text>
               </View>
             ))}
             {dash?.inactivity_alerts?.map((a: any) => (
               <View key={a.alert_id} style={[styles.alertRow, { borderColor: C.warn }]}>
                 <Ionicons name="time-outline" size={18} color={C.onWarn} />
-                <Text style={styles.alertText}>NEČINNOSŤ {a.hours_inactive}h · {String(a.created_at).slice(0, 16).replace('T', ' ')}</Text>
+                <Text style={styles.alertText}>INACTIVITY {a.hours_inactive}h · {String(a.created_at).slice(0, 16).replace('T', ' ')}</Text>
               </View>
             ))}
           </>

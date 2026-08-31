@@ -40,7 +40,7 @@ export default function DailyBrief() {
         }
         await Notifications.scheduleNotificationAsync({
           identifier: 'daily-brief-8am',
-          content: { title: '☀️ Dobré ráno', body: 'Váš denný prehľad je pripravený — lieky, termíny a odkazy od rodiny.', data: { deeplink: '/daily-brief' } },
+          content: { title: '☀️ Good morning', body: 'Your daily briefing is ready — meds, appointments and family messages.', data: { deeplink: '/daily-brief' } },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: 8, minute: 0 } as any,
         });
       }
@@ -63,37 +63,37 @@ export default function DailyBrief() {
         <Pressable testID="db-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>DENNÝ PREHĽAD</Text>
+        <Text style={styles.title}>DAILY BRIEFING</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView
         contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
-        <Text style={styles.greet}>Dobré ráno,{'\n'}{brief?.name || '…'}.</Text>
+        <Text style={styles.greet}>Good morning,{'\n'}{brief?.name || '…'}.</Text>
         <Text style={styles.date}>{today}</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         <View style={styles.notifRow}>
           <Ionicons name="sunny" size={20} color="#B8860B" />
-          <Text style={styles.notifText}>Ranné pripomenutie o 8:00</Text>
+          <Text style={styles.notifText}>Morning reminder at 8:00</Text>
           <Switch testID="db-notif" value={notifOn} onValueChange={toggleNotif} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={styles.section}>💊 LIEKY DNES {brief ? `· ${brief.meds.pending} ČAKÁ` : ''}</Text>
+        <Text style={styles.section}>💊 MEDS TODAY {brief ? `· ${brief.meds.pending} PENDING` : ''}</Text>
         {(brief?.meds?.items || []).map((m: any, i: number) => (
           <Pressable key={i} testID={`db-med-${i}`} onPress={() => !m.taken && takeMed(m)} style={[styles.bigRow, m.taken && { opacity: 0.45 }]}>
             <Ionicons name={m.taken ? 'checkmark-circle' : 'ellipse-outline'} size={30} color={m.taken ? '#5FA779' : C.brand} />
             <View style={{ flex: 1 }}>
               <Text style={styles.bigTitle}>{m.name}{m.dose ? ` · ${m.dose}` : ''}</Text>
-              <Text style={styles.bigSub}>{m.taken ? 'Užité ✓' : 'Ťuknite, keď užijete'}</Text>
+              <Text style={styles.bigSub}>{m.taken ? 'Taken ✓' : 'Tap when taken'}</Text>
             </View>
             <Text style={styles.bigTime}>{m.time}</Text>
           </Pressable>
         ))}
-        {brief && brief.meds.items.length === 0 && <Text style={styles.empty}>Žiadne lieky na dnes. Pridajte pripomienky v sekcii Lieky.</Text>}
+        {brief && brief.meds.items.length === 0 && <Text style={styles.empty}>No meds for today. Add reminders in the Meds section.</Text>}
 
-        <Text style={styles.section}>📅 TERMÍNY</Text>
+        <Text style={styles.section}>📅 APPOINTMENTS</Text>
         {(brief?.events_today || []).map((e: any) => (
           <View key={e.event_id} style={[styles.bigRow, { borderColor: C.error, borderWidth: 2 }]}>
             <Ionicons name="alarm" size={28} color={C.error} />
@@ -113,7 +113,7 @@ export default function DailyBrief() {
           </View>
         ))}
         {brief && brief.events_today.length === 0 && brief.events_upcoming.length === 0 && (
-          <Text style={styles.empty}>Najbližšie 3 dni žiadne termíny. Oddychujte. 🌿</Text>
+          <Text style={styles.empty}>No appointments in the next 3 days. Rest up. 🌿</Text>
         )}
 
         <Text style={styles.section}>👪 RODINA</Text>
@@ -121,22 +121,22 @@ export default function DailyBrief() {
           <Pressable key={p.req_id} testID={`db-pulse-${p.req_id}`} onPress={() => answerPulse(p)} style={[styles.bigRow, { backgroundColor: C.brandTer }]}>
             <Ionicons name="heart" size={28} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.bigTitle}>{p.from_name} sa pýta, či ste OK</Text>
-              <Text style={styles.bigSub}>Ťuknite pre odpoveď „SOM V PORIADKU“</Text>
+              <Text style={styles.bigTitle}>{p.from_name} is asking if you are OK</Text>
+              <Text style={styles.bigSub}>Tap to reply I AM OK</Text>
             </View>
           </Pressable>
         ))}
         {brief && brief.family.pending_pulse.length === 0 && (
-          <Text style={styles.empty}>Žiadne nové odkazy od rodiny.{brief.family.emergency_contact ? ` Núdzový kontakt: ${brief.family.emergency_contact}.` : ''}</Text>
+          <Text style={styles.empty}>No new family messages.{brief.family.emergency_contact ? ` Emergency contact: ${brief.family.emergency_contact}.` : ''}</Text>
         )}
 
         {brief?.jarvis_last_action && (
           <>
-            <Text style={styles.section}>🧠 JARVIS PRE VÁS VYBAVIL</Text>
+            <Text style={styles.section}>🧠 JARVIS HANDLED FOR YOU</Text>
             <View style={styles.bigRow}>
               <Ionicons name="sparkles" size={26} color={C.brand} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.bigTitle}>{brief.jarvis_last_action.booked_slot ? `Termín: ${brief.jarvis_last_action.booked_slot}` : `Dokument spracovaný`}</Text>
+                <Text style={styles.bigTitle}>{brief.jarvis_last_action.booked_slot ? `Appointment: ${brief.jarvis_last_action.booked_slot}` : `Document processed`}</Text>
                 <Text style={styles.bigSub}>{brief.jarvis_last_action.doc_title}</Text>
               </View>
             </View>
@@ -144,7 +144,7 @@ export default function DailyBrief() {
         )}
 
         {brief?.recovery?.status === 'active' && (
-          <Text style={styles.recovery}>🤒 Aktívna PN do {brief.recovery.end_date || '—'} — dodržujte vychádzky.</Text>
+          <Text style={styles.recovery}>🤒 Active sick leave until {brief.recovery.end_date || '—'} — respect your outing windows.</Text>
         )}
         {brief && <Text style={styles.gat}>💎 GA-T zostatok: {Number(brief.gat_balance).toFixed(1)}</Text>}
       </ScrollView>

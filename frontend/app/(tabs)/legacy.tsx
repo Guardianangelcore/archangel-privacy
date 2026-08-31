@@ -7,38 +7,38 @@ export default function LegacyWealth() {
     <PillarHub
       testID="hub-legacy"
       icon="shield-checkmark"
-      title="Suverénny trezor"
-      subtitle="Pilier 3 · Moc a prežitie — majetok, poistky, večný odkaz a bunker mód."
+      title="Sovereign Vault"
+      subtitle="Pillar 3 · Power & survival — wealth, insurance, eternal legacy and bunker mode."
       sections={[
-        { title: 'A · MAJETOK A POISTKY', items: [
-          { testID: 'lw-wealth', icon: 'wallet-outline', title: 'Trezor majetku', subtitle: 'Krypto + IBAN · okamžitá výplata na kartu', route: '/wealth-vault' },
-          { testID: 'lw-insurance', icon: 'umbrella-outline', title: 'Strážca poistiek', subtitle: 'Insurance Auditor · splatnosť · Jarvis alarm', route: '/insurance' },
-          { testID: 'lw-healing', icon: 'sync-outline', title: 'Finančný štít pri úraze', subtitle: 'Kolotoč uzdravenia — poistka platí hneď', route: '/healing' },
-          { testID: 'lw-refunds', icon: 'cash-outline', title: 'Moje nároky', subtitle: 'Refundácie poisťovne · daňový odpočet · 1 ťuk', route: '/refunds' },
-          { testID: 'lw-token', icon: 'diamond-outline', title: 'GA-T peňaženka', subtitle: 'Guardian Token · GBI príjem · burn rate', route: '/token' },
-          { testID: 'lw-subscription', icon: 'star-outline', title: 'Predplatné', subtitle: 'Guardian · Sentinel · Archangel — aj GA-T', route: '/subscription' },
-          { testID: 'lw-protocol', icon: 'globe-outline', title: 'Data Marketplace', subtitle: 'API brána · predaj anonymných dát · Sentinel', route: '/protocol' },
-          { testID: 'lw-market', icon: 'briefcase-outline', title: 'Služby expertov', subtitle: 'Cash / crypto · bez provízií', route: '/marketplace' },
-          { testID: 'lw-impact', icon: 'planet-outline', title: 'Môj svetový odtlačok', subtitle: 'Koľkým ľuďom ste dnes pomohli · zisk + hrdinstvo', route: '/impact' },
-          { testID: 'lw-barter', icon: 'swap-horizontal-outline', title: 'Výmena služieb', subtitle: 'Kredity dôvery · služba za službu', route: '/barter' },
-          { testID: 'lw-solidarity', icon: 'heart-circle-outline', title: 'Solidarita', subtitle: 'P2P kampane · AML chránené', route: '/solidarity' },
-          { testID: 'lw-inner-circle', icon: 'diamond-outline', title: 'Vnútorný kruh', subtitle: 'Doživotný Archangel pre rodinu zakladateľa', route: '/inner-circle' },
+        { title: 'A · WEALTH & INSURANCE', items: [
+          { testID: 'lw-wealth', icon: 'wallet-outline', title: 'Wealth Vault', subtitle: 'Crypto + IBAN · instant card payout', route: '/wealth-vault' },
+          { testID: 'lw-insurance', icon: 'umbrella-outline', title: 'Insurance Guardian', subtitle: 'Insurance Auditor · due dates · Jarvis alarm', route: '/insurance' },
+          { testID: 'lw-healing', icon: 'sync-outline', title: 'Financial Shield on Injury', subtitle: 'Healing Loop — insurance pays instantly', route: '/healing' },
+          { testID: 'lw-refunds', icon: 'cash-outline', title: 'My Claims', subtitle: 'Insurance refunds · tax deduction · one tap', route: '/refunds' },
+          { testID: 'lw-token', icon: 'diamond-outline', title: 'GA-T Wallet', subtitle: 'Guardian Token · GBI income · burn rate', route: '/token' },
+          { testID: 'lw-subscription', icon: 'star-outline', title: 'Subscription', subtitle: 'Guardian · Sentinel · Archangel — GA-T accepted', route: '/subscription' },
+          { testID: 'lw-protocol', icon: 'globe-outline', title: 'Data Marketplace', subtitle: 'API gateway · sell anonymous data · Sentinel', route: '/protocol' },
+          { testID: 'lw-market', icon: 'briefcase-outline', title: 'Expert Services', subtitle: 'Cash / crypto · zero commission', route: '/marketplace' },
+          { testID: 'lw-impact', icon: 'planet-outline', title: 'My World Impact', subtitle: 'How many people you helped today · profit + heroism', route: '/impact' },
+          { testID: 'lw-barter', icon: 'swap-horizontal-outline', title: 'Service Barter', subtitle: 'Trust credits · service for service', route: '/barter' },
+          { testID: 'lw-solidarity', icon: 'heart-circle-outline', title: 'Solidarity', subtitle: 'P2P campaigns · AML protected', route: '/solidarity' },
+          { testID: 'lw-inner-circle', icon: 'diamond-outline', title: 'Inner Circle', subtitle: 'Lifetime Archangel for the founder family', route: '/inner-circle' },
         ] },
-        { title: 'B · ODKAZ — VEČNÝ TREZOR 🔒', items: [
-          { testID: 'lw-eternal', icon: 'finger-print-outline', title: 'Večný trezor', subtitle: 'Biometrický zámok: video-závety · pohrebný fond · digitálny exekútor', route: '/eternal-vault' },
+        { title: 'B · LEGACY — ETERNAL VAULT 🔒', items: [
+          { testID: 'lw-eternal', icon: 'finger-print-outline', title: 'Eternal Vault', subtitle: 'Biometric lock: video wills · funeral fund · digital executor', route: '/eternal-vault' },
         ] },
-        { title: 'C · PREŽITIE — BUNKER MODE', items: [
-          { testID: 'lw-compass', icon: 'compass-outline', title: 'Kompas prežitia', subtitle: 'Satelitný handshake · Bio-Beacon · bod S3', route: '/compass' },
-          { testID: 'lw-mesh', icon: 'radio-outline', title: 'Mesh správy', subtitle: 'P2P offline správy nezávislé od operátorov', route: '/mesh' },
-          { testID: 'lw-blackout', icon: 'flash-off-outline', title: 'Blackout protokol', subtitle: 'Offline režim · mesh sieť', route: '/blackout' },
-          { testID: 'lw-survival', icon: 'cube-outline', title: 'Zásoby prežitia', subtitle: 'Supply arbitráž · voda · jedlo · dni prežitia', route: '/survival-auditor' },
-          { testID: 'lw-pantry', icon: 'scan-circle-outline', title: 'Survival Pantry Scanner', subtitle: 'Jarvis stráži konzervy · batérie · filtre · expiráciu', route: '/pantry' },
-          { testID: 'lw-enviro', icon: 'thunderstorm-outline', title: 'Mapa hrozieb', subtitle: 'Environmentálne hrozby · mesh konsenzus', route: '/enviro' },
-          { testID: 'lw-humanitarian', icon: 'earth-outline', title: 'Humanitárny štít', subtitle: 'Krízová identita · Červený kríž / UN', route: '/humanitarian' },
-          { testID: 'lw-truth', icon: 'checkmark-done-outline', title: 'Overovač faktov', subtitle: 'Peer-konsenzus proti dezinformáciám', route: '/truth-validator' },
-          { testID: 'lw-ghost', icon: 'eye-off-outline', title: 'Ghost režim & šetrič', subtitle: 'Anonymný pacientsky token · Power-Saver', route: '/ghost-mode' },
-          { testID: 'lw-fortress', icon: 'shield-half-outline', title: 'Kyber pevnosť', subtitle: 'Zero-Knowledge · DePIN uzly · self-healing', route: '/fortress' },
-          { testID: 'lw-recovery-suite', icon: 'key-outline', title: '3-stupňová obnova', subtitle: 'Social Recovery · QR Talizman · Biometria', route: '/recovery-suite' },
+        { title: 'C · SURVIVAL — BUNKER MODE', items: [
+          { testID: 'lw-compass', icon: 'compass-outline', title: 'Survival Compass', subtitle: 'Satellite handshake · Bio-Beacon · point S3', route: '/compass' },
+          { testID: 'lw-mesh', icon: 'radio-outline', title: 'Mesh Messages', subtitle: 'P2P offline messages independent of carriers', route: '/mesh' },
+          { testID: 'lw-blackout', icon: 'flash-off-outline', title: 'Blackout Protocol', subtitle: 'Offline mode · mesh network', route: '/blackout' },
+          { testID: 'lw-survival', icon: 'cube-outline', title: 'Survival Supplies', subtitle: 'Supply arbitrage · water · food · survival days', route: '/survival-auditor' },
+          { testID: 'lw-pantry', icon: 'scan-circle-outline', title: 'Survival Pantry Scanner', subtitle: 'Jarvis guards cans · batteries · filters · expiry', route: '/pantry' },
+          { testID: 'lw-enviro', icon: 'thunderstorm-outline', title: 'Threat Map', subtitle: 'Environmental threats · mesh consensus', route: '/enviro' },
+          { testID: 'lw-humanitarian', icon: 'earth-outline', title: 'Humanitarian Shield', subtitle: 'Crisis identity · Red Cross / UN', route: '/humanitarian' },
+          { testID: 'lw-truth', icon: 'checkmark-done-outline', title: 'Fact Validator', subtitle: 'Peer consensus against disinformation', route: '/truth-validator' },
+          { testID: 'lw-ghost', icon: 'eye-off-outline', title: 'Ghost Mode & Power Saver', subtitle: 'Anonymous patient token · Power Saver', route: '/ghost-mode' },
+          { testID: 'lw-fortress', icon: 'shield-half-outline', title: 'Cyber Fortress', subtitle: 'Zero-Knowledge · DePIN nodes · self-healing', route: '/fortress' },
+          { testID: 'lw-recovery-suite', icon: 'key-outline', title: '3-Tier Recovery', subtitle: 'Social Recovery · QR Talisman · Biometrics', route: '/recovery-suite' },
           { testID: 'lw-mosaic', icon: 'cube-outline', title: 'Mosaic Protocol', subtitle: 'ZK-Rollup L2 · PQC · zero-fee', route: '/mosaic' },
         ] },
       ]}

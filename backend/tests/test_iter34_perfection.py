@@ -7,7 +7,7 @@ Covers:
   - Silent Witness: session/chunk/close/list lifecycle
   - Streak freeze (weekly cap) + blazing celebrated flag
   - Angel Pulse: send / inbox / felt
-  - Regression: /api/achievements badges + /api/streaks/physio flags + /api/voice/tts
+  - Regression: /api/streaks/physio flags + /api/voice/tts
 
 Design notes:
   * Seed rows tagged {"seeded_test": True} where possible for safe cleanup.
@@ -448,16 +448,6 @@ class TestAngelPulse:
 # REGRESSION
 # ============================================================================
 class TestRegression:
-    def test_achievements_8_badges(self):
-        r = requests.get(f"{BASE_URL}/api/achievements", headers=AUTH)
-        assert r.status_code == 200
-        b = r.json()
-        # Response shape: {unlocked:[], locked:[], unlocked_count, total}
-        assert b["total"] == 8
-        assert len(b["unlocked"]) + len(b["locked"]) == 8
-        for badge in (b["unlocked"] + b["locked"]):
-            assert "key" in badge and "title" in badge
-
     def test_streaks_flags(self):
         r = requests.get(f"{BASE_URL}/api/streaks/physio", headers=AUTH)
         assert r.status_code == 200

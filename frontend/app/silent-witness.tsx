@@ -93,7 +93,7 @@ export default function SilentWitness() {
       setRecording(true);
       tap('medium');
       jarvisSpeak('Tichý svedok aktívny. Dôkaz sa streamuje do Trezoru.', {
-        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       // schedule rolling chunk uploads
       scheduleNextChunk(opened.session_id);
@@ -145,7 +145,7 @@ export default function SilentWitness() {
       setSessionId(null);
       tap('success');
       jarvisSpeak('Dôkaz uzatvorený a zabezpečený v Trezore.', {
-        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk',
+        voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       await load();
     } catch (e: any) { setErr(String(e?.message || e)); }

@@ -20,7 +20,7 @@ const KIND_ICON: Record<string, any> = {
 
 export default function Gigs() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [tab, setTab] = useState<'open' | 'mine'>('open');
   const [open, setOpen] = useState<any[]>([]);

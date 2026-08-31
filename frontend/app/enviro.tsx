@@ -13,7 +13,7 @@ import { Lang } from '@/src/i18n';
 
 export default function Enviro() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [threats, setThreats] = useState<any[]>([]);
   const [kinds, setKinds] = useState<Record<string, any>>({});

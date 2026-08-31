@@ -16,7 +16,7 @@ const MOOD_ICONS: Record<number, any> = { 5: 'sunny', 4: 'partly-sunny', 3: 'clo
 
 export default function Wellness() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [mood, setMood] = useState<number | null>(null);
   const [text, setText] = useState('');

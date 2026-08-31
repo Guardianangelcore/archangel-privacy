@@ -17,7 +17,7 @@ type Doc = { doc_id: string; title: string; file_name: string; content_type: str
 
 export default function Vault() {
   const { user, setUser } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,14 +82,14 @@ export default function Vault() {
       if (ocr.birth_year_applied && ocr.birth_year_detected) {
         const stage = stageFromAge(ageFromBirthYear(ocr.birth_year_detected));
         const stageLbl = AGE_LABEL_SK[stage];
-        setAgeToast(`✨ Bio-Timeline aktualizovaná: ${stageLbl} (rok ${ocr.birth_year_detected})`);
+        setAgeToast(`✨ Bio-Timeline updated: ${stageLbl} (year ${ocr.birth_year_detected})`);
         try {
           const me: any = await api('/auth/me');
           if (me?.user) setUser(me.user);
         } catch {}
         try {
-          jarvisSpeak(`Rozumiem. Vek nastavený — ${stageLbl}. Rozhranie som prispôsobil.`,
-            { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'sk' });
+          jarvisSpeak(`Understood. Age set — ${stageLbl}. I adapted the interface.`,
+            { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' });
         } catch {}
         setTimeout(() => setAgeToast(''), 6000);
       }
@@ -129,7 +129,7 @@ export default function Vault() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{t('vault', lang).toUpperCase()}</Text>
-          <Text style={styles.sub}>ŠIFROVANÉ ÚLOŽISKO — LEN VY MÁTE KĽÚČ</Text>
+          <Text style={styles.sub}>ENCRYPTED STORAGE — ONLY YOU HOLD THE KEY</Text>
         </View>
         <Pressable testID="vault-settings" onPress={() => router.push('/(tabs)/profile')} hitSlop={10}>
           <Ionicons name="settings-outline" size={22} color={C.onInverse} />
@@ -148,7 +148,7 @@ export default function Vault() {
               <View style={styles.gallery}>
                 <View style={styles.galleryHead}>
                   <Ionicons name="color-palette" size={15} color={C.brand} />
-                  <Text style={styles.galleryTitle}>GALÉRIA OBRAZOV · JARVIS ({art.length})</Text>
+                  <Text style={styles.galleryTitle}>IMAGE GALLERY · JARVIS ({art.length})</Text>
                 </View>
                 <View style={styles.galleryGrid}>
                   {art.map(a => (
@@ -182,8 +182,8 @@ export default function Vault() {
                   {uploading ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="scan-outline" size={38} color={C.onInverse} />}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.firstScanTitle}>NASKENUJTE OBČIANKU</Text>
-                  <Text style={styles.firstScanSub}>Jarvis vyplní Vek, Bio-Timeline a poistkové polia — bez ťukania.</Text>
+                  <Text style={styles.firstScanTitle}>SCAN YOUR ID CARD</Text>
+                  <Text style={styles.firstScanSub}>Jarvis fills in Age, Bio-Timeline and insurance fields — no typing.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={C.onInverse} />
               </Pressable>
@@ -211,7 +211,7 @@ export default function Vault() {
             </View>
             <Pressable testID={`doc-view-${item.doc_id}`} onPress={() => view(item)} style={styles.viewBtn}>
               {opening === item.doc_id ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="eye-outline" size={16} color={C.brand} />}
-              <Text style={styles.viewBtnText}>ZOBRAZIŤ / OTVORIŤ</Text>
+              <Text style={styles.viewBtnText}>VIEW / OPEN</Text>
             </Pressable>
             {item.plain_language ? (
               <View style={styles.translation}>

@@ -34,7 +34,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="health"
         options={{
-          title: 'UZDRAVOVANIE',
+          title: 'HEALING',
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'sync-circle' : 'sync-circle-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-health',
         }}
@@ -42,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="family"
         options={{
-          title: 'RODINNÝ ŠTÍT',
+          title: 'FAMILY SHIELD',
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-family',
         }}
@@ -50,7 +50,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="legacy"
         options={{
-          title: 'TREZOR',
+          title: 'VAULT',
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-legacy',
         }}

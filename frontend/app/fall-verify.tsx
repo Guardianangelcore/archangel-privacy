@@ -19,7 +19,7 @@ const STROKE = 10;
 
 export default function FallVerify() {
   const { user } = useAuth();
-  const lang: Lang = (user?.language as Lang) || 'sk';
+  const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
   const [remain, setRemain] = useState(TOTAL);
   const [phase, setPhase] = useState<'countdown' | 'sent' | 'ok'>('countdown');
