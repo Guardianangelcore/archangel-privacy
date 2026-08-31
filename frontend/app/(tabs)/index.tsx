@@ -173,6 +173,16 @@ export default function Home() {
           </View>
         </View>
 
+        {/* MAGIC LENS — #1 senior wow feature: photograph any document, AI files it */}
+        <Pressable testID="home-magic-lens" onPress={() => { tap(); router.push('/magic-lens'); }} style={styles.magicTile}>
+          <View style={styles.magicIcon}><Ionicons name="scan" size={26} color={C.onInverse} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.magicTitle}>✨ MAGIC LENS</Text>
+            <Text style={styles.magicSub}>Point at any document — I read it, explain it and file it. No typing.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={C.brand} />
+        </Pressable>
+
         {/* JARVIS PRESENCE — pulsing AI Orb, the primary welcome interface */}
         <HomeOrb lang={lang} onPress={() => { tap('heavy'); router.push('/jarvis'); }} />
 
@@ -606,6 +616,10 @@ const styles = StyleSheet.create({
   welcomeBanner: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.md, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.55)', backgroundColor: 'rgba(212,175,55,0.08)', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm },
   welcomeTitle: { color: C.brand, fontWeight: '900', fontSize: 14, letterSpacing: 1.5 },
   welcomeSub: { color: C.fg, fontSize: 11.5, marginTop: 1, letterSpacing: 0.5 },
+  magicTile: { flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.md, borderWidth: 2, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.14)', borderRadius: R.lg, padding: S.md },
+  magicIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
+  magicTitle: { color: C.brand, fontWeight: '900', fontSize: 16, letterSpacing: 1.5 },
+  magicSub: { color: C.fg, fontSize: 12, marginTop: 2, lineHeight: 17 },
   briefIcon: { width: 44, height: 44, borderRadius: R.pill, backgroundColor: 'rgba(212,175,55,0.14)', alignItems: 'center', justifyContent: 'center' },
   briefTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   briefSub: { color: C.info, fontSize: 10.5, marginTop: 2 },

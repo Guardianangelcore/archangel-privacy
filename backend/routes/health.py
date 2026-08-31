@@ -1894,3 +1894,65 @@ async def recovery_report_pdf(kind: str = "employer", token: Optional[str] = Non
     )
     pdf = await run_in_threadpool(_make_pdf, title, body_txt, _pdf_footer())
     return _pdf_response(pdf, f"guardian_pn_report_{kind}.pdf")
+
+
+# --- MAGIC LENS — photograph ANY health document: AI OCR + plain-language
+# --- summary + Life Card category detection. Senior-first, zero typing.
+MAGIC_LENS_SYSTEM = (
+    "You are Guardian Magic Lens. You read a photo of a health-related document for a senior user. "
+    "Return ONLY valid JSON, no markdown: "
+    '{"found": true|false, "extracted_text": string, "summary": string, '
+    '"detected_category": "medications|allergies|vaccinations|lab_results|diagnoses|surgeries|doctor_visits|insurance|emergency_contacts|other", '
+    '"suggested_title": string}. '
+    "extracted_text = all legible text from the photo (verbatim OCR). "
+    "summary = 3-4 SHORT sentences in plain, simple language a 75-year-old instantly understands. "
+    "NO medical jargon — explain what the document says and what it means for the person. "
+    "Write the summary in English. "
+    "suggested_title = max 6 words naming the document (e.g. 'Tetanus vaccination record'). "
+    "found=false only when the image contains no readable document at all."
+)
+
+MAGIC_TO_LIFECARD = {
+    "vaccinations": "vaccine", "diagnoses": "disease", "allergies": "disease",
+    "surgeries": "surgery", "lab_results": "exam", "doctor_visits": "exam",
+    "medications": "exam", "insurance": "exam", "emergency_contacts": "exam", "other": "exam",
+}
+
+
+class MagicLensIn(BaseModel):
+    image_base64: str
+
+
+@api.post("/magic-lens")
+async def magic_lens(body: MagicLensIn, authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    b64 = (body.image_base64 or "").split(",")[-1].strip()
+    if not b64:
+        raise HTTPException(400, "Empty image")
+    if len(b64) > 20 * 1024 * 1024:
+        raise HTTPException(400, "Image too large (max ~15MB)")
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"magic-lens-{uuid.uuid4().hex[:6]}",
+        system_message=MAGIC_LENS_SYSTEM,
+    ).with_model("openai", "gpt-5.4")
+    try:
+        resp = await chat.send_message(UserMessage(
+            text="Read this document photo. JSON only.",
+            file_contents=[ImageContent(image_base64=b64)]))
+        m = re.search(r"\{.*\}", str(resp), re.S)
+        d = json.loads(m.group(0)) if m else {}
+    except Exception as e:
+        logger.error(f"magic lens error: {e}")
+        raise HTTPException(502, "AI service unavailable")
+    cat = str(d.get("detected_category") or "other").lower()
+    if cat not in MAGIC_TO_LIFECARD:
+        cat = "other"
+    return {
+        "found": bool(d.get("found")),
+        "extracted_text": str(d.get("extracted_text") or "")[:8000],
+        "summary": str(d.get("summary") or "")[:1200],
+        "detected_category": cat,
+        "suggested_title": str(d.get("suggested_title") or "Health document")[:80],
+        "lifecard_category": MAGIC_TO_LIFECARD[cat],
+    }

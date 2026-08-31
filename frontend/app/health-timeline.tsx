@@ -376,7 +376,7 @@ export default function LifeCard() {
                     <Text style={styles.idLabel}>SEX (for WHO growth percentiles)</Text>
                     <View style={{ flexDirection: 'row', gap: S.sm }}>
                       <Pressable testID="lc-sex-m" onPress={() => setESex(eSex === 'm' ? '' : 'm')} style={[styles.bloodChip, { flex: 1 }, eSex === 'm' && { backgroundColor: C.brand, borderColor: C.brand }]}>
-                        <Text style={[styles.bloodChipText, eSex === 'm' && { color: C.onInverse }]}>👦 CHLAPEC</Text>
+                        <Text style={[styles.bloodChipText, eSex === 'm' && { color: C.onInverse }]}>👦 BOY</Text>
                       </Pressable>
                       <Pressable testID="lc-sex-f" onPress={() => setESex(eSex === 'f' ? '' : 'f')} style={[styles.bloodChip, { flex: 1 }, eSex === 'f' && { backgroundColor: C.brand, borderColor: C.brand }]}>
                         <Text style={[styles.bloodChipText, eSex === 'f' && { color: C.onInverse }]}>👧 GIRL</Text>
@@ -411,6 +411,10 @@ export default function LifeCard() {
         {/* PDF · PREUKAZ EÚ · TRENDY · RAST — 1 ťuk */}
         {card && (
           <View style={styles.btnRow}>
+            <Pressable testID="lc-magic-lens" onPress={() => router.push('/magic-lens')} style={[styles.pdfBtn, { borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.12)' }]}>
+              <Ionicons name="scan" size={16} color={C.brand} />
+              <Text style={styles.pdfText}>✨ MAGIC LENS</Text>
+            </Pressable>
             <Pressable testID="lc-pdf" onPress={exportPdf} disabled={pdfBusy} style={styles.pdfBtn}>
               {pdfBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
                 <>
