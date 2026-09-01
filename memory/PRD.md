@@ -120,3 +120,10 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 - Google fix: exchangeSessionId no longer swallows errors (authError surfaced on login screen); web URL fragment cleaned only on success (playbook rules 7+8). Backend logs showed exchange 200s — failures were silent UI state.
 - models.py User.language default sk→en (new users get English TOS gate; en TOS existed in legacy.py TOS_TEXT).
 - Tested iter 51: 11/11 backend + full UI E2E green. Test account: demo.judge@guardian.app / guardian-demo-2026 (in test_credentials.md).
+
+## Forgot Password Flow (Iter 52, June 2026)
+- Emergent-managed Resend integration: /app/backend/emailer.py (EMAIL_BASE_URL constant, X-Email-Key, from_name=EMAIL_FROM_NAME env, full G2/G3 guardrail gate on every send). .env: EMERGENT_EMAIL_KEY + EMAIL_FROM_NAME added.
+- POST /api/auth/forgot-password: generic 200 always (no enumeration); 6-digit code sha256-hashed at rest, 15-min TTL, 3 requests/hour/email (old codes soft-invalidated via used:true — delete_many defeated the rate limit, FIXED after testing agent caught it), fixed HTML template (no links/forms).
+- POST /api/auth/reset-password: generic 400, 5 attempts max, single-use, bcrypt rehash, ALL sessions revoked.
+- Login UI: FORGOT PASSWORD? link → email → SEND RESET CODE → code + new password → RESET PASSWORD; RESEND CODE / BACK TO SIGN IN links. testIDs: forgot-link, reset-submit, reset-code, reset-new-password, resend-code, back-to-login, login-info.
+- Tested iter 52: 20/20 pytest (test_password_reset.py self-healing fixture added) + 7/7 UI E2E flows. Reset-test account: delivered@resend.dev / reset-password-2026-01.

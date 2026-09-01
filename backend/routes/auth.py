@@ -263,6 +263,118 @@ async def auth_login(body: LoginIn):
     return await _issue_password_session(user)
 
 
+# --------- PASSWORD RESET (Forgot password) ---------
+# Flow: POST /auth/forgot-password {email} -> always generic 200 (no enumeration);
+# if a password account exists, a 6-digit one-time code is e-mailed (Emergent Resend,
+# 15-min expiry, hashed at rest, max 3 requests/hour). POST /auth/reset-password
+# {email, code, new_password} verifies the code (max 5 attempts), rehashes the
+# password and revokes ALL existing sessions.
+import secrets as _secrets
+from emailer import send_email, EMAIL_FROM_NAME
+
+_RESET_TTL_MIN = 15
+_RESET_MAX_PER_HOUR = 3
+_RESET_MAX_ATTEMPTS = 5
+_GENERIC_RESET_MSG = "If an account exists for this e-mail, a reset code has been sent."
+
+
+class ForgotPasswordIn(BaseModel):
+    email: str
+
+
+class ResetPasswordIn(BaseModel):
+    email: str
+    code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=12, max_length=72)
+
+
+def _code_hash(email: str, code: str) -> str:
+    return hashlib.sha256(f"{email}:{code}".encode()).hexdigest()
+
+
+def _reset_email_html(code: str) -> str:
+    # Fixed server-side template (G4). No links, no forms — just the one-time code.
+    return (
+        '<table role="presentation" width="100%"><tr><td '
+        'style="padding:24px;font-family:Arial,sans-serif;color:#1a1a1a">'
+        '<h2 style="margin:0 0 12px 0">Password reset</h2>'
+        '<p>Use this one-time code to reset your password:</p>'
+        f'<p style="font-size:30px;font-weight:bold;letter-spacing:6px;margin:16px 0">{code}</p>'
+        f'<p>The code expires in {_RESET_TTL_MIN} minutes. '
+        'If you did not request a reset, you can safely ignore this e-mail.</p>'
+        f'<p style="font-size:12px;color:#888">Sent by {EMAIL_FROM_NAME}. '
+        'We never ask for your password by e-mail.</p>'
+        '</td></tr></table>'
+    )
+
+
+@api.post("/auth/forgot-password")
+async def auth_forgot_password(body: ForgotPasswordIn):
+    email_l = body.email.strip().casefold()
+    if "@" not in email_l:
+        raise HTTPException(422, "invalid email")
+    user = await db.users.find_one({"email": email_l}, {"_id": 0, "user_id": 1, "password_hash": 1})
+    # Only accounts that actually have a password can be reset — but the response
+    # is identical either way (no account enumeration).
+    if user and user.get("password_hash"):
+        hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        recent = await db.password_resets.count_documents(
+            {"email": email_l, "created_at": {"$gt": hour_ago}})
+        if recent < _RESET_MAX_PER_HOUR:
+            code = f"{_secrets.randbelow(1_000_000):06d}"
+            now = datetime.now(timezone.utc)
+            # Soft-invalidate previous unused codes (they must still count toward
+            # the hourly rate-limit window — deleting them would defeat it).
+            await db.password_resets.update_many(
+                {"email": email_l, "used": False}, {"$set": {"used": True}})
+            await db.password_resets.insert_one({
+                "email": email_l,
+                "code_hash": _code_hash(email_l, code),
+                "created_at": now,
+                "expires_at": now + timedelta(minutes=_RESET_TTL_MIN),
+                "attempts": 0,
+                "used": False,
+            })
+            try:
+                await send_email(to=email_l, subject=f"{EMAIL_FROM_NAME} — password reset code",
+                                 html=_reset_email_html(code))
+            except HTTPException as e:
+                logger.error(f"reset email send failed for {email_l}: {e.detail}")
+    return {"ok": True, "message": _GENERIC_RESET_MSG}
+
+
+@api.post("/auth/reset-password")
+async def auth_reset_password(body: ResetPasswordIn):
+    email_l = body.email.strip().casefold()
+    _validate_password_bytes(body.new_password)
+    now = datetime.now(timezone.utc)
+    doc = await db.password_resets.find_one(
+        {"email": email_l, "used": False}, {"_id": 0}, sort=[("created_at", -1)])
+    generic = HTTPException(400, "Invalid or expired code")
+    if not doc:
+        raise generic
+    exp = doc["expires_at"]
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if exp < now or doc.get("attempts", 0) >= _RESET_MAX_ATTEMPTS:
+        raise generic
+    if _code_hash(email_l, body.code.strip()) != doc["code_hash"]:
+        await db.password_resets.update_one(
+            {"email": email_l, "code_hash": doc["code_hash"]}, {"$inc": {"attempts": 1}})
+        raise generic
+    user = await db.users.find_one({"email": email_l}, {"_id": 0, "user_id": 1})
+    if not user:
+        raise generic
+    password_hash = await _hash_password(body.new_password)
+    await db.users.update_one({"user_id": user["user_id"]},
+                              {"$set": {"password_hash": password_hash}})
+    await db.password_resets.update_one(
+        {"email": email_l, "code_hash": doc["code_hash"]}, {"$set": {"used": True}})
+    # Revoke every existing session — the account may have been compromised.
+    await db.user_sessions.delete_many({"user_id": user["user_id"]})
+    return {"ok": True, "message": "Password updated — sign in with your new password."}
+
+
 # --------- USER PREFS ---------
 class PrefIn(BaseModel):
     language: Optional[str] = None

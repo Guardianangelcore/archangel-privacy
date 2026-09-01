@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 52 — Forgot/Reset password flow (Emergent Resend playbook). Backend 8/9 pytest pass, Frontend E2E 100% (all 7 flows). One SECURITY BUG found: the 3/hour rate limit on POST /api/auth/forgot-password is DEFEATED because auth_forgot_password() calls db.password_resets.delete_many({email, used:False}) before inserting a new code — this wipes prior unused codes so count_documents(created_at>hour_ago) never exceeds 1, and the check `recent < 3` therefore always passes. An attacker can flood a target's inbox with reset codes via the Emergent proxy. Fix: soft-invalidate old codes (used:True) OR use a separate immutable rate-counter. Everything else is green: identical generic 200 body for known & unknown email (no enumeration), invalid email 422, wrong code 400 + attempts++ increment in DB, correct code 200, code reuse 400, short password 422, ALL user_sessions revoked after reset (old bearer token → 401 on /auth/me), old password 401, new password 200. Regressions clean: /auth/register 201, /auth/login demo 200, /auth/dev-bypass founder 200, bogus /auth/session 401. Frontend E2E on mobile viewport 390×844: login → FORGOT PASSWORD? (forgot-link) → reset mode with SEND RESET CODE (reset-submit) → green info (login-info) + reset-code + reset-new-password inputs appear → wrong code shows 'Invalid or expired code.' on login-err → correct code (brute-forced from DB) + 12+ char pw → returns to SIGN IN with success info → new password logs in successfully (navigates to /). BACK TO SIGN IN (back-to-login) + RESEND CODE (resend-code) links verified. Test account delivered@resend.dev password is now reset-password-2026-01 (updated in /app/memory/test_credentials.md).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/forgot-password", "issue": "3/hour rate limit is silently DEFEATED. delete_many({email, used:False}) at line 326 runs before insert_one, wiping any prior unused code, so the count_documents check at line 321 never exceeds 1 (which is < _RESET_MAX_PER_HOUR=3). Verified: 4 successive requests all return 200 and produce only 1 doc in DB. Attackers can spam reset emails to any registered address via the Emergent proxy. Fix: mark old codes used:True instead of delete_many, OR track requests in a separate collection that isn't cleared on new code issuance.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Deprecated style props (all screens)", "issue": "Console warnings: 'shadow*' style props deprecated → use 'boxShadow'; 'textShadow*' deprecated → use 'textShadow'; props.pointerEvents deprecated → use style.pointerEvents. Non-blocking on web but should be migrated for React Native new-arch compatibility."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_password_reset.py",
+    "/app/test_reports/pytest/pytest_iter52.xml"
+  ],
+  "action_items": [
+    "HIGH: Fix the rate-limit bypass in /app/backend/routes/auth.py:auth_forgot_password. Two safe patches: (a) replace `delete_many({email, used:False})` with `update_many({email, used:False}, {$set:{used:True, superseded:True}})` so old unused codes count toward the hourly limit but can't be re-used; OR (b) add a lightweight `password_reset_attempts` collection (append-only, ttl-indexed) and count against that. Then keep the `recent < 3` check as-is.",
+    "Optional: migrate deprecated RN Web style props (shadow*/textShadow*/pointerEvents) across the app for new-arch readiness."
+  ],
+  "critical_code_review_comments": [
+    "emailer.py: G2/G3 gate (_assert_safe_email) is called on every send — blocks forms, credential-asking phrases, non-https URLs, shortener hostnames, numeric hosts, and anchor-text host mismatches. EMAIL_BASE_URL is hard-coded (deploy-safe). Good.",
+    "auth.py reset-password endpoint correctly: (1) returns a generic 400 for missing/expired/wrong-code/max-attempts/unknown-user — no enumeration; (2) increments attempts$inc:1 on wrong code; (3) marks code used:True after success; (4) delete_many on user_sessions revokes ALL sessions; (5) bcrypt rehash via threadpool.",
+    "_code_hash uses sha256(f'{email}:{code}') — deterministic (no per-code salt). For a 6-digit code space (10^6), a database leak lets an attacker brute-force the codes in seconds. Acceptable given 15-min expiry + 5-attempt cap + single-use, but noting for security review.",
+    "The rate-limit collection wiping is the ONLY functional bug — reset-flow test in Playwright succeeded end-to-end using the exact brute-force technique an attacker would use. This underscores why the 3/hour cap matters.",
+    "Login screen (login.tsx) properly gates forgot-link to `!resetMode && pwMode==='login'`, so it only appears on the SIGN IN tab. reset-submit onPress correctly branches on codeSent between onForgot (send code) and onReset (verify code + set new pw). authError vs info both surface via distinct testIDs (login-err / login-info)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_password_reset.py (new; 9 tests, 8 pass, 1 documents the rate-limit bug)",
+    "/app/memory/test_credentials.md (added iter-52 section; noted new password for delivered@resend.dev = reset-password-2026-01)",
+    "/tmp/set_known_pw.py (helper — not committed; re-sets delivered@resend.dev password if a subsequent test consumes it)"
+  ],
+  "success_rate": {"backend": "89% (8/9 — the 1 failure IS the rate-limit bug)", "frontend": "100% (7/7 E2E flows including wrong-code error, code-sent state, full reset, sign-in with new password)"},
+  "seed_data_creation": "Created a few TEST_reset_reg_*, TEST_dup_*, TEST_life_* users during regression testing (low volume, prefixed for cleanup). Reset delivered@resend.dev password from brand-new-password-1 to reset-password-2026-01 (documented in test_credentials.md). demo.judge@guardian.app untouched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "delivered@resend.dev password is reset-password-2026-01 (12 → 22 chars, over the min-12 cap). demo.judge@guardian.app / guardian-demo-2026 untouched. To recover a reset code without inbox access: (1) read db.password_resets.find_one({email, used:False}, sort=[('created_at',-1)]).code_hash; (2) brute-force sha256(f'{email}:{code}') over 000000..999999 (finishes in <1s in python). To reset the 3/hour rate limit: db.password_resets.delete_many({email}). The rate limit itself is currently broken — see backend_issues.critical.",
+  "rca_of_issue": "Rate-limit bypass RCA: at /app/backend/routes/auth.py line 320-334, the sequence is (i) `recent = count_documents({email, created_at>hour_ago})`, (ii) `if recent < 3:`, (iii) `delete_many({email, used:False})`, (iv) `insert_one(...)`. Step (iii) unconditionally wipes any prior unused code for this email before step (iv) inserts the new one, so at any given time there is AT MOST one unused doc per email. On the next call, step (i)'s count therefore sees at most 1 doc, and `1 < 3` is always true. Reproduction: `for _ in range(4): POST /api/auth/forgot-password {email:'delivered@resend.dev'}` → all four return 200 and the Emergent proxy is asked to send 4 e-mails; DB still shows only 1 doc. Fix: keep prior codes present in DB but mark them `used:True` (or add a `superseded:True` flag) so they count toward the rate window but cannot be redeemed. Alternatively, keep a separate append-only `password_reset_attempts` collection with a TTL index for accurate rate-tracking."
+}

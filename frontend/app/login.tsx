@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/auth';
+import { api as apiCall } from '@/src/api';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang, isRTL } from '@/src/i18n';
 
@@ -24,6 +25,12 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  // Forgot-password flow
+  const [resetMode, setResetMode] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [info, setInfo] = useState('');
 
   // SECURITY — the dev/founder bypass is auto-disabled in production. It only
   // renders on preview / localhost / native-dev builds, never on a public deploy.
@@ -71,6 +78,38 @@ export default function Login() {
     } finally { setBusy(null); }
   };
 
+  const onForgot = async () => {
+    setBusy('pw'); setErr(''); setInfo('');
+    try {
+      const res: any = await apiCall('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      setCodeSent(true);
+      setInfo(res.message || 'If an account exists, a reset code has been sent.');
+    } catch (e: any) { setErr(String(e?.message || e)); }
+    finally { setBusy(null); }
+  };
+
+  const onReset = async () => {
+    setBusy('pw'); setErr(''); setInfo('');
+    try {
+      if (newPassword.length < 12) throw new Error('Password must be at least 12 characters.');
+      const res: any = await apiCall('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase(), code: resetCode.trim(), new_password: newPassword }),
+      });
+      setResetMode(false); setCodeSent(false); setResetCode(''); setNewPassword('');
+      setPwMode('login'); setPassword('');
+      setInfo(res.message || 'Password updated — sign in with your new password.');
+    } catch (e: any) {
+      const m = String(e?.message || e);
+      if (m.startsWith('400')) setErr('Invalid or expired code.');
+      else if (m.includes('at least 12')) setErr('Password must be at least 12 characters.');
+      else setErr(m);
+    } finally { setBusy(null); }
+  };
+
   return (
     <View testID="login-screen" style={styles.root}>
       <Image source={BG} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -109,6 +148,7 @@ export default function Login() {
 
         <View style={styles.bottom}>
           {/* CLASSIC E-MAIL & PASSWORD */}
+          {!resetMode && (
           <View style={styles.pwTabs}>
             <Pressable testID="pw-tab-login" onPress={() => { setPwMode('login'); setErr(''); }}
               style={[styles.pwTab, pwMode === 'login' && styles.pwTabActive]}>
@@ -119,6 +159,8 @@ export default function Login() {
               <Text style={[styles.pwTabText, pwMode === 'register' && styles.pwTabTextActive]}>CREATE ACCOUNT</Text>
             </Pressable>
           </View>
+          )}
+          {resetMode && <Text style={styles.resetTitle}>FORGOT PASSWORD</Text>}
           <TextInput
             testID="pw-email"
             value={email}
@@ -131,6 +173,7 @@ export default function Login() {
             autoComplete="email"
             style={styles.pwInput}
           />
+          {!resetMode && (
           <View style={styles.pwRow}>
             <TextInput
               testID="pw-password"
@@ -148,6 +191,34 @@ export default function Login() {
               <Ionicons name={showPw ? 'eye-off' : 'eye'} size={20} color="rgba(255,255,255,0.7)" />
             </Pressable>
           </View>
+          )}
+          {resetMode && codeSent && (
+            <>
+              <TextInput
+                testID="reset-code"
+                value={resetCode}
+                onChangeText={setResetCode}
+                placeholder="6-digit code from e-mail"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                keyboardType="number-pad"
+                maxLength={6}
+                style={styles.pwInput}
+              />
+              <TextInput
+                testID="reset-new-password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="New password (min. 12 characters)"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
+                style={styles.pwInput}
+              />
+            </>
+          )}
+          {!resetMode ? (
           <Pressable
             testID="pw-submit"
             onPress={onPassword}
@@ -159,6 +230,38 @@ export default function Login() {
               ? <ActivityIndicator color={C.inverse} />
               : <Text style={styles.signBtnText}>{pwMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}</Text>}
           </Pressable>
+          ) : (
+          <Pressable
+            testID="reset-submit"
+            onPress={codeSent ? onReset : onForgot}
+            disabled={busy !== null || !email.includes('@') || (codeSent && (resetCode.length !== 6 || newPassword.length === 0))}
+            style={({ pressed }) => [styles.signBtn, pressed && { opacity: 0.85 },
+              (busy !== null || !email.includes('@')) && { opacity: 0.55 }]}
+          >
+            {busy === 'pw'
+              ? <ActivityIndicator color={C.inverse} />
+              : <Text style={styles.signBtnText}>{codeSent ? 'RESET PASSWORD' : 'SEND RESET CODE'}</Text>}
+          </Pressable>
+          )}
+          <View style={styles.linkRow}>
+            {!resetMode && pwMode === 'login' && (
+              <Pressable testID="forgot-link" onPress={() => { setResetMode(true); setErr(''); setInfo(''); setCodeSent(false); }} hitSlop={8}>
+                <Text style={styles.linkText}>FORGOT PASSWORD?</Text>
+              </Pressable>
+            )}
+            {resetMode && (
+              <>
+                {codeSent && (
+                  <Pressable testID="resend-code" onPress={onForgot} hitSlop={8}>
+                    <Text style={styles.linkText}>RESEND CODE</Text>
+                  </Pressable>
+                )}
+                <Pressable testID="back-to-login" onPress={() => { setResetMode(false); setCodeSent(false); setErr(''); setInfo(''); }} hitSlop={8}>
+                  <Text style={styles.linkText}>BACK TO SIGN IN</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
 
           <View style={styles.orRow}>
             <View style={styles.orLine} />
@@ -234,6 +337,7 @@ export default function Login() {
           )}
 
           {(!!err || !!authError) && <Text testID="login-err" style={styles.err}>{err || authError}</Text>}
+          {!!info && !err && <Text testID="login-info" style={styles.info}>{info}</Text>}
 
           <Text style={styles.footer}>© 2026 GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO) · PROPRIETARY · ZERO-KNOWLEDGE</Text>
           <Text style={styles.footerArt50}>EU AI ACT ART. 50 · AI OUTPUTS ARE INFORMATIONAL ONLY · YOU ACT AT YOUR OWN RISK</Text>
@@ -283,6 +387,9 @@ const styles = StyleSheet.create({
   bypassSubmit: { backgroundColor: C.brand, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
   bypassSubmitText: { color: C.onInverse, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
   err: { color: C.error, fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
+  info: { color: '#7BE0AD', fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
+  resetTitle: { color: C.onInverse, fontSize: 12, fontWeight: '900', letterSpacing: 2, textAlign: 'center', paddingVertical: 6 },
+  linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 2 },
   footer: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center', marginTop: 6 },
   footerArt50: { color: C.onInverse, opacity: 0.45, fontSize: 8, letterSpacing: 1, textAlign: 'center', marginTop: 2 },
   rtl: { writingDirection: 'rtl', textAlign: 'right' },
