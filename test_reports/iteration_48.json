@@ -1,0 +1,53 @@
+{
+  "summary": "Iter 48 — final pre-competition smoke & regression. BACKEND: 8/9 pytest passed, 1 skipped (simulate-beam skipped because preview emergent objstore returns 401 Unauthorized → clinic sync raises HTTPException(502); PII change verified at source-code level as a fallback). /api/auth/dev-bypass, /api/auth/me, /api/clinic-sync/radar (6 shuffled samples — zero 'Kováčová' leaks), /api/, /api/origin, /api/lifecard, /api/token/wallet all clean. FRONTEND: login screen + founder-bypass-btn work, all 5 requested translated screens render without red-screens/crashes, home Guardian Eye FAB (home-orb) still present, tabs still render.\n\nBLOCKING FINDING FOR THE 'ENGLISH-ONLY' REQUIREMENT: the bulk translation sweep is INCOMPLETE. Every requested translated screen except /inner-circle still shows Slovak diacritics in visible UI:\n  • /token — 19 Slovak strings incl. 'VÁŠ ZOSTATOK', 'ZAROBIŤ GA-T', 'MINÚŤ GA-T (UTILITY)', 'Prioritný Waitlist Hunter (7 dní)', 'Sentinel Tier — 30 dní (GA-T)'\n  • /recovery-suite — 5+ Slovak strings incl. 'SOCIÁLNA OBNOVA — STRÁŽCOVIA', 'HANDSHAKE STRÁŽCU', 'QR TALIZMAN (PAPIEROVÝ ZÁCHRANNÝ KĽÚČ)', 'VYGENEROVAŤ TALIZMAN'\n  • /pantry — 6+ Slovak strings incl. 'ROTOVAŤ TERAZ', 'ČOSKORO', 'NASKENOVAŤ ETIKETU', 'DIKTOVAŤ JARVISOVI', 'KATEGÓRIA PRE ĎALŠIE SKENOVANIE'\n  • /compass — 69 Slovak diacritic hits — nearly the whole screen still Slovak ('AKTIVOVAŤ BIO-BEACON (NÚDZA)', 'SATELITNÁ NÚDZA — ODOSLAŤ NANO-PACKET', 'KRVNÁ SKUPINA', 'DIAGNÓZY', 'NESCHOPENKA (ePN) · VYCHÁDZKY', 'OČKOVANIA · PREOČKOVANIE', 'STRÁŽCOVIA', 'NÚDZOVÉ ČÍSLA', 'ZÁCHRANKA SK', 'PRÍRUČKA PREŽITIA', …)\n  • /monolith — 1 Slovak fragment: '22. STOROČIE' in header banner (subtitle 'SOVEREIGN SURVIVAL OS · 22. STOROČIE · GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO)')\n\nAdditional screens sampled that were also part of the sweep and still leak Slovak (found in first pass to help E1 prioritise):\n  • /protocol — 10+ Slovak strings ('API BRÁNA PRE PARTNEROV (LEN S VAŠÍM SÚHLASOM)', 'VYDAŤ PARTNERSKÝ KĽÚČ (30 DNÍ)', 'ANONYMIZOVANÁ MONETIZÁCIA DÁT — OPT-IN', 'PREDAŤ', 'ŽIVÉ SIGNÁLY (7 DNÍ) · AKTÍVNE UZLY: 0')\n  • /eternal-vault — 'VEČNÝ TREZOR', 'ODOMKNÚŤ BIOMETRIOU'\n  • /wealth-vault — 'SUVERÉNNY MAJETOK (ODHAD)', 'PRIDAŤ AKTÍVUM', 'ZAPEČATIŤ DO TREZORA', 'UKOTVIŤ HASH NA MOSAIC CHAIN', 'ODOSLAŤ OKAMŽITE NA KARTU', plus the long consent sentence starting 'Seeds/kľúče sú zapečatené…'\n  • /inner-circle — CLEAN, English only ✅ (evidence sweep completed correctly here)\n\nHOME/GUARDIAN EYE FAB — 0 Slovak hits on home; home-orb testID present; tab bar (HEALING / FAMILY SHIELD / VAULT) rendered — PillarHub regression looks fine. Founder is auto-seeded English per iter 47 note.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/clinic-sync/simulate-beam", "issue": "Returns 502 in preview env because storage init hits emergent objstore https://integrations.emergentagent.com/objstore/api/v1/storage/init and gets 401 Unauthorized. Same 401 also logs at startup ('Storage init failed'). Pre-existing preview credential issue — NOT caused by translation sweep. Blocks live end-to-end verification of the doctor_name='Dr. Guardian Angel' change (verified at source-code level instead)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "bulk English translation sweep across ~32 screens", "issue": "Sweep is largely incomplete on the tested subset — /token, /recovery-suite, /pantry, /compass, /protocol, /wealth-vault, /eternal-vault, /monolith all still contain Slovak diacritics in visible UI. Only /inner-circle came back clean. The strings are hard-coded in the screens themselves (not i18n keys), so the ~300-string replace sweep missed most of them. See summary for representative samples per screen.", "affected_testIDs": []}
+    ],
+    "design_issues": [
+      {"screen": "/compass", "issues": ["Almost the entire screen is still Slovak (69 diacritic hits) — the sweep did not touch this file materially. Top CTA 'AKTIVOVAŤ BIO-BEACON (NÚDZA)' is Slovak."]},
+      {"screen": "/token", "issues": ["Balance card header 'VÁŠ ZOSTATOK' + earn/spend section titles + tier button labels still Slovak."]},
+      {"screen": "/pantry", "issues": ["Primary CTAs 'ROTOVAŤ TERAZ', 'NASKENOVAŤ ETIKETU', 'DIKTOVAŤ JARVISOVI', 'ČOSKORO' still Slovak."]},
+      {"screen": "/recovery-suite", "issues": ["Section titles + primary buttons still Slovak ('VYGENEROVAŤ TALIZMAN', 'SOCIAL 2FA — HANDSHAKE STRÁŽCU')."]},
+      {"screen": "/monolith", "issues": ["Header subtitle contains '22. STOROČIE' (should be '22ND CENTURY')."]},
+      {"screen": "/wealth-vault", "issues": ["Header 'SUVERÉNNY MAJETOK', all main CTAs, long consent paragraph still Slovak."]},
+      {"screen": "/protocol", "issues": ["Section titles + demo marketplace copy + PREDAŤ button still Slovak."]},
+      {"screen": "/eternal-vault", "issues": ["Header 'VEČNÝ TREZOR', unlock CTA 'ODOMKNÚŤ BIOMETRIOU' still Slovak."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN-web deprecation warnings", "issue": "Pre-existing warnings persist unchanged: 'shadow*' → boxShadow, 'textShadow*' → textShadow, props.pointerEvents → style.pointerEvents. Not caused by this iter (already reported in iter 47)."},
+      {"component": "expo-notifications web", "issue": "Warning 'Listening to push token changes is not yet fully supported on web' — pre-existing, non-fatal."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter48_translation_regression.py",
+    "/app/test_reports/pytest/pytest_iter48.xml"
+  ],
+  "action_items": [
+    "Redo the translation sweep on the affected screens — this iter proves that /token, /recovery-suite, /pantry, /compass, /monolith, /protocol, /eternal-vault, /wealth-vault still ship Slovak UI. Only /inner-circle is clean. Recommend grepping each file for the specific strings listed under design_issues and replacing them (e.g., 'VÁŠ ZOSTATOK' → 'YOUR BALANCE', 'ROTOVAŤ TERAZ' → 'ROTATE NOW', 'AKTIVOVAŤ BIO-BEACON (NÚDZA)' → 'ACTIVATE BIO-BEACON (EMERGENCY)', 'STRÁŽCOVIA' → 'GUARDIANS', '22. STOROČIE' → '22ND CENTURY', 'VEČNÝ TREZOR' → 'ETERNAL VAULT', 'SUVERÉNNY MAJETOK (ODHAD)' → 'SOVEREIGN WEALTH (EST.)', 'ZAPEČATIŤ DO TREZORA' → 'SEAL TO VAULT', 'UKOTVIŤ HASH NA MOSAIC CHAIN' → 'ANCHOR HASH TO MOSAIC CHAIN', 'ODOSLAŤ OKAMŽITE NA KARTU' → 'SEND INSTANTLY TO CARD', 'API BRÁNA PRE PARTNEROV' → 'API GATEWAY FOR PARTNERS', 'PREDAŤ' → 'SELL', etc.).",
+    "Not blocking, but worth checking: emergent objstore returns 401 at preview startup ('Storage init failed: 401 Unauthorized' for https://integrations.emergentagent.com/objstore/api/v1/storage/init). Anything that writes a document (clinic-sync/beam, likely lifecard OCR, magic-lens upload) will 502 in preview until this credential is renewed."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/routes/clinic_sync.py — PII sweep verified at source: line 141 doctor_name=\"Dr. Guardian Angel\", line 113 _RADAR_CLINICS uses 'GA Labs Ortho Clinic' (formerly 'MUDr. Kováčová — Ortopédia'). No remaining occurrence of 'Kováčová' or 'MUDr. Eva' anywhere in the file. Random sampling of /api/clinic-sync/radar (6 hourly-seeded calls per user) never returned 'Kováčová'.",
+    "clinic_sync.py still holds Slovak content strings inside the simulate-beam demo report (report_text) and the push message 'uložené do Trezora'. Those are backend demo content, not touched by this sweep — flagging in case E1 wants full English demo content."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter48_translation_regression.py (NEW)"
+  ],
+  "success_rate": {
+    "backend": "8/9 tests passed, 1 environment-skipped (simulate-beam 502 → objstore 401). 0 failures.",
+    "frontend": "Renders/crashes/FAB regression: 6/6 screens PASS (login, home + FAB, /token, /recovery-suite, /pantry, /compass, /monolith all render without red-screen and founder-bypass-btn login works). English-only requirement: 1/8 PASS (only /inner-circle is fully English)."
+  },
+  "seed_data_creation": "None. Founder session was created via /api/auth/dev-bypass which is idempotent (auto-seeded at startup). One clinic_sync_sessions doc for the founder was created (status=waiting, will auto-expire in 10 min).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend pytest suite: /app/backend/tests/test_iter48_translation_regression.py — reuses founder dev-bypass and does static + live checks on the PII sweep. Live simulate-beam currently 502s in preview because emergent objstore returns 401 at storage init; test auto-skips with a source-level PII assert fallback. When testing frontend translations, use the Slovak-diacritic regex `[áäčďéíĺľňóôřšťúýžÁÄČĎÉÍĹĽŇÓÔŘŠŤÚÝŽ]` — any hit inside visible innerText on the target screens indicates incomplete translation. Skip files listed as protected in the request (mosaic.tsx, subscription.tsx, arbitrage.tsx, barter.tsx, billing.py, src/i18n.ts) — Slovak text there is intentional. Founder demo Life Card + calendar timeline were NOT touched this iter.",
+  "rca_of_issue": "Translation sweep RCA — the ~300 exact-string replacements landed against some files (e.g. /inner-circle, home) but the majority of the target screens (/token, /recovery-suite, /pantry, /compass, /monolith, /protocol, /eternal-vault, /wealth-vault, ...) still ship literal Slovak strings. Most likely causes: (a) the replacement dictionary was keyed on a limited subset of exact source strings and the actual strings in those files don't match verbatim (extra whitespace, punctuation, gerund/imperative variants, or embedded template literals), or (b) the sweep script matched by testID/component name rather than by literal string. Fix approach for E1: for each remaining screen, open the file, grep for the Slovak diacritic set, and replace each literal string one-by-one — the strings are hard-coded (not i18n keys), so a targeted per-file edit is required. simulate-beam 502 RCA — /app/backend/core.py storage subsystem calls integrations.emergentagent.com/objstore for init; that endpoint returns 401 in this preview cluster, so put_object_sync raises → routes/clinic_sync.py line 85 converts to HTTPException(502). Not caused by the translation sweep; renew the objstore credential or mock storage locally."
+}

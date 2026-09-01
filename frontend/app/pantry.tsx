@@ -30,22 +30,22 @@ type Item = {
 const CATS = [
   { key: 'food', label: 'Konzervy · potraviny', icon: 'nutrition' },
   { key: 'water', label: 'Voda', icon: 'water' },
-  { key: 'battery', label: 'Batérie', icon: 'battery-charging' },
+  { key: 'battery', label: 'Batteries', icon: 'battery-charging' },
   { key: 'gas', label: 'Plyn · palivo', icon: 'flame' },
   { key: 'med', label: 'Lieky', icon: 'medkit' },
   { key: 'filter', label: 'Filtre', icon: 'funnel' },
-  { key: 'ammo', label: 'Munícia', icon: 'shield' },
-  { key: 'tool', label: 'Náradie', icon: 'construct' },
-  { key: 'other', label: 'Ostatné', icon: 'cube' },
+  { key: 'ammo', label: 'Ammo', icon: 'shield' },
+  { key: 'tool', label: 'Tools', icon: 'construct' },
+  { key: 'other', label: 'Other', icon: 'cube' },
 ];
 
 const URGENCY_STYLE: Record<Item['urgency'], { color: string; label: string }> = {
   expired:  { color: '#EF4444', label: 'PO SPOTREBE' },
-  critical: { color: '#F59E0B', label: 'ROTOVAŤ TERAZ' },
-  soon:     { color: '#EAB308', label: 'ČOSKORO' },
+  critical: { color: '#F59E0B', label: 'ROTATE NOW' },
+  soon:     { color: '#EAB308', label: 'SOON' },
   healthy:  { color: '#22C55E', label: 'V PORIADKU' },
-  fresh:    { color: '#10B981', label: 'ČERSTVÉ' },
-  unknown:  { color: '#94A3B8', label: 'BEZ DÁTUMU' },
+  fresh:    { color: '#10B981', label: 'FRESH' },
+  unknown:  { color: '#94A3B8', label: 'NO DATE' },
 };
 
 export default function Pantry() {
@@ -119,8 +119,8 @@ export default function Pantry() {
         method: 'POST',
         body: JSON.stringify({ doc_id: up.doc_id, hint_category: scanCat, location: newLoc.trim() || null }),
       });
-      const stage = pr.extracted_expiry ? 'z etikety' : 'štandardná trvanlivosť';
-      jarvisSpeak(`${pr.name} pridané. Spotreba (${stage}): ${pr.expiration_date}.`,
+      const stage = pr.extracted_expiry ? 'from label' : 'standard shelf life';
+      jarvisSpeak(`${pr.name} added. Expiry (${stage}): ${pr.expiration_date}.`,
         { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' });
       await load();
     } catch (e) { console.log('scan err', e); }
@@ -145,7 +145,7 @@ export default function Pantry() {
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true } as any);
       await voiceRecorder.prepareToRecordAsync();
       voiceRecorder.record();
-      jarvisSpeak('Počúvam. Povedzte, čo pridať do zásob.', {
+      jarvisSpeak('Listening. Tell me what to add to your supplies.', {
         voice: 'onyx', speed: 1.0, language: (user?.language as any) || 'en',
       });
     } catch (e) { console.log('voice start', e); }
@@ -162,7 +162,7 @@ export default function Pantry() {
       const ct = uri.endsWith('.m4a') ? 'audio/m4a' : 'audio/webm';
       const parsed: any = await apiUpload('/pantry/voice', uri, name, ct, {});
       setVoiceHeard(`${parsed.quantity}× „${parsed.name}"${parsed.location ? ` v „${parsed.location}"` : ''}`);
-      jarvisSpeak(`Pridané: ${parsed.quantity} kusov ${parsed.name}${parsed.location ? `, v ${parsed.location}` : ''}.`, {
+      jarvisSpeak(`Added: ${parsed.quantity} pcs of ${parsed.name}${parsed.location ? `, in ${parsed.location}` : ''}.`, {
         voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       await load();
@@ -211,8 +211,8 @@ export default function Pantry() {
         {items.length === 0 && !loading && (
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={48} color={C.onS3} />
-            <Text style={styles.emptyText}>ZAČNITE — NASKENUJTE PRVÚ ZÁSOBU</Text>
-            <Text style={styles.emptyHint}>Jarvis prečíta dátum spotreby z etikety.</Text>
+            <Text style={styles.emptyText}>GET STARTED — SCAN YOUR FIRST SUPPLY</Text>
+            <Text style={styles.emptyHint}>Jarvis reads the expiry date from the label.</Text>
           </View>
         )}
         {items.map((it) => {
@@ -256,8 +256,8 @@ export default function Pantry() {
           <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanCtaBg}>
             {scanning ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="scan-circle" size={26} color={C.onInverse} />}
             <View style={{ flex: 1 }}>
-              <Text style={styles.scanCtaTitle}>NASKENOVAŤ ETIKETU</Text>
-              <Text style={styles.scanCtaSub}>Jarvis prečíta spotrebu a pridá zásobu — bez ťukania.</Text>
+              <Text style={styles.scanCtaTitle}>SCAN LABEL</Text>
+              <Text style={styles.scanCtaSub}>Jarvis reads the expiry and adds the supply — no typing.</Text>
             </View>
           </LinearGradient>
         </Pressable>
@@ -270,13 +270,13 @@ export default function Pantry() {
         >
           <Ionicons name="mic-circle" size={26} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.voiceCtaTitle}>DIKTOVAŤ JARVISOVI</Text>
-              <Text style={styles.voiceCtaSub}>„Mám tri konzervy fazule v bunkri A.“ — a je to.</Text>
+            <Text style={styles.voiceCtaTitle}>DICTATE TO JARVIS</Text>
+              <Text style={styles.voiceCtaSub}>“Three cans of beans in bunker A.” — done.</Text>
           </View>
         </Pressable>
 
         {/* Category chip picker for the next scan */}
-        <Text style={styles.section}>KATEGÓRIA PRE ĎALŠIE SKENOVANIE</Text>
+        <Text style={styles.section}>CATEGORY FOR NEXT SCAN</Text>
         <View style={styles.catRow}>
           {CATS.map((c) => (
             <Pressable
@@ -299,20 +299,20 @@ export default function Pantry() {
             <View style={styles.voiceRing}>
               <Ionicons name="mic" size={64} color={C.brand} />
             </View>
-            <Text style={styles.voiceTitle}>{voiceBusy ? 'ROZPOZNÁVAM…' : 'HOVORTE'}</Text>
+            <Text style={styles.voiceTitle}>{voiceBusy ? 'RECOGNIZING…' : 'SPEAK'}</Text>
             <Text style={styles.voiceHint}>
-              {voiceBusy ? 'Jarvis rozumie Vášmu jazyku.' : 'Napr.: „Mám tri konzervy fazule v bunkri A."'}
+              {voiceBusy ? 'Jarvis understands your language.' : 'E.g.: “Three cans of beans in bunker A.”'}
             </Text>
             {!!voiceHeard && <Text testID="pantry-voice-heard" style={styles.voiceHeard}>✓ {voiceHeard}</Text>}
             {!voiceBusy && (
               <Pressable testID="pantry-voice-stop" onPress={stopVoice} style={styles.voiceStopBtn}>
                 <Ionicons name="stop-circle" size={22} color={C.onInverse} />
-                <Text style={styles.voiceStopText}>UKONČIŤ · ULOŽIŤ</Text>
+                <Text style={styles.voiceStopText}>FINISH · SAVE</Text>
               </Pressable>
             )}
             {voiceBusy && <ActivityIndicator color={C.brand} size="large" />}
             <Pressable onPress={() => { try { voiceRecorder.stop(); } catch {}; setVoiceOpen(false); }} hitSlop={12}>
-              <Text style={styles.voiceCancel}>Zrušiť</Text>
+              <Text style={styles.voiceCancel}>Cancel</Text>
             </Pressable>
           </View>
         </View>
@@ -322,8 +322,8 @@ export default function Pantry() {
       <Modal visible={addOpen} transparent animationType="slide" onRequestClose={() => setAddOpen(false)}>
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>PRIDAŤ ZÁSOBU RUČNE</Text>
-            <TextInput testID="pantry-name" value={newName} onChangeText={setNewName} placeholder="Názov (Konzerva fazule)" placeholderTextColor="#999" style={styles.input} />
+            <Text style={styles.modalTitle}>ADD SUPPLY MANUALLY</Text>
+            <TextInput testID="pantry-name" value={newName} onChangeText={setNewName} placeholder="Name (Can of beans)" placeholderTextColor="#999" style={styles.input} />
             <View style={styles.catRow}>
               {CATS.map((c) => (
                 <Pressable key={c.key} onPress={() => setNewCat(c.key)} style={[styles.catChip, newCat === c.key && styles.catChipActive]}>
@@ -332,15 +332,15 @@ export default function Pantry() {
                 </Pressable>
               ))}
             </View>
-            <TextInput testID="pantry-exp" value={newExp} onChangeText={setNewExp} placeholder="Dátum spotreby (2028-03-15)" placeholderTextColor="#999" style={styles.input} maxLength={10} />
-            <TextInput testID="pantry-qty" value={newQty} onChangeText={setNewQty} placeholder="Množstvo" placeholderTextColor="#999" keyboardType="number-pad" style={styles.input} maxLength={4} />
+            <TextInput testID="pantry-exp" value={newExp} onChangeText={setNewExp} placeholder="Expiry date (2028-03-15)" placeholderTextColor="#999" style={styles.input} maxLength={10} />
+            <TextInput testID="pantry-qty" value={newQty} onChangeText={setNewQty} placeholder="Quantity" placeholderTextColor="#999" keyboardType="number-pad" style={styles.input} maxLength={4} />
             <TextInput testID="pantry-loc" value={newLoc} onChangeText={setNewLoc} placeholder="Miesto (Bunker A · polica 2)" placeholderTextColor="#999" style={styles.input} maxLength={80} />
             <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
               <Pressable onPress={() => setAddOpen(false)} style={[styles.mBtn, styles.mBtnGhost]}>
-                <Text style={styles.mBtnGhostText}>Zrušiť</Text>
+                <Text style={styles.mBtnGhostText}>Cancel</Text>
               </Pressable>
               <Pressable testID="pantry-save" onPress={save} style={[styles.mBtn, styles.mBtnPrimary]}>
-                <Text style={styles.mBtnPrimaryText}>PRIDAŤ</Text>
+                <Text style={styles.mBtnPrimaryText}>ADD</Text>
               </Pressable>
             </View>
           </View>

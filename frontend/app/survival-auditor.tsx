@@ -19,7 +19,7 @@ const CATS: { key: string; icon: any; label: string }[] = [
   { key: 'food', icon: 'restaurant-outline', label: 'JEDLO' },
   { key: 'power', icon: 'battery-charging-outline', label: 'ENERGIA' },
   { key: 'meds', icon: 'medkit-outline', label: 'LIEKY' },
-  { key: 'tools', icon: 'construct-outline', label: 'NÁSTROJE' },
+  { key: 'tools', icon: 'construct-outline', label: 'TOOLS' },
 ];
 
 export default function SurvivalAuditor() {
@@ -80,7 +80,7 @@ export default function SurvivalAuditor() {
             <View style={[styles.runwayCard, { borderColor: overallColor }]}>
               <Text style={styles.runwayLbl}>{t('survival_runway', lang).toUpperCase()}</Text>
               <Text testID="sa-overall" style={[styles.runwayVal, { color: overallColor }]}>{overall}</Text>
-              <Text style={styles.runwayUnit}>DNÍ · {familySize} OSÔB</Text>
+              <Text style={styles.runwayUnit}>DAYS · {familySize} PEOPLE</Text>
               <View style={styles.catRow}>
                 {CATS.map(c => (
                   <View key={c.key} style={styles.catBox}>
@@ -102,7 +102,7 @@ export default function SurvivalAuditor() {
             </View>
 
             <JarvisAdvice module="survival_auditor" lang={lang} buildContext={() => `Survival runway: overall ${overall} days for ${familySize} people. Categories: ${JSON.stringify(runway?.category_runways || {})}. Items: ${items.map(i => `${i.name} ${i.quantity}${i.unit}`).join(', ') || 'none'}`} />
-            <Text style={styles.section}>INVENTÁR</Text>
+            <Text style={styles.section}>INVENTORY</Text>
           </View>
         }
         ListEmptyComponent={!loading ? <Text style={styles.noData}>{t('no_data', lang).toUpperCase()}</Text> : null}
@@ -111,7 +111,7 @@ export default function SurvivalAuditor() {
             <Ionicons name={(CATS.find(c => c.key === item.category)?.icon) || 'cube-outline'} size={20} color={C.fg} />
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemMeta}>{item.quantity} {item.unit} · {item.daily_need_per_person}/os/deň</Text>
+              <Text style={styles.itemMeta}>{item.quantity} {item.unit} · {item.daily_need_per_person}/person/day</Text>
             </View>
             <Pressable testID={`sv-del-${item.item_id}`} onPress={() => del(item)} hitSlop={10}>
               <Ionicons name="trash-outline" size={18} color={C.error} />
@@ -129,11 +129,11 @@ export default function SurvivalAuditor() {
         <View style={styles.modalRoot}>
           <View style={styles.modalCard}>
             <View style={styles.modalHead}>
-              <Text style={styles.modalTitle}>INVENTÁR +</Text>
+              <Text style={styles.modalTitle}>INVENTORY +</Text>
               <Pressable testID="sa-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 420 }}>
-              <TextInput testID="sv-name" placeholder="Balená voda 1.5l" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="sv-name" placeholder="Bottled water 1.5l" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {CATS.map(c => (
                   <Pressable testID={`sv-cat-${c.key}`} key={c.key} onPress={() => setF({ ...f, category: c.key })} style={[styles.chip, f.category === c.key && styles.chipActive]}>
@@ -142,11 +142,11 @@ export default function SurvivalAuditor() {
                 ))}
               </View>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
-                <WheelField testID="sv-qty" title="MNOŽSTVO" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="12" style={[styles.input, { flex: 1 }]} />
+                <WheelField testID="sv-qty" title="QUANTITY" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="12" style={[styles.input, { flex: 1 }]} />
                 <TextInput testID="sv-unit" placeholder="l / ks / kg" value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
               </View>
-              <Text style={styles.lbl}>SPOTREBA / OSOBA / DEŇ</Text>
-              <WheelField testID="sv-need" title="DENNÁ POTREBA / OSOBA" min={1} max={20} value={f.daily_need_per_person} onChange={v => setF({ ...f, daily_need_per_person: v })} placeholder="3" style={styles.input} />
+              <Text style={styles.lbl}>CONSUMPTION / PERSON / DAY</Text>
+              <WheelField testID="sv-need" title="DAILY NEED / PERSON" min={1} max={20} value={f.daily_need_per_person} onChange={v => setF({ ...f, daily_need_per_person: v })} placeholder="3" style={styles.input} />
             </ScrollView>
             <Pressable testID="sa-save" onPress={add} style={styles.saveBtn}>
               <Text style={styles.saveBtnText}>{t('save', lang).toUpperCase()}</Text>

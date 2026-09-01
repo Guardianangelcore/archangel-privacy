@@ -17,29 +17,30 @@ from core import api, db, get_current_user, clean
 
 # Supported city index — city display name, country, local language, coords, timezone
 CITIES = [
-    {"city": "Praha", "country": "CZ", "lang": "cs", "lat": 50.0755, "lng": 14.4378, "tz": "Europe/Prague"},
+    {"city": "New York", "country": "US", "lang": "en", "lat": 40.7128, "lng": -74.0060, "tz": "America/New_York"},
+    {"city": "Prague", "country": "CZ", "lang": "cs", "lat": 50.0755, "lng": 14.4378, "tz": "Europe/Prague"},
     {"city": "Brno", "country": "CZ", "lang": "cs", "lat": 49.1951, "lng": 16.6068, "tz": "Europe/Prague"},
     {"city": "Ostrava", "country": "CZ", "lang": "cs", "lat": 49.8209, "lng": 18.2625, "tz": "Europe/Prague"},
     {"city": "Bratislava", "country": "SK", "lang": "sk", "lat": 48.1486, "lng": 17.1077, "tz": "Europe/Bratislava"},
     {"city": "Košice", "country": "SK", "lang": "sk", "lat": 48.7164, "lng": 21.2611, "tz": "Europe/Bratislava"},
-    {"city": "Viedeň", "country": "AT", "lang": "de", "lat": 48.2082, "lng": 16.3738, "tz": "Europe/Vienna"},
-    {"city": "Berlín", "country": "DE", "lang": "de", "lat": 52.52, "lng": 13.405, "tz": "Europe/Berlin"},
-    {"city": "Mníchov", "country": "DE", "lang": "de", "lat": 48.1351, "lng": 11.582, "tz": "Europe/Berlin"},
-    {"city": "Paríž", "country": "FR", "lang": "fr", "lat": 48.8566, "lng": 2.3522, "tz": "Europe/Paris"},
-    {"city": "Londýn", "country": "GB", "lang": "en", "lat": 51.5074, "lng": -0.1278, "tz": "Europe/London"},
-    {"city": "Varšava", "country": "PL", "lang": "pl", "lat": 52.2297, "lng": 21.0122, "tz": "Europe/Warsaw"},
-    {"city": "Krakov", "country": "PL", "lang": "pl", "lat": 50.0647, "lng": 19.945, "tz": "Europe/Warsaw"},
-    {"city": "Budapešť", "country": "HU", "lang": "hu", "lat": 47.4979, "lng": 19.0402, "tz": "Europe/Budapest"},
-    {"city": "Rím", "country": "IT", "lang": "it", "lat": 41.9028, "lng": 12.4964, "tz": "Europe/Rome"},
+    {"city": "Vienna", "country": "AT", "lang": "de", "lat": 48.2082, "lng": 16.3738, "tz": "Europe/Vienna"},
+    {"city": "Berlin", "country": "DE", "lang": "de", "lat": 52.52, "lng": 13.405, "tz": "Europe/Berlin"},
+    {"city": "Munich", "country": "DE", "lang": "de", "lat": 48.1351, "lng": 11.582, "tz": "Europe/Berlin"},
+    {"city": "Paris", "country": "FR", "lang": "fr", "lat": 48.8566, "lng": 2.3522, "tz": "Europe/Paris"},
+    {"city": "London", "country": "GB", "lang": "en", "lat": 51.5074, "lng": -0.1278, "tz": "Europe/London"},
+    {"city": "Warsaw", "country": "PL", "lang": "pl", "lat": 52.2297, "lng": 21.0122, "tz": "Europe/Warsaw"},
+    {"city": "Krakow", "country": "PL", "lang": "pl", "lat": 50.0647, "lng": 19.945, "tz": "Europe/Warsaw"},
+    {"city": "Budapest", "country": "HU", "lang": "hu", "lat": 47.4979, "lng": 19.0402, "tz": "Europe/Budapest"},
+    {"city": "Rome", "country": "IT", "lang": "it", "lat": 41.9028, "lng": 12.4964, "tz": "Europe/Rome"},
     {"city": "Madrid", "country": "ES", "lang": "es", "lat": 40.4168, "lng": -3.7038, "tz": "Europe/Madrid"},
-    {"city": "Kyjev", "country": "UA", "lang": "uk", "lat": 50.4501, "lng": 30.5234, "tz": "Europe/Kyiv"},
+    {"city": "Kyiv", "country": "UA", "lang": "uk", "lat": 50.4501, "lng": 30.5234, "tz": "Europe/Kyiv"},
 ]
 
 # Sovereign default — Bratislava is a neutral EU-central fallback used only when
 # NO signal at all (no GPS, no IP, no manual). Every user is expected to converge
 # on a real geo within seconds of opening the app.
-DEFAULT_GEO = {"city": "Bratislava", "country": "SK", "lang": "sk", "tz": "Europe/Bratislava",
-               "lat": 48.1486, "lng": 17.1077, "source": "default"}
+DEFAULT_GEO = {"city": "New York", "country": "US", "lang": "en", "tz": "America/New_York",
+               "lat": 40.7128, "lng": -74.0060, "source": "default"}
 
 
 def geo_of(user: dict) -> dict:

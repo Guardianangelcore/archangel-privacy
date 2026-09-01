@@ -11,12 +11,12 @@ import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 
 const ITEMS = [
-  { testID: 'ev-dignity', icon: 'rose-outline', title: 'Dôstojná rozlúčka', sub: 'Pohrebný fond · posledné priania', route: '/dignity' },
-  { testID: 'ev-legal', icon: 'shield-checkmark-outline', title: 'Závet a právo', sub: 'Závet · TOS · KYC', route: '/legal' },
-  { testID: 'ev-biometric', icon: 'finger-print-outline', title: 'Biometrický závet', sub: 'Hlas/video dôkaz · blockchain hash', route: '/biometric-will' },
-  { testID: 'ev-video', icon: 'videocam-outline', title: 'Video odkaz rodine', sub: 'Zapečatené video-odkazy', route: '/video-legacy' },
-  { testID: 'ev-digital', icon: 'cloud-done-outline', title: 'Digitálne dedičstvo', sub: 'Účty · likvidátor predplatných', route: '/digital-legacy' },
-  { testID: 'ev-proxy', icon: 'document-lock-outline', title: 'Splnomocnenec', sub: 'Právna ochrana partnera', route: '/healthcare-proxy' },
+  { testID: 'ev-dignity', icon: 'rose-outline', title: 'Dignified farewell', sub: 'Funeral fund · last wishes', route: '/dignity' },
+  { testID: 'ev-legal', icon: 'shield-checkmark-outline', title: 'Will & legal', sub: 'Will · TOS · KYC', route: '/legal' },
+  { testID: 'ev-biometric', icon: 'finger-print-outline', title: 'Biometric will', sub: 'Voice/video proof · blockchain hash', route: '/biometric-will' },
+  { testID: 'ev-video', icon: 'videocam-outline', title: 'Video message for family', sub: 'Sealed video messages', route: '/video-legacy' },
+  { testID: 'ev-digital', icon: 'cloud-done-outline', title: 'Digital legacy', sub: 'Accounts · subscription liquidator', route: '/digital-legacy' },
+  { testID: 'ev-proxy', icon: 'document-lock-outline', title: 'Healthcare proxy', sub: 'Legal protection for your partner', route: '/healthcare-proxy' },
 ];
 
 export default function EternalVault() {
@@ -32,11 +32,11 @@ export default function EternalVault() {
       const enrolled = hw ? await LocalAuthentication.isEnrolledAsync() : false;
       if (!hw || !enrolled) { setUnlocked(true); return; }
       const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Odomknúť Večný trezor',
-        cancelLabel: 'Zrušiť',
+        promptMessage: 'Unlock the Eternal Vault',
+        cancelLabel: 'Cancel',
       });
       if (res.success) { tap('success'); setUnlocked(true); }
-      else setErr('Overenie zlyhalo. Skúste znova.');
+      else setErr('Verification failed. Try again.');
     } catch (e: any) { setErr(String(e.message || e)); }
   };
 
@@ -46,7 +46,7 @@ export default function EternalVault() {
         <Pressable testID="ev-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>VEČNÝ TREZOR</Text>
+        <Text style={st.title}>ETERNAL VAULT</Text>
         <Ionicons name="lock-closed" size={18} color={unlocked ? C.brand : C.info} />
       </View>
 
@@ -55,11 +55,11 @@ export default function EternalVault() {
           <View style={st.lockRing}>
             <Ionicons name="finger-print" size={64} color={C.brand} />
           </View>
-          <Text style={st.lockTitle}>Zamknutý priestor</Text>
-          <Text style={st.lockSub}>Záležitosti odkazu a poslednej vôle sú oddelené od denného života. Odomknete ich iba biometriou — nikdy vás nerušia pri zdraví a uzdravovaní.</Text>
+          <Text style={st.lockTitle}>Locked space</Text>
+          <Text style={st.lockSub}>Legacy and last-will matters are separated from daily life. Unlock them only with biometrics — they never intrude on health and healing.</Text>
           <Pressable testID="ev-unlock" onPress={unlock} style={st.unlockBtn}>
             <Ionicons name="finger-print" size={20} color={C.onInverse} />
-            <Text style={st.unlockText}>ODOMKNÚŤ BIOMETRIOU</Text>
+            <Text style={st.unlockText}>UNLOCK WITH BIOMETRICS</Text>
           </Pressable>
           {!!err && <Text style={st.err}>{err}</Text>}
         </View>
@@ -67,7 +67,7 @@ export default function EternalVault() {
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 100 }}>
           <View style={st.notice}>
             <Ionicons name="eye-off-outline" size={16} color={C.brand} />
-            <Text style={st.noticeText}>Tento obsah je skrytý z hlavného panela. Život patrí hore — odkaz sem.</Text>
+            <Text style={st.noticeText}>This content is hidden from the main dashboard. Life belongs up top — legacy lives here.</Text>
           </View>
           <View style={{ gap: S.md, marginTop: S.md }}>
             {ITEMS.map(it => (

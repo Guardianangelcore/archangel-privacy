@@ -43,12 +43,12 @@ export default function Refunds() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.intro}>Jarvis predvyplní žiadosť o refundáciu zdravotných výdavkov (zubár, fyzio, optika, diagnostika) z dokladov v Trezore a Jarvis akcií — jedným ťukom.</Text>
+        <Text style={st.intro}>Jarvis prefills a health-expense refund claim (dental, physio, optics, diagnostics) from the receipts in your Vault and Jarvis actions — with one tap.</Text>
 
         <Pressable testID="rf-build" onPress={build} disabled={busy === 'build'} style={st.buildBtn}>
           {busy === 'build' ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="cash-outline" size={20} color={C.onInverse} />
-            <Text style={st.buildText}>PRIPRAVIŤ NÁROK JEDNÝM ŤUKOM</Text>
+            <Text style={st.buildText}>PREPARE THE CLAIM WITH ONE TAP</Text>
           </>}
         </Pressable>
         {!!err && <Text testID="rf-err" style={st.err}>{err}</Text>}
@@ -56,12 +56,12 @@ export default function Refunds() {
         {claim && (
           <View testID="rf-claim">
             <View style={st.totalCard}>
-              <Text style={st.totalLbl}>ODHADOVANÁ REFUNDÁCIA</Text>
+              <Text style={st.totalLbl}>ESTIMATED REFUND</Text>
               <Text testID="rf-total" style={st.totalVal}>{claim.estimated_refund_eur} €</Text>
-              <Text style={st.totalMeta}>Poisťovňa: {claim.insurer} · poistka {claim.policy_paid ? 'ZAPLATENÁ ✓' : 'NEZAPLATENÁ ⚠'}</Text>
+              <Text style={st.totalMeta}>Insurer: {claim.insurer} · policy {claim.policy_paid ? 'PAID ✓' : 'UNPAID ⚠'}</Text>
             </View>
 
-            <Text style={st.section}>POLOŽKY NÁROKU ({claim.items?.length || 0})</Text>
+            <Text style={st.section}>CLAIM ITEMS ({claim.items?.length || 0})</Text>
             {(claim.items || []).length ? claim.items.map((it: any, i: number) => (
               <View key={i} style={st.row}>
                 <Ionicons name="document-text-outline" size={18} color={C.brand} />
@@ -72,11 +72,11 @@ export default function Refunds() {
                 <Text style={st.rowVal}>{it.estimated_refund_eur} €</Text>
               </View>
             )) : (
-              <Text style={st.emptyLine}>— zatiaľ žiadne refundovateľné úkony. Nahrajte doklady zo zubára / fyzioterapie do Trezoru a Jarvis ich spracuje.</Text>
+              <Text style={st.emptyLine}>— no refundable procedures yet. Upload dental / physio receipts to your Vault and Jarvis will process them.</Text>
             )}
 
             <View style={st.taxCard}>
-              <Text style={st.taxTitle}>DAŇOVÝ ODPOČET</Text>
+              <Text style={st.taxTitle}>TAX DEDUCTION</Text>
               <Text style={st.taxText}>{claim.tax_note}</Text>
               <Text style={st.taxText}>Dokladov v Trezore: {claim.vault_docs}</Text>
             </View>
@@ -84,7 +84,7 @@ export default function Refunds() {
             <Pressable testID="rf-pdf" onPress={share} disabled={busy === 'pdf'} style={st.pdfBtn}>
               {busy === 'pdf' ? <ActivityIndicator color={C.fg} /> : <>
                 <Ionicons name="share-outline" size={18} color={C.fg} />
-                <Text style={st.pdfText}>ZDIEĽAŤ PDF ŽIADOSŤ (POISŤOVŇA / DANE)</Text>
+                <Text style={st.pdfText}>SHARE PDF CLAIM (INSURER / TAXES)</Text>
               </>}
             </Pressable>
           </View>

@@ -39,12 +39,12 @@ export default function PulseCheck() {
     setBusy(true); setErr(''); setInfo('');
     try {
       await api('/pulse/request', { method: 'POST', body: JSON.stringify({ target_did: did.trim() }) });
-      setInfo('Tichý ping odoslaný. Odpoveď uvidíte nižšie.');
+      setInfo('Silent ping sent. You will see the reply below.');
       setDid('');
       await load();
     } catch (e: any) {
       const msg = String(e.message || e);
-      setErr(msg.includes('opt_in_required') ? 'Tento používateľ nepovolil Pulse Check — súkromie je prísne opt-in.' : msg);
+      setErr(msg.includes('opt_in_required') ? 'This user has not enabled Pulse Check — privacy is strictly opt-in.' : msg);
     } finally { setBusy(false); }
   };
 
@@ -66,18 +66,18 @@ export default function PulseCheck() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <View style={styles.heroIcon}><Ionicons name="pulse-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>Tichý ping rodine</Text>
+        <Text style={styles.h1}>A silent ping to family</Text>
         <Text style={styles.sub}>
-          Blízky okruh sa môže diskrétne opýtať „si v poriadku?" počas rizikových období.
-          Žiadna poloha, žiadne sledovanie — len odpoveď jedným ťukom.
+          Your inner circle can discreetly ask are-you-OK during risky periods.
+          No location, no tracking — just a one-tap reply.
         </Text>
 
         <View style={styles.privacyBox}>
           <Ionicons name="lock-closed-outline" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.privacyTitle}>SÚKROMIE: PRÍSNE OPT-IN</Text>
+            <Text style={styles.privacyTitle}>PRIVACY: STRICTLY OPT-IN</Text>
             <Text style={styles.privacySub}>
-              Pingy vám môže posielať rodina LEN ak to tu výslovne povolíte. Kedykoľvek vypnete.
+              Family can send you pings ONLY if you explicitly allow it here. Disable any time.
             </Text>
           </View>
           <Switch testID="pc-optin" value={optin} onValueChange={setOptin} trackColor={{ true: C.brand, false: C.surface3 }} />
@@ -85,10 +85,10 @@ export default function PulseCheck() {
 
         {pending.length > 0 && (
           <>
-            <Text style={styles.section}>ČAKAJÚ NA VAŠU ODPOVEĎ</Text>
+            <Text style={styles.section}>AWAITING YOUR REPLY</Text>
             {pending.map(r => (
               <View key={r.req_id} style={styles.pingCard}>
-                <Text style={styles.pingFrom}>💛 {r.from_name} sa pýta: Ste v poriadku?</Text>
+                <Text style={styles.pingFrom}>💛 {r.from_name} is asking: Are you OK?</Text>
                 <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
                   <Pressable testID={`pc-ok-${r.req_id}`} onPress={() => respond(r.req_id, 'ok')} style={styles.okBtn}>
                     <Text style={styles.okText}>SOM OK</Text>
@@ -102,11 +102,11 @@ export default function PulseCheck() {
           </>
         )}
 
-        <Text style={styles.section}>POSLAŤ TICHÝ PING</Text>
+        <Text style={styles.section}>SEND A SILENT PING</Text>
         <TextInput
           testID="pc-did-input"
           style={styles.input}
-          placeholder="DID člena rodiny (did:guardian:…)"
+          placeholder="Family member DID (did:guardian:…)"
           placeholderTextColor={C.info}
           value={did}
           onChangeText={setDid}
@@ -116,7 +116,7 @@ export default function PulseCheck() {
           {busy ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="paper-plane-outline" size={16} color={C.onInverse} />
-              <Text style={styles.ctaText}>ODOSLAŤ PING</Text>
+              <Text style={styles.ctaText}>SEND PING</Text>
             </>
           )}
         </Pressable>
@@ -125,12 +125,12 @@ export default function PulseCheck() {
 
         {sent.length > 0 && (
           <>
-            <Text style={styles.section}>ODOSLANÉ PINGY</Text>
+            <Text style={styles.section}>SENT PINGS</Text>
             {sent.map(r => (
               <View key={r.req_id} style={styles.sentRow}>
                 <Text style={styles.sentDid} numberOfLines={1}>{r.target_did}</Text>
                 <Text style={[styles.sentStatus, r.status === 'ok' && { color: '#5FA779' }, r.status === 'need_help' && { color: C.error }]}>
-                  {r.status === 'pending' ? 'ČAKÁ…' : r.status === 'ok' ? '✓ V PORIADKU' : '● POTREBUJE POMOC'}
+                  {r.status === 'pending' ? 'WAITING…' : r.status === 'ok' ? '✓ OK' : '● NEEDS HELP'}
                 </Text>
               </View>
             ))}

@@ -39,10 +39,10 @@ export default function Wallpaper() {
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60, alignItems: 'center' }}>
-        <Text style={styles.h1}>Núdzová tapeta na zamknutú obrazovku</Text>
+        <Text style={styles.h1}>Emergency Lock-Screen Wallpaper</Text>
         <Text style={styles.sub}>
-          QR kód s krvnou skupinou, alergiami a ICE kontaktom — záchranári ho naskenujú bez odomknutia telefónu.
-          Údaje pochádzajú z vášho Núdzového profilu.
+          A QR code with blood type, allergies and an ICE contact — paramedics scan it without unlocking your phone.
+          The data comes from your Emergency Profile.
         </Text>
 
         <View style={styles.previewBox}>
@@ -53,7 +53,7 @@ export default function Wallpaper() {
               style={styles.preview}
               resizeMode="contain"
               onLoadEnd={() => setLoading(false)}
-              onError={() => { setLoading(false); setErr('Náhľad sa nepodarilo načítať.'); }}
+              onError={() => { setLoading(false); setErr('The preview failed to load.'); }}
             />
           ) : null}
           {loading && <ActivityIndicator color={C.brand} style={StyleSheet.absoluteFill} />}
@@ -64,7 +64,7 @@ export default function Wallpaper() {
           {busy ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="download-outline" size={18} color={C.onInverse} />
-              <Text style={styles.ctaText}>STIAHNUŤ TAPETU</Text>
+              <Text style={styles.ctaText}>DOWNLOAD WALLPAPER</Text>
             </>
           )}
         </Pressable>
@@ -72,7 +72,7 @@ export default function Wallpaper() {
           testID="wp-share"
           onPress={async () => {
             try {
-              if (Platform.OS === 'web' && (navigator as any).share) await (navigator as any).share({ title: 'Guardian núdzová tapeta', url });
+              if (Platform.OS === 'web' && (navigator as any).share) await (navigator as any).share({ title: 'Guardian emergency wallpaper', url });
               else await shareFile('/family/wallpaper.png', 'guardian_emergency_wallpaper.png', 'image/png');
             } catch {}
           }}
@@ -80,14 +80,14 @@ export default function Wallpaper() {
           style={styles.ctaOutline}
         >
           <Ionicons name="people-outline" size={18} color={C.brand} />
-          <Text style={styles.ctaOutlineText}>POSLAŤ RODINE JEDNÝM ŤUKOM</Text>
+          <Text style={styles.ctaOutlineText}>SEND TO FAMILY WITH ONE TAP</Text>
         </Pressable>
 
         <View style={styles.steps}>
-          <Text style={styles.stepTitle}>AKO NASTAVIŤ</Text>
-          <Text style={styles.step}>1. Stiahnite tapetu do galérie.</Text>
-          <Text style={styles.step}>2. Nastavenia → Tapeta → Zamknutá obrazovka.</Text>
-          <Text style={styles.step}>3. Hotovo — kritické info je dostupné aj bez odomknutia.</Text>
+          <Text style={styles.stepTitle}>HOW TO SET IT UP</Text>
+          <Text style={styles.step}>1. Download the wallpaper to your gallery.</Text>
+          <Text style={styles.step}>2. Settings → Wallpaper → Lock screen.</Text>
+          <Text style={styles.step}>3. Done — critical info is available without unlocking.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

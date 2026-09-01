@@ -50,31 +50,31 @@ export default function RecoverySuite() {
   const addGuardian = () => run('addg', async () => {
     if (!contact.trim()) return;
     await api('/recovery-suite/guardians', { method: 'POST', body: JSON.stringify({ contact: contact.trim() }) });
-    setContact(''); setMsg('Strážca pridaný ✓');
+    setContact(''); setMsg('Guardian added ✓');
   });
   const delGuardian = (id: string) => run(`delg-${id}`, async () => {
     await api(`/recovery-suite/guardians/${id}`, { method: 'DELETE' });
   });
   const toggle2fa = (v: boolean) => run('2fa', async () => {
     await api('/recovery-suite/social-2fa', { method: 'PATCH', body: JSON.stringify({ enabled: v }) });
-    setMsg(v ? 'Social 2FA zapnuté — strážcovia dostanú handshake pri každom prihlásení.' : 'Social 2FA vypnuté.');
+    setMsg(v ? 'Social 2FA enabled — guardians get a handshake on every login.' : 'Social 2FA disabled.');
   });
   const genTalisman = () => run('tal', async () => {
     const res: any = await api('/recovery-suite/talisman', { method: 'POST' });
     setTalisman(res.payload);
-    setMsg('Talizman vygenerovaný — VYTLAČTE HO TERAZ. Zobrazí sa iba raz.');
+    setMsg('Talisman generated — PRINT IT NOW. Shown only once.');
   });
   const regPasskey = () => run('pk', async () => {
     await api('/recovery-suite/passkey/register', { method: 'POST', body: JSON.stringify({ device_name: 'Toto zariadenie' }) });
-    setMsg('Passkey zaregistrovaný (natívna biometria po builde).');
+    setMsg('Passkey registered (native biometrics after build).');
   });
   const confirm2fa = (hid: string, legit: boolean) => run(`c2fa-${hid}`, async () => {
     await api(`/recovery-suite/2fa/${hid}/confirm`, { method: 'POST', body: JSON.stringify({ legit }) });
-    setMsg(legit ? 'Prihlásenie potvrdené ✓' : 'Prihlásenie označené ako PODOZRIVÉ — používateľ upozornený.');
+    setMsg(legit ? 'Login confirmed ✓' : 'Login flagged as SUSPICIOUS — user notified.');
   });
   const approveRec = (rid: string) => run(`apr-${rid}`, async () => {
     const res: any = await api(`/recovery-suite/social/${rid}/approve`, { method: 'POST' });
-    setMsg(res.status === 'approved' ? 'Kvórum dosiahnuté — obnova SCHVÁLENÁ ✓' : `Schválené ${res.approvals}/${res.needed} — čaká sa na ďalšieho strážcu.`);
+    setMsg(res.status === 'approved' ? 'Quorum reached — recovery APPROVED ✓' : `Approved ${res.approvals}/${res.needed} — waiting for another guardian.`);
   });
 
   const score = status?.security_score ?? 0;
@@ -96,15 +96,15 @@ export default function RecoverySuite() {
           <Text style={st.scoreLbl}>SECURITY SCORE</Text>
           <Text testID="rs-score" style={st.scoreVal}>{score}/100</Text>
           <View style={st.scoreBarBg}><View style={[st.scoreBar, { width: `${score}%` }]} /></View>
-          <Text style={st.scoreHint}>Strážca +25 · Social 2FA +25 · Talizman +25 · Passkey +25</Text>
+          <Text style={st.scoreHint}>Guardian +25 · Social 2FA +25 · Talisman +25 · Passkey +25</Text>
         </View>
 
         {!!msg && <Text testID="rs-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="rs-err" style={st.err}>{err}</Text>}
 
         {/* 1 — SOCIAL RECOVERY */}
-        <Text style={st.section}>1 · SOCIÁLNA OBNOVA — STRÁŽCOVIA</Text>
-        <Text style={st.note}>Ak stratíte prístup, {status?.guardians >= 2 ? '2 strážcovia' : 'strážca'} schváli obnovu (kvórum 2-z-N).</Text>
+        <Text style={st.section}>1 · SOCIAL RECOVERY — GUARDIANS</Text>
+        <Text style={st.note}>If you lose access, {status?.guardians >= 2 ? '2 guardians' : 'a guardian'} will approve recovery (2-of-N quorum).</Text>
         {guardians.map(g => (
           <View key={g.guardian_id} style={st.row}>
             <Ionicons name="shield-checkmark-outline" size={20} color={C.brand} />
@@ -119,7 +119,7 @@ export default function RecoverySuite() {
         ))}
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
           <TextInput testID="rs-guardian-input" value={contact} onChangeText={setContact}
-            placeholder="e-mail alebo DID strážcu" placeholderTextColor="#777"
+            placeholder="guardian e-mail or DID" placeholderTextColor="#777"
             autoCapitalize="none" style={[st.input, { flex: 1 }]} />
           <Pressable testID="rs-guardian-contacts" onPress={() => setPickerOpen(true)} style={st.addBtn}>
             <Ionicons name="people-circle-outline" size={22} color={C.onInverse} />
@@ -133,28 +133,28 @@ export default function RecoverySuite() {
         <View style={[st.row, { marginTop: S.lg, borderColor: C.brand }]}>
           <Ionicons name="finger-print-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={st.rowTitle}>SOCIAL 2FA — HANDSHAKE STRÁŽCU</Text>
-            <Text style={st.rowSub}>Pri každom novom prihlásení dostane strážca push na potvrdenie</Text>
+            <Text style={st.rowTitle}>SOCIAL 2FA — GUARDIAN HANDSHAKE</Text>
+            <Text style={st.rowSub}>On every new login a guardian gets a confirmation push</Text>
           </View>
           <Switch testID="rs-2fa-switch" value={!!status?.social_2fa_enabled} onValueChange={toggle2fa}
             trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
         {/* 2 — QR TALISMAN */}
-        <Text style={st.section}>2 · QR TALIZMAN (PAPIEROVÝ ZÁCHRANNÝ KĽÚČ)</Text>
-        <Text style={st.note}>Jednorazový offline kľúč — vytlačte a uložte do trezoru. {status?.talisman_ready ? 'AKTÍVNY ✓' : 'Zatiaľ nevygenerovaný.'}</Text>
+        <Text style={st.section}>2 · QR TALISMAN (PAPER RESCUE KEY)</Text>
+        <Text style={st.note}>One-time offline key — print and store in a safe. {status?.talisman_ready ? 'ACTIVE ✓' : 'Not generated yet.'}</Text>
         {talisman && (
           <View testID="rs-talisman-qr" style={st.qrBox}>
             <View style={{ backgroundColor: '#FFFFFF', padding: 12 }}>
               <QRCode value={talisman} size={180} backgroundColor="#FFFFFF" color="#000000" />
             </View>
-            <Text style={st.qrWarn}>⚠ ZOBRAZENÉ IBA RAZ — VYTLAČTE / ODFOŤTE NA PAPIER, NIE DO GALÉRIE</Text>
+            <Text style={st.qrWarn}>⚠ SHOWN ONLY ONCE — PRINT / COPY TO PAPER, NOT TO YOUR GALLERY</Text>
           </View>
         )}
         <Pressable testID="rs-talisman-gen" onPress={genTalisman} disabled={busy === 'tal'} style={st.actionBtn}>
           {busy === 'tal' ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="qr-code-outline" size={18} color={C.onInverse} />
-            <Text style={st.actionText}>{status?.talisman_ready ? 'PREGENEROVAŤ TALIZMAN' : 'VYGENEROVAŤ TALIZMAN'}</Text>
+            <Text style={st.actionText}>{status?.talisman_ready ? 'REGENERATE TALISMAN' : 'GENERATE TALISMAN'}</Text>
           </>}
         </Pressable>
 
@@ -172,26 +172,26 @@ export default function RecoverySuite() {
         <Pressable testID="rs-passkey-reg" onPress={regPasskey} disabled={busy === 'pk'} style={[st.actionBtn, { backgroundColor: C.surface3 }]}>
           {busy === 'pk' ? <ActivityIndicator color={C.fg} /> : <>
             <Ionicons name="finger-print" size={18} color={C.fg} />
-            <Text style={[st.actionText, { color: C.fg }]}>REGISTROVAŤ PASSKEY (PLACEHOLDER)</Text>
+            <Text style={[st.actionText, { color: C.fg }]}>REGISTER PASSKEY (PLACEHOLDER)</Text>
           </>}
         </Pressable>
 
         {/* GUARDIAN INBOX */}
         {(pending2fa.length > 0 || recRequests.length > 0) && (
           <>
-            <Text style={st.section}>SOM STRÁŽCA — ČAKAJÚCE POTVRDENIA</Text>
+            <Text style={st.section}>I AM A GUARDIAN — PENDING CONFIRMATIONS</Text>
             {pending2fa.map(h => (
               <View key={h.handshake_id} style={[st.row, { borderColor: C.warn, flexWrap: 'wrap' }]}>
                 <View style={{ flex: 1, minWidth: 150 }}>
                   <Text style={st.rowTitle}>🔐 2FA: {h.user_name}</Text>
-                  <Text style={st.rowSub}>Nové prihlásenie …{h.session_tail}</Text>
+                  <Text style={st.rowSub}>New login …{h.session_tail}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: S.sm }}>
                   <Pressable testID={`rs-2fa-ok-${h.handshake_id}`} onPress={() => confirm2fa(h.handshake_id, true)} style={st.miniOk}>
                     <Text style={st.miniText}>JE TO ON/ONA</Text>
                   </Pressable>
                   <Pressable testID={`rs-2fa-flag-${h.handshake_id}`} onPress={() => confirm2fa(h.handshake_id, false)} style={st.miniBad}>
-                    <Text style={[st.miniText, { color: C.onError }]}>PODOZRIVÉ</Text>
+                    <Text style={[st.miniText, { color: C.onError }]}>SUSPICIOUS</Text>
                   </Pressable>
                 </View>
               </View>
@@ -200,10 +200,10 @@ export default function RecoverySuite() {
               <View key={r.req_id} style={[st.row, { borderColor: C.error, flexWrap: 'wrap' }]}>
                 <View style={{ flex: 1, minWidth: 150 }}>
                   <Text style={st.rowTitle}>🆘 OBNOVA: {r.user_name}</Text>
-                  <Text style={st.rowSub}>Schválené {r.approvals?.length || 0}/{r.needed}</Text>
+                  <Text style={st.rowSub}>Approved {r.approvals?.length || 0}/{r.needed}</Text>
                 </View>
                 <Pressable testID={`rs-rec-approve-${r.req_id}`} onPress={() => approveRec(r.req_id)} style={st.miniOk}>
-                  <Text style={st.miniText}>SCHVÁLIŤ</Text>
+                  <Text style={st.miniText}>APPROVE</Text>
                 </Pressable>
               </View>
             ))}

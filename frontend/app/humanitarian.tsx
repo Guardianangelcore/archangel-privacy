@@ -38,11 +38,11 @@ export default function Humanitarian() {
 
   const verify = () => run('verify', async () => {
     const ev: any = await api('/humanitarian/verify', { method: 'POST', body: JSON.stringify({ kind, region }) });
-    setMsg(`Katastrofa OVERENÁ konsenzom ${ev.consensus_sources.length} zdrojov (simulácia) — štít je aktívny.`);
+    setMsg(`Disaster VERIFIED by consensus of ${ev.consensus_sources.length} sources (simulation) — the shield is active.`);
   });
   const genProfile = () => run('profile', async () => {
     await api('/humanitarian/profile', { method: 'POST' });
-    setMsg('Humanitárny profil vygenerovaný — pripravený pre Červený kríž / UN intake.');
+    setMsg('Humanitarian profile generated — ready for Red Cross / UN intake.');
   });
   const share = () => run('pdf', async () => {
     await sharePdf('/humanitarian/card.pdf', 'guardian_humanitarian_card.pdf');
@@ -60,13 +60,13 @@ export default function Humanitarian() {
         <Text style={st.title}>HUMANITARIAN SHIELD</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SIMULÁCIA · REÁLNE FEEDY (GDACS/WHO) VO PHASE 3 · UZNANIE: ICRC / UNHCR / UN OCHA</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>SIMULATION · REAL FEEDS (GDACS/WHO) IN PHASE 3 · RECOGNITION: ICRC / UNHCR / UN OCHA</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={[st.statusCard, { borderColor: verified ? C.error : C.borderStrong }]}>
           <Ionicons name={verified ? 'alert-circle' : 'earth-outline'} size={30} color={verified ? C.error : C.brand} />
           <Text style={[st.statusText, verified && { color: C.error }]}>
-            {verified ? `GLOBÁLNA KATASTROFA OVERENÁ · ${status.event?.label?.toUpperCase() || ''}` : 'ŽIADNA OVERENÁ KATASTROFA — SVET JE STABILNÝ'}
+            {verified ? `GLOBAL DISASTER VERIFIED · ${status.event?.label?.toUpperCase() || ''}` : 'NO VERIFIED DISASTER — THE WORLD IS STABLE'}
           </Text>
           {verified && <Text style={st.statusMeta}>{status.event?.region || 'global'} · konsenzus: {status.event?.consensus_sources?.length} zdrojov</Text>}
         </View>
@@ -83,32 +83,32 @@ export default function Humanitarian() {
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="hu-region" value={region} onChangeText={setRegion} placeholder="Región (napr. Stredná Európa)"
+          <TextInput testID="hu-region" value={region} onChangeText={setRegion} placeholder="Region (e.g. Central Europe)"
             placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <Pressable testID="hu-verify" onPress={verify} disabled={busy === 'verify'} style={st.addBtn}>
             {busy === 'verify' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Ionicons name="checkmark-done" size={20} color={C.onInverse} />}
           </Pressable>
         </View>
 
-        <Text style={st.section}>2 · HUMANITÁRNA IDENTITA + ZDRAVOTNÝ PROFIL</Text>
-        <Text style={st.intro}>Jarvis vygeneruje oficiálny profil uznateľný medzinárodnými organizáciami: UNHCR PRIMES, ICRC Restoring Family Links, Sphere Handbook.</Text>
+        <Text style={st.section}>2 · HUMANITARIAN IDENTITY + HEALTH PROFILE</Text>
+        <Text style={st.intro}>Jarvis generates an official profile recognized by international organizations: UNHCR PRIMES, ICRC Restoring Family Links, Sphere Handbook.</Text>
         <Pressable testID="hu-generate" onPress={genProfile} disabled={busy === 'profile' || !verified}
           style={[st.actionBtn, !verified && { opacity: 0.4 }]}>
           {busy === 'profile' ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="id-card-outline" size={20} color={C.onInverse} />
-            <Text style={st.actionText}>{profile ? 'OBNOVIŤ HUMANITÁRNY PROFIL' : 'VYGENEROVAŤ HUMANITÁRNY PROFIL'}</Text>
+            <Text style={st.actionText}>{profile ? 'REFRESH HUMANITARIAN PROFILE' : 'GENERATE HUMANITARIAN PROFILE'}</Text>
           </>}
         </Pressable>
-        {!verified && <Text style={st.hint}>Aktivuje sa až po overení globálnej katastrofy (krok 1).</Text>}
+        {!verified && <Text style={st.hint}>Activates only after global disaster verification (step 1).</Text>}
 
         {profile && (
           <View testID="hu-card" style={st.humCard}>
             <Text style={st.humId}>{profile.hum_id}</Text>
             <Text style={st.humName}>{profile.full_name}</Text>
             <Text style={st.humLine}>Krv: {profile.blood_type || '—'} · Alergie: {profile.allergies || '—'}</Text>
-            <Text style={st.humLine}>Diagnózy: {profile.conditions || '—'}</Text>
+            <Text style={st.humLine}>Diagnoses: {profile.conditions || '—'}</Text>
             <Text style={st.humLine}>Lieky: {profile.medications || '—'}</Text>
-            <Text style={st.humLine}>Očkovania: {(profile.vaccinations || []).map((v: any) => v.title).join(', ') || '—'}</Text>
+            <Text style={st.humLine}>Vaccinations: {(profile.vaccinations || []).map((v: any) => v.title).join(', ') || '—'}</Text>
             <View style={st.qrWrap}>
               <View style={{ backgroundColor: '#FFFFFF', padding: 10 }}>
                 <QRCode value={profile.qr_payload || profile.hum_id} size={140} backgroundColor="#FFFFFF" color="#000000" />
@@ -118,7 +118,7 @@ export default function Humanitarian() {
             <Pressable testID="hu-pdf" onPress={share} disabled={busy === 'pdf'} style={st.pdfBtn}>
               {busy === 'pdf' ? <ActivityIndicator color={C.fg} /> : <>
                 <Ionicons name="share-outline" size={16} color={C.fg} />
-                <Text style={st.pdfText}>ZDIEĽAŤ KARTU (PDF PRE AID INTAKE)</Text>
+                <Text style={st.pdfText}>SHARE CARD (PDF FOR AID INTAKE)</Text>
               </>}
             </Pressable>
           </View>

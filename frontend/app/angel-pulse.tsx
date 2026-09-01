@@ -16,8 +16,8 @@ import { playPulse, PulsePattern } from '@/src/haptic-heartbeat';
 
 const PATTERNS: { key: PulsePattern; label: string; icon: any }[] = [
   { key: 'heartbeat', label: 'Tep srdca', icon: 'heart' },
-  { key: 'soft',      label: 'Jemný',     icon: 'water' },
-  { key: 'strong',    label: 'Silný',     icon: 'flash' },
+  { key: 'soft',      label: 'Gentle',    icon: 'water' },
+  { key: 'strong',    label: 'Strong',    icon: 'flash' },
   { key: 'sos',       label: 'SOS',       icon: 'warning' },
 ];
 
@@ -67,7 +67,7 @@ export default function AngelPulse() {
         body: JSON.stringify({ to_user_id: target, pattern, bpm: parseInt(bpm || '72', 10) }),
       });
       tap('success');
-      setMsg('💛 Tep doručený. Rodinný člen ho pocíti.');
+      setMsg('💛 Heartbeat delivered. Your family member will feel it.');
     } catch (e: any) {
       setMsg(String(e?.message || e));
     }
@@ -117,20 +117,20 @@ export default function AngelPulse() {
             <Animated.View style={[styles.heartBg, heartStyle]}>
               <Ionicons name="heart" size={100} color={C.brand} />
             </Animated.View>
-            <Text style={styles.liveText}>CÍTITE TEP…</Text>
+            <Text style={styles.liveText}>YOU FEEL A HEARTBEAT…</Text>
           </View>
         )}
 
         {!playingId && (
           <>
             <Text style={styles.intro}>
-              Bez slov. Bez správy. Iba <Text style={{ color: C.brand, fontWeight: '900' }}>hmatateľné prepojenie</Text>.
-              Váš anjelský tep dorazí ako jemná vibrácia priamo do dlane rodiny.
+              No words. No message. Just a <Text style={{ color: C.brand, fontWeight: '900' }}>tangible connection</Text>.
+              Your angel heartbeat arrives as a gentle vibration right into your family’s palm.
             </Text>
 
             {inbox.length > 0 && (
               <>
-                <Text style={styles.section}>DORUČENÉ VÁM · {inbox.length}</Text>
+                <Text style={styles.section}>DELIVERED TO YOU · {inbox.length}</Text>
                 {inbox.slice(0, 6).map((p) => (
                   <Pressable key={p.pulse_id} testID={`ap-inbox-${p.pulse_id}`} onPress={() => feel(p)} style={styles.inCard}>
                     <View style={styles.inRing}>
@@ -146,7 +146,7 @@ export default function AngelPulse() {
                       <Ionicons name="checkmark-circle" size={20} color={C.brand} />
                     ) : (
                       <View style={styles.newDot}>
-                        <Text style={styles.newDotText}>NOVÝ</Text>
+                        <Text style={styles.newDotText}>NEW</Text>
                       </View>
                     )}
                   </Pressable>
@@ -154,9 +154,9 @@ export default function AngelPulse() {
               </>
             )}
 
-            <Text style={styles.section}>POSLAŤ TEP</Text>
+            <Text style={styles.section}>SEND A HEARTBEAT</Text>
             {circle.length === 0 ? (
-              <Text style={styles.empty}>Najprv pridajte niekoho do rodinného kruhu.</Text>
+              <Text style={styles.empty}>First add someone to your family circle.</Text>
             ) : (
               <>
                 <View style={styles.targetRow}>
@@ -201,7 +201,7 @@ export default function AngelPulse() {
                 <Pressable testID="ap-send" onPress={send} disabled={busy || !target} style={styles.sendCta}>
                   <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sendBg}>
                     {busy ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="heart" size={22} color={C.onInverse} />}
-                    <Text style={styles.sendText}>POSLAŤ TEP</Text>
+                    <Text style={styles.sendText}>SEND A HEARTBEAT</Text>
                   </LinearGradient>
                 </Pressable>
 

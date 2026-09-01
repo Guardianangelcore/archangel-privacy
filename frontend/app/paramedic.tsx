@@ -18,7 +18,7 @@ export default function Paramedic() {
   const [locks, setLocks] = useState<any[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
   const [active, setActive] = useState<any[]>([]);
-  const [lockName, setLockName] = useState('Vchodové dvere');
+  const [lockName, setLockName] = useState('Front door');
   const [vendor, setVendor] = useState('nuki');
   const [lic, setLic] = useState('');
   const [country, setCountry] = useState<'SK' | 'CZ'>('SK');
@@ -44,7 +44,7 @@ export default function Paramedic() {
 
   const addLock = () => run('addlock', async () => {
     await api('/paramedic/locks', { method: 'POST', body: JSON.stringify({ vendor, name: lockName }) });
-    setMsg('Smart zámok zaregistrovaný.');
+    setMsg('Smart lock registered.');
   });
   const delLock = (id: string) => run(`dl-${id}`, async () => {
     await api(`/paramedic/locks/${id}`, { method: 'DELETE' });
@@ -52,11 +52,11 @@ export default function Paramedic() {
   const issueCode = (confirm: boolean) => run('issue', async () => {
     try {
       const rec: any = await api('/paramedic/access', { method: 'POST', body: JSON.stringify({ reason: 'emergency', confirm }) });
-      setMsg(`VSTUPNÝ KÓD ${rec.code} vydaný (platí 60 min) — strážcovia dostali push. Overenie: ${rec.emergency_verified}.`);
+      setMsg(`ENTRY CODE ${rec.code} issued (valid 60 min) — guardians were notified. Verification: ${rec.emergency_verified}.`);
     } catch (e: any) {
       const m = String(e.message || e);
       if (m.includes('no_verified_emergency')) {
-        setErr('Za posledných 30 min nebola overená núdzová udalosť. Ťuknite znova na „MANUÁLNE VYDANIE" pre override.');
+        setErr('No verified emergency in the last 30 min. Tap MANUAL ISSUE again to override.');
       } else { throw e; }
     }
   });
@@ -74,10 +74,10 @@ export default function Paramedic() {
         <Text style={st.title}>PARAMEDIC KEY</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SMART-LOCK API PLACEHOLDER (NUKI/SOMFY) · REGISTRE NCZI/ÚZIS SIMULOVANÉ</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>SMART-LOCK API PLACEHOLDER (NUKI/SOMFY) · NCZI/UZIS REGISTRIES SIMULATED</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.intro}>Pri overenej núdzi (maják / pád / pulse „potrebujem pomoc") systém vydá záchranárom dočasný 6-miestny vstupný kód k vašim dverám.</Text>
+        <Text style={st.intro}>During a verified emergency (beacon / fall / a needs-help pulse) the system issues paramedics a temporary 6-digit entry code to your door.</Text>
 
         {!!msg && <Text testID="pm-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="pm-err" style={st.err}>{err}</Text>}
@@ -85,14 +85,14 @@ export default function Paramedic() {
         {/* ACTIVE CODES */}
         {active.map(a => (
           <View key={a.access_id} style={st.codeCard}>
-            <Text style={st.codeLbl}>AKTÍVNY VSTUPNÝ KÓD · {a.emergency_verified?.toUpperCase()}</Text>
+            <Text style={st.codeLbl}>ACTIVE ENTRY CODE · {a.emergency_verified?.toUpperCase()}</Text>
             <Text testID={`pm-code-${a.access_id}`} style={st.codeVal}>{a.code}</Text>
-            <Text style={st.codeMeta}>Zámky: {(a.locks || []).join(', ')} · platí do {String(a.expires_at).slice(11, 16)} UTC</Text>
+            <Text style={st.codeMeta}>Locks: {(a.locks || []).join(', ')} · valid until {String(a.expires_at).slice(11, 16)} UTC</Text>
           </View>
         ))}
 
         {/* LOCKS */}
-        <Text style={st.section}>MOJE SMART ZÁMKY</Text>
+        <Text style={st.section}>MY SMART LOCKS</Text>
         {locks.map(l => (
           <View key={l.lock_id} style={st.row}>
             <Ionicons name="lock-closed-outline" size={20} color={C.brand} />
@@ -123,25 +123,25 @@ export default function Paramedic() {
         <Pressable testID="pm-issue" onPress={() => issueCode(false)} disabled={busy === 'issue' || locks.length === 0} style={[st.actionBtn, locks.length === 0 && { opacity: 0.5 }]}>
           {busy === 'issue' ? <ActivityIndicator color={C.onError} /> : <>
             <Ionicons name="key" size={20} color={C.onError} />
-            <Text style={st.actionText}>VYDAŤ NÚDZOVÝ VSTUPNÝ KÓD</Text>
+            <Text style={st.actionText}>ISSUE EMERGENCY ENTRY CODE</Text>
           </>}
         </Pressable>
         <Pressable testID="pm-issue-manual" onPress={() => issueCode(true)} disabled={busy === 'issue' || locks.length === 0} style={st.manualBtn}>
-          <Text style={st.manualText}>MANUÁLNE VYDANIE (OVERRIDE BEZ NÚDZE)</Text>
+          <Text style={st.manualText}>MANUAL ISSUE (OVERRIDE WITHOUT EMERGENCY)</Text>
         </Pressable>
 
         {/* REGISTRY */}
-        <Text style={st.section}>OVERENIE ZÁCHRANÁRA · ŠTÁTNY REGISTER</Text>
-        <Text style={st.intro}>Pred vydaním kódu overte licenciu zdravotníka v registri NCZI (SK) / ÚZIS (CZ).</Text>
+        <Text style={st.section}>PARAMEDIC VERIFICATION · STATE REGISTRY</Text>
+        <Text style={st.intro}>Before issuing a code, verify the clinician licence in the NCZI (SK) / UZIS (CZ) registry.</Text>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
           {(['SK', 'CZ'] as const).map(cc => (
             <Pressable testID={`pm-country-${cc}`} key={cc} onPress={() => setCountry(cc)} style={[st.chip, country === cc && st.chipActive]}>
-              <Text style={[st.chipText, country === cc && st.chipTextActive]}>{cc === 'SK' ? 'SK · NCZI' : 'CZ · ÚZIS'}</Text>
+              <Text style={[st.chipText, country === cc && st.chipTextActive]}>{cc === 'SK' ? 'SK · NCZI' : 'CZ · UZIS'}</Text>
             </Pressable>
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="pm-license" value={lic} onChangeText={setLic} placeholder="Číslo licencie (napr. A1234567)"
+          <TextInput testID="pm-license" value={lic} onChangeText={setLic} placeholder="Licence number (e.g. A1234567)"
             autoCapitalize="characters" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <Pressable testID="pm-verify" onPress={verifyRegistry} disabled={busy === 'reg' || !lic.trim()} style={st.addBtn}>
             {busy === 'reg' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Ionicons name="shield-checkmark" size={20} color={C.onInverse} />}
@@ -150,10 +150,10 @@ export default function Paramedic() {
         {regResult && (
           <View testID="pm-reg-result" style={[st.regCard, { borderColor: regResult.valid ? C.brand : C.error }]}>
             <Text style={[st.regVerdict, { color: regResult.valid ? C.brand : C.error }]}>
-              {regResult.valid ? '✓ OVERENÝ ZDRAVOTNÍK' : '✗ NENÁJDENÝ V REGISTRI'}
+              {regResult.valid ? '✓ VERIFIED CLINICIAN' : '✗ NOT FOUND IN REGISTRY'}
             </Text>
             <Text style={st.rowSub}>{regResult.registry}</Text>
-            <Text style={[st.rowSub, { marginTop: 4 }]}>{regResult.detail} (SIMULÁCIA)</Text>
+            <Text style={[st.rowSub, { marginTop: 4 }]}>{regResult.detail} (SIMULATION)</Text>
           </View>
         )}
 

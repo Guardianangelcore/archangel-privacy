@@ -8,15 +8,15 @@ import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 
 const SCOPES = [
-  ['emergency_profile', 'Núdzový profil'],
-  ['vault_list', 'Zoznam dokumentov (len metadáta)'],
-  ['recovery_status', 'Stav PN / zotavenia'],
+  ['emergency_profile', 'Emergency profile'],
+  ['vault_list', 'Document list (metadata only)'],
+  ['recovery_status', 'Sick leave / recovery status'],
 ];
 const SIGNALS = [
-  ['pharmacy_out', 'Liek nedostupný', 'flask-outline'],
-  ['supply_shortage', 'Nedostatok zásob', 'cube-outline'],
-  ['grid_down', 'Výpadok elektriny', 'flash-outline'],
-  ['water_issue', 'Problém s vodou', 'water-outline'],
+  ['pharmacy_out', 'Medication unavailable', 'flask-outline'],
+  ['supply_shortage', 'Supply shortage', 'cube-outline'],
+  ['grid_down', 'Power outage', 'flash-outline'],
+  ['water_issue', 'Water issue', 'water-outline'],
 ];
 
 export default function Protocol() {
@@ -65,17 +65,17 @@ export default function Protocol() {
 
   const accept = async (id: string) => {
     setBusy(id); setErr(''); setInfo('');
-    try { const s: any = await api(`/marketplace/offers/${id}/accept`, { method: 'POST' }); setInfo(`Predané anonymne: +${s.reward_eur} € (${s.reward_crypto}) — DEMO výplata.`); await load(); }
+    try { const s: any = await api(`/marketplace/offers/${id}/accept`, { method: 'POST' }); setInfo(`Sold anonymously: +${s.reward_eur} € (${s.reward_crypto}) — DEMO payout.`); await load(); }
     catch (e: any) {
       const m = String(e.message || e);
-      setErr(m.includes('optin_required') ? 'Najprv zapnite anonymizované zdieľanie (opt-in).' : m.includes('409') ? 'Túto ponuku ste už prijali.' : m);
+      setErr(m.includes('optin_required') ? 'First enable anonymized sharing (opt-in).' : m.includes('409') ? 'You already accepted this offer.' : m);
     }
     finally { setBusy(null); }
   };
 
   const report = async (kind: string) => {
     setBusy(`sig-${kind}`); setErr('');
-    try { await api('/sentinel/report', { method: 'POST', body: JSON.stringify({ kind, region: 'SK' }) }); setInfo('Anonymný signál odoslaný do Sentinel siete.'); await load(); }
+    try { await api('/sentinel/report', { method: 'POST', body: JSON.stringify({ kind, region: 'SK' }) }); setInfo('Anonymous signal sent to the Sentinel network.'); await load(); }
     catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
@@ -90,13 +90,13 @@ export default function Protocol() {
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Globálna infraštruktúra</Text>
-        <Text style={styles.sub}>Guardian OS ako univerzálny protokol: prístupy pre kliniky, monetizácia anonymných dát a Sentinel sieť prežitia.</Text>
+        <Text style={styles.h1}>Global infrastructure</Text>
+        <Text style={styles.sub}>Guardian OS as a universal protocol: clinic access, anonymous data monetization and the Sentinel survival network.</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         {!!info && <Text style={styles.info}>{info}</Text>}
 
-        <Text style={styles.section}>1 · API BRÁNA PRE PARTNEROV (LEN S VAŠÍM SÚHLASOM)</Text>
-        <TextInput testID="pr-partner" style={styles.input} placeholder="Názov partnera (klinika, poisťovňa, záchranka)" placeholderTextColor={C.info} value={partner} onChangeText={setPartner} />
+        <Text style={styles.section}>1 · PARTNER API GATEWAY (ONLY WITH YOUR CONSENT)</Text>
+        <TextInput testID="pr-partner" style={styles.input} placeholder="Partner name (clinic, insurer, ambulance)" placeholderTextColor={C.info} value={partner} onChangeText={setPartner} />
         {SCOPES.map(([k, l]) => (
           <Pressable key={k} testID={`pr-scope-${k}`} onPress={() => setScopes(scopes.includes(k) ? scopes.filter(s => s !== k) : [...scopes, k])} style={styles.scopeRow}>
             <Ionicons name={scopes.includes(k) ? 'checkbox' : 'square-outline'} size={20} color={C.brand} />
@@ -104,42 +104,42 @@ export default function Protocol() {
           </Pressable>
         ))}
         <Pressable testID="pr-grant" onPress={createGrant} disabled={busy === 'grant'} style={styles.cta}>
-          {busy === 'grant' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>VYDAŤ PARTNERSKÝ KĽÚČ (30 DNÍ)</Text>}
+          {busy === 'grant' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ISSUE PARTNER KEY (30 DAYS)</Text>}
         </Pressable>
         {!!newToken && (
           <View style={styles.tokenBox}>
-            <Text style={styles.tokenLbl}>KĽÚČ PRE PARTNERA (zobrazený iba raz — odovzdajte bezpečne):</Text>
+            <Text style={styles.tokenLbl}>PARTNER KEY (shown only once — hand over securely):</Text>
             <Text testID="pr-token" style={styles.tokenVal} selectable>{newToken}</Text>
           </View>
         )}
         {grants.map(g => (
           <View key={g.grant_id} style={styles.grantRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.grantName}>{g.partner_name}{g.revoked ? '  · ZRUŠENÉ' : ''}</Text>
+              <Text style={styles.grantName}>{g.partner_name}{g.revoked ? '  · REVOKED' : ''}</Text>
               <Text style={styles.grantSub}>{(g.scopes || []).join(', ')} · {g.token_preview}</Text>
             </View>
             {!g.revoked && (
               <Pressable testID={`pr-revoke-${g.grant_id}`} onPress={() => revoke(g.grant_id)} style={styles.revokeBtn}>
-                <Text style={styles.revokeText}>ZRUŠIŤ</Text>
+                <Text style={styles.revokeText}>CANCEL</Text>
               </Pressable>
             )}
           </View>
         ))}
         {audit.length > 0 && (
           <>
-            <Text style={styles.mini}>AUDIT PRÍSTUPOV ({audit.length})</Text>
+            <Text style={styles.mini}>ACCESS AUDIT ({audit.length})</Text>
             {audit.slice(0, 5).map((a, i) => (
               <Text key={i} style={styles.auditRow}>• {a.partner_name} → {a.scope} · {(a.at || '').slice(0, 16).replace('T', ' ')}</Text>
             ))}
           </>
         )}
 
-        <Text style={styles.section}>2 · SOVEREIGN DATA MARKETPLACE (DEMO VÝPLATY)</Text>
+        <Text style={styles.section}>2 · SOVEREIGN DATA MARKETPLACE (DEMO PAYOUTS)</Text>
         <View style={styles.optinRow}>
           <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.optinTitle}>ANONYMIZOVANÁ MONETIZÁCIA DÁT — OPT-IN</Text>
-            <Text style={styles.optinSub}>Zarobené: {market?.earnings_eur ?? 0} € · dáta vždy anonymné (GDPR čl. 9)</Text>
+            <Text style={styles.optinTitle}>ANONYMIZED DATA MONETIZATION — OPT-IN</Text>
+            <Text style={styles.optinSub}>Earned: {market?.earnings_eur ?? 0} € · data always anonymous (GDPR Art. 9)</Text>
           </View>
           <Switch testID="pr-market-optin" value={!!market?.enabled} onValueChange={setOptin} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -152,14 +152,14 @@ export default function Protocol() {
                 <Text style={styles.grantSub}>{o.institution} · {o.reward_eur} € / {o.reward_crypto}</Text>
               </View>
               <Pressable testID={`pr-offer-${o.offer_id}`} onPress={() => accept(o.offer_id)} disabled={sold || busy === o.offer_id} style={[styles.sellBtn, sold && { opacity: 0.4 }]}>
-                {busy === o.offer_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.sellText}>{sold ? 'PREDANÉ' : 'PREDAŤ'}</Text>}
+                {busy === o.offer_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.sellText}>{sold ? 'SOLD' : 'SELL'}</Text>}
               </Pressable>
             </View>
           );
         })}
 
         <Text style={styles.section}>3 · GLOBAL SENTINEL NETWORK</Text>
-        <Text style={styles.sub}>Anonymne hláste výpadky a nedostatky — sieť ich agreguje pre všetkých v regióne.</Text>
+        <Text style={styles.sub}>Report outages and shortages anonymously — the network aggregates them for everyone in the region.</Text>
         <View style={styles.sigGrid}>
           {SIGNALS.map(([k, l, ic]) => (
             <Pressable key={k} testID={`pr-signal-${k}`} onPress={() => report(k)} disabled={busy === `sig-${k}`} style={styles.sigBtn}>
@@ -170,14 +170,14 @@ export default function Protocol() {
         </View>
         {agg && (
           <View style={styles.aggBox}>
-            <Text style={styles.mini}>ŽIVÉ SIGNÁLY (7 DNÍ) · AKTÍVNE UZLY: {agg.active_nodes}</Text>
+            <Text style={styles.mini}>LIVE SIGNALS (7 DAYS) · ACTIVE NODES: {agg.active_nodes}</Text>
             {(agg.signals || []).slice(0, 6).map((s: any, i: number) => (
               <Text key={i} style={styles.auditRow}>• {s.region}: {s.kind} × {s.count}</Text>
             ))}
-            {(agg.signals || []).length === 0 && <Text style={styles.auditRow}>Zatiaľ žiadne signály.</Text>}
+            {(agg.signals || []).length === 0 && <Text style={styles.auditRow}>No signals yet.</Text>}
           </View>
         )}
-        <Text style={styles.disclaimer}>Marketplace výplaty a Sentinel sieť bežia v DEMO režime do napojenia reálnych partnerov. Partnerská API brána je plne funkčná (scoped kľúče + audit).</Text>
+        <Text style={styles.disclaimer}>Marketplace payouts and the Sentinel network run in DEMO mode until real partners connect. The partner API gateway is fully functional (scoped keys + audit).</Text>
       </ScrollView>
     </SafeAreaView>
   );

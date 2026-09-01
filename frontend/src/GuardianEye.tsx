@@ -28,7 +28,7 @@ export function GuardianEyeFAB({ testID = 'guardian-eye', bottom = 24, right = 2
         onPress={open}
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.94 }] }]}
         hitSlop={10}
-        accessibilityLabel="Guardian Eye — kamera pre okamžité OCR"
+        accessibilityLabel="Guardian Eye — camera for instant OCR"
       >
         <Ionicons name="scan-outline" size={22} color={C.onInverse} />
         <View style={styles.dot} />

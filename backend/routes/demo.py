@@ -38,7 +38,7 @@ async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(
     user = await get_current_user(authorization)
     from routes.subscription import _is_founder
     if not await _is_founder(user):
-        raise HTTPException(403, "founder_only: Demo Mode je dostupný iba v admin pohľade zakladateľa.")
+        raise HTTPException(403, "founder_only: Demo Mode is available only in the founder admin view.")
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     await _wipe_demo(uid)  # idempotent — clean slate either way
@@ -47,7 +47,7 @@ async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(
         # 1. Successful waitlist hunt (Kardiológia — slot found 14 days out)
         await db.waitlist.insert_one({
             "item_id": uuid.uuid4().hex, "user_id": uid,
-            "specialty": "Kardiológia", "clinic": "NÚSCH Bratislava", "city": "Bratislava",
+            "specialty": "Cardiology", "clinic": "NÚSCH Bratislava", "city": "Bratislava",
             "current_date": (now + timedelta(days=210)).strftime("%Y-%m-%d"),
             "target_before": (now + timedelta(days=60)).strftime("%Y-%m-%d"),
             "priority": "high", "status": "slot_found",
@@ -56,18 +56,18 @@ async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(
         # 2. €150 insurance refund claim source (dental invoice processed by Jarvis)
         await db.jarvis_actions.insert_one({
             "action_id": uuid.uuid4().hex, "user_id": uid,
-            "specialty": "Stomatológia", "doc_title": "Faktúra — Dental Premium Clinic (demo)",
+            "specialty": "Dentistry", "doc_title": "Invoice — Dental Premium Clinic (demo)",
             "booked_slot": (now + timedelta(days=7)).strftime("%Y-%m-%d 09:00"),
             "status": "done", "steps": [{"step": "OCR", "status": "ok", "detail": "demo"}],
             "demo": True, "created_at": now})
         # 3. Family safety pulse — Guardian answered 'V PORIADKU'
         await db.pulse_requests.insert_one({
-            "req_id": uuid.uuid4().hex, "from_user": uid, "from_name": "Strážca",
+            "req_id": uuid.uuid4().hex, "from_user": uid, "from_name": "Guardian",
             "target_user": uid, "target_did": user["did"], "status": "ok",
             "responded_at": now, "demo": True, "created_at": now})
-        seeded = {"waitlist_hunt": "Kardiológia · slot_found +14d",
-                  "refund_claim": "Stomatológia → 150 € (Claim My Benefits)",
-                  "family_pulse": "Strážca · V PORIADKU"}
+        seeded = {"waitlist_hunt": "Cardiology · slot_found +14d",
+                  "refund_claim": "Dentistry → 150 € (Claim My Benefits)",
+                  "family_pulse": "Guardian · OK"}
     await db.users.update_one({"user_id": uid}, {"$set": {"demo_mode": body.enabled}})
     return {"demo_mode": body.enabled, "seeded": seeded}
 

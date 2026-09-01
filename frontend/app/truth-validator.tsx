@@ -12,9 +12,9 @@ import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
 
 const BADGE: Record<string, { text: string; bg: string; fg: string }> = {
-  verified: { text: 'OVERENÉ KOMUNITOU', bg: '#1B4332', fg: '#FFFFFF' },
-  disputed: { text: 'SPORNÉ', bg: '#C25450', fg: '#FFFFFF' },
-  pending: { text: 'ČAKÁ NA KONSENZUS', bg: '#2C2C2E', fg: '#D1D1D6' },
+  verified: { text: 'COMMUNITY VERIFIED', bg: '#1B4332', fg: '#FFFFFF' },
+  disputed: { text: 'DISPUTED', bg: '#C25450', fg: '#FFFFFF' },
+  pending: { text: 'AWAITING CONSENSUS', bg: '#2C2C2E', fg: '#D1D1D6' },
 };
 
 export default function TruthValidator() {
@@ -74,7 +74,7 @@ export default function TruthValidator() {
         contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
         ListHeaderComponent={
           <View>
-            <Text style={st.intro}>Peer-konsenzus proti dezinformáciám v kríze: tvrdenia overuje komunita, každé je ukotvené SHA-256 hashom na Neural Bus.</Text>
+            <Text style={st.intro}>Peer consensus against crisis disinformation: claims are verified by the community, each anchored with a SHA-256 hash on the Neural Bus.</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.md }}>
               {Object.entries(cats).map(([k, v]) => (
                 <Pressable testID={`tv-cat-${k}`} key={k} onPress={() => setCat(k)} style={[st.chip, cat === k && st.chipActive]}>
@@ -83,19 +83,19 @@ export default function TruthValidator() {
               ))}
             </View>
             <TextInput testID="tv-text" value={text} onChangeText={setText} multiline
-              placeholder="Napr.: Lekáreň na Hlavnej 12 má Paralen skladom (overené dnes 14:00)…"
+              placeholder="E.g.: Pharmacy at Main St 12 has Paralen in stock (verified today 14:00)…"
               placeholderTextColor="#777" style={[st.input, { minHeight: 70, marginTop: S.sm }]} />
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <TextInput testID="tv-city" value={city} onChangeText={setCity} placeholder="Mesto"
+              <TextInput testID="tv-city" value={city} onChangeText={setCity} placeholder="City"
                 placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
               <Pressable testID="tv-submit" onPress={submit} disabled={busy === 'submit' || text.trim().length < 10} style={st.submitBtn}>
-                {busy === 'submit' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.submitText}>ODOSLAŤ</Text>}
+                {busy === 'submit' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.submitText}>SEND</Text>}
               </Pressable>
             </View>
             {!!err && <Text testID="tv-err" style={st.err}>{err}</Text>}
           </View>
         }
-        ListEmptyComponent={!loading ? <Text style={st.empty}>ZATIAĽ ŽIADNE TVRDENIA — BUĎTE PRVÍ</Text> : null}
+        ListEmptyComponent={!loading ? <Text style={st.empty}>NO CLAIMS YET — BE THE FIRST</Text> : null}
         renderItem={({ item }) => {
           const b = BADGE[item.status] || BADGE.pending;
           const mine = item.user_id === user?.user_id;
@@ -110,14 +110,14 @@ export default function TruthValidator() {
               {!mine && !item.my_vote && (
                 <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
                   <Pressable testID={`tv-verify-${item.claim_id}`} onPress={() => vote(item.claim_id, 'verify')} style={[st.voteBtn, { backgroundColor: C.brand }]}>
-                    <Text style={st.voteText}>POTVRDZUJEM ✓</Text>
+                    <Text style={st.voteText}>I VERIFY ✓</Text>
                   </Pressable>
                   <Pressable testID={`tv-dispute-${item.claim_id}`} onPress={() => vote(item.claim_id, 'dispute')} style={[st.voteBtn, { backgroundColor: C.error }]}>
-                    <Text style={st.voteText}>SPOCHYBŇUJEM ✗</Text>
+                    <Text style={st.voteText}>I DISPUTE ✗</Text>
                   </Pressable>
                 </View>
               )}
-              {!!item.my_vote && <Text style={st.voted}>VÁŠ HLAS: {item.my_vote === 'verify' ? 'POTVRDENÉ ✓' : 'SPOCHYBNENÉ ✗'}</Text>}
+              {!!item.my_vote && <Text style={st.voted}>YOUR VOTE: {item.my_vote === 'verify' ? 'VERIFIED ✓' : 'DISPUTED ✗'}</Text>}
             </View>
           );
         }}

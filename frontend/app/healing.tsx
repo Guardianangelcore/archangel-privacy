@@ -34,7 +34,7 @@ function PainCurve() {
   return (
     <View testID="healing-pain-curve" style={pc.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={pc.title}>📉 KRIVKA BOLESTI — DÔKAZ POKROKU</Text>
+        <Text style={pc.title}>📉 PAIN CURVE — PROOF OF PROGRESS</Text>
         <Text style={[pc.trend, t.trend === 'worsening' && { color: C.warn }]}>{label}</Text>
       </View>
       <View style={pc.bars}>

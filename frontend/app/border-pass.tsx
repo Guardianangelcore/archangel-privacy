@@ -38,10 +38,10 @@ export default function BorderPass() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <View style={styles.heroIcon}><Ionicons name="airplane-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>Medzinárodný certifikát o liekoch</Text>
+        <Text style={styles.h1}>International medication certificate</Text>
         <Text style={styles.sub}>
-          Certifikát v 14 jazykoch, podpísaný vaším DID. Vysvetľuje colníkom a úradom nevyhnutnosť
-          prevozu vašich liekov na predpis pri cestách či kríze.
+          A certificate in 14 languages, signed with your DID. It explains to customs and authorities the necessity
+          of carrying your prescription medication while traveling or in a crisis.
         </Text>
 
         {!cert && !err && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
@@ -50,17 +50,17 @@ export default function BorderPass() {
         {cert && (
           <>
             <View style={styles.card}>
-              <Row label="Držiteľ" value={cert.holder || '—'} />
-              <Row label="Krvná skupina" value={cert.blood_type || '—'} />
+              <Row label="Holder" value={cert.holder || '—'} />
+              <Row label="Blood type" value={cert.blood_type || '—'} />
               <Row label="Alergie" value={cert.allergies || '—'} />
               <Row label="DID podpis" value={`${(cert.did_signature || '').slice(0, 20)}…`} mono />
             </View>
 
-            <Text style={styles.section}>LIEKY V CERTIFIKÁTE ({cert.medications?.length || 0})</Text>
+            <Text style={styles.section}>MEDICATIONS IN CERTIFICATE ({cert.medications?.length || 0})</Text>
             {(cert.medications || []).length === 0 ? (
               <Text style={styles.hint}>
-                Žiadne lieky na predpis v Lekárničke. Pridajte ich v Health Hub → Lekárnička
-                (označte {'"na predpis"'}) — objavia sa tu automaticky.
+                No prescription medications in the Medicine Cabinet. Add them in Health Hub → Medicine Cabinet
+                (mark them {'"prescription"'}) — they appear here automatically.
               </Text>
             ) : (
               cert.medications.map((m: any, i: number) => (
@@ -71,7 +71,7 @@ export default function BorderPass() {
               ))
             )}
 
-            <Text style={styles.section}>JAZYKY CERTIFIKÁTU</Text>
+            <Text style={styles.section}>CERTIFICATE LANGUAGES</Text>
             <View style={styles.langWrap}>
               {(cert.languages || []).map((l: any) => (
                 <View key={l.code} style={styles.langChip}><Text style={styles.langText}>{l.name}</Text></View>
@@ -82,12 +82,12 @@ export default function BorderPass() {
               {busy ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="document-text-outline" size={18} color={C.onInverse} />
-                  <Text style={styles.ctaText}>STIAHNUŤ PDF CERTIFIKÁT</Text>
+                  <Text style={styles.ctaText}>DOWNLOAD PDF CERTIFICATE</Text>
                 </>
               )}
             </Pressable>
             <Text style={styles.disclaimer}>
-              Dokument je informačná šablóna podpísaná DID — nenahrádza lekársky predpis ani úradné potvrdenie.
+              This document is an informational template signed with a DID — it does not replace a prescription or an official certificate.
             </Text>
           </>
         )}

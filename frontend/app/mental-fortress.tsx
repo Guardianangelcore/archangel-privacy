@@ -55,10 +55,10 @@ export default function MentalFortress() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <View style={styles.heroIcon}><Ionicons name="shield-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>Krízový audio sprievodca</Text>
+        <Text style={styles.h1}>Crisis audio guide</Text>
         <Text style={styles.sub}>
-          Hlasom vedené techniky proti panike a stresu — dych, ukotvenie a akupresúrne body
-          z expertízy zakladateľa. Stlačte ▶ a Jarvis vás prevedie krok za krokom.
+          Voice-guided techniques against panic and stress — breathing, grounding and acupressure points
+          from the founder expertise. Press ▶ and Jarvis guides you step by step.
         </Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         <View style={styles.langRow}>

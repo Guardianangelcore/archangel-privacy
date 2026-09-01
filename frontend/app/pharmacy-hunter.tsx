@@ -9,8 +9,8 @@ import { C, S, R } from '@/src/theme';
 
 const STATUS_UI: any = {
   in_stock: { label: 'SKLADOM', color: '#5FA779' },
-  low_stock: { label: 'POSLEDNÉ KUSY', color: '#E6A23C' },
-  out_of_stock: { label: 'VYPREDANÉ', color: '#C25450' },
+  low_stock: { label: 'LAST FEW LEFT', color: '#E6A23C' },
+  out_of_stock: { label: 'SOLD OUT', color: '#C25450' },
 };
 
 export default function PharmacyHunter() {
@@ -79,16 +79,16 @@ export default function PharmacyHunter() {
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <View style={styles.demoBadge}>
           <Ionicons name="flask-outline" size={13} color={C.onWarn} />
-          <Text style={styles.demoText}>DEMO DÁTA — reálne napojenie na sklady lekární sa pripravuje</Text>
+          <Text style={styles.demoText}>DEMO DATA — a live pharmacy stock connection is in preparation</Text>
         </View>
-        <Text style={styles.h1}>Lovec liekov v lekárňach</Text>
-        <Text style={styles.sub}>Skenovanie dostupnosti kritických liekov v sieťach lekární CZ/SK regiónu.</Text>
+        <Text style={styles.h1}>Pharmacy Med Hunter</Text>
+        <Text style={styles.sub}>Scans the availability of critical medications across regional pharmacy networks.</Text>
 
         <View style={styles.searchRow}>
           <TextInput
             testID="ph-input"
             style={styles.input}
-            placeholder="Názov lieku (napr. Euthyrox)"
+            placeholder="Medication name (e.g. Euthyrox)"
             placeholderTextColor={C.info}
             value={med}
             onChangeText={setMed}
@@ -104,18 +104,18 @@ export default function PharmacyHunter() {
           ))}
           <Pressable testID="ph-search" onPress={search} disabled={busy} style={styles.searchBtn}>
             {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="search" size={16} color={C.onInverse} />}
-            <Text style={styles.searchBtnText}>HĽADAŤ</Text>
+            <Text style={styles.searchBtnText}>SEARCH</Text>
           </Pressable>
           <Pressable testID="ph-watch" onPress={watch} style={styles.watchBtn}>
             <Ionicons name="eye-outline" size={16} color={C.brand} />
-            <Text style={styles.watchBtnText}>SLEDOVAŤ</Text>
+            <Text style={styles.watchBtnText}>WATCH</Text>
           </Pressable>
         </View>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         {results.length > 0 && (
           <>
-            <Text style={styles.section}>DOSTUPNOSŤ · {region}</Text>
+            <Text style={styles.section}>AVAILABILITY · {region}</Text>
             {results.map((r, i) => {
               const ui = STATUS_UI[r.status] || STATUS_UI.out_of_stock;
               return (
@@ -136,13 +136,13 @@ export default function PharmacyHunter() {
         )}
 
         <Text style={styles.section}>MOJE SLEDOVANIA ({watches.length})</Text>
-        {watches.length === 0 && <Text style={styles.hint}>Zatiaľ nič nesledujete. Zadajte liek a ťuknite SLEDOVAŤ.</Text>}
+        {watches.length === 0 && <Text style={styles.hint}>You are not watching anything yet. Enter a medication and tap WATCH.</Text>}
         {watches.map(w => (
           <View key={w.watch_id} style={styles.watchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.resName}>{w.med_name} · {w.region}</Text>
               <Text style={styles.resSub}>
-                {w.status === 'found' ? `✓ Nájdené: ${w.found_pharmacy || ''}` : 'Sledujem dostupnosť…'}
+                {w.status === 'found' ? `✓ Found: ${w.found_pharmacy || ''}` : 'Watching availability…'}
               </Text>
             </View>
             <Pressable testID={`ph-scan-${w.watch_id}`} onPress={() => scan(w.watch_id)} disabled={scanBusy === w.watch_id} style={styles.scanBtn}>

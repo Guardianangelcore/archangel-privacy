@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
-import { C, S, R, GOLD, GLASS } from '@/src/theme';
+import { C, S, R, GOLD, GLASS, SHADOW } from '@/src/theme';
 
 export function tap(kind: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') {
   if (Platform.OS === 'web') return;
@@ -26,7 +26,7 @@ type GlassProps = { children: React.ReactNode; style?: ViewStyle | ViewStyle[]; 
 export function GlassCard({ children, style, pad = S.lg, radius = R.md, glow, testID, onPress }: GlassProps) {
   const body = (
     <LinearGradient colors={GLASS.edge as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      style={[{ borderRadius: radius, padding: StyleSheet.hairlineWidth * 3 }, glow && st.glow, style as any]}>
+      style={[{ borderRadius: radius, padding: StyleSheet.hairlineWidth * 3 }, Platform.OS !== 'web' && (SHADOW as any), glow && st.glow, style as any]}>
       <View style={{ borderRadius: radius - 2, overflow: 'hidden', backgroundColor: GLASS.bg }}>
         {Platform.OS !== 'android' && <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />}
         <View style={{ padding: pad }}>{children}</View>

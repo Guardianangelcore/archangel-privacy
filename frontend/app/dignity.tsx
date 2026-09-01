@@ -15,8 +15,8 @@ import { t, Lang } from '@/src/i18n';
 const CURRENCIES = ['EUR', 'CZK', 'CRYPTO'];
 const BURIALS = [
   { key: 'burial', label: 'POCHOVANIE' },
-  { key: 'cremation', label: 'KREMÁCIA' },
-  { key: 'natural', label: 'PRÍRODNÉ' },
+  { key: 'cremation', label: 'CREMATION' },
+  { key: 'natural', label: 'NATURAL' },
 ];
 
 export default function Dignity() {
@@ -66,7 +66,7 @@ export default function Dignity() {
   };
   const saveWishes = async () => {
     await api('/dignity/wishes', { method: 'PUT', body: JSON.stringify(wishes) });
-    setMsg('✓ POSLEDNÉ PRIANIA ULOŽENÉ');
+    setMsg('✓ LAST WISHES SAVED');
     load();
   };
   const verify = async () => {
@@ -80,9 +80,9 @@ export default function Dignity() {
     setMsg('');
     try {
       const r: any = await api('/dignity/release', { method: 'POST' });
-      setMsg(`✓ UVOĽNENÉ ${r.amount} ${fund?.currency} → ${r.to?.name}`);
+      setMsg(`✓ RELEASED ${r.amount} ${fund?.currency} → ${r.to?.name}`);
       load();
-    } catch (e: any) { setMsg(String(e.message || e).includes('locked') ? '🔒 FOND JE UZAMKNUTÝ DO OVERENIA ÚMRTIA' : String(e.message || e)); }
+    } catch (e: any) { setMsg(String(e.message || e).includes('locked') ? '🔒 FUND LOCKED UNTIL DEATH VERIFICATION' : String(e.message || e)); }
   };
 
   const released = fund?.status === 'released';
@@ -96,7 +96,7 @@ export default function Dignity() {
         <Text style={styles.title}>FINAL DIGNITY</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>POHREBNÝ FOND · DÔSTOJNOSŤ PRE KAŽDÉHO · ODBREMENÍ POZOSTALÝCH</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>FUNERAL FUND · DIGNITY FOR EVERYONE · RELIEVES THE BEREAVED</Text></View>
 
       <ScrollView
         contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }}
@@ -110,18 +110,18 @@ export default function Dignity() {
           <View style={styles.lockRow}>
             <Ionicons name={released ? 'lock-open' : 'lock-closed'} size={18} color={released ? C.brand : C.error} />
             <Text style={[styles.lockText, { color: released ? C.brand : C.error }]}>
-              {released ? 'UVOĽNENÉ' : fund?.death_verified ? 'OVERENÉ · PRIPRAVENÉ NA UVOĽNENIE' : 'UZAMKNUTÉ DO OVERENIA ÚMRTIA'}
+              {released ? 'RELEASED' : fund?.death_verified ? 'VERIFIED · READY TO RELEASE' : 'LOCKED UNTIL DEATH VERIFICATION'}
             </Text>
           </View>
           <Text testID="dg-balance" style={styles.balance}>{(fund?.balance ?? 0).toFixed(0)}</Text>
-          <Text style={styles.balanceCur}>{fund?.currency || 'EUR'} · POHREBNÝ FOND</Text>
+          <Text style={styles.balanceCur}>{fund?.currency || 'EUR'} · FUNERAL FUND</Text>
           {released && fund?.released_to ? <Text style={styles.releasedTo}>→ {fund.released_to.name} ({fund.released_amount} {fund.currency})</Text> : null}
         </View>
 
         {!released && (
           <>
             {/* Deposit */}
-            <Text style={styles.section}>VKLAD (MOCKED RAILS · REÁLNY AML LEDGER)</Text>
+            <Text style={styles.section}>DEPOSIT (MOCKED RAILS · REAL AML LEDGER)</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               {CURRENCIES.map(c => (
                 <Pressable testID={`dg-cur-${c}`} key={c} onPress={() => setCurrency(c)} style={[styles.chip, currency === c && styles.chipActive]}>
@@ -137,31 +137,31 @@ export default function Dignity() {
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
               <WheelField testID="dg-amount" title="SUMA €" min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder="Suma €" style={[styles.input, { flex: 1 }]} />
               <Pressable testID="dg-deposit" onPress={deposit} disabled={busy} style={styles.priBtn}>
-                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>VLOŽIŤ</Text>}
+                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>DEPOSIT</Text>}
               </Pressable>
             </View>
 
             {/* Recurring plan */}
-            <Text style={styles.section}>AUTOMATICKÉ MESAČNÉ SPORENIE</Text>
+            <Text style={styles.section}>AUTOMATIC MONTHLY SAVING</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, alignItems: 'center' }}>
-              <WheelField testID="dg-plan-amount" title="MESAČNE €" min={5} max={500} step={5} unit="€" value={plan.monthly_amount} onChange={v => setPlan({ ...plan, monthly_amount: v })} placeholder="€/mes." style={[styles.input, { flex: 1 }]} />
+              <WheelField testID="dg-plan-amount" title="MONTHLY €" min={5} max={500} step={5} unit="€" value={plan.monthly_amount} onChange={v => setPlan({ ...plan, monthly_amount: v })} placeholder="€/mo." style={[styles.input, { flex: 1 }]} />
               <Switch testID="dg-plan-enabled" value={plan.enabled} onValueChange={v => setPlan({ ...plan, enabled: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
               <Pressable testID="dg-plan-save" onPress={savePlan} style={styles.priBtn}><Text style={styles.priBtnText}>{t('save', lang).toUpperCase()}</Text></Pressable>
             </View>
-            <Text style={styles.hint}>Mesačne sa automaticky pripíše nastavená suma ({plan.monthly_amount || 0} {currency}/mes.).</Text>
+            <Text style={styles.hint}>The configured amount is auto-credited monthly ({plan.monthly_amount || 0} {currency}/mo.).</Text>
           </>
         )}
 
         {/* Beneficiary */}
-        <Text style={styles.section}>PRÍJEMCA PO UVOĽNENÍ</Text>
+        <Text style={styles.section}>BENEFICIARY AFTER RELEASE</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
-          {[{ k: 'proxy', l: 'SPLNOMOCNENEC' }, { k: 'funeral_director', l: 'POHREBNÁ SLUŽBA' }].map(o => (
+          {[{ k: 'proxy', l: 'PROXY' }, { k: 'funeral_director', l: 'FUNERAL DIRECTOR' }].map(o => (
             <Pressable testID={`dg-ben-${o.k}`} key={o.k} onPress={() => setBen({ ...ben, type: o.k })} style={[styles.chip, { flex: 1, alignItems: 'center' }, ben.type === o.k && styles.chipActive]}>
               <Text style={[styles.chipText, ben.type === o.k && styles.chipTextActive]}>{o.l}</Text>
             </Pressable>
           ))}
         </View>
-        <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? 'Meno splnomocnenca (auto zo splnomocnenia)' : 'Pohrebná služba, s.r.o.'} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? 'Proxy name (auto from proxy directive)' : 'Funeral Services Ltd.'} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
         <TextInput testID="dg-ben-contact" placeholder="Kontakt / IBAN" value={ben.contact} onChangeText={v => setBen({ ...ben, contact: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
         <Pressable testID="dg-ben-pick" onPress={() => setBenPick(true)} style={[styles.secBtn, { marginTop: S.sm, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }]}>
           <Ionicons name="people-outline" size={16} color={C.brand} />
@@ -174,7 +174,7 @@ export default function Dignity() {
         </Pressable>
 
         {/* Final wishes */}
-        <Text style={styles.section}>POSLEDNÉ PRIANIA (FUNERAL DIRECTIVES)</Text>
+        <Text style={styles.section}>LAST WISHES (FUNERAL DIRECTIVES)</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {BURIALS.map(b => (
             <Pressable testID={`dg-burial-${b.key}`} key={b.key} onPress={() => setWishes({ ...wishes, burial_type: b.key })} style={[styles.chip, { flex: 1, alignItems: 'center' }, wishes.burial_type === b.key && styles.chipActive]}>
@@ -182,9 +182,9 @@ export default function Dignity() {
             </Pressable>
           ))}
         </View>
-        <TextInput testID="dg-music" placeholder="Hudba na rozlúčke (Hallelujah…)" value={wishes.ceremony_music} onChangeText={v => setWishes({ ...wishes, ceremony_music: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
-        <TextInput testID="dg-guests" placeholder="Koho pozvať (mená, kontakty)" value={wishes.guest_list} onChangeText={v => setWishes({ ...wishes, guest_list: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
-        <TextInput testID="dg-notes" placeholder="Ďalšie priania" value={wishes.notes} onChangeText={v => setWishes({ ...wishes, notes: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-music" placeholder="Ceremony music (Hallelujah…)" value={wishes.ceremony_music} onChangeText={v => setWishes({ ...wishes, ceremony_music: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-guests" placeholder="Who to invite (names, contacts)" value={wishes.guest_list} onChangeText={v => setWishes({ ...wishes, guest_list: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-notes" placeholder="Other wishes" value={wishes.notes} onChangeText={v => setWishes({ ...wishes, notes: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
         <Pressable testID="dg-wishes-save" onPress={saveWishes} style={[styles.secBtn, { marginTop: S.sm }]}>
           <Text style={styles.secBtnText}>{t('save', lang).toUpperCase()}</Text>
         </Pressable>
@@ -194,23 +194,23 @@ export default function Dignity() {
         {/* Death trigger */}
         {!released && (
           <>
-            <Text style={styles.section}>PODMIENENÉ UVOĽNENIE (DEATH TRIGGER)</Text>
+            <Text style={styles.section}>CONDITIONAL RELEASE (DEATH TRIGGER)</Text>
             <View style={styles.triggerBox}>
               <Text style={styles.triggerText}>
-                Fond je uzamknutý a nedá sa minúť do úradného overenia úmrtia (štátny register — v MVP simulované číslom úmrtného listu). Po overení sa uvoľní priamo príjemcovi.
+                The fund is locked and cannot be spent until official death verification (state registry — simulated in MVP with a death certificate number). After verification it is released directly to the beneficiary.
               </Text>
               {!fund?.death_verified ? (
                 <>
-                  <TextInput testID="dg-cert" placeholder="Číslo úmrtného listu (min. 6 znakov)" value={cert} onChangeText={setCert} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+                  <TextInput testID="dg-cert" placeholder="Death certificate number (min. 6 chars)" value={cert} onChangeText={setCert} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
                   <Pressable testID="dg-verify" onPress={verify} disabled={cert.trim().length < 6} style={[styles.warnBtn, cert.trim().length < 6 && { opacity: 0.4 }]}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={C.onWarn} />
-                    <Text style={styles.warnBtnText}>OVERIŤ V REGISTRI (SIMULÁCIA)</Text>
+                    <Text style={styles.warnBtnText}>VERIFY IN REGISTRY (SIMULATION)</Text>
                   </Pressable>
                 </>
               ) : (
                 <Pressable testID="dg-release" onPress={release} style={styles.releaseBtn}>
                   <Ionicons name="lock-open-outline" size={18} color={C.onInverse} />
-                  <Text style={styles.releaseBtnText}>UVOĽNIŤ FOND PRÍJEMCOVI</Text>
+                  <Text style={styles.releaseBtnText}>RELEASE FUND TO BENEFICIARY</Text>
                 </Pressable>
               )}
             </View>
@@ -219,7 +219,7 @@ export default function Dignity() {
 
         {fund?.contributions?.length ? (
           <>
-            <Text style={styles.section}>HISTÓRIA VKLADOV</Text>
+            <Text style={styles.section}>DEPOSIT HISTORY</Text>
             {fund.contributions.map((c: any) => (
               <View key={c.contribution_id} style={styles.contribRow}>
                 <Ionicons name={c.method === 'recurring' ? 'repeat' : c.method === 'crypto' ? 'logo-bitcoin' : 'card-outline'} size={16} color={C.brand} />

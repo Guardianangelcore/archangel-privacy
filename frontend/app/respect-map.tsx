@@ -136,7 +136,7 @@ export default function RespectMap() {
                 ))}
               </View>
               <Text style={styles.lbl}>{t('real_wait', lang).toUpperCase()}</Text>
-              <WheelField testID="rm-wait" title="ČAKANIE (TÝŽDNE)" min={0} max={104} unit="týž." value={f.waiting_weeks} onChange={v => setF({ ...f, waiting_weeks: v })} placeholder="8" style={styles.input} />
+              <WheelField testID="rm-wait" title="WAITING (WEEKS)" min={0} max={104} unit="wks" value={f.waiting_weeks} onChange={v => setF({ ...f, waiting_weeks: v })} placeholder="8" style={styles.input} />
               <Text style={styles.lbl}>{t('fin_transparency', lang).toUpperCase()}</Text>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {[1,2,3,4,5].map(n => (

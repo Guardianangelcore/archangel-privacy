@@ -1,0 +1,48 @@
+{
+  "summary": "Iter 49 — RETEST of iter_48 English-only finding. MASSIVE IMPROVEMENT: 7/9 primary screens are now fully English (home, /token, /recovery-suite, /pantry, /compass, /monolith, /dignity). Backend suite = 11 passed / 1 skipped / 0 failed. Founder dev-bypass + /api/auth/me + core smoke (/api/, /api/origin, /api/lifecard, /api/token/wallet) all healthy. /api/token/wallet payload and /api/compass/offline-pack payload contain 0 Slovak diacritics and correctly expose 'Ambulance SK' + 'Sentinel Tier — 30 days (GA-T)'. Source scans of routes/token.py, routes/compass.py, routes/demo.py all clean.\n\nREMAINING FINDINGS (both are backend-sourced strings that leak into the two of the requested screens):\n  • /protocol — 3 Slovak marketplace item titles still shown: 'Anonymné dáta o liekoch na dýchacie cesty' (offer_id resp-eu-2026), 'Anonymná preočkovanosť V4 regiónu' (sk-vaccination), plus institution name 'Stredoeurópsky epidemiologický inštitút'. Source: /app/backend/routes/gateway.py:103,105 (offers list served to /protocol). E1's iter-49 backend sweep translated token.py/compass.py/demo.py but MISSED gateway.py.\n  • /wealth-vault — long consent paragraph 'Seeds/kľúče sú zapečatené zero-knowledge (plaintext sa nikdy neukladá). Manifest hash je ukotvený na Mosaic Chain — Proof of Asset Stewardship.' Source: /app/backend/routes/wealth.py:179 (policy field). E1's iter-49 backend sweep also MISSED wealth.py.\n\nOther backend routes still with Slovak content that may surface elsewhere (not blocking for this iter's checklist but E1 should be aware): medic.py (60 hits — protocols demo), hunter.py (35 hits), pantry.py (25 hits — pantry backend strings, though frontend /pantry itself is clean), plus 25+ additional route files with residual Slovak.\n\nHome screen renders cleanly with home-orb FAB (Guardian Eye), tab bar (HEALING/FAMILY SHIELD/VAULT), and DEMO badge visible. 0 console errors during navigation across 9 screens. No red-screen or crash on any tested screen.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/gateway/offers (feeds /protocol)", "issue": "Marketplace offers list at routes/gateway.py:103,105 still contains Slovak titles: 'Anonymné dáta o liekoch na dýchacie cesty', 'Anonymná preočkovanosť V4 regiónu' and institution 'Stredoeurópsky epidemiologický inštitút'. Needs English translation (e.g. 'Anonymous respiratory medication data', 'Anonymous V4 regional revaccination', 'Central European Epidemiology Institute')."},
+      {"endpoint": "wealth vault (routes/wealth.py:179 'policy' field)", "issue": "Consent paragraph is Slovak: 'Seeds/kľúče sú zapečatené zero-knowledge (plaintext sa nikdy neukladá). Manifest hash je ukotvený na Mosaic Chain — Proof of Asset Stewardship.' Suggest EN: 'Seeds/keys are sealed zero-knowledge (plaintext is never stored). Manifest hash is anchored on Mosaic Chain — Proof of Asset Stewardship.'"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "English-only sweep — remaining backend leaks", "issue": "The iter-49 backend translation sweep covered routes/token.py, routes/compass.py, routes/demo.py but missed routes/gateway.py (surfaces on /protocol) and routes/wealth.py (surfaces on /wealth-vault). All Slovak text visible on those two screens now originates from backend responses, not from the *.tsx files (frontend source is clean).", "affected_testIDs": []}
+    ],
+    "design_issues": [
+      {"screen": "/protocol", "issues": ["3 marketplace offer titles + 1 institution name in Slovak (backend routes/gateway.py:100-107)."]},
+      {"screen": "/wealth-vault", "issues": ["Consent paragraph in Slovak (backend routes/wealth.py:179)."]}
+    ],
+    "react_native_issues": [
+      {"component": "expo-notifications web", "issue": "Pre-existing warning 'Listening to push token changes is not yet fully supported on web' — non-fatal, unchanged from iter 47/48."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter49_english_retest.py",
+    "/app/test_reports/pytest/pytest_iter49.xml"
+  ],
+  "action_items": [
+    "Extend the backend-string English sweep to routes/gateway.py (3+ Slovak marketplace offer titles at lines ~100-107) and routes/wealth.py:179 (Slovak 'policy' consent paragraph). Same pattern as done for token.py/compass.py/demo.py.",
+    "OPTIONAL follow-up: 25+ other backend route files still carry Slovak strings (medic.py=60 hits, hunter.py=35, pantry.py=25, etc.). If any of these surface as visible UI on other screens the same pattern will need extending. Frontend .tsx files themselves for the 8 requested screens are already clean (only Slovak diacritics left in these .tsx are inside `{/* ... */}` or `//` code comments in pantry.tsx L265, compass.tsx L191, eternal-vault.tsx L2-3 — invisible to users)."
+  ],
+  "critical_code_review_comments": [
+    "Frontend .tsx sweep for the 8 requested screens landed cleanly this iter — no visible Slovak on /token, /recovery-suite, /pantry, /compass, /monolith, /dignity, /home. Only in-file comments still Slovak (harmless).",
+    "Backend translation is partial — completing routes/gateway.py + routes/wealth.py will close the remaining two /protocol + /wealth-vault gaps."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter49_english_retest.py (NEW)",
+    "/app/test_reports/iteration_49.json (NEW)"
+  ],
+  "success_rate": {
+    "backend": "11 passed / 1 skipped / 0 failed — 100% of executed tests pass. Skip = /api/token/spend catalog endpoint not exposed under expected paths (source-check equivalent passed).",
+    "frontend": "English-only requirement: 7/9 screens PASS (home, /token, /recovery-suite, /pantry, /compass, /monolith, /dignity). 2/9 FAIL (/protocol + /wealth-vault) — both due to backend-sourced strings, not frontend .tsx. Regression: 100% — founder-bypass-btn login works, home-orb FAB visible, tab bar renders, 0 console errors, 0 red-screens across 9 screens."
+  },
+  "seed_data_creation": "None. Reused founder session via idempotent /api/auth/dev-bypass.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reuse /app/backend/tests/test_iter49_english_retest.py — it does source-code + live API English-only scans. To re-verify /protocol and /wealth-vault after E1 patches gateway.py + wealth.py, either (a) re-run the frontend Playwright diacritic scan (see script in iter_49 agent transcript) or (b) add API-level asserts on /api/gateway/offers (or whichever route serves marketplace demo items) and on the wealth policy endpoint. The Slovak-diacritic regex is `[áäčďéíĺľňóôřšťúýžÁÄČĎÉÍĹĽŇÓÔŘŠŤÚÝŽ]`. Allow-list proper nouns: 'NÚSCH', 'Bratislava', 'Košice' (real hospital/city names OK). Language names on login/CityPicker (slovenčina, čeština, …) are INTENTIONAL and must NOT be flagged. Protected files (do not touch): mosaic.tsx, subscription.tsx, arbitrage.tsx, barter.tsx, billing.py, src/i18n.ts.",
+  "rca_of_issue": "iter_48 flagged both frontend AND backend leaks. iter_49 successfully closed all frontend .tsx leaks in the 8 requested screens AND closed backend leaks in token.py/compass.py/demo.py. However 2 screens still leak because their Slovak text originates from OTHER backend routes that were not part of this iter's sweep: gateway.py (marketplace offers rendered on /protocol) and wealth.py (consent policy rendered on /wealth-vault). Reproduction: with founder session, navigate to /protocol → observe Slovak marketplace offer titles; navigate to /wealth-vault → observe Slovak consent paragraph beneath the anchor-to-chain CTAs. Fix: replicate the same literal-string English replacements in gateway.py:100-110 and wealth.py:179. After patching, restart backend (`sudo supervisorctl restart backend`) and re-run the frontend diacritic scan to confirm 0 hits."
+}

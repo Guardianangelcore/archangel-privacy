@@ -110,7 +110,7 @@ async def clinic_sync_beam(code: str, body: BeamIn):
 
 _RADAR_CLINICS = [
     ("Poliklinika Ružinov", "Kardiológia · Interná"), ("ProCare Central", "Všeobecná ambulancia"),
-    ("Nemocnica Bory", "Rádiológia · MRI"), ("MUDr. Kováčová — Ortopédia", "Súkromná ambulancia"),
+    ("Nemocnica Bory", "Rádiológia · MRI"), ("GA Labs Ortho Clinic", "Súkromná ambulancia"),
     ("Alpha Medical Lab", "Laboratórne výsledky"),
 ]
 
@@ -138,7 +138,7 @@ async def clinic_sync_simulate(body: SimulateBeamIn, authorization: Optional[str
         raise HTTPException(404, "No active sync session — generate a QR code first")
     demo = BeamIn(
         clinic_name=body.clinic_name or "Poliklinika Ružinov",
-        doctor_name="MUDr. Eva Kováčová",
+        doctor_name="Dr. Guardian Angel",
         title="Kardiologický nález — kontrola",
         report_text=("SIMULOVANÝ NÁLEZ (demo Clinic Sync)\n\n"
                      "Pacient absolvoval kontrolné kardiologické vyšetrenie. EKG: sínusový rytmus, 72/min. "

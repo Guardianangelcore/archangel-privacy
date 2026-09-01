@@ -22,12 +22,12 @@ type Contact = { contact_id: string; name: string; phone: string; relation: stri
 
 const RELATIONS = [
   { id: 'partner', label: 'Partner' },
-  { id: 'rodic', label: 'Rodič' },
-  { id: 'surodenec', label: 'Súrodenec' },
-  { id: 'dieta', label: 'Dieťa' },
-  { id: 'priatel', label: 'Priateľ' },
-  { id: 'lekar', label: 'Lekár' },
-  { id: 'ine', label: 'Iné' },
+  { id: 'rodic', label: 'Parent' },
+  { id: 'surodenec', label: 'Sibling' },
+  { id: 'dieta', label: 'Child' },
+  { id: 'priatel', label: 'Friend' },
+  { id: 'lekar', label: 'Doctor' },
+  { id: 'ine', label: 'Other' },
 ];
 
 export default function FamilyContacts() {
@@ -62,14 +62,14 @@ export default function FamilyContacts() {
       animate();
       setContacts(prev => [...prev, c]);
       setShow(false); setName(''); setPhone('+421 '); setRelation('rodic');
-      showToast(`✓ ${c.name} pridaný do Rodinného štítu`);
+      showToast(`✓ ${c.name} added to your Family Shield`);
     } catch (e: any) { setErr(String(e?.message || e).replace(/^\d+:\s*/, '')); }
     finally { setSaving(false); }
   };
 
   const call = (c: Contact) => {
     tap('medium');
-    Linking.openURL(`tel:${c.phone.replace(/[^+0-9]/g, '')}`).catch(() => showToast('Vytáčanie nie je dostupné na tomto zariadení.'));
+    Linking.openURL(`tel:${c.phone.replace(/[^+0-9]/g, '')}`).catch(() => showToast('Dialing is not available on this device.'));
   };
 
   const sos = async (c: Contact) => {
@@ -92,7 +92,7 @@ export default function FamilyContacts() {
       await api(`/family-contacts/${c.contact_id}`, { method: 'DELETE' });
       animate();
       setContacts(prev => prev.filter(x => x.contact_id !== c.contact_id));
-      showToast(`Kontakt ${c.name} odstránený.`);
+      showToast(`Contact ${c.name} removed.`);
     } catch (e: any) { showToast(String(e?.message || e)); }
     finally { setBusyId(null); setConfirmId(null); }
   };
@@ -103,7 +103,7 @@ export default function FamilyContacts() {
         <Pressable testID="fc-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/family'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>RODINNÉ KONTAKTY</Text>
+        <Text style={st.title}>FAMILY CONTACTS</Text>
         <Pressable testID="fc-settings" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={10}>
           <Ionicons name="settings-outline" size={20} color={C.onS3} />
         </Pressable>
@@ -114,18 +114,18 @@ export default function FamilyContacts() {
       )}
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.sub}>Núdzové čísla vašej rodiny — šifrované, len vo vašom Trezore. Zavolať či poslať SOS viete jedným ťukom.</Text>
+        <Text style={st.sub}>Your family emergency numbers — encrypted, only in your Vault. Call or send an SOS with one tap.</Text>
 
         <Pressable testID="fc-add" onPress={() => { tap('medium'); setErr(''); setShow(true); }} style={st.addBtn}>
           <Ionicons name="person-add" size={20} color={C.onInverse} />
-          <Text style={st.addBtnText}>+ PRIDAŤ ČLENA RODINY</Text>
+          <Text style={st.addBtnText}>+ ADD FAMILY MEMBER</Text>
         </Pressable>
 
         {loading && <ActivityIndicator color={C.brand} style={{ marginTop: S.xl }} />}
         {!loading && contacts.length === 0 && (
           <View style={st.empty}>
             <Ionicons name="people-outline" size={44} color={C.info} />
-            <Text style={st.emptyText}>Zatiaľ žiadne kontakty.{'\n'}Pridajte prvého člena rodiny — pre istotu.</Text>
+            <Text style={st.emptyText}>No contacts yet.{'\n'}Add your first family member — just in case.</Text>
           </View>
         )}
 
@@ -141,9 +141,9 @@ export default function FamilyContacts() {
             </View>
             {confirmId === c.contact_id ? (
               <View style={st.confirmRow}>
-                <Text style={st.confirmText}>Naozaj odstrániť {c.name}?</Text>
+                <Text style={st.confirmText}>Really remove {c.name}?</Text>
                 <Pressable testID={`fc-del-yes-${c.contact_id}`} onPress={() => remove(c)} style={st.confirmYes}>
-                  {busyId === c.contact_id ? <ActivityIndicator size="small" color={C.onError} /> : <Text style={st.confirmYesText}>ÁNO, ODSTRÁNIŤ</Text>}
+                  {busyId === c.contact_id ? <ActivityIndicator size="small" color={C.onError} /> : <Text style={st.confirmYesText}>YES, REMOVE</Text>}
                 </Pressable>
                 <Pressable testID={`fc-del-no-${c.contact_id}`} onPress={() => setConfirmId(null)} style={st.confirmNo}>
                   <Text style={st.confirmNoText}>NIE</Text>
@@ -153,13 +153,13 @@ export default function FamilyContacts() {
               <View style={st.actionRow}>
                 <Pressable testID={`fc-call-${c.contact_id}`} onPress={() => call(c)} style={[st.action, st.actionCall]}>
                   <Ionicons name="call" size={16} color={C.onInverse} />
-                  <Text style={st.actionTextInv}>ZAVOLAŤ</Text>
+                  <Text style={st.actionTextInv}>CALL</Text>
                 </Pressable>
                 <Pressable testID={`fc-sos-${c.contact_id}`} onPress={() => sos(c)} disabled={busyId === c.contact_id} style={[st.action, st.actionSos]}>
                   {busyId === c.contact_id ? <ActivityIndicator size="small" color={C.onError} /> : (
                     <>
                       <Ionicons name="warning" size={16} color={C.onError} />
-                      <Text style={[st.actionTextInv, { color: C.onError }]}>POSLAŤ SOS</Text>
+                      <Text style={[st.actionTextInv, { color: C.onError }]}>SEND SOS</Text>
                     </>
                   )}
                 </Pressable>
@@ -171,7 +171,7 @@ export default function FamilyContacts() {
           </View>
         ))}
 
-        <Text style={st.footNote}>🔒 Čísla sú šifrované (Fernet AES) — nikdy neopúšťajú váš suverénny trezor v čitateľnej podobe.</Text>
+        <Text style={st.footNote}>🔒 Numbers are encrypted (Fernet AES) — they never leave your sovereign vault in readable form.</Text>
       </ScrollView>
 
       {/* ADD CONTACT MODAL */}
@@ -180,17 +180,17 @@ export default function FamilyContacts() {
           <Pressable style={{ flex: 1 }} onPress={() => setShow(false)} />
           <View style={st.sheet}>
             <View style={st.sheetHandle} />
-            <Text style={st.sheetTitle}>NOVÝ ČLEN RODINY</Text>
+            <Text style={st.sheetTitle}>NEW FAMILY MEMBER</Text>
 
             <Text style={st.label}>MENO</Text>
-            <TextInput testID="fc-name" value={name} onChangeText={setName} placeholder="napr. Mária"
+            <TextInput testID="fc-name" value={name} onChangeText={setName} placeholder="e.g. Maria"
               placeholderTextColor={C.info} style={st.input} autoCapitalize="words" />
 
-            <Text style={st.label}>TELEFÓNNE ČÍSLO</Text>
+            <Text style={st.label}>PHONE NUMBER</Text>
             <TextInput testID="fc-phone" value={phone} onChangeText={setPhone} placeholder="+421 900 123 456"
               placeholderTextColor={C.info} style={st.input} keyboardType="phone-pad" />
 
-            <Text style={st.label}>VZŤAH</Text>
+            <Text style={st.label}>RELATIONSHIP</Text>
             <View style={st.relRow}>
               {RELATIONS.map(r => (
                 <Pressable key={r.id} testID={`fc-rel-${r.id}`} onPress={() => { tap('light'); setRelation(r.id); }}
@@ -206,12 +206,12 @@ export default function FamilyContacts() {
               {saving ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="shield-checkmark" size={18} color={C.onInverse} />
-                  <Text style={st.saveBtnText}>ULOŽIŤ DO RODINNÉHO ŠTÍTU</Text>
+                  <Text style={st.saveBtnText}>SAVE TO FAMILY SHIELD</Text>
                 </>
               )}
             </Pressable>
             <Pressable testID="fc-cancel" onPress={() => setShow(false)} style={st.cancelBtn}>
-              <Text style={st.cancelText}>ZRUŠIŤ</Text>
+              <Text style={st.cancelText}>CANCEL</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>

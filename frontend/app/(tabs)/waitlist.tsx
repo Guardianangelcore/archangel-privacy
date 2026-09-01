@@ -136,7 +136,7 @@ export default function Waitlist() {
                 <Ionicons name="chevron-down" size={18} color={C.info} />
               </Pressable>
               <Text style={styles.lbl}>{t('clinic', lang).toUpperCase()}</Text>
-              <TextInput testID="wl-clinic" value={f.clinic} onChangeText={v => setF({ ...f, clinic: v })} style={styles.input} placeholder="Univerzitná nemocnica" placeholderTextColor="#999" />
+              <TextInput testID="wl-clinic" value={f.clinic} onChangeText={v => setF({ ...f, clinic: v })} style={styles.input} placeholder="University hospital…" placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('city', lang).toUpperCase()}</Text>
               <TextInput testID="wl-city" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholder="Bratislava" placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('current_date', lang).toUpperCase()}</Text>

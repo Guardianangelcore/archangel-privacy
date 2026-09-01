@@ -2,16 +2,18 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { C } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { useAuth } from '@/src/auth';
+import { GuardianEyeFAB } from '@/src/GuardianEye';
 
 export default function TabsLayout() {
   const { user } = useAuth();
   const angel = !!user?.angel_mode;
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenListeners={{ tabPress: () => tap('light') }}
       screenOptions={{
@@ -60,5 +62,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="waitlist" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
+    {/* GUARDIAN EYE — the always-on camera "eye", visible on every tab */}
+    {!angel && <GuardianEyeFAB bottom={Platform.OS === 'ios' ? 96 : 78} />}
+    </View>
   );
 }

@@ -40,7 +40,7 @@ export default function WealthVault() {
       await api('/wealth/assets', { method: 'POST', body: JSON.stringify(body) });
       setLabel(''); setAddress(''); setSecret(''); setIban(''); setBankName(''); setValue('');
       await load();
-      setMsg('Aktívum zapečatené v trezore (zero-knowledge).');
+      setMsg('Asset sealed in the vault (zero-knowledge).');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
@@ -49,7 +49,7 @@ export default function WealthVault() {
     setBusy('anchor'); setErr(''); setMsg('');
     try {
       const r: any = await api('/wealth/anchor', { method: 'POST' });
-      setMsg(`Ukotvené na Mosaic Chain — blok #${r.mosaic_block ?? '—'} · manifest ${r.manifest_sha256?.slice(0, 12)}…`);
+      setMsg(`Anchored on Mosaic Chain — block #${r.mosaic_block ?? '—'} · manifest ${r.manifest_sha256?.slice(0, 12)}…`);
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -59,7 +59,7 @@ export default function WealthVault() {
     setBusy('payout'); setErr(''); setMsg('');
     try {
       const r: any = await api('/wealth/payout', { method: 'POST', body: JSON.stringify({ amount_eur: parseFloat(payAmount), card_last4: payCard }) });
-      setMsg(`⚡ ${r.amount_eur} € odoslaných na kartu ****${r.card_last4} — ${r.eta} (${r.rail}).`);
+      setMsg(`⚡ ${r.amount_eur} € sent to card ****${r.card_last4} — ${r.eta} (${r.rail}).`);
       setPayAmount(''); setPayCard('');
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -84,55 +84,55 @@ export default function WealthVault() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.totalCard}>
-          <Text style={st.totalLbl}>SUVERÉNNY MAJETOK (ODHAD)</Text>
+          <Text style={st.totalLbl}>SOVEREIGN WEALTH (ESTIMATE)</Text>
           <Text testID="wv-total" style={st.totalVal}>{(vault?.total_est_value_eur ?? 0).toLocaleString('sk-SK')} €</Text>
           {vault?.anchor ? (
             <Text style={st.anchorInfo}>⛓ Proof of Asset Stewardship · Mosaic blok #{vault.anchor.mosaic_block ?? '—'} · {vault.anchor.manifest_sha256?.slice(0, 14)}…</Text>
           ) : (
-            <Text style={st.anchorInfo}>Zatiaľ neukotvené na Mosaic Chain</Text>
+            <Text style={st.anchorInfo}>Not yet anchored on Mosaic Chain</Text>
           )}
         </View>
         <Text style={st.policy}>{vault?.policy}</Text>
 
-        <Text style={st.section}>PRIDAŤ AKTÍVUM</Text>
+        <Text style={st.section}>ADD ASSET</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <Pressable testID="wv-type-crypto" onPress={() => setType('crypto')} style={[st.chip, type === 'crypto' && st.chipActive]}>
             <Text style={[st.chipText, type === 'crypto' && st.chipTextActive]}>₿ KRYPTO</Text>
           </Pressable>
           <Pressable testID="wv-type-bank" onPress={() => setType('bank')} style={[st.chip, type === 'bank' && st.chipActive]}>
-            <Text style={[st.chipText, type === 'bank' && st.chipTextActive]}>🏦 BANKOVÝ ÚČET</Text>
+            <Text style={[st.chipText, type === 'bank' && st.chipTextActive]}>🏦 BANK ACCOUNT</Text>
           </Pressable>
         </View>
-        <TextInput testID="wv-label" value={label} onChangeText={setLabel} placeholder="Označenie (napr. BTC cold wallet / Tatra banka)"
+        <TextInput testID="wv-label" value={label} onChangeText={setLabel} placeholder="Label (e.g. BTC cold wallet / My Bank)"
           placeholderTextColor="#777" style={st.input} />
         {type === 'crypto' ? (
           <>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
-              <TextInput testID="wv-chain" value={chain} onChangeText={setChain} placeholder="Sieť (BTC/ETH…)"
+              <TextInput testID="wv-chain" value={chain} onChangeText={setChain} placeholder="Network (BTC/ETH…)"
                 placeholderTextColor="#777" style={[st.input, { width: 130 }]} />
-              <TextInput testID="wv-address" value={address} onChangeText={setAddress} placeholder="Adresa peňaženky"
+              <TextInput testID="wv-address" value={address} onChangeText={setAddress} placeholder="Wallet address"
                 placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
             </View>
-            <TextInput testID="wv-secret" value={secret} onChangeText={setSecret} secureTextEntry placeholder="Seed fráza / privátny kľúč (zapečatí sa zero-knowledge)"
+            <TextInput testID="wv-secret" value={secret} onChangeText={setSecret} secureTextEntry placeholder="Seed phrase / private key (sealed zero-knowledge)"
               placeholderTextColor="#777" style={st.input} />
           </>
         ) : (
           <>
             <TextInput testID="wv-iban" value={iban} onChangeText={setIban} autoCapitalize="characters" placeholder="IBAN (SK31 1200 …)"
               placeholderTextColor="#777" style={st.input} />
-            <TextInput testID="wv-bank" value={bankName} onChangeText={setBankName} placeholder="Názov banky"
+            <TextInput testID="wv-bank" value={bankName} onChangeText={setBankName} placeholder="Bank name"
               placeholderTextColor="#777" style={st.input} />
           </>
         )}
-        <WheelField testID="wv-value" title="ODHADOVANÁ HODNOTA €" min={0} max={500000} step={1000} unit="€" value={value} onChange={setValue} placeholder="Odhadovaná hodnota v €" style={st.input} />
+        <WheelField testID="wv-value" title="ESTIMATED VALUE €" min={0} max={500000} step={1000} unit="€" value={value} onChange={setValue} placeholder="Estimated value in €" style={st.input} />
         <Pressable testID="wv-add" onPress={addAsset} disabled={busy === 'add' || !label.trim()} style={st.mainBtn}>
-          {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>ZAPEČATIŤ DO TREZORA</Text>}
+          {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>SEAL INTO VAULT</Text>}
         </Pressable>
 
         {!!msg && <Text testID="wv-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="wv-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>AKTÍVA ({vault?.assets?.length ?? 0})</Text>
+        <Text style={st.section}>ASSETS ({vault?.assets?.length ?? 0})</Text>
         {(vault?.assets ?? []).map((a: any) => (
           <View testID={`wv-asset-${a.asset_id}`} key={a.asset_id} style={st.card}>
             <View style={st.rowSpread}>
@@ -140,34 +140,34 @@ export default function WealthVault() {
               <Text style={st.cardVal}>{(a.est_value_eur ?? 0).toLocaleString('sk-SK')} €</Text>
             </View>
             {a.type === 'crypto' ? (
-              <Text style={st.meta}>{a.chain} · {a.address_masked || '—'} · {a.has_sealed_secret ? '🔐 seed zapečatený' : 'bez seedu'}</Text>
+              <Text style={st.meta}>{a.chain} · {a.address_masked || '—'} · {a.has_sealed_secret ? '🔐 seed sealed' : 'no seed'}</Text>
             ) : (
               <Text style={st.meta}>{a.bank_name} · {a.iban_masked}</Text>
             )}
             <Pressable testID={`wv-del-${a.asset_id}`} onPress={() => remove(a.asset_id)} hitSlop={8} style={st.delBtn}>
-              <Text style={st.delText}>ODSTRÁNIŤ</Text>
+              <Text style={st.delText}>REMOVE</Text>
             </Pressable>
           </View>
         ))}
 
         <Pressable testID="wv-anchor" onPress={anchor} disabled={busy === 'anchor'} style={[st.mainBtn, { backgroundColor: '#8A2BE2', marginTop: S.lg }]}>
-          {busy === 'anchor' ? <ActivityIndicator color="#FFF" /> : <Text style={[st.mainBtnText, { color: '#FFF' }]}>⛓ UKOTVIŤ HASH NA MOSAIC CHAIN</Text>}
+          {busy === 'anchor' ? <ActivityIndicator color="#FFF" /> : <Text style={[st.mainBtnText, { color: '#FFF' }]}>⛓ ANCHOR HASH ON MOSAIC CHAIN</Text>}
         </Pressable>
 
         <Text style={st.section}>⚡ INSTANT CARD PAYOUT</Text>
-        <Text style={st.policy}>Okamžitá výplata na kartu (Visa Direct / Mastercard Send) — pripísanie do 30 minút. Simulované do pripojenia reálneho payment railu.</Text>
+        <Text style={st.policy}>Instant card payout (Visa Direct / Mastercard Send) — credited within 30 minutes. Simulated until a real payment rail connects.</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <WheelField testID="wv-pay-amount" title="SUMA €" min={10} max={5000} step={10} unit="€" value={payAmount} onChange={setPayAmount} placeholder="Suma €" style={[st.input, { flex: 1 }]} />
           <TextInput testID="wv-pay-card" value={payCard} onChangeText={setPayCard} keyboardType="numeric" maxLength={4} placeholder="Karta ****"
             placeholderTextColor="#777" style={[st.input, { width: 110 }]} />
         </View>
         <Pressable testID="wv-payout" onPress={payout} disabled={busy === 'payout' || !payAmount || payCard.length !== 4} style={[st.mainBtn, { backgroundColor: '#1B4332' }]}>
-          {busy === 'payout' ? <ActivityIndicator color="#FFF" /> : <Text style={[st.mainBtnText, { color: '#FFF' }]}>ODOSLAŤ OKAMŽITE NA KARTU</Text>}
+          {busy === 'payout' ? <ActivityIndicator color="#FFF" /> : <Text style={[st.mainBtnText, { color: '#FFF' }]}>SEND INSTANTLY TO CARD</Text>}
         </Pressable>
 
         {(vault?.payouts ?? []).length > 0 && (
           <>
-            <Text style={st.section}>HISTÓRIA VÝPLAT</Text>
+            <Text style={st.section}>PAYOUT HISTORY</Text>
             {(vault?.payouts ?? []).map((p: any) => (
               <View key={p.payout_id} style={st.card}>
                 <Text style={st.cardTitle}>⚡ {p.amount_eur} € → ****{p.card_last4}</Text>

@@ -44,7 +44,7 @@ function GuideVideo({ url, testID, muted = true }: { url: string; testID: string
     <View style={styles.videoWrap}>
       <VideoView testID={testID} player={player} style={styles.video} contentFit="cover"
         nativeControls allowsFullscreen allowsPictureInPicture={false} />
-      <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>▶ VIDEO-NÁVOD · HD</Text></View>
+      <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>▶ VIDEO GUIDE · HD</Text></View>
     </View>
   );
 }
@@ -109,13 +109,13 @@ function PainLogger({ guideId }: { guideId: string }) {
     setBusy(false);
   };
 
-  const trendLabel = trend?.trend === 'improving' ? '↘ BOLESŤ KLESÁ — HOJENIE'
-    : trend?.trend === 'worsening' ? '↗ BOLESŤ RASTIE — POZOR'
-    : '→ STABILNÁ';
+  const trendLabel = trend?.trend === 'improving' ? '↘ PAIN FALLING — HEALING'
+    : trend?.trend === 'worsening' ? '↗ PAIN RISING — CAUTION'
+    : '→ STABLE';
 
   return (
     <View style={styles.painBox}>
-      <Text style={styles.painLbl}>🩹 AKÁ BOLA BOLESŤ PO CVIČENÍ? (1–10)</Text>
+      <Text style={styles.painLbl}>🩹 HOW WAS THE PAIN AFTER EXERCISING? (1–10)</Text>
       <View style={styles.painRow}>
         {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
           <Pressable key={n} testID={`pain-${guideId}-${n}`} onPress={() => log(n)} disabled={busy}
@@ -127,7 +127,7 @@ function PainLogger({ guideId }: { guideId: string }) {
       {!!reply && <Text testID={`pain-reply-${guideId}`} style={styles.painReply}>💛 {reply}</Text>}
       {!!milestone && <Text testID={`pain-milestone-${guideId}`} style={styles.painMilestone}>{milestone}</Text>}
       {!!trend?.avg_14d && (
-        <Text style={styles.painTrend}>Priemer 14 dní: {trend.avg_14d}/10 · {trendLabel} · ide do reportu pre lekára</Text>
+        <Text style={styles.painTrend}>14-day average: {trend.avg_14d}/10 · {trendLabel} · goes into your doctor report</Text>
       )}
       {confetti > 0 && <ConfettiBurst key={confetti} />}
     </View>
@@ -158,7 +158,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
   return (
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.lbl}>📅 TÝŽDENNÝ PLÁN ZOTAVENIA</Text>
+        <Text style={styles.lbl}>📅 WEEKLY RECOVERY PLAN</Text>
         {!!plan && (
           <Pressable testID="ph-plan-regen" onPress={gen} hitSlop={10} disabled={busy}>
             {busy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="refresh" size={16} color={C.info} />}
@@ -167,11 +167,11 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
       </View>
       {!plan ? (
         <GlassCard pad={S.md} radius={R.md}>
-          <Text style={styles.planIntro}>Jarvis zoradí návody a expertné videá do 7-dňového plánu — deň po dni až k úľave. Pri aktívnom Kolotoči pridá dennú kotvu na boľavé miesto.</Text>
+          <Text style={styles.planIntro}>Jarvis arranges the guides and expert videos into a 7-day plan — day by day to relief. With an active Healing Loop it adds a daily anchor for the sore spot.</Text>
           <Pressable testID="ph-plan-generate" onPress={gen} disabled={busy} style={styles.planGenBtn}>
             {busy ? <ActivityIndicator color={C.onInverse} /> : (<>
               <Ionicons name="calendar" size={16} color={C.onInverse} />
-              <Text style={styles.planGenText}>ZOSTAVIŤ 7-DŇOVÝ PLÁN</Text>
+              <Text style={styles.planGenText}>BUILD A 7-DAY PLAN</Text>
             </>)}
           </Pressable>
         </GlassCard>
@@ -179,7 +179,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
         <View>
           <View style={styles.planProgress}>
             <View style={[styles.planProgressFill, { width: `${pct}%` }]} />
-            <Text style={styles.planProgressText}>{plan.days.filter((d: any) => d.done).length}/7 DNÍ · {pct} %</Text>
+            <Text style={styles.planProgressText}>{plan.days.filter((d: any) => d.done).length}/7 DAYS · {pct} %</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm, paddingVertical: S.sm }}>
             {plan.days.map((d: any) => (
@@ -204,7 +204,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
                 </View>
                 {!d.done && (
                   <Pressable testID={`ph-plan-done-${d.day}`} onPress={() => doneDay(d.day)} style={styles.dayDoneBtn}>
-                    <Text style={styles.dayDoneText}>HOTOVO ✓</Text>
+                    <Text style={styles.dayDoneText}>DONE ✓</Text>
                   </Pressable>
                 )}
               </View>
@@ -274,7 +274,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
   return (
     <View style={{ marginTop: S.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.evLbl}>🎬 EXPERTNÉ VIDEÁ — VLASTNÁ NARÁCIA</Text>
+        <Text style={styles.evLbl}>🎬 EXPERT VIDEOS — YOUR OWN NARRATION</Text>
         <Pressable testID={`ev-refresh-${guideId}`} onPress={load} hitSlop={10}>
           <Ionicons name="refresh" size={14} color={C.info} />
         </Pressable>
@@ -296,7 +296,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
           {v.transcript_status === 'done' && (
             <Pressable testID={`ev-cc-${v.video_id}`} onPress={() => { tap('light'); setCcOpen(ccOpen === v.video_id ? null : v.video_id); }} style={styles.ccBtn}>
               <Ionicons name="chatbox-ellipses-outline" size={13} color={C.brand} />
-              <Text style={styles.ccBtnText}>TITULKY PRE NEPOČUJÚCICH (CC)</Text>
+              <Text style={styles.ccBtnText}>CAPTIONS FOR THE DEAF (CC)</Text>
               <Ionicons name={ccOpen === v.video_id ? 'chevron-up' : 'chevron-down'} size={12} color={C.info} />
             </Pressable>
           )}
@@ -304,41 +304,41 @@ function ExpertVideos({ guideId }: { guideId: string }) {
             <Text key={i} style={styles.ccStep}>{i + 1}. {s}</Text>
           ))}
           {(v.transcript_status === 'processing' || v.transcript_status === 'pending') && (
-            <Text style={styles.ccNote}>⏳ Jarvis prepisuje naráciu na titulky… (obnovte o chvíľu)</Text>
+            <Text style={styles.ccNote}>⏳ Jarvis is transcribing the narration into captions… (refresh in a moment)</Text>
           )}
           {v.transcript_status === 'too_large' && (
-            <Text style={styles.ccNote}>ℹ️ Video nad 24 MB — titulky podporujú kratšie videá.</Text>
+            <Text style={styles.ccNote}>ℹ️ Video over 24 MB — captions support shorter videos.</Text>
           )}
           {v.transcript_status === 'failed' && v.mine && (
             <Pressable testID={`ev-cc-retry-${v.video_id}`} onPress={() => retryCc(v.video_id)} disabled={ccBusy === v.video_id} style={styles.ccRetry}>
               {ccBusy === v.video_id ? <ActivityIndicator size="small" color={C.brand} /> : (<>
                 <Ionicons name="refresh" size={12} color={C.brand} />
-                <Text style={styles.ccBtnText}>TITULKY ZLYHALI — SKÚSIŤ ZNOVA</Text>
+                <Text style={styles.ccBtnText}>CAPTIONS FAILED — TRY AGAIN</Text>
               </>)}
             </Pressable>
           )}
         </View>
       ))}
-      {videos.length === 0 && <Text style={styles.evEmpty}>Zatiaľ žiadne vlastné video k tomuto cviku — nahrajte prvé a rehabilitácia bude autenticky vaša.</Text>}
+      {videos.length === 0 && <Text style={styles.evEmpty}>No own video for this exercise yet — upload the first one and your rehab becomes authentically yours.</Text>}
       {Platform.OS === 'web' ? (
-        <Text style={styles.evEmpty}>📱 Nahrávanie videí funguje v mobilnej appke (galéria alebo kamera).</Text>
+        <Text style={styles.evEmpty}>📱 Video upload works in the mobile app (gallery or camera).</Text>
       ) : (
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
           <Pressable testID={`ev-record-${guideId}`} onPress={() => upload(true)} disabled={busy} style={styles.evBtn}>
             {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : (<>
               <Ionicons name="videocam" size={15} color={C.onInverse} />
-              <Text style={styles.evBtnText}>NAHRAŤ KAMEROU</Text>
+              <Text style={styles.evBtnText}>RECORD WITH CAMERA</Text>
             </>)}
           </Pressable>
           <Pressable testID={`ev-pick-${guideId}`} onPress={() => upload(false)} disabled={busy} style={[styles.evBtn, styles.evBtnGhost]}>
             <Ionicons name="images-outline" size={15} color={C.brand} />
-            <Text style={[styles.evBtnText, { color: C.brand }]}>Z GALÉRIE</Text>
+            <Text style={[styles.evBtnText, { color: C.brand }]}>FROM GALLERY</Text>
           </Pressable>
         </View>
       )}
       {camBlocked && (
         <Pressable onPress={() => Linking.openSettings()} style={styles.evSettings}>
-          <Text style={styles.evSettingsText}>Kamera je zablokovaná — OTVORIŤ NASTAVENIA</Text>
+          <Text style={styles.evSettingsText}>Camera is blocked — OPEN SETTINGS</Text>
         </Pressable>
       )}
       {!!err && <Text style={styles.evErr}>{err}</Text>}
@@ -406,7 +406,7 @@ export default function Physio() {
         <Text style={styles.title}>PHYSIO-AI</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>FOUNDER’S LEGACY · VIDEO-NATÍVNE NÁVODY · SELF-MASSAGE</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>FOUNDER’S LEGACY · VIDEO-NATIVE GUIDES · SELF-MASSAGE</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {/* WEEKLY RECOVERY PLAYLIST — day-by-day guidance through the whole week */}

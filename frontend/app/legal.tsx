@@ -12,7 +12,7 @@ import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
-const COUNTRIES = ['SK', 'CZ', 'DE', 'AT', 'GB', 'US', 'INÉ'];
+const COUNTRIES = ['SK', 'CZ', 'DE', 'AT', 'GB', 'US', 'OTHER'];
 const TOS_VERSION = '2026-06.1';
 
 export default function Legal() {
@@ -31,7 +31,7 @@ export default function Legal() {
   const [testBusy, setTestBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const cc = country === 'INÉ' ? 'XX' : country;
+  const cc = country === 'OTHER' ? 'XX' : country;
 
   const loadRegion = useCallback(async (c: string) => {
     try { setRegion(await api(`/legal/region?country=${c}&language=${lang}`)); } catch (e) { console.log(e); }
@@ -56,7 +56,7 @@ export default function Legal() {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
       const geo = await Location.reverseGeocodeAsync({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
       const iso = geo?.[0]?.isoCountryCode;
-      if (iso) setCountry(COUNTRIES.includes(iso) ? iso : 'INÉ');
+      if (iso) setCountry(COUNTRIES.includes(iso) ? iso : 'OTHER');
     } catch (e) { console.log('gps err', e); }
   };
 
@@ -107,7 +107,7 @@ export default function Legal() {
         <Text style={styles.title}>{t('legal_hub', lang).toUpperCase()}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>EU AI ACT ČL. 50 · GDPR · UK DPA/DUAA · FDA/HIPAA · AML 2026</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>EU AI ACT ART. 50 · GDPR · UK DPA/DUAA · FDA/HIPAA · AML 2026</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         {/* Jurisdiction */}
@@ -138,12 +138,12 @@ export default function Legal() {
         <View style={[styles.statusRow, { borderColor: tosOk ? C.brand : C.error }]}>
           <Ionicons name={tosOk ? 'checkmark-circle' : 'alert-circle-outline'} size={20} color={tosOk ? C.brand : C.error} />
           <Text style={[styles.statusText, { color: tosOk ? C.brand : C.error }]}>
-            {tosOk ? t('tos_accepted', lang).toUpperCase() : 'ČAKÁ NA PRIJATIE'}
+            {tosOk ? t('tos_accepted', lang).toUpperCase() : 'AWAITING ACCEPTANCE'}
           </Text>
         </View>
         <Pressable testID="lg-tos-view" onPress={openTos} style={styles.secBtn}>
           <Ionicons name={showTos ? 'chevron-up' : 'document-text-outline'} size={16} color={C.fg} />
-          <Text style={styles.secBtnText}>{showTos ? 'SKRYŤ' : 'ZOBRAZIŤ CELÉ PODMIENKY'}</Text>
+          <Text style={styles.secBtnText}>{showTos ? 'HIDE' : 'SHOW FULL TERMS'}</Text>
         </Pressable>
         <Pressable testID="lg-tos-pdf" onPress={() => sharePdf(`/legal/tos.pdf?language=${lang}`, 'guardian_tos.pdf')} style={[styles.secBtn, { marginTop: S.sm }]}>
           <Ionicons name="share-outline" size={16} color={C.fg} />
@@ -163,31 +163,31 @@ export default function Legal() {
           <View style={[styles.statusRow, { borderColor: C.brand }]}>
             <Ionicons name="shield-checkmark" size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.statusText, { color: C.brand }]}>{t('kyc_verified', lang).toUpperCase()} · LIMIT €{aml.daily_limit?.toFixed(0)}/DEŇ</Text>
-              <Text style={styles.attText}>DID ATESTÁCIA: {String(aml.attestation).slice(0, 24)}…</Text>
+              <Text style={[styles.statusText, { color: C.brand }]}>{t('kyc_verified', lang).toUpperCase()} · LIMIT €{aml.daily_limit?.toFixed(0)}/DAY</Text>
+              <Text style={styles.attText}>DID ATTESTATION: {String(aml.attestation).slice(0, 24)}…</Text>
             </View>
           </View>
         ) : (
           <View>
-            <Text style={styles.hint}>Bez KYC: limit €{aml?.daily_limit?.toFixed(0) ?? 150}/deň v Solidarity Hub. Kampane vyžadujú KYC. Atestácia sa ukotví na váš DID (decentralizované ID) do AML reťazca.</Text>
-            <TextInput testID="kyc-name" placeholder="Celé meno" value={kycForm.full_name} onChangeText={v => setKycForm({ ...kycForm, full_name: v })} style={styles.input} placeholderTextColor="#999" />
+            <Text style={styles.hint}>Without KYC: limit €{aml?.daily_limit?.toFixed(0) ?? 150}/day in Solidarity Hub. Campaigns require KYC. The attestation anchors to your DID (decentralized ID) in the AML chain.</Text>
+            <TextInput testID="kyc-name" placeholder="Full name" value={kycForm.full_name} onChangeText={v => setKycForm({ ...kycForm, full_name: v })} style={styles.input} placeholderTextColor="#999" />
             <WheelField testID="kyc-year" title="ROK NARODENIA" min={1920} max={2012} value={kycForm.birth_year} onChange={v => setKycForm({ ...kycForm, birth_year: v })} placeholder="Rok narodenia" style={styles.input} />
             <View style={styles.switchRow}>
-              <Text style={styles.switchLbl}>VYHLASUJEM: NIE SOM NA SANKČNOM ZOZNAME A PROSTRIEDKY SÚ LEGÁLNE</Text>
+              <Text style={styles.switchLbl}>I DECLARE: I AM NOT ON A SANCTIONS LIST AND THE FUNDS ARE LEGAL</Text>
               <Switch testID="kyc-declaration" value={kycForm.declaration} onValueChange={v => setKycForm({ ...kycForm, declaration: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
             </View>
             <Pressable testID="kyc-submit" onPress={submitKyc} disabled={kycBusy || !kycForm.declaration} style={[styles.priBtn, !kycForm.declaration && { opacity: 0.4 }]}>
-              {kycBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>OVERIŤ (DID ATESTÁCIA)</Text>}
+              {kycBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>VERIFY (DID ATTESTATION)</Text>}
             </Pressable>
           </View>
         )}
-        {aml ? <Text style={styles.hint}>Dnes darované: €{aml.donated_today?.toFixed(0)} / €{aml.daily_limit?.toFixed(0)} · Transakcie: {aml.tx_today}/{aml.max_tx_per_day} · AML záznamy: {aml.ledger_entries}</Text> : null}
+        {aml ? <Text style={styles.hint}>Donated today: €{aml.donated_today?.toFixed(0)} / €{aml.daily_limit?.toFixed(0)} · Transactions: {aml.tx_today}/{aml.max_tx_per_day} · AML records: {aml.ledger_entries}</Text> : null}
 
         {/* Testament */}
         <Text style={styles.section}>{t('testament', lang).toUpperCase()} · {region?.testament_format === 'common_law_uk' ? 'UK (WILLS ACT 1837)' : region?.testament_format === 'common_law' ? 'COMMON LAW' : 'HOLOGRAF (§ 476 OZ)'}</Text>
-        <TextInput testID="tw-name" placeholder="Celé meno poručiteľa" value={tf.full_name} onChangeText={v => setTf({ ...tf, full_name: v })} style={styles.input} placeholderTextColor="#999" />
-        <TextInput testID="tw-wishes" placeholder="Moja posledná vôľa… (komu čo zanechávam)" value={tf.wishes} onChangeText={v => setTf({ ...tf, wishes: v })} multiline style={[styles.input, { minHeight: 90 }]} placeholderTextColor="#999" />
-        <TextInput testID="tw-executor" placeholder="Vykonávateľ závetu (nepovinné)" value={tf.executor_name} onChangeText={v => setTf({ ...tf, executor_name: v })} style={styles.input} placeholderTextColor="#999" />
+        <TextInput testID="tw-name" placeholder="Testator full name" value={tf.full_name} onChangeText={v => setTf({ ...tf, full_name: v })} style={styles.input} placeholderTextColor="#999" />
+        <TextInput testID="tw-wishes" placeholder="My last will… (who gets what)" value={tf.wishes} onChangeText={v => setTf({ ...tf, wishes: v })} multiline style={[styles.input, { minHeight: 90 }]} placeholderTextColor="#999" />
+        <TextInput testID="tw-executor" placeholder="Will executor (optional)" value={tf.executor_name} onChangeText={v => setTf({ ...tf, executor_name: v })} style={styles.input} placeholderTextColor="#999" />
         {isCommonLaw && (
           <View style={{ flexDirection: 'row', gap: S.sm }}>
             <TextInput testID="tw-w1" placeholder="Svedok 1" value={tf.witness1} onChangeText={v => setTf({ ...tf, witness1: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
@@ -201,19 +201,19 @@ export default function Legal() {
           <View testID="tw-document" style={styles.docBox}>
             <View style={styles.docHead}>
               <Ionicons name="shield-checkmark" size={16} color={C.brand} />
-              <Text style={styles.docHeadText}>{String(testDoc.format).toUpperCase()} · SHA-256 UKOTVENÉ</Text>
+              <Text style={styles.docHeadText}>{String(testDoc.format).toUpperCase()} · SHA-256 ANCHORED</Text>
             </View>
             <Text style={styles.docText}>{testDoc.document_text}</Text>
             <Pressable testID="tw-pdf" onPress={() => sharePdf('/legal/testament.pdf', 'guardian_testament.pdf')} style={styles.pdfBtn}>
               <Ionicons name="share-outline" size={18} color={C.onInverse} />
-              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTÁR / RODINA</Text>
+              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTARY / FAMILY</Text>
             </Pressable>
           </View>
         ) : null}
 
         <Pressable testID="lg-dignity-link" onPress={() => router.push('/dignity')} style={[styles.secBtn, { marginTop: S.lg }]}>
           <Ionicons name="rose-outline" size={16} color={C.fg} />
-          <Text style={styles.secBtnText}>FINAL DIGNITY · POHREBNÝ FOND A POSLEDNÉ PRIANIA</Text>
+          <Text style={styles.secBtnText}>FINAL DIGNITY · FUNERAL FUND & LAST WISHES</Text>
         </Pressable>
 
         <Text style={styles.footer}>⚠ {t('ai_disclosure', lang)}</Text>

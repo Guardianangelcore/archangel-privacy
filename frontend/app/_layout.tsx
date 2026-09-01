@@ -130,12 +130,12 @@ function RootNav() {
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
         if (lastNudge && Date.now() - Number(lastNudge) <= oneWeek) return;
         Alert.alert(
-          "Notifikácie sú vypnuté",
-          "Zapnite notifikácie, aby vám neušiel nájdený termín ani bezpečnostné upozornenia.",
+          "Notifications are off",
+          "Turn on notifications so you never miss a found appointment or a safety alert.",
           [
-            { text: "Neskôr", onPress: () => AsyncStorage.setItem("pushNudgeAt", String(Date.now())) },
+            { text: "Later", onPress: () => AsyncStorage.setItem("pushNudgeAt", String(Date.now())) },
             {
-              text: "Otvoriť nastavenia",
+              text: "Open settings",
               onPress: async () => {
                 await AsyncStorage.setItem("pushNudgeAt", String(Date.now()));
                 Linking.openSettings();

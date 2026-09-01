@@ -86,9 +86,9 @@ export default function Meds() {
   const speakToday = useCallback((items: TodayItem[]) => {
     const pending = items.filter(i => !i.taken);
     const msg = pending.length === 0
-      ? (lang === 'sk' ? 'Výborne! Všetky dnešné lieky sú užité.' : 'Great! All medications for today are taken.')
+      ? (lang === 'sk' ? 'Great! All medications for today are taken.' : 'Great! All medications for today are taken.')
       : (lang === 'sk'
-        ? `Dnes vás ešte čaká: ${pending.map(p => `${p.name} o ${p.time.replace(':', ' ')}`).join(', ')}.`
+        ? `Still ahead today: ${pending.map(p => `${p.name} at ${p.time.replace(':', ' ')}`).join(', ')}.`
         : `Still pending today: ${pending.map(p => `${p.name} at ${p.time}`).join(', ')}.`);
     speak(msg);
   }, [lang, speak]);

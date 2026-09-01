@@ -72,33 +72,33 @@ export default function Longevity() {
           <Paywall message={locked} onUnlocked={load} />
         ) : needProfile ? (
           <View>
-            <Text style={st.intro}>Jarvis vypočíta váš biologický vek z dát (kroky, tep, stres, diagnózy). Najprv základné údaje:</Text>
+            <Text style={st.intro}>Jarvis computes your biological age from data (steps, pulse, stress, diagnoses). Basic details first:</Text>
             <Text style={st.lbl}>ROK NARODENIA</Text>
             <WheelField testID="lg-birth" title="ROK NARODENIA" min={1920} max={2012} value={f.birth_year} onChange={v => setF({ ...f, birth_year: v })} placeholder="1971" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               <View style={{ flex: 1 }}>
-                <Text style={st.lbl}>VÝŠKA (cm)</Text>
-                <WheelField testID="lg-height" title="VÝŠKA" min={120} max={220} unit="cm" value={f.height_cm} onChange={v => setF({ ...f, height_cm: v })} placeholder="178" style={st.input} />
+                <Text style={st.lbl}>HEIGHT (cm)</Text>
+                <WheelField testID="lg-height" title="HEIGHT" min={120} max={220} unit="cm" value={f.height_cm} onChange={v => setF({ ...f, height_cm: v })} placeholder="178" style={st.input} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={st.lbl}>VÁHA (kg)</Text>
-                <WheelField testID="lg-weight" title="VÁHA" min={35} max={200} unit="kg" value={f.weight_kg} onChange={v => setF({ ...f, weight_kg: v })} placeholder="85" style={st.input} />
+                <Text style={st.lbl}>WEIGHT (kg)</Text>
+                <WheelField testID="lg-weight" title="WEIGHT" min={35} max={200} unit="kg" value={f.weight_kg} onChange={v => setF({ ...f, weight_kg: v })} placeholder="85" style={st.input} />
               </View>
             </View>
             <View style={st.switchRow}>
-              <Text style={st.switchLbl}>FAJČIAR</Text>
+              <Text style={st.switchLbl}>SMOKER</Text>
               <Switch testID="lg-smoker" value={f.smoker} onValueChange={v => setF({ ...f, smoker: v })} trackColor={{ true: C.error, false: C.surface3 }} />
             </View>
             <Text style={st.lbl}>AKTIVITA</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
-              {[['low', 'NÍZKA'], ['medium', 'STREDNÁ'], ['high', 'VYSOKÁ']].map(([k, v]) => (
+              {[['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH']].map(([k, v]) => (
                 <Pressable testID={`lg-act-${k}`} key={k} onPress={() => setF({ ...f, activity_level: k })} style={[st.chip, f.activity_level === k && st.chipActive]}>
                   <Text style={[st.chipText, f.activity_level === k && st.chipTextActive]}>{v}</Text>
                 </Pressable>
               ))}
             </View>
             <Pressable testID="lg-save" onPress={saveProfile} disabled={busy || !f.birth_year} style={st.saveBtn}>
-              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>VYPOČÍTAŤ BIO-VEK</Text>}
+              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>CALCULATE BIO-AGE</Text>}
             </Pressable>
             {!!err && <Text style={st.err}>{err}</Text>}
           </View>
@@ -106,13 +106,13 @@ export default function Longevity() {
           <>
             <View style={st.ageCard}>
               <View style={st.ageCol}>
-                <Text style={st.ageLbl}>KALENDÁRNY VEK</Text>
+                <Text style={st.ageLbl}>CALENDAR AGE</Text>
                 <Text style={st.ageVal}>{data.chronological_age}</Text>
               </View>
               <Ionicons name={data.delta_years > 0.5 ? 'trending-up' : data.delta_years < -0.5 ? 'trending-down' : 'remove'} size={30}
                 color={data.delta_years > 0.5 ? C.error : data.delta_years < -0.5 ? C.brand : C.info} />
               <View style={st.ageCol}>
-                <Text style={st.ageLbl}>BIOLOGICKÝ VEK</Text>
+                <Text style={st.ageLbl}>BIOLOGICAL AGE</Text>
                 <Text testID="lg-bioage" style={[st.ageVal, { color: data.delta_years > 0.5 ? C.error : C.brand }]}>{data.biological_age}</Text>
               </View>
             </View>
@@ -130,7 +130,7 @@ export default function Longevity() {
                 </View>
               </View>
             ))}
-            {data.factors.length === 0 && <Text style={st.emptyLine}>— zatiaľ málo dát. Zapisujte kroky/tep vo Wellness a spravte Bio-Scan.</Text>}
+            {data.factors.length === 0 && <Text style={st.emptyLine}>— not enough data yet. Log steps/pulse in Wellness and run a Bio-Scan.</Text>}
 
             <Text style={st.section}>AI BIO-HACKS</Text>
             {data.bio_hacks.map((h: string, i: number) => (
@@ -140,7 +140,7 @@ export default function Longevity() {
               </View>
             ))}
             <Pressable testID="lg-edit" onPress={() => setNeedProfile(true)} style={st.editBtn}>
-              <Text style={st.editText}>UPRAVIŤ PROFIL (VÝŠKA / VÁHA / AKTIVITA)</Text>
+              <Text style={st.editText}>EDIT PROFILE (HEIGHT / WEIGHT / ACTIVITY)</Text>
             </Pressable>
             <Text style={st.disc}>{data.disclaimer}</Text>
             <Art50 lang={lang} />

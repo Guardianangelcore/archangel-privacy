@@ -11,10 +11,10 @@ export type AgeStage = 'infant' | 'child' | 'teen' | 'adult' | 'senior';
 export const AGE_STAGES: AgeStage[] = ['infant', 'child', 'teen', 'adult', 'senior'];
 
 export const AGE_LABEL_SK: Record<AgeStage, string> = {
-  infant: 'Dojča (0–3)',
-  child:  'Dieťa (4–12)',
+  infant: 'Infant (0–3)',
+  child:  'Child (4–12)',
   teen:   'Teenager (13–17)',
-  adult:  'Dospelý (18–64)',
+  adult:  'Adult (18–64)',
   senior: 'Senior (65+)',
 };
 

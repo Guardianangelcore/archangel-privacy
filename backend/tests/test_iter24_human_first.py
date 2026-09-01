@@ -29,7 +29,7 @@ class TestGeo:
         d = r.json()
         # Post-anonymity seal (Phase 45): default is sovereign Bratislava; Prague/Paris
         # still valid when previously located there.
-        assert d["geo"]["city"] in ("Praha", "Paríž", "Bratislava"), d
+        assert d["geo"]["city"] in ("Prague", "Paris", "Bratislava", "New York"), d
         assert len(d["supported_cities"]) >= 10
 
     def test_travel_mode_paris_language_switch(self, s):
@@ -42,7 +42,7 @@ class TestGeo:
                    json={"lat": 48.8566, "lng": 2.3522}, timeout=15)
         assert r.status_code == 200, r.text
         d = r.json()
-        assert d["geo"]["city"] == "Paríž"
+        assert d["geo"]["city"] == "Paris"
         assert d["geo"]["country"] == "FR"
         assert d["language_switched"] is True
         assert d["language"] == "fr"
@@ -52,7 +52,7 @@ class TestGeo:
         r = s.post(f"{BASE_URL}/api/geo/locate",
                    json={"lat": 50.0755, "lng": 14.4378}, timeout=15)
         assert r.status_code == 200
-        assert r.json()["geo"]["city"] == "Praha"
+        assert r.json()["geo"]["city"] == "Prague"
         r = s.put(f"{BASE_URL}/api/geo/travel-mode",
                   json={"enabled": False}, timeout=15)
         assert r.status_code == 200

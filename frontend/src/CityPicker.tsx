@@ -46,8 +46,8 @@ export function CityPicker({ visible, onClose, onPicked }: {
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.handle} />
-          <Text style={styles.title}>MANUÁLNY VÝBER MESTA</Text>
-          <Text style={styles.sub}>GPS a IP boli zablokované alebo nepresné — vyberte mesto ručne.</Text>
+          <Text style={styles.title}>MANUAL CITY SELECTION</Text>
+          <Text style={styles.sub}>GPS and IP were blocked or inaccurate — pick your city manually.</Text>
           {!!err && <Text style={styles.err}>{err}</Text>}
           {loading ? <ActivityIndicator color={C.brand} style={{ marginVertical: S.lg }} /> : (
             <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ paddingBottom: S.md }}>
@@ -70,7 +70,7 @@ export function CityPicker({ visible, onClose, onPicked }: {
             </ScrollView>
           )}
           <Pressable testID="cp-cancel" onPress={onClose} style={styles.cancel}>
-            <Text style={styles.cancelText}>ZRUŠIŤ</Text>
+            <Text style={styles.cancelText}>CANCEL</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -92,15 +92,15 @@ export function LanguageSuggestionBanner({ suggestion, onAccept, onDismiss }: {
     <View testID="lang-suggestion" style={styles.bannerBox}>
       <Ionicons name="language" size={20} color={C.brand} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.bannerTitle}>PREKROČILI STE HRANICU · {suggestion.country}</Text>
+        <Text style={styles.bannerTitle}>YOU CROSSED A BORDER · {suggestion.country}</Text>
         <Text style={styles.bannerSub}>
-          Prepnúť aplikáciu z {LANG_LABEL[suggestion.from] || suggestion.from} na{' '}
+          Switch the app from {LANG_LABEL[suggestion.from] || suggestion.from} to{' '}
           <Text style={{ fontWeight: '900' }}>{LANG_LABEL[suggestion.to] || suggestion.to}</Text>?
         </Text>
       </View>
       <View style={{ gap: 6 }}>
         <Pressable testID="lang-suggest-accept" onPress={onAccept} style={styles.bannerAccept}>
-          <Text style={styles.bannerAcceptText}>ÁNO</Text>
+          <Text style={styles.bannerAcceptText}>YES</Text>
         </Pressable>
         <Pressable testID="lang-suggest-dismiss" onPress={onDismiss} style={styles.bannerDismiss}>
           <Text style={styles.bannerDismissText}>NIE</Text>

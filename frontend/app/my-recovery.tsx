@@ -13,7 +13,7 @@ import { EmptyState } from '@/src/ui/EmptyState';
 import { t, Lang } from '@/src/i18n';
 import { C, S, R } from '@/src/theme';
 
-const CONTRACTS = [['fulltime', 'TPP'], ['dpp', 'DPP'], ['dpc', 'DPČ']];
+const CONTRACTS = [['fulltime', 'Full-time'], ['dpp', 'Part-time (DPP)'], ['dpc', 'Contract (DPC)']];
 
 function outingStatus(outings: any[]) {
   const now = new Date();
@@ -215,7 +215,7 @@ export default function MyRecovery() {
         </Pressable>
         {showAi && (
           <View style={{ gap: S.sm }}>
-            <TextInput testID="mr-ai-text" style={[styles.input, { minHeight: 90, textAlignVertical: 'top', paddingTop: S.md }]} multiline placeholder="Vložte text z ePN / potvrdenia lekára…" placeholderTextColor={C.info} value={aiText} onChangeText={setAiText} />
+            <TextInput testID="mr-ai-text" style={[styles.input, { minHeight: 90, textAlignVertical: 'top', paddingTop: S.md }]} multiline placeholder="Paste text from an eSick-note / doctor confirmation…" placeholderTextColor={C.info} value={aiText} onChangeText={setAiText} />
             <Pressable testID="mr-ai-run" onPress={extractAi} disabled={busy === 'ai'} style={styles.ctaOutline}>
               {busy === 'ai' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>EXTRACT (AI)</Text>}
             </Pressable>

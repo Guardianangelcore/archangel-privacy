@@ -1,5 +1,5 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-// ANGEL MODE 2.0 — Fall verification: 120s empathetic loop + hands-free voice "Som v poriadku" (Whisper)
+// ANGEL MODE 2.0 — Fall verification: 120s empathetic loop + hands-free voice "I am OK" (Whisper)
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,9 +72,9 @@ export default function FallVerify() {
     try {
       const perm = await AudioModule.getRecordingPermissionsAsync();
       if (!perm.granted) {
-        if (!perm.canAskAgain) { setHeard('Mikrofón je zablokovaný v nastaveniach.'); setVoiceState('failed'); return; }
+        if (!perm.canAskAgain) { setHeard('The microphone is blocked in settings.'); setVoiceState('failed'); return; }
         const r = await AudioModule.requestRecordingPermissionsAsync();
-        if (!r.granted) { setVoiceState('failed'); setHeard('Mikrofón nepovolený — použite tlačidlo SOM V PORIADKU.'); return; }
+        if (!r.granted) { setVoiceState('failed'); setHeard('Microphone not allowed — use the I AM OK button.'); return; }
       }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true } as any);
       setVoiceState('recording');
@@ -100,13 +100,13 @@ export default function FallVerify() {
           });
           const body = await res.json();
           if (!res.ok) throw new Error(body?.detail || 'STT failed');
-          setHeard(body.transcript ? `Počul som: „${body.transcript}"` : '');
+          setHeard(body.transcript ? `I heard: "${body.transcript}"` : '');
           if (body.ok_detected) cancel(true);
           else setVoiceState('failed');
         } catch (e: any) {
           console.log('liveness err', e);
           setVoiceState('failed');
-          setHeard('Nepodarilo sa rozpoznať hlas — skúste znova alebo stlačte tlačidlo.');
+          setHeard('Could not recognize your voice — try again or press the button.');
         }
       }, 4000);
     } catch (e) {
@@ -126,8 +126,8 @@ export default function FallVerify() {
     return (
       <View testID="fall-ok" style={[st.root, { backgroundColor: C.brandPri }]}>
         <Ionicons name="checkmark-circle" size={90} color={C.onInverse} />
-        <Text style={[st.big, { color: C.onInverse }]}>STE V PORIADKU ✓</Text>
-        <Text style={[st.subBig, { color: C.onInverse }]}>ALARM ZRUŠENÝ</Text>
+        <Text style={[st.big, { color: C.onInverse }]}>YOU ARE OK ✓</Text>
+        <Text style={[st.subBig, { color: C.onInverse }]}>ALARM CANCELLED</Text>
       </View>
     );
   }
@@ -136,9 +136,9 @@ export default function FallVerify() {
       <SafeAreaView testID="fall-sent" style={[st.root, { backgroundColor: C.error }]}>
         <Ionicons name="alert" size={90} color={C.onError} />
         <Text style={[st.big, { color: C.onError }]}>{t('get_help_now', lang).toUpperCase()}</Text>
-        <Text style={[st.subBig, { color: C.onError }]}>UPOZORŇUJEM RODINU A KONTAKTY…</Text>
+        <Text style={[st.subBig, { color: C.onError }]}>ALERTING YOUR FAMILY AND CONTACTS…</Text>
         <Pressable testID="fall-back" onPress={() => router.back()} style={st.exitBtn}>
-          <Text style={st.exitBtnText}>ZAVRIEŤ</Text>
+          <Text style={st.exitBtnText}>CLOSE</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -166,7 +166,7 @@ export default function FallVerify() {
           </Svg>
           <Text testID="fall-countdown" style={[st.countdown, { color: accent }]}>{mm}:{String(ss).padStart(2, '0')}</Text>
         </View>
-        <Text style={[st.subBig, { color: accent }]}>DO ODOSLANIA ALARMU</Text>
+        <Text style={[st.subBig, { color: accent }]}>UNTIL THE ALARM IS SENT</Text>
 
         <Pressable testID="fall-voice" onPress={listen} disabled={voiceState === 'recording' || voiceState === 'checking'}
           style={[st.voiceBtn, voiceState === 'recording' && { backgroundColor: C.error, borderColor: C.error }]}>
@@ -174,7 +174,7 @@ export default function FallVerify() {
             <Ionicons name={voiceState === 'recording' ? 'mic' : 'mic-outline'} size={30} color={voiceState === 'recording' ? '#FFF' : C.brand} />
           )}
           <Text style={[st.voiceText, voiceState === 'recording' && { color: '#FFF' }]}>
-            {voiceState === 'recording' ? 'POČÚVAM… HOVORTE TERAZ' : voiceState === 'checking' ? 'OVERUJEM HLAS…' : 'POVEDZTE: „SOM V PORIADKU!"'}
+            {voiceState === 'recording' ? 'LISTENING… SPEAK NOW' : voiceState === 'checking' ? 'VERIFYING VOICE…' : 'SAY: "I AM OK!"'}
           </Text>
         </Pressable>
         {!!heard && <Text testID="fall-heard" style={st.heard}>{heard}</Text>}

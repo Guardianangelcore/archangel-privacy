@@ -58,46 +58,46 @@ export default function InnerCircle() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.heroIcon}><Ionicons name="diamond" size={28} color="#8A2BE2" /></View>
-        <Text style={st.h1}>Zakladateľov vnútorný kruh</Text>
+        <Text style={st.h1}>Founder’s Inner Circle</Text>
         <Text style={st.sub}>
-          Členovia Inner Circle získavajú DOŽIVOTNÝ Archangel status — všetky elitné funkcie, navždy, bez platby.
-          Status sa aktivuje okamžite alebo pri prvom prihlásení daným e-mailom.
+          Inner Circle members receive LIFETIME Archangel status — every elite feature, forever, free of charge.
+          Status activates instantly or on first login with that e-mail.
         </Text>
 
         {isFounder === false && (
           <View style={st.lockedCard}>
             <Ionicons name="lock-closed" size={22} color={C.info} />
-            <Text style={st.lockedText}>Inner Circle spravuje výhradne zakladateľ nadácie. Ak ste členom, váš Archangel status je aktívny automaticky — skontrolujte Subscription.</Text>
+            <Text style={st.lockedText}>The Inner Circle is managed solely by the foundation founder. If you are a member, your Archangel status is active automatically — check Subscription.</Text>
           </View>
         )}
 
         {isFounder && (
           <>
-            <Text style={st.section}>PRIDAŤ ČLENA</Text>
+            <Text style={st.section}>ADD MEMBER</Text>
             <TextInput testID="ic-email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
-              placeholder="E-mail člena rodiny" placeholderTextColor="#777" style={st.input} />
+              placeholder="Family member e-mail" placeholderTextColor="#777" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
               <TextInput testID="ic-name" value={name} onChangeText={setName} placeholder="Meno"
                 placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
-              <TextInput testID="ic-relationship" value={relationship} onChangeText={setRelationship} placeholder="Vzťah"
+              <TextInput testID="ic-relationship" value={relationship} onChangeText={setRelationship} placeholder="Relationship"
                 placeholderTextColor="#777" style={[st.input, { width: 110, marginTop: 0 }]} />
             </View>
             <Pressable testID="ic-add" onPress={add} disabled={busy === 'add' || !email.includes('@')} style={st.mainBtn}>
-              {busy === 'add' ? <ActivityIndicator color="#FFF" /> : <Text style={st.mainBtnText}>👑 UDELIŤ DOŽIVOTNÝ ARCHANGEL</Text>}
+              {busy === 'add' ? <ActivityIndicator color="#FFF" /> : <Text style={st.mainBtnText}>👑 GRANT LIFETIME ARCHANGEL</Text>}
             </Pressable>
             {!!err && <Text testID="ic-err" style={st.err}>{err}</Text>}
 
-            <Text style={st.section}>ČLENOVIA ({members.length})</Text>
-            {members.length === 0 && <Text style={st.empty}>KRUH JE ZATIAĽ PRÁZDNY</Text>}
+            <Text style={st.section}>MEMBERS ({members.length})</Text>
+            {members.length === 0 && <Text style={st.empty}>THE CIRCLE IS EMPTY SO FAR</Text>}
             {members.map(m => (
               <View testID={`ic-member-${m.member_id}`} key={m.member_id} style={st.card}>
                 <View style={st.rowSpread}>
                   <Text style={st.cardTitle}>{m.name || m.email}</Text>
                   <View style={st.badge}><Text style={st.badgeText}>ARCHANGEL ∞</Text></View>
                 </View>
-                <Text style={st.meta}>{m.email} · {m.relationship}{m.linked_did ? ` · DID prepojené` : ' · čaká na prvé prihlásenie'}</Text>
+                <Text style={st.meta}>{m.email} · {m.relationship}{m.linked_did ? ` · DID linked` : ' · awaiting first login'}</Text>
                 <Pressable testID={`ic-del-${m.member_id}`} onPress={() => remove(m.member_id)} disabled={busy === m.member_id} style={st.delBtn}>
-                  <Text style={st.delText}>ODOBRAŤ Z KRUHU</Text>
+                  <Text style={st.delText}>REMOVE FROM CIRCLE</Text>
                 </Pressable>
               </View>
             ))}

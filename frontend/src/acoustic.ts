@@ -18,11 +18,11 @@ export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
 
   const showBlocked = () => {
     Alert.alert(
-      'Mikrofón je zablokovaný',
-      'Akustický strážca potrebuje mikrofón na lokálnu detekciu hluku (rozbité sklo, výkrik). Zvuk sa nikam neodosiela.',
+      'The microphone is blocked',
+      'The Acoustic Guardian needs the microphone for local noise detection (broken glass, a scream). No audio ever leaves your device.',
       [
-        { text: 'Neskôr' },
-        { text: 'Otvoriť nastavenia', onPress: () => Linking.openSettings() },
+        { text: 'Later' },
+        { text: 'Open settings', onPress: () => Linking.openSettings() },
       ]
     );
   };

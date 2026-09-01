@@ -63,7 +63,7 @@ export default function Impact() {
         <Pressable testID="impact-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>MÔJ SVETOVÝ ODTLAČOK</Text>
+        <Text style={styles.title}>MY WORLD FOOTPRINT</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -77,7 +77,7 @@ export default function Impact() {
             <Ionicons name="planet" size={40} color={C.onInverse} />
             <View style={{ flex: 1 }}>
               <Text style={styles.heroNumber}>{data.people_helped.toLocaleString('sk-SK')}</Text>
-              <Text style={styles.heroLbl}>ĽUDÍ JE VĎAKA VÁM O KROK BLIŽŠIE K LIEČBE</Text>
+              <Text style={styles.heroLbl}>PEOPLE ARE ONE STEP CLOSER TO A CURE THANKS TO YOU</Text>
             </View>
           </LinearGradient>
         </View>
@@ -87,17 +87,17 @@ export default function Impact() {
           <View style={styles.kpi}>
             <Ionicons name="hourglass" size={20} color={C.brand} />
             <Text style={styles.kpiVal}>{data.research_hours} h</Text>
-            <Text style={styles.kpiLbl}>ZRÝCHLENIE VÝSKUMU</Text>
+            <Text style={styles.kpiLbl}>RESEARCH ACCELERATION</Text>
           </View>
           <View style={styles.kpi}>
             <Ionicons name="cash" size={20} color={C.brand} />
             <Text style={styles.kpiVal}>{data.tokens_earned}</Text>
-            <Text style={styles.kpiLbl}>GA-T ZAROBENÉ</Text>
+            <Text style={styles.kpiLbl}>GA-T EARNED</Text>
           </View>
           <View style={styles.kpi}>
             <Ionicons name="pulse" size={20} color={C.brand} />
             <Text style={styles.kpiVal}>{data.contributions_total}</Text>
-            <Text style={styles.kpiLbl}>PRÍSPEVKOV</Text>
+            <Text style={styles.kpiLbl}>CONTRIBUTIONS</Text>
           </View>
         </View>
 
@@ -110,13 +110,13 @@ export default function Impact() {
             <View style={{ flex: 1 }}>
               <Text style={styles.threadTitle}>{data.top_thread.title.toUpperCase()}</Text>
               <Text style={styles.threadMsg}>{data.top_thread.message_sk}</Text>
-              <Text style={styles.threadTap}>▸ ŤUKNITE — JARVIS TO PREČÍTA</Text>
+              <Text style={styles.threadTap}>▸ TAP — JARVIS READS IT ALOUD</Text>
             </View>
           </Pressable>
         )}
 
         {/* 4-week timeline */}
-        <Text style={styles.section}>POSLEDNÉ 4 TÝŽDNE</Text>
+        <Text style={styles.section}>LAST 4 WEEKS</Text>
         <View style={styles.timeline}>
           {data.timeline_weeks.map((w) => (
             <View key={w.week_ago} style={styles.tlCol}>
@@ -137,7 +137,7 @@ export default function Impact() {
             { key: 'pain', label: 'Pain-Signal', icon: 'thermometer', val: data.breakdown.pain_logs },
             { key: 'wellness', label: 'Wellness', icon: 'happy', val: data.breakdown.wellness },
             { key: 'scam', label: 'Scam-Shield', icon: 'shield-checkmark', val: data.breakdown.scam_reports },
-            { key: 'vitals', label: 'Vitálne funkcie', icon: 'heart', val: data.breakdown.vitals },
+            { key: 'vitals', label: 'Vitals', icon: 'heart', val: data.breakdown.vitals },
             { key: 'docs', label: 'Dokumenty', icon: 'documents', val: data.breakdown.documents },
           ].map((b) => (
             <View key={b.key} style={styles.breakCard}>

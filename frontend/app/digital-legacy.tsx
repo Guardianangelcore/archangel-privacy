@@ -10,7 +10,7 @@ import { WheelField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
 
 const CAT_ICON: Record<string, string> = { financial: 'card', social: 'share-social', property: 'home', digital: 'cloud' };
-const SUB_ACTIONS: [string, string][] = [['cancel', 'ZRUŠIŤ'], ['transfer', 'PREVIESŤ'], ['memorialize', 'PAMÄTNÍK']];
+const SUB_ACTIONS: [string, string][] = [['cancel', 'CANCEL'], ['transfer', 'TRANSFER'], ['memorialize', 'MEMORIALIZE']];
 
 export default function DigitalLegacy() {
   const router = useRouter();
@@ -64,8 +64,8 @@ export default function DigitalLegacy() {
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Digitálne dedičstvo</Text>
-        <Text style={styles.sub}>Globálny checklist — nič dôležité nezostane visieť vo vzduchu. Financie, sociálne siete, majetok aj digitálny svet.</Text>
+        <Text style={styles.h1}>Digital legacy</Text>
+        <Text style={styles.sub}>A global checklist — nothing important is left hanging. Finances, social media, assets and your digital world.</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         {list && (
@@ -73,7 +73,7 @@ export default function DigitalLegacy() {
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${list.progress.pct}%` }]} />
             </View>
-            <Text testID="dl-progress" style={styles.progressText}>{list.progress.done}/{list.progress.total} pripravené · {list.progress.pct} %</Text>
+            <Text testID="dl-progress" style={styles.progressText}>{list.progress.done}/{list.progress.total} ready · {list.progress.pct} %</Text>
           </View>
         )}
 
@@ -92,8 +92,8 @@ export default function DigitalLegacy() {
           </View>
         ))}
 
-        <Text style={[styles.section, { marginTop: S.xl }]}>LIKVIDÁTOR PREDPLATNÝCH</Text>
-        <Text style={styles.subSmall}>Čo sa má pri vykonaní závetu zrušiť, previesť alebo memorializovať. {subs ? `Mesačná úspora likvidáciou: ${subs.monthly_liquidation_saving} €` : ''}</Text>
+        <Text style={[styles.section, { marginTop: S.xl }]}>SUBSCRIPTION LIQUIDATOR</Text>
+        <Text style={styles.subSmall}>What should be cancelled, transferred or memorialized when the will executes. {subs ? `Monthly saving from liquidation: ${subs.monthly_liquidation_saving} €` : ''}</Text>
         {(subs?.subscriptions || []).map((s: any) => (
           <View key={s.sub_id} style={styles.subRow}>
             <Ionicons name={s.action === 'cancel' ? 'close-circle' : s.action === 'transfer' ? 'swap-horizontal' : 'flower'} size={18} color={s.action === 'cancel' ? C.error : C.brand} />

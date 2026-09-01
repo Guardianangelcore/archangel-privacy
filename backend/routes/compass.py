@@ -15,17 +15,17 @@ import uuid, hashlib
 from core import api, db, clean, get_current_user, send_push
 
 SURVIVAL_GUIDE = [
-    "Zachovajte pokoj. Skontrolujte dýchanie a krvácanie — najprv seba, potom ostatných.",
-    "Bez signálu: SMS má vyššiu šancu než hovor. Skúste 112 — funguje v každej sieti EÚ.",
-    "Voda: 3 l / osoba / deň. Pri neistote prevarte alebo použite dezinfekčné tablety.",
-    "Teplo: 3 vrstvy oblečenia sú lepšie než 1 hrubá. Chráňte hlavu a krk.",
-    "Lieky z lekárničky berte podľa plánu — pozrite sekciu LIEKY DNES nižšie.",
-    "Ak ste na PN (neschopenka), dodržte vychádzky — okná máte uložené offline nižšie.",
-    "Ukážte záchranárom NÚDZOVÝ QR alebo tento kompas — obsahuje krvnú skupinu a alergie.",
-    "Bio-Beacon aktivujte LEN v reálnej núdzi — vysiela vašu polohu strážcom.",
+    "Stay calm. Check breathing and bleeding — yourself first, then others.",
+    "No signal: SMS has a better chance than a call. Try 112 — it works on every EU network.",
+    "Water: 3 l / person / day. When unsure, boil it or use purification tablets.",
+    "Warmth: 3 clothing layers beat 1 thick one. Protect your head and neck.",
+    "Take medication as scheduled — see the MEDS TODAY section below.",
+    "If on sick leave (ePN), keep to your outing windows — stored offline below.",
+    "Show responders the EMERGENCY QR or this compass — it holds your blood type and allergies.",
+    "Activate the Bio-Beacon ONLY in a real emergency — it broadcasts your location to guardians.",
 ]
 
-EMERGENCY_NUMBERS = {"EU / SK / CZ": "112", "Záchranka SK": "155", "UK": "999", "USA / Kanada": "911"}
+EMERGENCY_NUMBERS = {"EU / SK / CZ": "112", "Ambulance SK": "155", "UK": "999", "USA / Kanada": "911"}
 
 
 # ---------------- SOVEREIGN COMPASS BEARING — GPS wiring ----------------
@@ -101,7 +101,7 @@ async def compass_bearing(body: BearingIn, authorization: Optional[str] = Header
             continue
         dist, brng = _haversine_bearing(body.lat, body.lng, c["lat"], c["lng"])
         waitlist_targets.append({
-            "kind": "waitlist", "label": f"{w.get('specialty') or 'Vyšetrenie'} · {c['city']}",
+            "kind": "waitlist", "label": f"{w.get('specialty') or 'Examination'} · {c['city']}",
             "item_id": w["item_id"], "clinic": w.get("clinic"),
             "status": w.get("status") or "hunting",
             "distance_km": dist, "bearing_deg": brng, "direction": _compass_direction(brng),
@@ -164,11 +164,11 @@ async def compass_pack(authorization: Optional[str] = Header(None)):
 
 # ---------------- TRUTH-VALIDATOR (peer consensus, ZK-hash anchored) ----------------
 CLAIM_CATEGORIES = {
-    "shortage": "Nedostatok liekov / zásob",
-    "clinic": "Dostupnosť kliniky / lekára",
-    "danger": "Nebezpečenstvo v okolí",
-    "help": "Dostupná pomoc / zdroje",
-    "other": "Iné overiteľné tvrdenie",
+    "shortage": "Medication / supply shortage",
+    "clinic": "Clinic / doctor availability",
+    "danger": "Danger nearby",
+    "help": "Available help / resources",
+    "other": "Other verifiable claim",
 }
 
 class ClaimIn(BaseModel):
@@ -200,7 +200,7 @@ async def truth_submit(body: ClaimIn, authorization: Optional[str] = Header(None
         raise HTTPException(400, f"category must be one of {list(CLAIM_CATEGORIES)}")
     text = body.text.strip()
     if len(text) < 10:
-        raise HTTPException(400, "Tvrdenie musí mať aspoň 10 znakov.")
+        raise HTTPException(400, "Claim must be at least 10 characters.")
     claim = {"claim_id": uuid.uuid4().hex, "user_id": user["user_id"],
              "author_name": (user.get("name") or "Guardian").split(" ")[0],
              "text": text[:400], "category": body.category, "city": (body.city or "").strip()[:60],
@@ -228,10 +228,10 @@ async def truth_vote(claim_id: str, body: VoteIn, authorization: Optional[str] =
     if not claim:
         raise HTTPException(404, "Claim not found")
     if claim["user_id"] == user["user_id"]:
-        raise HTTPException(400, "Vlastné tvrdenie nemôžete overovať.")
+        raise HTTPException(400, "You cannot verify your own claim.")
     dup = await db.truth_votes.find_one({"claim_id": claim_id, "voter_id": user["user_id"]})
     if dup:
-        raise HTTPException(409, "Už ste hlasovali.")
+        raise HTTPException(409, "You have already voted.")
     await db.truth_votes.insert_one({"vote_id": uuid.uuid4().hex, "claim_id": claim_id,
                                      "voter_id": user["user_id"], "vote": body.vote,
                                      "at": datetime.now(timezone.utc)})
@@ -277,8 +277,8 @@ async def bio_beacon_activate(body: BeaconActivateIn, authorization: Optional[st
     try:
         if guardians:
             await send_push(recipients=[g["guardian_user_id"] for g in guardians],
-                            data={"title": "🚨 BIO-BEACON AKTIVOVANÝ",
-                                  "message": f"{user.get('name') or 'Váš blízky'} aktivoval núdzový Bio-Beacon — sledujte polohu a vitálne funkcie.",
+                            data={"title": "🚨 BIO-BEACON ACTIVATED",
+                                  "message": f"{user.get('name') or 'Your loved one'} activated an emergency Bio-Beacon — track their location and vitals.",
                                   "action_url": f"/compass"})
     except Exception:
         pass
@@ -300,7 +300,7 @@ async def bio_beacon_ping(body: BeaconPingIn, authorization: Optional[str] = Hea
     user = await get_current_user(authorization)
     beacon = await db.bio_beacons.find_one({"user_id": user["user_id"], "active": True}, {"_id": 0})
     if not beacon:
-        raise HTTPException(404, "Žiadny aktívny Bio-Beacon.")
+        raise HTTPException(404, "No active Bio-Beacon.")
     upd = {"last_ping": datetime.now(timezone.utc)}
     if body.lat is not None:
         upd["location"] = {"lat": body.lat, "lng": body.lng}

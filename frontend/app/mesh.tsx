@@ -56,39 +56,39 @@ export default function Mesh() {
         ListHeaderComponent={
           <View>
             <Text style={st.intro}>
-              P2P komunikácia nezávislá od operátorov — správy sa šíria store-and-forward cez Guardian relay.
-              Reálne BLE mesh rádio (telefón-telefón bez internetu) sa aktivuje v natívnom builde.
+              P2P communication independent of carriers — messages spread store-and-forward via the Guardian relay.
+              Real BLE mesh radio (phone-to-phone without internet) activates in the native build.
             </Text>
             {status && (
               <View style={st.statusCard}>
                 <Text style={st.statusLine}>📡 {status.protocol}</Text>
-                <Text style={st.statusLine}>Uzly v dosahu: {status.reachable_peers} · Čakajúce odoslané: {status.queued_outbox}</Text>
+                <Text style={st.statusLine}>Nodes in range: {status.reachable_peers} · Queued outbox: {status.queued_outbox}</Text>
               </View>
             )}
-            <Text style={st.section}>MOJE DID (zdieľajte s rodinou)</Text>
+            <Text style={st.section}>MY DID (share with family)</Text>
             <Text testID="me-my-did" style={st.didText} selectable>{myDid}</Text>
-            <Text style={st.section}>ODOSLAŤ SPRÁVU</Text>
+            <Text style={st.section}>SEND MESSAGE</Text>
             <TextInput testID="me-to" value={toDid} onChangeText={setToDid} autoCapitalize="none"
-              placeholder="DID príjemcu (did:guardian:…)" placeholderTextColor="#777" style={st.input} />
+              placeholder="Recipient DID (did:guardian:…)" placeholderTextColor="#777" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <TextInput testID="me-text" value={text} onChangeText={setText} placeholder="Správa…"
+              <TextInput testID="me-text" value={text} onChangeText={setText} placeholder="Message…"
                 placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
               <Pressable testID="me-send" onPress={send} disabled={busy || !toDid.trim() || !text.trim()} style={st.sendBtn}>
                 {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="send" size={18} color={C.onInverse} />}
               </Pressable>
             </View>
             {!!err && <Text testID="me-err" style={st.err}>{err}</Text>}
-            <Text style={st.section}>SPRÁVY ({messages.length})</Text>
+            <Text style={st.section}>MESSAGES ({messages.length})</Text>
           </View>
         }
-        ListEmptyComponent={!loading ? <Text style={st.empty}>ZATIAĽ ŽIADNE MESH SPRÁVY</Text> : null}
+        ListEmptyComponent={!loading ? <Text style={st.empty}>NO MESH MESSAGES YET</Text> : null}
         renderItem={({ item }) => {
           const mine = item.from_did === myDid;
           return (
             <View testID={`me-msg-${item.msg_id}`} style={[st.msgCard, mine ? st.msgMine : st.msgTheirs]}>
               <Text style={st.msgFrom}>{mine ? `→ ${item.to_did.slice(0, 24)}…` : `${item.from_name}`}</Text>
               <Text style={st.msgText}>{item.text}</Text>
-              <Text style={st.msgMeta}>{item.status === 'delivered' ? '✓ doručené' : '⏳ v mesh fronte'} · hop {item.hops} · #{item.sha256?.slice(0, 8)}</Text>
+              <Text style={st.msgMeta}>{item.status === 'delivered' ? '✓ delivered' : '⏳ in mesh queue'} · hop {item.hops} · #{item.sha256?.slice(0, 8)}</Text>
             </View>
           );
         }}

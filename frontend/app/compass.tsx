@@ -69,11 +69,11 @@ export default function Compass() {
     try {
       if (beacon) {
         await api('/bio-beacon/deactivate', { method: 'POST' });
-        setBeacon(null); setMsg('Bio-Beacon deaktivovaný.');
+        setBeacon(null); setMsg('Bio-Beacon deactivated.');
       } else {
         const loc = await getLoc();
         const b: any = await api('/bio-beacon/activate', { method: 'POST', body: JSON.stringify({ ...loc, note: 'compass' }) });
-        setBeacon(b); setMsg('BIO-BEACON AKTÍVNY — strážcovia dostali polohu a vitálne funkcie.');
+        setBeacon(b); setMsg('BIO-BEACON ACTIVE — guardians received your location and vitals.');
       }
     } catch (e: any) { setMsg(String(e.message || e)); }
     finally { setBusy(null); }
@@ -85,7 +85,7 @@ export default function Compass() {
       const loc = await getLoc();
       const p: any = await api('/satellite/nano-packet', { method: 'POST', body: JSON.stringify({ ...loc, note: 'SOS' }) });
       setSat(prev => [p, ...prev]);
-      setMsg(`Nano-Packet (${p.packet_bytes} B) zaradený do satelitnej fronty — Swarm ho odvysiela.`);
+      setMsg(`Nano-Packet (${p.packet_bytes} B) queued for satellite uplink — the Swarm will broadcast it.`);
     } catch (e: any) { setMsg(String(e.message || e)); }
     finally { setBusy(null); }
   };
@@ -105,7 +105,7 @@ export default function Compass() {
         </Pressable>
       </View>
 
-      {offline && <View style={st.offBanner}><Text style={st.offText}>OFFLINE REŽIM · ZOBRAZUJEM ULOŽENÝ BALÍK · {pack?.generated_at?.slice(0, 16).replace('T', ' ')}</Text></View>}
+      {offline && <View style={st.offBanner}><Text style={st.offText}>OFFLINE MODE · SHOWING CACHED PACK · {pack?.generated_at?.slice(0, 16).replace('T', ' ')}</Text></View>}
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {!pack ? <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} /> : (
@@ -116,24 +116,24 @@ export default function Compass() {
               {busy === 'beacon' ? <ActivityIndicator color={C.onError} /> : <>
                 <Ionicons name={beacon ? 'radio' : 'radio-outline'} size={22} color={beacon ? C.onError : C.brand} />
                 <Text style={[st.beaconText, beacon && { color: C.onError }]}>
-                  {beacon ? 'BIO-BEACON VYSIELA — VYPNÚŤ' : 'AKTIVOVAŤ BIO-BEACON (NÚDZA)'}
+                  {beacon ? 'BIO-BEACON BROADCASTING — TURN OFF' : 'ACTIVATE BIO-BEACON (EMERGENCY)'}
                 </Text>
               </>}
             </Pressable>
-            {beacon && <Text style={st.beaconMeta}>Pingy: {beacon.pings} · tep: {beacon.vitals?.heart_rate ?? '—'} · vyprší o 24 h · strážcovia sledujú</Text>}
+            {beacon && <Text style={st.beaconMeta}>Pings: {beacon.pings} · pulse: {beacon.vitals?.heart_rate ?? '—'} · expires in 24 h · guardians watching</Text>}
 
             {/* SOVEREIGN COMPASS BEARING */}
             {bearing && (
               <View testID="cp-bearing" style={st.bearingBox}>
                 <View style={st.bearingHead}>
                   <Ionicons name="compass" size={16} color={C.brand} />
-                  <Text style={st.bearingTitle}>SOVEREIGN COMPASS — GPS AKTÍVNY</Text>
+                  <Text style={st.bearingTitle}>SOVEREIGN COMPASS — GPS ACTIVE</Text>
                   <Pressable testID="cp-bearing-refresh" onPress={loadBearing} hitSlop={8}>
                     <Ionicons name="refresh" size={16} color={C.brand} />
                   </Pressable>
                 </View>
                 {!!bearing.nearest_safe_city && (
-                  <Text style={st.bearingLine}>NAJBLIŽŠIE BEZP. MESTO · {bearing.nearest_safe_city.label} · {bearing.nearest_safe_city.direction} · {bearing.nearest_safe_city.distance_km} km</Text>
+                  <Text style={st.bearingLine}>NEAREST SAFE CITY · {bearing.nearest_safe_city.label} · {bearing.nearest_safe_city.direction} · {bearing.nearest_safe_city.distance_km} km</Text>
                 )}
                 {(bearing.beacons || []).length > 0 && bearing.beacons.map((b: any, i: number) => (
                   <Text key={`b${i}`} style={[st.bearingLine, { color: C.error }]}>🚨 {b.label} — {b.direction} · {b.distance_km} km</Text>
@@ -148,14 +148,14 @@ export default function Compass() {
             <Pressable testID="cp-sat" onPress={sendSat} disabled={busy === 'sat'} style={st.satBtn}>
               {busy === 'sat' ? <ActivityIndicator color={C.onInverse} /> : <>
                 <Ionicons name="planet-outline" size={20} color={C.onInverse} />
-                <Text style={st.satText}>SATELITNÁ NÚDZA — ODOSLAŤ NANO-PACKET</Text>
+                <Text style={st.satText}>SATELLITE SOS — SEND NANO-PACKET</Text>
               </>}
             </Pressable>
-            <Text style={st.satNote}>Bez signálu Jarvis skomprimuje kritické dáta do ~100 B paketu pre Starlink/Globalstar (SIMULÁCIA — placeholder protokolu).</Text>
+            <Text style={st.satNote}>With no signal, Jarvis compresses critical data into a ~100 B packet for Starlink/Globalstar (SIMULATION — protocol placeholder).</Text>
             {sat.slice(0, 3).map(p => (
               <View key={p.packet_id} style={st.satRow}>
                 <Ionicons name={p.status === 'broadcasted' ? 'checkmark-circle' : 'time-outline'} size={16} color={p.status === 'broadcasted' ? C.brand : C.warn} />
-                <Text style={st.satRowText}>{p.packet_bytes} B · {p.status === 'broadcasted' ? 'ODVYSIELANÝ' : 'VO FRONTE'} · {p.protocol?.split(' ')[0]}</Text>
+                <Text style={st.satRowText}>{p.packet_bytes} B · {p.status === 'broadcasted' ? 'BROADCASTED' : 'QUEUED'} · {p.protocol?.split(' ')[0]}</Text>
               </View>
             ))}
             {!!msg && <Text testID="cp-msg" style={st.msg}>{msg}</Text>}
@@ -163,9 +163,9 @@ export default function Compass() {
             {/* ICE */}
             <Section title="IDENTITA · ICE">
               <Row lbl="MENO" val={pack.identity?.name || '—'} />
-              <Row lbl="KRVNÁ SKUPINA" val={pack.identity?.blood_type || '—'} />
+              <Row lbl="BLOOD TYPE" val={pack.identity?.blood_type || '—'} />
               <Row lbl="ALERGIE" val={pack.identity?.allergies || '—'} />
-              <Row lbl="DIAGNÓZY" val={pack.identity?.conditions || '—'} />
+              <Row lbl="DIAGNOSES" val={pack.identity?.conditions || '—'} />
               <Row lbl="KONTAKT" val={`${pack.emergency_contact?.name || '—'} · ${pack.emergency_contact?.phone || '—'}`} />
             </Section>
 
@@ -173,41 +173,41 @@ export default function Compass() {
             <Section title="LIEKY DNES">
               {(pack.meds_today || []).length ? pack.meds_today.map((m: any, i: number) => (
                 <Row key={i} lbl={m.time} val={`${m.name} — ${m.dose}`} />
-              )) : <Text style={st.emptyLine}>— žiadne pripomienky liekov</Text>}
+              )) : <Text style={st.emptyLine}>— no medication reminders</Text>}
             </Section>
 
             {/* NESCHOPENKA / ePN */}
-            <Section title="NESCHOPENKA (ePN) · VYCHÁDZKY" testID="cp-sickleave">
+            <Section title="SICK LEAVE (ePN) · OUTINGS" testID="cp-sickleave">
               {sl?.active ? (
                 <>
-                  <Row lbl="STAV" val={`AKTÍVNA PN od ${sl.start_date}${sl.end_date ? ` do ${sl.end_date}` : ''}`} />
-                  <Row lbl="ÚVÄZOK" val={(sl.contract_type || 'fulltime').toUpperCase()} />
-                  <Row lbl="VYCHÁDZKY" val={(sl.outings || []).map((o: any) => `${o.from_time}–${o.to_time}`).join(' · ') || 'bez vychádzok'} />
-                  <Text style={st.warnLine}>⚠ Mimo okien vychádzok zostaňte doma — kontrola Sociálnej poisťovne.</Text>
+                  <Row lbl="STAV" val={`ACTIVE SICK LEAVE from ${sl.start_date}${sl.end_date ? ` to ${sl.end_date}` : ''}`} />
+                  <Row lbl="CONTRACT" val={(sl.contract_type || 'fulltime').toUpperCase()} />
+                  <Row lbl="PERMITTED OUTINGS" val={(sl.outings || []).map((o: any) => `${o.from_time}–${o.to_time}`).join(' · ') || 'no outings'} />
+                  <Text style={st.warnLine}>⚠ Stay home outside outing windows — social insurance inspections.</Text>
                 </>
-              ) : <Text style={st.emptyLine}>— žiadna aktívna PN (spravujte v Moje zotavenie)</Text>}
+              ) : <Text style={st.emptyLine}>— no active sick leave (manage in My Recovery)</Text>}
             </Section>
 
             {/* OČKOVANIA */}
-            <Section title="OČKOVANIA · PREOČKOVANIE" testID="cp-vaccines">
+            <Section title="VACCINATIONS · BOOSTERS" testID="cp-vaccines">
               {(vac?.booster_alerts || []).map((b: any, i: number) => (
-                <Text key={`b${i}`} style={st.warnLine}>⚠ {b.title} — preočkovanie do {b.booster_due}</Text>
+                <Text key={`b${i}`} style={st.warnLine}>⚠ {b.title} — booster due by {b.booster_due}</Text>
               ))}
               {(vac?.history || []).length ? vac.history.map((v: any, i: number) => (
                 <Row key={i} lbl={v.date} val={`${v.title}${v.booster_due ? ` (booster ${v.booster_due})` : ''}`} />
-              )) : <Text style={st.emptyLine}>— žiadne záznamy (pridajte v Health Timeline)</Text>}
+              )) : <Text style={st.emptyLine}>— no records (add in Health Timeline)</Text>}
             </Section>
 
             {/* GUARDIANS + NUMBERS */}
-            <Section title="STRÁŽCOVIA">
+            <Section title="GUARDIANS">
               {(pack.guardians || []).length ? pack.guardians.map((g: any, i: number) => (
                 <Row key={i} lbl={`#${i + 1}`} val={`${g.guardian_name} · ${g.guardian_email}`} />
-              )) : <Text style={st.emptyLine}>— pridajte strážcov v Sovereign Recovery</Text>}
+              )) : <Text style={st.emptyLine}>— add guardians in Sovereign Recovery</Text>}
             </Section>
-            <Section title="NÚDZOVÉ ČÍSLA">
+            <Section title="EMERGENCY NUMBERS">
               {Object.entries(pack.emergency_numbers || {}).map(([k, v]) => <Row key={k} lbl={k.toUpperCase()} val={String(v)} />)}
             </Section>
-            <Section title="PRÍRUČKA PREŽITIA">
+            <Section title="SURVIVAL HANDBOOK">
               {(pack.survival_guide || []).map((s: string, i: number) => (
                 <Text key={i} style={st.tip}>{i + 1}.  {s}</Text>
               ))}

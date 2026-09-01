@@ -74,7 +74,7 @@ export default function ClinicSync() {
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>Lekár „beamne“ nález priamo do vášho trezora — bez papierov, bez e-mailov.</Text>
+        <Text style={st.tag}>Your doctor beams a report straight into your vault — no paper, no e-mails.</Text>
 
         <View style={st.toggle}>
           <Pressable testID="csy-mode-radar" onPress={() => { tap(); setMode('radar'); }} style={[st.toggleBtn, mode === 'radar' && st.toggleActive]}>
@@ -95,14 +95,14 @@ export default function ClinicSync() {
               <RadarRing delay={1600} />
               <View style={st.radarCore}><Ionicons name="medkit" size={26} color={C.onInverse} /></View>
             </View>
-            <Text style={st.radarLbl}>SKENUJEM OKOLIE… ({radar?.nearby?.length ?? 0} zariadení)</Text>
-            <Text style={st.simNote}>⚠ {radar?.transport || 'BLE/NFC simulácia — reálne rádio v natívnom builde'}</Text>
+            <Text style={st.radarLbl}>SCANNING NEARBY… ({radar?.nearby?.length ?? 0} devices)</Text>
+            <Text style={st.simNote}>⚠ {radar?.transport || 'BLE/NFC simulation — real radio in a native build'}</Text>
             {(radar?.nearby || []).map((n: any, i: number) => (
               <View key={i} style={st.clinicRow}>
                 <Ionicons name="business-outline" size={20} color={C.brand} />
                 <View style={{ flex: 1 }}>
                   <Text style={st.clinicName}>{n.clinic}</Text>
-                  <Text style={st.clinicSub}>{n.dept} · {n.distance_m} m · signál {n.signal}</Text>
+                  <Text style={st.clinicSub}>{n.dept} · {n.distance_m} m · signal {n.signal}</Text>
                 </View>
                 <View style={st.signalDot} />
               </View>
@@ -116,20 +116,20 @@ export default function ClinicSync() {
                   <QRCode value={session.qr_payload} size={190} backgroundColor="#FFFFFF" color="#000000" />
                 </View>
                 <Text testID="csy-code" style={st.code}>{session.code}</Text>
-                <Text style={st.qrHint}>Lekár naskenuje QR alebo zadá kód — nález sa okamžite a šifrovane uloží do vášho trezora. Platnosť 10 minút.</Text>
+                <Text style={st.qrHint}>The doctor scans the QR or enters the code — the report is instantly and encryptedly stored in your vault. Valid for 10 minutes.</Text>
               </View>
             ) : (
               <View style={{ alignItems: 'center', gap: S.md }}>
                 <Ionicons name="qr-code-outline" size={56} color={C.brand} />
-                <Text style={st.qrHint}>Vygenerujte jednorazový bezpečnostný kód pre ordináciu.</Text>
+                <Text style={st.qrHint}>Generate a one-time security code for the practice.</Text>
               </View>
             )}
-            <GoldButton testID="csy-create" title={waiting ? 'NOVÝ KÓD' : 'VYGENEROVAŤ QR HANDSHAKE'} icon="qr-code"
+            <GoldButton testID="csy-create" title={waiting ? 'NEW CODE' : 'GENERATE QR HANDSHAKE'} icon="qr-code"
               onPress={createSession} loading={busy === 'create'} style={{ marginTop: S.lg }} />
             {waiting && (
               <Pressable testID="csy-simulate" onPress={simulateBeam} disabled={busy === 'beam'} style={st.simBtn}>
                 {busy === 'beam' ? <ActivityIndicator size="small" color={C.brand} /> : (
-                  <Text style={st.simBtnText}>▶ DEMO: SIMULOVAŤ PRÍJEM NÁLEZU OD LEKÁRA</Text>
+                  <Text style={st.simBtnText}>▶ DEMO: SIMULATE RECEIVING A REPORT FROM A DOCTOR</Text>
                 )}
               </Pressable>
             )}
@@ -138,8 +138,8 @@ export default function ClinicSync() {
 
         {!!err && <Text testID="csy-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>PRIJATÉ NÁLEZY ({docs.length})</Text>
-        {docs.length === 0 && <Text style={st.empty}>ZATIAĽ ŽIADNE — ČAKÁM NA BEAM OD LEKÁRA</Text>}
+        <Text style={st.section}>RECEIVED REPORTS ({docs.length})</Text>
+        {docs.length === 0 && <Text style={st.empty}>NONE YET — WAITING FOR A DOCTOR BEAM</Text>}
         {docs.map((d: any, i: number) => (
           <GlassCard key={i} pad={S.md} style={{ marginTop: S.sm }} testID={`csy-doc-${d.doc_id}`}
             onPress={() => router.push('/(tabs)/vault')}>
@@ -147,7 +147,7 @@ export default function ClinicSync() {
               <Ionicons name="document-text" size={24} color={C.brand} />
               <View style={{ flex: 1 }}>
                 <Text style={st.docTitle}>{d.title}</Text>
-                <Text style={st.docSub}>{d.clinic_name}{d.doctor_name ? ` · ${d.doctor_name}` : ''} → uložené v Trezore ✓</Text>
+                <Text style={st.docSub}>{d.clinic_name}{d.doctor_name ? ` · ${d.doctor_name}` : ''} → stored in the Vault ✓</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={C.info} />
             </View>

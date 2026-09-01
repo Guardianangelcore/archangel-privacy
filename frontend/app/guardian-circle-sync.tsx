@@ -60,7 +60,7 @@ export default function GuardianCircleSync() {
 
   const askPermissionAndLoad = async () => {
     setErr(''); tap('medium');
-    if (Platform.OS === 'web') { setErr('Kontakty sú dostupné len na mobilnom zariadení.'); return; }
+    if (Platform.OS === 'web') { setErr('Contacts are available only on a mobile device.'); return; }
     setBusy(true);
     try {
       const current = await Contacts.getPermissionsAsync();
@@ -85,11 +85,11 @@ export default function GuardianCircleSync() {
   };
 
   const addToCircle = async (c: Contacts.Contact) => {
-    if (circle.length >= MAX_CIRCLE) { setErr(`Kruh je plný (max ${MAX_CIRCLE}).`); return; }
+    if (circle.length >= MAX_CIRCLE) { setErr(`The circle is full (max ${MAX_CIRCLE}).`); return; }
     const phone = c.phoneNumbers?.[0]?.number || '';
     const name = c.name || 'Unknown';
     const did_hash = await hashId(name, phone);
-    if (circle.some(p => p.did_hash === did_hash)) { setErr('Tento kontakt už v kruhu je.'); return; }
+    if (circle.some(p => p.did_hash === did_hash)) { setErr('This contact is already in the circle.'); return; }
     const next = [...circle, { did_hash, name, phone, added_at: new Date().toISOString() }];
     setCircle(next); await saveCircle(next); tap('success');
   };
@@ -117,16 +117,16 @@ export default function GuardianCircleSync() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>LOKÁLNY KRUH · MAX {MAX_CIRCLE} OSÔB · KONTAKTY NIKDY NEOPUSTIA ZARIADENIE</Text>
+        <Text style={st.tag}>LOCAL CIRCLE · MAX {MAX_CIRCLE} PEOPLE · CONTACTS NEVER LEAVE THE DEVICE</Text>
 
         {/* Current Circle */}
         <View style={st.card}>
           <View style={st.cardHead}>
-            <Text style={st.cardTitle}>MÔJ KRUH</Text>
+            <Text style={st.cardTitle}>MY CIRCLE</Text>
             <Text style={st.cardMeta}>{circle.length}/{MAX_CIRCLE}</Text>
           </View>
           {circle.length === 0 ? (
-            <Text style={st.empty}>Kruh je zatiaľ prázdny. Pridajte dôveryhodné osoby zo svojich kontaktov.</Text>
+            <Text style={st.empty}>The circle is empty so far. Add trusted people from your contacts.</Text>
           ) : circle.map(p => (
             <View key={p.did_hash} style={st.row}>
               <View style={st.avatar}><Text style={st.avatarText}>{(p.name || '?').charAt(0).toUpperCase()}</Text></View>
@@ -141,34 +141,34 @@ export default function GuardianCircleSync() {
           ))}
           {circle.length > 0 && (
             <Pressable testID="gcs-clear" onPress={clearAll} style={st.clearBtn}>
-              <Text style={st.clearText}>VYPRÁZDNIŤ KRUH</Text>
+              <Text style={st.clearText}>EMPTY THE CIRCLE</Text>
             </Pressable>
           )}
         </View>
 
         {/* Picker */}
         <View style={st.card}>
-          <Text style={st.cardTitle}>PRIDAŤ ZO ZARIADENIA</Text>
+          <Text style={st.cardTitle}>ADD FROM YOUR DEVICE</Text>
           {permStatus !== 'granted' && (
             <>
               <Text style={st.explain}>
-                Guardian Angel potrebuje jednorazový prístup k vašim kontaktom, aby ste mohli vybrať dôveryhodných ľudí do Kruhu.
-                {'\n'}Kontakty zostávajú lokálne v zašifrovanom úložisku vášho telefónu.
+                Guardian Angel needs one-time access to your contacts so you can pick trusted people for your Circle.
+                {'\n'}Contacts stay local in your phone’s encrypted storage.
               </Text>
               <Pressable testID="gcs-perm" onPress={askPermissionAndLoad} style={st.primaryBtn} disabled={busy}>
                 {busy ? <ActivityIndicator color={C.onInverse} /> : (
                   <>
                     <Ionicons name="people" size={18} color={C.onInverse} />
-                    <Text style={st.primaryText}>POVOLIŤ · NAČÍTAŤ KONTAKTY</Text>
+                    <Text style={st.primaryText}>ALLOW · LOAD CONTACTS</Text>
                   </>
                 )}
               </Pressable>
               {permStatus === 'blocked' && (
                 <Pressable testID="gcs-settings" onPress={() => Linking.openSettings()} style={st.warnBtn}>
-                  <Text style={st.warnBtnText}>KONTAKTY SÚ ZABLOKOVANÉ — OTVORIŤ NASTAVENIA</Text>
+                  <Text style={st.warnBtnText}>CONTACTS ARE BLOCKED — OPEN SETTINGS</Text>
                 </Pressable>
               )}
-              {permStatus === 'denied' && <Text style={st.info}>Prístup zamietnutý — môžete to skúsiť neskôr znovu.</Text>}
+              {permStatus === 'denied' && <Text style={st.info}>Access denied — you can try again later.</Text>}
             </>
           )}
           {permStatus === 'granted' && phoneContacts && (
@@ -176,11 +176,11 @@ export default function GuardianCircleSync() {
               <View style={st.search}>
                 <Ionicons name="search" size={16} color={C.info} />
                 <TextInput testID="gcs-search" value={q} onChangeText={setQ}
-                  placeholder="Hľadať v kontaktoch…" placeholderTextColor={C.info}
+                  placeholder="Search contacts…" placeholderTextColor={C.info}
                   style={st.searchInput} autoCapitalize="none" />
               </View>
               {filtered.length === 0 ? (
-                <Text style={st.empty}>Žiadny kontakt sa nezhoduje.</Text>
+                <Text style={st.empty}>No contact matches.</Text>
               ) : filtered.map(c => {
                 const phone = c.phoneNumbers?.[0]?.number || '';
                 return (
@@ -199,7 +199,7 @@ export default function GuardianCircleSync() {
         </View>
 
         {!!err && <Text testID="gcs-err" style={st.err}>{err}</Text>}
-        <Text style={st.footer}>Zápis je lokálny a šifrovaný (Keychain / Android Keystore). Guardian Angel nevidí obsah — iba anonymné DID hashy.</Text>
+        <Text style={st.footer}>Storage is local and encrypted (Keychain / Android Keystore). Guardian Angel never sees the content — only anonymous DID hashes.</Text>
       </ScrollView>
     </SafeAreaView>
   );

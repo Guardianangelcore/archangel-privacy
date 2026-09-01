@@ -100,9 +100,9 @@ async def partner_recovery(x_partner_key: Optional[str] = Header(None)):
 
 # --------- 2. SOVEREIGN DATA MARKETPLACE (opt-in anonymized insights — payouts SIMULATED) ---------
 MARKET_OFFERS = [
-    {"offer_id": "resp-eu-2026", "institution": "EU Respiratory Research Consortium", "title": "Anonymné dáta o liekoch na dýchacie cesty", "reward_eur": 12.0, "reward_crypto": "4.1 USDC", "category": "medication"},
-    {"offer_id": "senior-mobility", "institution": "WHO Healthy Ageing Lab", "title": "Anonymné vzorce pohybu seniorov 65+", "reward_eur": 18.5, "reward_crypto": "6.3 USDC", "category": "wellness"},
-    {"offer_id": "sk-vaccination", "institution": "Stredoeurópsky epidemiologický inštitút", "title": "Anonymná preočkovanosť V4 regiónu", "reward_eur": 8.0, "reward_crypto": "2.7 USDC", "category": "vaccination"},
+    {"offer_id": "resp-eu-2026", "institution": "EU Respiratory Research Consortium", "title": "Anonymized respiratory medication data", "reward_eur": 12.0, "reward_crypto": "4.1 USDC", "category": "medication"},
+    {"offer_id": "senior-mobility", "institution": "WHO Healthy Ageing Lab", "title": "Anonymized mobility patterns of seniors 65+", "reward_eur": 18.5, "reward_crypto": "6.3 USDC", "category": "wellness"},
+    {"offer_id": "sk-vaccination", "institution": "Central European Epidemiology Institute", "title": "Anonymized V4-region vaccination coverage", "reward_eur": 8.0, "reward_crypto": "2.7 USDC", "category": "vaccination"},
 ]
 
 class MarketOptinIn(BaseModel):
@@ -131,14 +131,14 @@ async def marketplace_me(authorization: Optional[str] = Header(None)):
 async def marketplace_offers(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     return {"offers": MARKET_OFFERS, "simulated": True,
-            "disclaimer": "DEMO režim — reálne výskumné inštitúcie a výplaty budú napojené v produkcii. Dáta sú vždy anonymizované a zdieľané len s vaším výslovným súhlasom (GDPR čl. 9)."}
+            "disclaimer": "DEMO mode — real research institutions and payouts will be connected in production. Data is always anonymized and shared only with your explicit consent (GDPR Art. 9)."}
 
 @api.post("/marketplace/offers/{offer_id}/accept")
 async def marketplace_accept(offer_id: str, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     me = await db.marketplace_optins.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not me or not me.get("enabled"):
-        raise HTTPException(403, "optin_required: Najprv zapnite anonymizované zdieľanie dát (opt-in).")
+        raise HTTPException(403, "optin_required: First enable anonymized data sharing (opt-in).")
     offer = next((o for o in MARKET_OFFERS if o["offer_id"] == offer_id), None)
     if not offer:
         raise HTTPException(404, "Offer not found")
@@ -234,7 +234,7 @@ async def solidarity_checkout(cid: str, body: CheckoutIn, authorization: Optiona
     if not camp:
         raise HTTPException(404, "Campaign not found")
     if not _stripe_ready():
-        raise HTTPException(503, "stripe_key_missing: Reálne platby vyžadujú platný Stripe kľúč (STRIPE_API_KEY). Zatiaľ použite komunitný mock-donate.")
+        raise HTTPException(503, "stripe_key_missing: Real payments require a valid Stripe key (STRIPE_API_KEY). For now use the community mock-donate.")
     import stripe
     stripe.api_key = STRIPE_API_KEY
     amount_cents = int(round(body.amount_eur * 100))

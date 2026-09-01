@@ -16,7 +16,7 @@ type Svc = { service_id: string; user_id: string; title: string; description: st
 type Booking = { booking_id: string; service_id: string; provider_user_id: string; client_user_id: string; client_name: string; message: string; payment_method: string; status: string; created_at: string };
 
 const CATS = ['massage', 'consultation', 'physio', 'care', 'other'];
-const CAT_LABELS: Record<string, string> = { massage: 'MASÁŽ', consultation: 'KONZULTÁCIA', physio: 'FYZIO', care: 'STAROSTLIVOSŤ', other: 'INÉ' };
+const CAT_LABELS: Record<string, string> = { massage: 'MASSAGE', consultation: 'CONSULTATION', physio: 'PHYSIO', care: 'CARE', other: 'OTHER' };
 
 export default function Marketplace() {
   const { user } = useAuth();
@@ -67,12 +67,12 @@ export default function Marketplace() {
         <Text style={styles.title}>{t('marketplace', lang).toUpperCase()}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>PRIAMO OD EXPERTOV · CASH / CRYPTO · BEZ SPROSTREDKOVATEĽOV</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>DIRECT FROM EXPERTS · CASH / CRYPTO · NO MIDDLEMEN</Text></View>
 
       <View style={styles.tabRow}>
         {(['services', 'bookings'] as const).map(k => (
           <Pressable testID={`mk-tab-${k}`} key={k} onPress={() => setTab(k)} style={[styles.tabBtn, tab === k && styles.tabBtnActive]}>
-            <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>{k === 'services' ? 'PONUKY' : 'OBJEDNÁVKY'}</Text>
+            <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>{k === 'services' ? 'OFFERS' : 'ORDERS'}</Text>
           </Pressable>
         ))}
       </View>
@@ -109,7 +109,7 @@ export default function Marketplace() {
               {item.user_id === user?.user_id ? (
                 <Pressable testID={`svc-del-${item.service_id}`} onPress={() => del(item)} style={styles.delBtn}>
                   <Ionicons name="trash-outline" size={14} color={C.error} />
-                  <Text style={styles.delText}>DEAKTIVOVAŤ</Text>
+                  <Text style={styles.delText}>DEACTIVATE</Text>
                 </Pressable>
               ) : (
                 <Pressable testID={`svc-book-${item.service_id}`} onPress={() => { setBookSvc(item); setBookPay(item.payment_methods?.[0] || 'cash'); }} style={styles.bookBtn}>
@@ -130,7 +130,7 @@ export default function Marketplace() {
           renderItem={({ item }) => (
             <View testID={`bk-${item.booking_id}`} style={styles.card}>
               <View style={styles.rowSpread}>
-                <Text style={styles.svcTitle}>{item.provider_user_id === user?.user_id ? `⬅ ${item.client_name}` : '➡ Moja objednávka'}</Text>
+                <Text style={styles.svcTitle}>{item.provider_user_id === user?.user_id ? `⬅ ${item.client_name}` : '➡ My order'}</Text>
                 <Text style={styles.svcMeta}>{item.payment_method.toUpperCase()}</Text>
               </View>
               {item.message ? <Text style={styles.svcDesc}>{item.message}</Text> : null}
@@ -154,7 +154,7 @@ export default function Marketplace() {
               <Pressable testID="mk-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 460 }}>
-              <TextInput testID="mk-title" placeholder="Klasická masáž 60 min" value={f.title} onChangeText={v => setF({ ...f, title: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="mk-title" placeholder="Classic massage 60 min" value={f.title} onChangeText={v => setF({ ...f, title: v })} style={styles.input} placeholderTextColor="#999" />
               <TextInput testID="mk-desc" placeholder="Popis" value={f.description} onChangeText={v => setF({ ...f, description: v })} multiline style={[styles.input, { minHeight: 60 }]} placeholderTextColor="#999" />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {CATS.map(c => (
@@ -192,7 +192,7 @@ export default function Marketplace() {
               <Pressable testID="bk-modal-close" onPress={() => setBookSvc(null)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <View style={{ padding: S.lg, gap: S.md }}>
-              <TextInput testID="bk-msg" placeholder="Správa poskytovateľovi…" value={bookMsg} onChangeText={setBookMsg} multiline style={[styles.input, { minHeight: 60 }]} placeholderTextColor="#999" />
+              <TextInput testID="bk-msg" placeholder="Message to provider…" value={bookMsg} onChangeText={setBookMsg} multiline style={[styles.input, { minHeight: 60 }]} placeholderTextColor="#999" />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {(bookSvc?.payment_methods || ['cash']).map(m => (
                   <Pressable testID={`bk-pay-${m}`} key={m} onPress={() => setBookPay(m)} style={[styles.chip, { flex: 1, alignItems: 'center' }, bookPay === m && styles.chipActive]}>

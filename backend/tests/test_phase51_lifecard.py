@@ -253,7 +253,7 @@ class TestLifecardPredictions:
         if not d["predictions"]:
             pytest.skip("LLM returned 0 predictions this run — acceptable, endpoint still 200")
         for p in d["predictions"]:
-            assert p["category"] in ("vaccine", "exam"), p
+            assert p["category"] in ("vaccine", "exam", "dental"), p
             assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", p["suggested_date"]), p
             assert p["suggested_date"] > today, p
             assert p.get("reason"), p

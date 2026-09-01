@@ -44,6 +44,8 @@ export default function LifeCard() {
   const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState<string>('all');
   const [err, setErr] = useState('');
+  // GDPR — explicit consent required before any health data is stored
+  const [gdprConsent, setGdprConsent] = useState(false);
 
   // karty detí (Karta pre dieťa)
   const [children, setChildren] = useState<any[]>([]);
@@ -137,6 +139,7 @@ export default function LifeCard() {
 
   const saveCard = async () => {
     setErr('');
+    if (!gdprConsent) { setErr('Please tick "I consent to storing my health data" first.'); return; }
     if (addingChild && (!eName.trim() || !eBirth)) { setErr('Enter the child name and date of birth.'); return; }
     setCardBusy(true);
     try {
@@ -384,6 +387,11 @@ export default function LifeCard() {
                     </View>
                   </>
                 )}
+                {/* GDPR CONSENT — required before storing health data */}
+                <Pressable testID="lc-gdpr-consent" onPress={() => setGdprConsent(v => !v)} style={styles.consentRow}>
+                  <Ionicons name={gdprConsent ? 'checkbox' : 'square-outline'} size={22} color={gdprConsent ? C.brand : C.info} />
+                  <Text style={styles.consentText}>I consent to storing my health data</Text>
+                </Pressable>
                 <Pressable testID="lc-save-card" onPress={saveCard} disabled={cardBusy} style={styles.cta}>
                   {cardBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{addingChild ? 'CREATE CHILD CARD' : 'SAVE DETAILS'}</Text>}
                 </Pressable>
@@ -695,6 +703,8 @@ const styles = StyleSheet.create({
   catChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: C.borderStrong, borderRadius: R.pill, paddingVertical: 8, paddingHorizontal: 12 },
   catChipText: { color: C.fg, fontWeight: '800', fontSize: 10, letterSpacing: 0.5 },
   input: { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, color: C.fg, paddingHorizontal: S.md, minHeight: 46, fontSize: 13 },
+  consentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, minHeight: 44 },
+  consentText: { color: C.fg, fontSize: 13, fontWeight: '700', flex: 1 },
   cta: { backgroundColor: C.brand, borderRadius: R.sm, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
   // predictions

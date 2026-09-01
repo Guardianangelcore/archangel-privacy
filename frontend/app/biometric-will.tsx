@@ -44,7 +44,7 @@ export default function BiometricWill() {
     try {
       await recorder.stop();
       const uri = recorder.uri;
-      if (!uri) throw new Error('Nahrávka sa nepodarila.');
+      if (!uri) throw new Error('Recording failed.');
       const saved = await apiUpload('/legal/testament/biometric', uri, 'biometric_statement.m4a', 'audio/mp4');
       setRec(saved);
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -87,17 +87,17 @@ export default function BiometricWill() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <View style={styles.heroIcon}><Ionicons name="finger-print-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>Biometrické potvrdenie závetu</Text>
+        <Text style={styles.h1}>Biometric will confirmation</Text>
         <Text style={styles.sub}>
-          Nahrajte krátke hlasové alebo video vyhlásenie k vášmu digitálnemu závetu. Súbor sa okamžite
-          zahashuje (SHA-256) a zapíše do nemenného reťazca s časovou pečiatkou — nezvratný dôkaz vášho úmyslu.
+          Record a short voice or video statement for your digital will. The file is immediately
+          hashed (SHA-256) and written to an immutable timestamped chain — irreversible proof of your intent.
         </Text>
 
         {permBlocked && (
           <View style={styles.permBox}>
-            <Text style={styles.permText}>Prístup k mikrofónu/galérii je zablokovaný. Povoľte ho v nastaveniach telefónu.</Text>
+            <Text style={styles.permText}>Microphone/gallery access is blocked. Enable it in your phone settings.</Text>
             <Pressable testID="bw-settings" onPress={() => Linking.openSettings()} style={styles.permBtn}>
-              <Text style={styles.permBtnText}>OTVORIŤ NASTAVENIA</Text>
+              <Text style={styles.permBtnText}>OPEN SETTINGS</Text>
             </Pressable>
           </View>
         )}
@@ -107,16 +107,16 @@ export default function BiometricWill() {
           <View style={styles.proofCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
               <Ionicons name="shield-checkmark" size={20} color={C.brand} />
-              <Text style={styles.proofTitle}>VYHLÁSENIE NOTARIZOVANÉ</Text>
+              <Text style={styles.proofTitle}>STATEMENT NOTARIZED</Text>
             </View>
             <Proof label="Typ" value={rec.media_type} />
-            <Proof label="Nahraté" value={(rec.recorded_at || '').replace('T', ' ').slice(0, 16) + ' UTC'} />
-            <Proof label="SHA-256 (odtlačok súboru)" value={rec.sha256} mono />
-            <Proof label="Ledger hash (reťazec dôkazov)" value={rec.ledger_hash} mono />
+            <Proof label="Recorded" value={(rec.recorded_at || '').replace('T', ' ').slice(0, 16) + ' UTC'} />
+            <Proof label="SHA-256 (file fingerprint)" value={rec.sha256} mono />
+            <Proof label="Ledger hash (proof chain)" value={rec.ledger_hash} mono />
             <Proof label="DID" value={rec.did} mono />
             <Pressable testID="bw-delete" onPress={remove} style={styles.deleteBtn}>
               <Ionicons name="trash-outline" size={16} color={C.error} />
-              <Text style={styles.deleteText}>ODSTRÁNIŤ A NAHRAŤ ZNOVA</Text>
+              <Text style={styles.deleteText}>DELETE & RECORD AGAIN</Text>
             </Pressable>
           </View>
         ) : (
@@ -124,31 +124,31 @@ export default function BiometricWill() {
             {recording ? (
               <Pressable testID="bw-stop" onPress={stopAndUpload} style={[styles.cta, { backgroundColor: C.error }]}>
                 <Ionicons name="stop" size={18} color={C.onError} />
-                <Text style={[styles.ctaText, { color: C.onError }]}>ZASTAVIŤ A NOTARIZOVAŤ</Text>
+                <Text style={[styles.ctaText, { color: C.onError }]}>STOP & NOTARIZE</Text>
               </Pressable>
             ) : (
               <Pressable testID="bw-record" onPress={startRecording} disabled={uploading} style={styles.cta}>
                 <Ionicons name="mic" size={18} color={C.onInverse} />
-                <Text style={styles.ctaText}>NAHRAŤ HLASOVÉ VYHLÁSENIE</Text>
+                <Text style={styles.ctaText}>RECORD VOICE STATEMENT</Text>
               </Pressable>
             )}
             <Pressable testID="bw-video" onPress={pickVideo} disabled={uploading || recording} style={styles.ctaOutline}>
               <Ionicons name="videocam-outline" size={18} color={C.brand} />
-              <Text style={styles.ctaOutlineText}>VYBRAŤ VIDEO Z GALÉRIE</Text>
+              <Text style={styles.ctaOutlineText}>PICK VIDEO FROM GALLERY</Text>
             </Pressable>
             {uploading && (
               <View style={{ marginTop: S.lg, alignItems: 'center' }}>
                 <ActivityIndicator color={C.brand} />
-                <Text style={styles.hint}>Nahrávam a notarizujem…</Text>
+                <Text style={styles.hint}>Recording and notarizing…</Text>
               </View>
             )}
-            {recording && <Text style={[styles.hint, { color: C.error }]}>● NAHRÁVA SA — povedzte svoje vyhlásenie…</Text>}
+            {recording && <Text style={[styles.hint, { color: C.error }]}>● RECORDING — speak your statement…</Text>}
           </>
         )}
 
         <Text style={styles.disclaimer}>
-          Hash je zapísaný do tamper-evident reťazca (simulácia blockchainu). Pre plnú právnu záväznosť
-          závetu platia náležitosti vašej jurisdikcie.
+          The hash is written to a tamper-evident chain (blockchain simulation). For full legal validity
+          of a will, the formalities of your jurisdiction apply.
         </Text>
       </ScrollView>
     </SafeAreaView>

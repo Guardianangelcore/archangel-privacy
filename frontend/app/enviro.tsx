@@ -39,7 +39,7 @@ export default function Enviro() {
     setBusy(true); setErr(''); setMsg('');
     try {
       await api('/enviro/report', { method: 'POST', body: JSON.stringify({ kind, severity, city }) });
-      setMsg('Hlásenie odoslané do mesh siete — konsenzus vzniká pri 2+ nezávislých hláseniach.');
+      setMsg('Report sent to the mesh network — consensus forms at 2+ independent reports.');
       setCity(''); await load();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(false); }
@@ -56,13 +56,13 @@ export default function Enviro() {
           <Ionicons name="flash-off-outline" size={22} color={C.onInverse} />
         </Pressable>
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SENZORY ZARIADENIA × P2P MESH · SIMULOVANÉ ŠÍRENIE · SWARM ESKALUJE KONSENZUS</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>DEVICE SENSORS × P2P MESH · SIMULATED PROPAGATION · SWARM ESCALATES CONSENSUS</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}>
 
-        <Text style={st.section}>AKTÍVNE HROZBY (24 h)</Text>
-        {threats.length === 0 && <Text style={st.emptyLine}>— žiadne hlásené hrozby v okolí. Prostredie je stabilné.</Text>}
+        <Text style={st.section}>ACTIVE THREATS (24 h)</Text>
+        {threats.length === 0 && <Text style={st.emptyLine}>— no reported threats nearby. The environment is stable.</Text>}
         {threats.map((t, i) => (
           <View key={i} style={[st.threatCard, t.status === 'CONFIRMED' && { borderColor: C.error }]}>
             <View style={st.rowSpread}>
@@ -71,15 +71,15 @@ export default function Enviro() {
                 <Text style={st.threatTitle}>{t.label.toUpperCase()}{t.city ? ` · ${t.city.toUpperCase()}` : ''}</Text>
               </View>
               <Text style={[st.statusBadge, t.status === 'CONFIRMED' ? { backgroundColor: C.error, color: C.onError } : { backgroundColor: C.surface3, color: C.onS3 }]}>
-                {t.status === 'CONFIRMED' ? 'POTVRDENÉ MESHOM' : 'NEOVERENÉ'}
+                {t.status === 'CONFIRMED' ? 'MESH-CONFIRMED' : 'UNVERIFIED'}
               </Text>
             </View>
-            <Text style={st.threatMeta}>Hlásenia: {t.reports} · závažnosť {t.max_severity}/5 · senzor: {t.sensor}</Text>
+            <Text style={st.threatMeta}>Reports: {t.reports} · severity {t.max_severity}/5 · sensor: {t.sensor}</Text>
             <Text style={st.guidance}>▶ {t.guidance}</Text>
           </View>
         ))}
 
-        <Text style={st.section}>NAHLÁSIŤ HROZBU</Text>
+        <Text style={st.section}>REPORT A THREAT</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {Object.entries(kinds).map(([k, v]: any) => (
             <Pressable testID={`en-kind-${k}`} key={k} onPress={() => setKind(k)} style={[st.chip, kind === k && st.chipActive]}>
@@ -87,7 +87,7 @@ export default function Enviro() {
             </Pressable>
           ))}
         </View>
-        <Text style={st.lbl}>ZÁVAŽNOSŤ: {severity}/5</Text>
+        <Text style={st.lbl}>SEVERITY: {severity}/5</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {[1, 2, 3, 4, 5].map(n => (
             <Pressable testID={`en-sev-${n}`} key={n} onPress={() => setSeverity(n)}
@@ -97,7 +97,7 @@ export default function Enviro() {
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="en-city" value={city} onChangeText={setCity} placeholder="Mesto / oblasť"
+          <TextInput testID="en-city" value={city} onChangeText={setCity} placeholder="City / area"
             placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <Pressable testID="en-report" onPress={report} disabled={busy} style={st.reportBtn}>
             {busy ? <ActivityIndicator color={C.onError} size="small" /> : <Ionicons name="megaphone" size={20} color={C.onError} />}

@@ -75,7 +75,7 @@ export default function SilentWitness() {
 
   const startSession = async () => {
     setErr('');
-    if (Platform.OS === 'web') { setErr('Silent Witness funguje v natívnej aplikácii.'); return; }
+    if (Platform.OS === 'web') { setErr('Silent Witness works in the native app.'); return; }
     try {
       let perm = await AudioModule.getRecordingPermissionsAsync();
       if (!perm.granted) {
@@ -92,7 +92,7 @@ export default function SilentWitness() {
       recorder.record();
       setRecording(true);
       tap('medium');
-      jarvisSpeak('Tichý svedok aktívny. Dôkaz sa streamuje do Trezoru.', {
+      jarvisSpeak('Silent Witness active. Evidence is streaming to your Vault.', {
         voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       // schedule rolling chunk uploads
@@ -144,7 +144,7 @@ export default function SilentWitness() {
       setRecording(false);
       setSessionId(null);
       tap('success');
-      jarvisSpeak('Dôkaz uzatvorený a zabezpečený v Trezore.', {
+      jarvisSpeak('Evidence sealed and secured in your Vault.', {
         voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
       await load();
@@ -157,15 +157,15 @@ export default function SilentWitness() {
         <Pressable testID="sw-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>TICHÝ SVEDOK</Text>
+        <Text style={styles.title}>SILENT WITNESS</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 120 }}>
         <Text style={styles.intro}>
-          Ak sa dostanete do konfliktu (úradník, agresor), spustite Tichého svedka. Nahrávanie
-          sa <Text style={{ color: C.brand, fontWeight: '900' }}>okamžite streamuje do Trezoru</Text> a
-          upozorní váš Vnútorný kruh. Ak vám telefón zoberú, dôkaz je už v bezpečí.
+          If you end up in a conflict (an official, an aggressor), start the Silent Witness. The recording
+          is <Text style={{ color: C.brand, fontWeight: '900' }}>instantly streamed to your Vault</Text> and
+          alerts your Inner Circle. If your phone is taken, the evidence is already safe.
         </Text>
 
         <View style={styles.recRing}>
@@ -185,7 +185,7 @@ export default function SilentWitness() {
           <View testID="sw-live" style={styles.live}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>
-              LIVE · {elapsed}s · {chunkIndex} úsek(ov) v Trezore
+              LIVE · {elapsed}s · {chunkIndex} chunk(s) in the Vault
               {uploading ? '  ↑' : ''}
             </Text>
           </View>
@@ -195,13 +195,13 @@ export default function SilentWitness() {
         {micBlocked && (
           <Pressable onPress={() => Linking.openSettings()} style={styles.settingsBtn}>
             <Ionicons name="settings-outline" size={14} color={C.brand} />
-            <Text style={styles.settingsText}>Mikrofón zablokovaný — OTVORIŤ NASTAVENIA</Text>
+            <Text style={styles.settingsText}>Microphone blocked — OPEN SETTINGS</Text>
           </Pressable>
         )}
 
-        <Text style={styles.section}>HISTÓRIA · {history.length}</Text>
+        <Text style={styles.section}>HISTORY · {history.length}</Text>
         {history.length === 0 && (
-          <Text style={styles.empty}>Žiadne nahrávky. To je dobre.</Text>
+          <Text style={styles.empty}>No recordings. That is a good thing.</Text>
         )}
         {history.map((s) => (
           <View key={s.session_id} testID={`sw-sess-${s.session_id}`} style={styles.sessCard}>
@@ -209,7 +209,7 @@ export default function SilentWitness() {
             <View style={{ flex: 1 }}>
               <Text style={styles.sessDate}>{new Date(s.opened_at).toLocaleString('sk-SK')}</Text>
               <Text style={styles.sessMeta}>
-                {s.chunk_count} úsekov · {Math.round((s.total_bytes || 0) / 1024)} KB · {s.status === 'active' ? 'PREBIEHA' : 'UZATVORENÝ'}
+                {s.chunk_count} chunks · {Math.round((s.total_bytes || 0) / 1024)} KB · {s.status === 'active' ? 'IN PROGRESS' : 'SEALED'}
               </Text>
             </View>
           </View>
@@ -218,7 +218,7 @@ export default function SilentWitness() {
         <View style={styles.hint}>
           <Ionicons name="information-circle-outline" size={14} color={C.info} />
           <Text style={styles.hintText}>
-            Nahrávky sú šifrované na strane servera. Iba vy máte k nim prístup cez Trezor.
+            Recordings are encrypted server-side. Only you can access them through your Vault.
           </Text>
         </View>
       </ScrollView>

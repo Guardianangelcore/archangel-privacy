@@ -45,7 +45,7 @@ export default function Solidarity() {
       setModal(false); setForm({ title: '', story: '', goal_amount: '', currency: 'EUR' }); load();
     } catch (e: any) {
       setModal(false);
-      setErr(String(e.message || e).includes('kyc_required') ? 'KAMPAŇ VYŽADUJE KYC OVERENIE — DOKONČITE HO V „PRÁVO A SÚLAD"' : String(e.message || e));
+      setErr(String(e.message || e).includes('kyc_required') ? 'CAMPAIGN REQUIRES KYC VERIFICATION — COMPLETE IT IN "LEGAL & COMPLIANCE"' : String(e.message || e));
     }
   };
 
@@ -59,7 +59,7 @@ export default function Solidarity() {
       else Linking.openURL(res.checkout_url);
     } catch (e: any) {
       const msg = String(e.message || e);
-      setErr(msg.includes('stripe_key_missing') ? 'Platby kartou budú aktívne po doplnení reálneho Stripe kľúča — zatiaľ použite komunitný príspevok.' : msg);
+      setErr(msg.includes('stripe_key_missing') ? 'Card payments activate once a real Stripe key is added — for now use a community contribution.' : msg);
     }
   };
 
@@ -72,7 +72,7 @@ export default function Solidarity() {
     } catch (e: any) {
       setDonateFor(null);
       const msg = String(e.message || e);
-      setErr(msg.includes('aml_limit') ? 'AML: PREKROČENÝ DENNÝ LIMIT — ZVÝŠTE HO CEZ KYC V „PRÁVO A SÚLAD"' : msg.includes('aml_velocity') ? 'AML: PRÍLIŠ VEĽA TRANSAKCIÍ DNES' : msg);
+      setErr(msg.includes('aml_limit') ? 'AML: DAILY LIMIT EXCEEDED — RAISE IT VIA KYC IN "LEGAL & COMPLIANCE"' : msg.includes('aml_velocity') ? 'AML: TOO MANY TRANSACTIONS TODAY' : msg);
     }
   };
 
@@ -88,14 +88,14 @@ export default function Solidarity() {
       <Pressable testID="sol-aml-banner" onPress={() => router.push('/legal')} style={[styles.banner, aml?.kyc_verified && { backgroundColor: C.brandTer }]}>
         <Text style={[styles.bannerText, aml?.kyc_verified && { color: C.brand }]}>
           {aml?.kyc_verified
-            ? `KYC ✓ · AML LIMIT €${aml?.daily_limit?.toFixed(0)}/DEŇ · LEDGER #${aml?.ledger_entries}`
-            : `AML: BEZ KYC LIMIT €${aml?.daily_limit?.toFixed(0) ?? 150}/DEŇ · KYC → PRÁVO A SÚLAD`}
+            ? `KYC ✓ · AML LIMIT €${aml?.daily_limit?.toFixed(0)}/DAY · LEDGER #${aml?.ledger_entries}`
+            : `AML: NO-KYC LIMIT €${aml?.daily_limit?.toFixed(0) ?? 150}/DAY · KYC → LEGAL & COMPLIANCE`}
         </Text>
       </Pressable>
       {err ? <Text style={styles.errText}>{err}</Text> : null}
       <Pressable testID="sol-dignity-link" onPress={() => router.push('/dignity')} style={styles.dignityLink}>
         <Ionicons name="rose-outline" size={16} color={C.brand} />
-        <Text style={styles.dignityLinkText}>FINAL DIGNITY · POHREBNÝ FOND (SUB-ÚČET)</Text>
+        <Text style={styles.dignityLinkText}>FINAL DIGNITY · FUNERAL FUND (SUB-ACCOUNT)</Text>
         <Ionicons name="chevron-forward" size={16} color={C.brand} />
       </Pressable>
       <FlatList
@@ -139,7 +139,7 @@ export default function Solidarity() {
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }}>
               <TextInput testID="sol-title" placeholder="TITLE" value={form.title} onChangeText={v => setForm({ ...form, title: v })} style={styles.input} placeholderTextColor="#999" />
               <TextInput testID="sol-story" placeholder="STORY" value={form.story} onChangeText={v => setForm({ ...form, story: v })} style={[styles.input, { minHeight: 100 }]} multiline placeholderTextColor="#999" />
-              <WheelField testID="sol-goal" title="CIEĽOVÁ SUMA €" min={100} max={20000} step={100} unit="€" value={form.goal_amount} onChange={v => setForm({ ...form, goal_amount: v })} placeholder="GOAL AMOUNT" style={styles.input} />
+              <WheelField testID="sol-goal" title="GOAL AMOUNT €" min={100} max={20000} step={100} unit="€" value={form.goal_amount} onChange={v => setForm({ ...form, goal_amount: v })} placeholder="GOAL AMOUNT" style={styles.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {['EUR','CZK','USD'].map(c => (
                   <Pressable testID={`cur-${c}`} key={c} onPress={() => setForm({ ...form, currency: c })} style={[styles.chip, form.currency === c && styles.chipActive]}><Text style={[styles.chipText, form.currency === c && styles.chipTextActive]}>{c}</Text></Pressable>
@@ -164,7 +164,7 @@ export default function Solidarity() {
               </View>
             </View>
             <Pressable testID="donate-confirm" onPress={donate} style={styles.saveBtn}><Text style={styles.saveBtnText}>DONATE {amount} {donateFor?.currency}</Text></Pressable>
-            <Pressable testID="donate-card" onPress={donateCard} style={[styles.saveBtn, { backgroundColor: C.surface3, marginTop: 8 }]}><Text style={[styles.saveBtnText, { color: C.brand }]}>💳 ZAPLATIŤ KARTOU (STRIPE)</Text></Pressable>
+            <Pressable testID="donate-card" onPress={donateCard} style={[styles.saveBtn, { backgroundColor: C.surface3, marginTop: 8 }]}><Text style={[styles.saveBtnText, { color: C.brand }]}>💳 PAY BY CARD (STRIPE)</Text></Pressable>
           </View>
         </View>
       </Modal>

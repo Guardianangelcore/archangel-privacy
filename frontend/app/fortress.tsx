@@ -37,7 +37,7 @@ export default function Fortress() {
     try {
       const rep: any = await api('/swarm/audit', { method: 'POST' });
       setAudit(rep);
-      setMsg(rep.ready_for_global_publish ? 'SYSTÉM PLNE ZABEZPEČENÝ — pripravený na Global Publish ✓' : 'Audit dokončený — niektoré kontroly vyžadujú pozornosť.');
+      setMsg(rep.ready_for_global_publish ? 'SYSTEM FULLY SECURED — ready for Global Publish ✓' : 'Audit complete — some checks need attention.');
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -55,7 +55,7 @@ export default function Fortress() {
 
   const runAgent = async (id: string) => {
     setBusy(id);
-    try { const r: any = await api(`/swarm/run/${id}`, { method: 'POST' }); setMsg(`${id}: ${r.actions} akcií vykonaných`); await load(); }
+    try { const r: any = await api(`/swarm/run/${id}`, { method: 'POST' }); setMsg(`${id}: ${r.actions} actions executed`); await load(); }
     catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
@@ -73,8 +73,8 @@ export default function Fortress() {
         contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
-        <Text style={styles.h1}>Suverénna ochrana & autonómia</Text>
-        <Text style={styles.sub}>DePIN infraštruktúra, Security Sentinel, autonómny agent swarm a Neural Bus so ZK-commitment obálkami. (DEMO vrstva — reálny P2P DePIN vo Phase 3.)</Text>
+        <Text style={styles.h1}>Sovereign protection & autonomy</Text>
+        <Text style={styles.sub}>DePIN infrastructure, Security Sentinel, autonomous agent swarm and Neural Bus with ZK-commitment envelopes. (DEMO layer — real P2P DePIN in Phase 3.)</Text>
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -97,23 +97,23 @@ export default function Fortress() {
           </View>
         )}
 
-        <Text style={styles.section}>AUTONÓMNY SWARM · {status?.loop_active ? 'AKTÍVNY ⦿' : 'ŠTARTUJE…'}</Text>
+        <Text style={styles.section}>AUTONOMOUS SWARM · {status?.loop_active ? 'ACTIVE ⦿' : 'STARTING…'}</Text>
         {(status?.agents || []).map((a: any) => (
           <View key={a.agent_id} style={styles.row}>
             <Ionicons name={(AGENT_ICONS[a.agent_id] || 'hardware-chip') as any} size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{a.label}</Text>
               <Text style={styles.rowSub}>{a.desc}</Text>
-              <Text style={styles.rowMeta}>beh #{a.runs} · {a.actions} akcií · {a.last_status === 'ok' ? '✓ OK' : a.last_status} · každých {a.interval_s}s</Text>
+              <Text style={styles.rowMeta}>run #{a.runs} · {a.actions} actions · {a.last_status === 'ok' ? '✓ OK' : a.last_status} · every {a.interval_s}s</Text>
             </View>
             <Pressable testID={`ft-run-${a.agent_id}`} onPress={() => runAgent(a.agent_id)} disabled={busy === a.agent_id} style={styles.runBtn}>
               {busy === a.agent_id ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="play" size={16} color={C.brand} />}
             </Pressable>
           </View>
         ))}
-        {(!status?.agents || status.agents.length === 0) && <Text style={styles.rowSub}>Agenti sa registrujú pri prvom behu slučky (do 15 s)…</Text>}
+        {(!status?.agents || status.agents.length === 0) && <Text style={styles.rowSub}>Agents register on the first loop run (within 15 s)…</Text>}
 
-        <Text style={styles.section}>DePIN UZLY · ŽIADNY SINGLE POINT OF FAILURE</Text>
+        <Text style={styles.section}>DePIN NODES · NO SINGLE POINT OF FAILURE</Text>
         <View style={styles.nodeGrid}>
           {(depin?.nodes || []).map((n: any) => (
             <View key={n.node_id} style={[styles.node, n.health < 70 && { borderColor: C.error }]}>
@@ -128,7 +128,7 @@ export default function Fortress() {
           ))}
         </View>
         <Pressable testID="ft-migrate" onPress={migrate} disabled={busy === 'migrate'} style={styles.migrateBtn}>
-          {busy === 'migrate' ? <ActivityIndicator color={C.error} /> : <Text style={styles.migrateText}>⛨ SAFE-MIGRATION — PRESUNÚŤ CORE NA BEZPEČNÉ UZLY</Text>}
+          {busy === 'migrate' ? <ActivityIndicator color={C.error} /> : <Text style={styles.migrateText}>⛨ SAFE-MIGRATION — MOVE CORE TO SAFE NODES</Text>}
         </Pressable>
 
         <Text style={styles.section}>SECURITY SENTINEL · UDALOSTI</Text>
@@ -138,9 +138,9 @@ export default function Fortress() {
             <Text style={styles.evText} numberOfLines={2}>{e.detail}</Text>
           </View>
         ))}
-        {secEvents.length === 0 && <Text style={styles.rowSub}>Žiadne bezpečnostné udalosti — systém je čistý.</Text>}
+        {secEvents.length === 0 && <Text style={styles.rowSub}>No security events — the system is clean.</Text>}
 
-        <Text style={styles.section}>NEURAL BUS · ZK-COMMITMENT OBÁLKY</Text>
+        <Text style={styles.section}>NEURAL BUS · ZK-COMMITMENT ENVELOPES</Text>
         {(status?.bus || []).slice(0, 8).map((b: any) => (
           <View key={b.event_id} style={styles.evRow}>
             <Ionicons name="git-network" size={14} color={C.info} />
@@ -148,7 +148,7 @@ export default function Fortress() {
           </View>
         ))}
 
-        <Text style={styles.disclaimer}>DePIN, ZKP a Security Sentinel bežia ako plne funkčná simulačná vrstva v rámci tohto nasadenia. Reálna P2P distribúcia a on-chain ZK dôkazy sú plánované vo Phase 3.</Text>
+        <Text style={styles.disclaimer}>DePIN, ZKP and Security Sentinel run as a fully functional simulation layer in this deployment. Real P2P distribution and on-chain ZK proofs are planned for Phase 3.</Text>
       </ScrollView>
     </SafeAreaView>
   );

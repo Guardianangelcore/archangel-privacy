@@ -27,19 +27,19 @@ from routes.neural import _gather_context
 # LEVELS & XP — the retention engine (companion grows with the user)
 # =========================================================================
 LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200]  # cumulative XP for L1..L10
-LEVEL_NAMES = ["ISKRA", "POMOCNÍK", "STRÁŽCA", "SPOLOČNÍK", "DÔVERNÍK",
-               "OCHRANCA", "PROROK", "SERAFÍN", "CHERUBÍN", "ARCHANJEL"]
+LEVEL_NAMES = ["SPARK", "HELPER", "GUARDIAN", "COMPANION", "CONFIDANT",
+               "PROTECTOR", "PROPHET", "SERAPH", "CHERUB", "ARCHANGEL"]
 ABILITIES = [
-    (1, "Základný rozhovor a rady"),
-    (2, "Osobný tón — pamätá si mená a zvyky"),
-    (3, "Analýza trendov tlaku a glukózy"),
-    (4, "Ranný brífing s počasím a liekmi"),
-    (5, "Hlboké zdravotné reporty"),
-    (6, "Prediktívne pripomienky"),
-    (7, "Varovania anomálií bez pýtania"),
-    (8, "Rodinná koordinácia a Angel Mode+"),
-    (9, "Emócie v hlase — upokojujúci / energický"),
-    (10, "ARCHANJEL — plná autonómia a múdrosť"),
+    (1, "Basic conversation and advice"),
+    (2, "Personal tone — remembers names and habits"),
+    (3, "Blood pressure & glucose trend analysis"),
+    (4, "Morning briefing with weather and meds"),
+    (5, "Deep health reports"),
+    (6, "Predictive reminders"),
+    (7, "Anomaly warnings without asking"),
+    (8, "Family coordination and Angel Mode+"),
+    (9, "Emotion in voice — calming / energetic"),
+    (10, "ARCHANGEL — full autonomy and wisdom"),
 ]
 
 def _level_for(xp: int) -> int:
@@ -82,7 +82,7 @@ async def award_xp(uid: str, amount: int, reason: str) -> dict:
         try:
             await send_push(recipients=[uid], data={
                 "title": f"✨ JARVIS DOSIAHOL LEVEL {new_level} — {LEVEL_NAMES[new_level - 1]}",
-                "message": f"Odomknuté: {ability}", "action_url": "/jarvis"})
+                "message": f"Unlocked: {ability}", "action_url": "/jarvis"})
         except Exception:
             pass
     return {"xp": new_xp, "level": new_level, "level_up": level_up, "gained": amount}
@@ -199,27 +199,27 @@ async def _detect_anomalies(uid: str) -> List[dict]:
     if bps:
         if bps[0] >= 160:
             alerts.append({"kind": "bp_critical", "severity": "high",
-                           "text": f"Posledný systolický tlak {bps[0]} mmHg je príliš vysoký — odporúčam ihneď kontaktovať lekára."})
+                           "text": f"Your last systolic pressure {bps[0]} mmHg is too high — I recommend contacting a doctor immediately."})
         elif bps[0] >= 140:
             alerts.append({"kind": "bp_elevated", "severity": "medium",
-                           "text": f"Systolický tlak {bps[0]} mmHg je zvýšený — zmerajte sa znova v pokoji."})
+                           "text": f"Systolic pressure {bps[0]} mmHg is elevated — measure again while at rest."})
         if len(bps) >= 3 and bps[0] > bps[1] > bps[2]:
             alerts.append({"kind": "bp_trend", "severity": "medium",
-                           "text": f"Tlak stúpa tri merania po sebe ({bps[2]} → {bps[1]} → {bps[0]}). Sledujem trend."})
+                           "text": f"Pressure rising three readings in a row ({bps[2]} → {bps[1]} → {bps[0]}). I am watching the trend."})
     glu = next((s.get("glucose_mmol") for s in scans if s.get("glucose_mmol")), None)
     if glu:
         if glu >= 13:
             alerts.append({"kind": "glucose_critical", "severity": "high",
-                           "text": f"Glukóza {glu} mmol/l je nebezpečne vysoká — kontaktujte lekára."})
+                           "text": f"Glucose {glu} mmol/l is dangerously high — contact a doctor."})
         elif glu >= 11:
             alerts.append({"kind": "glucose_high", "severity": "medium",
-                           "text": f"Glukóza {glu} mmol/l je nad normou — obmedzte cukry a premerajte sa."})
+                           "text": f"Glucose {glu} mmol/l is above normal — limit sugars and re-measure."})
         elif glu <= 3.5:
             alerts.append({"kind": "glucose_low", "severity": "high",
-                           "text": f"Glukóza {glu} mmol/l je nízka — zjedzte niečo sladké a oddychujte."})
+                           "text": f"Glucose {glu} mmol/l is low — eat something sweet and rest."})
     if scans and scans[0].get("stress_level") == "high":
         alerts.append({"kind": "stress", "severity": "low",
-                       "text": "Posledný sken ukázal vysoký stres — skúste dychové cvičenie v Mental Fortress."})
+                       "text": "Your last scan showed high stress — try a breathing exercise in the Mental Fortress."})
     return alerts
 
 @api.get("/agent/anomalies")
@@ -241,7 +241,7 @@ async def agent_anomalies(authorization: Optional[str] = Header(None)):
             "text": a["text"], "at": datetime.now(timezone.utc)})
         try:
             await send_push(recipients=[uid], data={
-                "title": "🚨 JARVIS — ZDRAVOTNÉ VAROVANIE",
+                "title": "🚨 JARVIS — HEALTH WARNING",
                 "message": a["text"], "action_url": "/bioscan"})
         except Exception:
             pass
@@ -262,9 +262,9 @@ async def _weather(user: Optional[dict] = None) -> Optional[dict]:
                                       "timezone": g["tz"], "forecast_days": 1})
             d = r.json()
             code = int(d["current"]["weather_code"])
-            desc = ("jasno" if code == 0 else "polooblačno" if code in (1, 2) else
-                    "zamračené" if code == 3 else "hmla" if code in (45, 48) else
-                    "dážď" if code < 70 else "sneženie" if code < 80 else "prehánky")
+            desc = ("clear" if code == 0 else "partly cloudy" if code in (1, 2) else
+                    "overcast" if code == 3 else "fog" if code in (45, 48) else
+                    "rain" if code < 70 else "snow" if code < 80 else "showers")
             return {"city": g["city"], "now_c": round(d["current"]["temperature_2m"]),
                     "max_c": round(d["daily"]["temperature_2m_max"][0]),
                     "min_c": round(d["daily"]["temperature_2m_min"][0]), "desc": desc}
@@ -341,8 +341,8 @@ def _detect_pain_level(text: str) -> Optional[int]:
 # ---- VOICE LIFE-CARD LOGGING — "dnes mi doktor povedal, že mám kiahne" ----
 # Cheap trigger regex first; a small LLM call then classifies into the 5
 # Karta života categories (or rejects → normal chat continues).
-LIFECARD_LABELS = {"vaccine": "Očkovanie", "disease": "Choroba", "surgery": "Operácia",
-                   "injury": "Úraz", "exam": "Prehliadka", "dental": "Zubár"}
+LIFECARD_LABELS = {"vaccine": "Vaccination", "disease": "Disease", "surgery": "Surgery",
+                   "injury": "Injury", "exam": "Check-up", "dental": "Dental"}
 LIFECARD_TRIGGER = re.compile(
     r"(doktor|doktork|lek[áa]r|diagn[óo]z|diagnostik|ochorel|oper[áa]ci|operoval|"
     r"zao[čc]koval|o[čc]kovan|vakc[íi]n|prehliadk|prevent[íi]vn|"
@@ -449,17 +449,17 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
             "created_at": now})
         sk = (user.get("language") or "sk")[:2] in ("sk", "cs")
         if pain_lvl >= 8:
-            reply = (f"Zapísal som bolesť {pain_lvl}/10 do bolesťového denníka. To je veľa — dnes už necvičte, "
-                     "odpočiňte si, a ak to potrvá do zajtra, spolu kontaktujeme lekára. Krivku uvidíte v Kolotoči uzdravenia."
+            reply = (f"I logged pain {pain_lvl}/10 into your pain diary. That is a lot — no more exercise today, "
+                     "rest, and if it lasts until tomorrow we will contact your doctor together. You will see the curve in the Healing Loop."
                      if sk else f"Logged pain {pain_lvl}/10. That's high — stop exercising today and rest. If it persists, contact your doctor.")
             mood = "concerned"
         elif pain_lvl >= 5:
-            reply = (f"Zapísal som bolesť {pain_lvl}/10. Stredná úroveň — znížte intenzitu cvičenia. "
-                     "Trend sledujem za vás a lekár ho uvidí v reporte."
+            reply = (f"I logged pain {pain_lvl}/10. Medium level — lower your exercise intensity. "
+                     "I am tracking the trend for you and your doctor will see it in the report."
                      if sk else f"Logged pain {pain_lvl}/10. Moderate — reduce exercise intensity. The trend goes into your doctor's report.")
             mood = "thinking"
         else:
-            reply = (f"Zapísal som bolesť {pain_lvl}/10 — nízka, telo sa pekne hojí. Krivka pokroku rastie v Kolotoči uzdravenia. 💛"
+            reply = (f"I logged pain {pain_lvl}/10 — low, your body is healing nicely. Your progress curve is growing in the Healing Loop. 💛"
                      if sk else f"Logged pain {pain_lvl}/10 — low, you're healing well. See your progress curve in the Healing Carousel. 💛")
             mood = "calm"
         from routes.physio_media import check_pain_milestone
@@ -489,8 +489,8 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
                 "date": rec["date"], "notes": rec["note"], "booster_due": None,
                 "source": "voice", "created_at": now})
             label = LIFECARD_LABELS[rec["category"]]
-            reply = (f"Zapísal som do Karty života: {label} — {rec['title']} ({rec['date']}). "
-                     "Nájdete to v Zdravie → Karta života. 💛"
+            reply = (f"I wrote into your Life Card: {label} — {rec['title']} ({rec['date']}). "
+                     "You will find it in Health → Life Card. 💛"
                      if sk else
                      f"Logged to your Life Card: {label} — {rec['title']} ({rec['date']}). "
                      "Find it under Health → Life Card. 💛")
@@ -615,7 +615,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
         {"_id": 0}).sort("created_at", -1).to_list(3)
     anomalies = await _detect_anomalies(uid)
     hour = (datetime.now(timezone.utc).hour + 2) % 24  # CET-ish
-    part = "ráno" if 5 <= hour < 11 else "poobede" if 11 <= hour < 18 else "večer"
+    part = "morning" if 5 <= hour < 11 else "afternoon" if 11 <= hour < 18 else "evening"
     payload = {
         "name": user.get("name"), "part_of_day": part, "weather": weather,
         "meds_today": meds_today[:6], "upcoming_exams": cal,
@@ -642,11 +642,11 @@ async def agent_briefing(language: str = "sk", force: bool = False,
     except Exception as e:
         logger.error(f"briefing error: {e}")
         pend = sum(1 for m in meds_today if not m["taken"])
-        text = (f"Dobré {part}, {user.get('name') or ''}! " +
+        text = (f"Good {part}, {user.get('name') or ''}! " +
                 (f"Vonku je {weather['now_c']} °C, {weather['desc']}. " if weather else "") +
-                (f"Dnes vás čaká {pend} liekov. " if pend else "Všetky lieky máte užité. ") +
-                "Prajem pokojný deň — som tu pre vás.")
-    mood = "concerned" if anomalies else "energetic" if part == "ráno" else "calm"
+                (f"You have {pend} medications ahead today. " if pend else "All your medications are taken. ") +
+                "Have a peaceful day — I am here for you.")
+    mood = "concerned" if anomalies else "energetic" if part == "morning" else "calm"
     doc = {"user_id": uid, "date": today, "briefing": apply_watermark(str(text)), "mood": mood,
            "weather": weather, "meds_today": meds_today[:6],
            "upcoming_exams": clean(cal), "alerts": anomalies,
@@ -675,11 +675,11 @@ async def agent_analyze(authorization: Optional[str] = Header(None)):
     anomalies = await _detect_anomalies(uid)
     bps = [s.get("bp_estimate") for s in scans if s.get("bp_estimate")][:3]
     steps = [
-        {"step": "Otváram zdravotný trezor", "detail": f"{docs_n} dokumentov zabezpečených", "ms": 550},
-        {"step": "Analyzujem vitálne trendy", "detail": f"{len(scans)} meraní · TK: {' → '.join(map(str, reversed(bps))) or 'bez dát'}", "ms": 800},
-        {"step": "Kontrolujem liekový režim", "detail": f"{meds_n} aktívnych pripomienok", "ms": 500},
-        {"step": "Prehľadávam pamäť spoločníka", "detail": f"{mems_n} spomienok · {wl_n} sledovaných termínov", "ms": 650},
-        {"step": "Syntéza vzorcov (gpt-5.4)", "detail": f"{len(anomalies)} anomálií zistených", "ms": 900},
+        {"step": "Opening the health vault", "detail": f"{docs_n} documents secured", "ms": 550},
+        {"step": "Analyzing vital trends", "detail": f"{len(scans)} readings · BP: {' → '.join(map(str, reversed(bps))) or 'no data'}", "ms": 800},
+        {"step": "Checking the medication regimen", "detail": f"{meds_n} active reminders", "ms": 500},
+        {"step": "Searching companion memory", "detail": f"{mems_n} memories · {wl_n} tracked appointments", "ms": 650},
+        {"step": "Pattern synthesis (gpt-5.4)", "detail": f"{len(anomalies)} anomalies detected", "ms": 900},
     ]
     summary_payload = {
         "documents": docs_n, "scans": len(scans), "meds": meds_n,
@@ -695,8 +695,8 @@ async def agent_analyze(authorization: Optional[str] = Header(None)):
         insight = await chat.send_message(UserMessage(text=json.dumps(summary_payload, ensure_ascii=False)))
     except Exception as e:
         logger.error(f"analyze error: {e}")
-        insight = ("Vaše dáta sú v bezpečí a pod dohľadom. " +
-                   (anomalies[0]["text"] if anomalies else "Žiadne anomálie — pokračujte v skvelej starostlivosti."))
+        insight = ("Your data is safe and watched over. " +
+                   (anomalies[0]["text"] if anomalies else "No anomalies — keep up the great care."))
     xp = await _award_once_daily(uid, 15, "deep_analysis")
     return {"steps": steps, "insight": apply_watermark(str(insight)), "alerts": anomalies,
             "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"]}
@@ -905,7 +905,7 @@ async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Hea
     except Exception as e:
         logger.error(f"agent imagine error: {e}")
         if "safety" in str(e).lower() or "rejected" in str(e).lower():
-            raise HTTPException(400, "Obraz odmietol bezpečnostný systém — skúste opísať motív inak.")
+            raise HTTPException(400, "The image was rejected by the safety system — try describing the motif differently.")
         raise HTTPException(502, "Image generation unavailable")
 
     # SOVEREIGN GALLERY — persist every generated image into the Vault (Object Storage,
@@ -931,7 +931,7 @@ async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Hea
     await db.agent_conversations.insert_many([
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": f"🎨 {prompt[:500]}", "at": now},
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent",
-         "text": "Vygeneroval som obraz." + (" Uložený v Trezore." if saved_to_vault else ""),
+         "text": "I generated the image." + (" Stored in the Vault." if saved_to_vault else ""),
          "mood": "energetic", "source": "imagine", "doc_id": doc_id if saved_to_vault else None, "at": now},
     ])
     xp = await award_xp(uid, 8, "imagine")

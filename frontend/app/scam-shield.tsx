@@ -74,7 +74,7 @@ export default function ScamShield() {
         <Text style={styles.title}>{t('scam_shield', lang).toUpperCase()}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>AI OCHRANA PRED PODVODMI · HLASOVÉ VAROVANIE · ALERT RODINE</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>AI FRAUD PROTECTION · VOICE WARNING · FAMILY ALERT</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <Text style={styles.lbl}>SMS / E-MAIL / ODKAZ NA KONTROLU</Text>
@@ -84,7 +84,7 @@ export default function ScamShield() {
           onChangeText={setText}
           multiline
           style={styles.input}
-          placeholder="Vložte podozrivú správu alebo odkaz…"
+          placeholder="Paste a suspicious message or link…"
           placeholderTextColor="#999"
         />
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
@@ -125,7 +125,7 @@ export default function ScamShield() {
           </View>
         )}
 
-        <Text style={styles.section}>HISTÓRIA KONTROL</Text>
+        <Text style={styles.section}>CHECK HISTORY</Text>
         {history.length === 0 ? <Text style={styles.noData}>{t('no_data', lang).toUpperCase()}</Text> : history.map(h => (
           <View key={h.check_id} style={styles.histRow}>
             <View style={[styles.dot, { backgroundColor: RISK_COLORS[h.risk]?.bg || C.info }]} />

@@ -14,10 +14,10 @@ import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
 
 const PRESETS = [
-  'Ľúbime ťa, babička! Mysli na nás. ❤️',
-  'Dedko, v nedeľu prídeme na obed!',
-  'Nezabudni na lieky o ôsmej. Pusinky!',
-  'Vnúčatá ťa pozdravujú a tešia sa na teba!',
+  'We love you, Grandma! Thinking of you. ❤️',
+  'Grandpa, we are coming for lunch on Sunday!',
+  'Do not forget your meds at eight. Kisses!',
+  'The grandkids say hi and cannot wait to see you!',
 ];
 
 export default function VoiceEchoes() {
@@ -55,9 +55,9 @@ export default function VoiceEchoes() {
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       // SENTIENT ANNOUNCEMENT — Jarvis (Onyx) says the sender's name FIRST, so babička
       // knows who is speaking before their real voice starts playing.
-      const senderLabel = (e.from_name || 'rodinný člen').trim();
+      const senderLabel = (e.from_name || 'a family member').trim();
       const langNow = (user?.language as any) || 'en';
-      await jarvisSpeak(`Máte novú správu od ${senderLabel}.`, { voice: 'onyx', speed: 0.95, language: langNow });
+      await jarvisSpeak(`You have a new message from ${senderLabel}.`, { voice: 'onyx', speed: 0.95, language: langNow });
       // Small pause so the intro is clearly heard before the real echo starts.
       await new Promise(r => setTimeout(r, 2200));
 
@@ -95,8 +95,8 @@ export default function VoiceEchoes() {
         const r: any = await apiUpload('/family/echoes/audio', uri, 'echo.m4a', 'audio/m4a', extra);
         tap('success');
         setSentMsg(target
-          ? `🎙 Hlasová nahrávka odoslaná na diaľku — ${r.to} si vypočuje váš skutočný hlas.`
-          : '🎙 Hlasová nahrávka uložená — ťuknite na kartu a vypočujte si ju.');
+          ? `🎙 Voice recording sent remotely — ${r.to} will hear your real voice.`
+          : '🎙 Voice recording saved — tap the card to listen.');
         setAdd(false);
         await load();
       } catch (e: any) { setSentMsg(String(e.message || e)); }
@@ -127,7 +127,7 @@ export default function VoiceEchoes() {
       if (target) {
         // REMOTE FAMILY ACCESS — send from my own account to the senior's device
         const r: any = await api('/family/echoes/send', { method: 'POST', body: JSON.stringify({ to_email: target.email, message }) });
-        setSentMsg(`💌 Odkaz odoslaný na diaľku — ${r.to} si ho vypočuje na svojom zariadení.`);
+        setSentMsg(`💌 Message sent remotely — ${r.to} will hear it on their device.`);
       } else {
         await api('/family/echoes', { method: 'POST', body: JSON.stringify({ from_name: fromName.trim() || 'Rodina', message }) });
         await load();
@@ -151,15 +151,15 @@ export default function VoiceEchoes() {
 
       {loading ? <ActivityIndicator color={C.brand} style={{ marginTop: 60 }} /> : (
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 100, gap: S.md }}>
-          <Text style={st.hint}>Ťuknite na kartu — Jarvis vám odkaz prečíta nahlas. 🔊</Text>
+          <Text style={st.hint}>Tap a card — Jarvis reads the message aloud. 🔊</Text>
           {!!sentMsg && <View style={st.sentBox}><Text testID="ve-sent-msg" style={st.sentText}>{sentMsg}</Text></View>}
           {echoes.length === 0 && (
             <View style={st.empty}>
               <Ionicons name="heart" size={44} color={C.brand} />
-              <Text style={st.emptyTitle}>Zatiaľ žiadne odkazy</Text>
-              <Text style={st.emptySub}>Rodina môže poslať odkaz cez tlačidlo + hore. Prvý odkaz poteší najviac.</Text>
+              <Text style={st.emptyTitle}>No messages yet</Text>
+              <Text style={st.emptySub}>Family can send a message via the + button above. The first one brings the most joy.</Text>
               <Pressable testID="ve-empty-add" onPress={() => setAdd(true)} style={st.emptyBtn}>
-                <Text style={st.emptyBtnText}>POSLAŤ PRVÝ ODKAZ</Text>
+                <Text style={st.emptyBtnText}>SEND THE FIRST MESSAGE</Text>
               </Pressable>
             </View>
           )}
@@ -172,7 +172,7 @@ export default function VoiceEchoes() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={st.from}>{e.from_name}</Text>
-                  {!e.heard && <View style={st.newBadge}><Text style={st.newBadgeText}>NOVÝ</Text></View>}
+                  {!e.heard && <View style={st.newBadge}><Text style={st.newBadgeText}>NEW</Text></View>}
                 </View>
                 <Text style={st.msgText} numberOfLines={3}>{e.message}</Text>
               </View>
@@ -185,9 +185,9 @@ export default function VoiceEchoes() {
         <Pressable style={st.overlay} onPress={() => setAdd(false)}>
           <Pressable style={st.sheet} onPress={() => {}}>
             <View style={st.sheetHandle} />
-            <Text style={st.sheetTitle}>Poslať hlasový odkaz</Text>
+            <Text style={st.sheetTitle}>Send a voice message</Text>
             {recipients.length > 0 && (<>
-              <Text style={st.lbl}>KOMU?</Text>
+              <Text style={st.lbl}>TO WHOM?</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 <Pressable testID="ve-target-self" onPress={() => { tap(); setTarget(null); }} style={[st.targetChip, !target && st.targetChipOn]}>
                   <Ionicons name="phone-portrait-outline" size={14} color={!target ? C.onInverse : C.fg} />
@@ -201,35 +201,35 @@ export default function VoiceEchoes() {
                   </Pressable>
                 ))}
               </View>
-              {!!target && <Text style={st.remoteHint}>💌 Odkaz pôjde na diaľku na zariadenie: {target.name} ({target.email})</Text>}
+              {!!target && <Text style={st.remoteHint}>💌 The message goes remotely to: {target.name} ({target.email})</Text>}
             </>)}
             {!target && (<>
               <Text style={st.lbl}>KTO POSIELA?</Text>
-              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="Napr. Vnučka / Blízky kruh" placeholderTextColor="#888" />
+              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="e.g. Granddaughter / Inner circle" placeholderTextColor="#888" />
             </>)}
 
             {/* 🎙 REAL VOICE RECORDING — own voice instead of Jarvis */}
-            <Text style={st.lbl}>VLASTNÝM HLASOM — 1 ŤUK</Text>
+            <Text style={st.lbl}>IN YOUR OWN VOICE — 1 TAP</Text>
             {Platform.OS === 'web' ? (
-              <Text style={st.webNote}>🎙 Nahrávanie vlastným hlasom funguje v mobilnej appke (Expo Go / natívny build).</Text>
+              <Text style={st.webNote}>🎙 Own-voice recording works in the mobile app (Expo Go / native build).</Text>
             ) : (
               <Pressable testID="ve-record" onPress={toggleRecord} disabled={busy}
                 style={[st.recBtn, recording && st.recBtnOn]}>
                 {busy ? <ActivityIndicator color={recording ? C.onError : C.onInverse} /> : (<>
                   <Ionicons name={recording ? 'stop-circle' : 'mic'} size={26} color={recording ? C.onError : C.onInverse} />
                   <Text style={[st.recText, recording && { color: C.onError }]}>
-                    {recording ? 'NAHRÁVAM… ŤUKNITE PRE ODOSLANIE' : 'NAHRAŤ VLASTNÝM HLASOM'}
+                    {recording ? 'RECORDING… TAP TO SEND' : 'RECORD IN YOUR OWN VOICE'}
                   </Text>
                 </>)}
               </Pressable>
             )}
             {micBlocked && (
               <Pressable testID="ve-mic-settings" onPress={() => Linking.openSettings()} style={st.micSettings}>
-                <Text style={st.micSettingsText}>Mikrofón je zablokovaný — OTVORIŤ NASTAVENIA</Text>
+                <Text style={st.micSettingsText}>Microphone is blocked — OPEN SETTINGS</Text>
               </Pressable>
             )}
 
-            <Text style={st.lbl}>RÝCHLE ODKAZY — 1 ŤUK</Text>
+            <Text style={st.lbl}>QUICK MESSAGES — 1 TAP</Text>
             <View style={{ gap: S.sm }}>
               {PRESETS.map((p, i) => (
                 <Pressable testID={`ve-preset-${i}`} key={i} onPress={() => send(p)} disabled={busy}
@@ -238,10 +238,10 @@ export default function VoiceEchoes() {
                 </Pressable>
               ))}
             </View>
-            <Text style={st.lbl}>ALEBO VLASTNÝ TEXT</Text>
-            <TextInput testID="ve-msg" value={msg} onChangeText={setMsg} style={[st.input, { minHeight: 60 }]} multiline placeholder="Napíšte odkaz…" placeholderTextColor="#888" />
+            <Text style={st.lbl}>OR YOUR OWN TEXT</Text>
+            <TextInput testID="ve-msg" value={msg} onChangeText={setMsg} style={[st.input, { minHeight: 60 }]} multiline placeholder="Write a message…" placeholderTextColor="#888" />
             <Pressable testID="ve-send" onPress={() => send()} disabled={busy || !msg.trim()} style={[st.sendBtn, !msg.trim() && { opacity: 0.5 }]}>
-              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.sendText}>ODOSLAŤ ODKAZ</Text>}
+              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.sendText}>SEND MESSAGE</Text>}
             </Pressable>
           </Pressable>
         </Pressable>

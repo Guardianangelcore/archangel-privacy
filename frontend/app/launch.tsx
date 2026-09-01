@@ -35,18 +35,18 @@ export default function Launch() {
       } else out.push({ ok: false, label: 'STABILITY AUDIT', detail: String(auditRes.reason) });
       if (stressRes.status === 'fulfilled') {
         const s: any = stressRes.value;
-        out.push({ ok: s.verdict === 'READY FOR PUBLISH', label: 'GLOBAL NODE STRESS TEST', detail: `${s.total_tps} TPS · 5 regiónov · zero-fee · ${s.verdict}` });
+        out.push({ ok: s.verdict === 'READY FOR PUBLISH', label: 'GLOBAL NODE STRESS TEST', detail: `${s.total_tps} TPS · 5 regions · zero-fee · ${s.verdict}` });
       } else out.push({ ok: false, label: 'GLOBAL NODE STRESS TEST', detail: String(stressRes.reason) });
       if (swarmRes.status === 'fulfilled') {
         const sw: any = swarmRes.value;
-        out.push({ ok: sw.agents?.length >= 7, label: 'AUTONOMOUS SWARM', detail: `${sw.agents?.length || 0}/7 agentov online (vrátane Sovereign Guard)` });
+        out.push({ ok: sw.agents?.length >= 7, label: 'AUTONOMOUS SWARM', detail: `${sw.agents?.length || 0}/7 agents online (incl. Sovereign Guard)` });
       } else out.push({ ok: false, label: 'AUTONOMOUS SWARM', detail: String(swarmRes.reason) });
       if (founderRes.status === 'fulfilled') {
         const f: any = founderRes.value;
         out.push({ ok: String(f.wealth_engine || '').startsWith('SECURED'), label: 'WEALTH ENGINE', detail: `MRR ${f.mrr_eur} € · Guardian Tax 15 % · ${f.wealth_engine}` });
-      } else out.push({ ok: false, label: 'WEALTH ENGINE', detail: 'founder-only pohľad nedostupný' });
-      out.push({ ok: true, label: 'AUTOMATED TEST SUITE', detail: '18 fáz pytest + testing agent — 100 % green (posledný beh)' });
-      out.push({ ok: true, label: 'IP & DAO PROTECTION', detail: 'Proof-of-Origin ukotvený · DAO rebrand · Article 50 waivers' });
+      } else out.push({ ok: false, label: 'WEALTH ENGINE', detail: 'founder-only view unavailable' });
+      out.push({ ok: true, label: 'AUTOMATED TEST SUITE', detail: '18 pytest phases + testing agent — 100% green (last run)' });
+      out.push({ ok: true, label: 'IP & DAO PROTECTION', detail: 'Proof-of-Origin anchored · DAO rebrand · Article 50 waivers' });
     } catch (e: any) { setErr(String(e.message || e)); }
     setChecks(out);
     setReady(out.length > 0 && out.every(c => c.ok));
@@ -67,7 +67,7 @@ export default function Launch() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.sub}>Finálna kontrola pred odovzdaním velenia. Guardian Angel preberá kontrolu.</Text>
+        <Text style={st.sub}>Final check before command handover. Guardian Angel takes control.</Text>
         {busy ? <ActivityIndicator color={PLATINUM} style={{ marginTop: 40 }} /> : (
           <>
             {checks.map((c, i) => (
@@ -84,14 +84,14 @@ export default function Launch() {
             <View testID="lc-deploy" style={[st.deployCard, { borderColor: ready ? GREEN : '#C25450' }]}>
               <Ionicons name="rocket" size={40} color={ready ? GREEN : '#8A8A93'} />
               <Text style={[st.deployTitle, ready && { color: GREEN }]}>
-                {ready ? 'READY FOR PUBLISH ✓' : 'ČAKÁ NA ZELENÉ KONTROLY'}
+                {ready ? 'READY FOR PUBLISH ✓' : 'AWAITING GREEN CHECKS'}
               </Text>
               <Text style={st.deployText}>
                 DEPLOY TO PRODUCTION:{'\n'}
-                1. Stlačte tlačidlo PUBLISH (vpravo hore na obrazovke Emergent){'\n'}
-                2. Deploy your app → produkčná URL{'\n'}
-                3. Generate iOS and Android builds → reálne zariadenia{'\n\n'}
-                Guardian Angel OS — globálny suverénny štandard. Velenie odovzdané. 🫡
+                1. Press the PUBLISH button (top right in Emergent){'\n'}
+                2. Deploy your app → production URL{'\n'}
+                3. Generate iOS and Android builds → real devices{'\n\n'}
+                Guardian Angel OS — the global sovereign standard. Command handed over. 🫡
               </Text>
             </View>
           </>

@@ -57,7 +57,7 @@ function GrowthChart({ curves, logs, measure }: { curves: any[]; logs: any[]; me
       )}
       {pts.length > 1 && <Polyline points={childLine} fill="none" stroke="#5FA779" strokeWidth={2.5} />}
       {pts.map((p, i) => (
-        <Circle key={i} cx={X(p.age_months)} cy={Y(p[key])} r={4} fill="#5FA779" stroke="#0A0A0F" strokeWidth={1.5} />
+        <Circle key={i} cx={X(p.age_months)} cy={Y(p[key])} r={4} fill="#5FA779" stroke="#050510" strokeWidth={1.5} />
       ))}
     </Svg>
   );

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
+import { startWakeWord, stopWakeWord } from '@/src/wake-word';
 import { Image } from 'expo-image';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring, withSequence, Easing, cancelAnimation,
@@ -138,6 +139,7 @@ export default function Jarvis() {
   const [err, setErr] = useState('');
   // Voice playback centralised in src/voice.ts (single module-level player, auto-cleanup)
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const wakeRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const toastY = useSharedValue(0);
   const toastStyle = useAnimatedStyle(() => ({ opacity: toastY.value, transform: [{ translateY: (1 - toastY.value) * 12 }] }));
 
@@ -311,8 +313,20 @@ export default function Jarvis() {
     } catch (e) { console.log('rec err', e); }
   };
 
+  // WAKE-WORD "JARVIS" — active in ALL 3 modes (chat · sonar · imagine).
+  // Hearing the wake-word hands-free opens the mic for a voice conversation.
+  useEffect(() => {
+    if (Platform.OS === 'web' || recording || busy) return;
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      cleanup = await startWakeWord(wakeRecorder, () => { orbPress(); });
+    })();
+    return () => { try { cleanup?.(); } catch {} stopWakeWord(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, recording, busy]);
+
   const stopVoice = async () => {
-    setRecording(false); setStatus('Prepisujem hlas…'); setMood('thinking');
+    setRecording(false); setStatus('Transcribing your voice…'); setMood('thinking');
     try {
       await recorder.stop();
       const uri = recorder.uri;
@@ -469,7 +483,7 @@ export default function Jarvis() {
           {([
             { id: 'chat', icon: 'chatbubble-ellipses-outline', label: 'CHAT' },
             { id: 'sonar', icon: 'globe-outline', label: 'SONAR · WEB' },
-            { id: 'imagine', icon: 'color-palette-outline', label: 'OBRAZ' },
+            { id: 'imagine', icon: 'color-palette-outline', label: 'IMAGE' },
           ] as const).map(m => (
             <Pressable key={m.id} testID={`jv-mode-${m.id}`} onPress={() => { tap('light'); setMode(m.id); }}
               style={[st.modeChip, mode === m.id && st.modeChipActive]}>

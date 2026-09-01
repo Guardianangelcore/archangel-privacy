@@ -27,7 +27,7 @@ export default function VideoLegacy() {
 
   const pickAndUpload = async () => {
     setErr('');
-    if (!recipient.trim()) { setErr('Zadajte meno príjemcu (komu je odkaz určený).'); return; }
+    if (!recipient.trim()) { setErr('Enter the recipient name (who the message is for).'); return; }
     try {
       const perm = await ImagePicker.getMediaLibraryPermissionsAsync();
       if (!perm.granted && Platform.OS !== 'web') {
@@ -76,42 +76,42 @@ export default function VideoLegacy() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.heroIcon}><Ionicons name="videocam-outline" size={28} color={C.brand} /></View>
-        <Text style={st.h1}>Rodinná mierová zmluva</Text>
+        <Text style={st.h1}>Family peace treaty</Text>
         <Text style={st.sub}>
-          Nahrajte zapečatený video-odkaz pre rodinu. Video je zero-knowledge šifrované, hash je ukotvený
-          na Mosaic Chain a rodine sa uvoľní až po overení životného statusu v štátnom registri — alebo keď ho uvoľníte manuálne.
+          Upload a sealed video message for your family. The video is zero-knowledge encrypted, its hash anchored
+          on Mosaic Chain and released to the family only after life-status verification in the state registry — or when you release it manually.
         </Text>
 
         {permBlocked && (
           <View style={st.permBox}>
-            <Text style={st.permText}>Prístup ku galérii je zablokovaný. Povoľte ho v nastaveniach telefónu.</Text>
+            <Text style={st.permText}>Gallery access is blocked. Enable it in your phone settings.</Text>
             <Pressable testID="vl-settings" onPress={() => Linking.openSettings()} style={st.permBtn}>
-              <Text style={st.permBtnText}>OTVORIŤ NASTAVENIA</Text>
+              <Text style={st.permBtnText}>OPEN SETTINGS</Text>
             </Pressable>
           </View>
         )}
 
-        <Text style={st.section}>NOVÝ ODKAZ</Text>
-        <TextInput testID="vl-title" value={title} onChangeText={setTitle} placeholder="Názov (napr. Pre moju dcéru)"
+        <Text style={st.section}>NEW MESSAGE</Text>
+        <TextInput testID="vl-title" value={title} onChangeText={setTitle} placeholder="Title (e.g. For my daughter)"
           placeholderTextColor="#777" style={st.input} />
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="vl-recipient" value={recipient} onChangeText={setRecipient} placeholder="Príjemca (meno)"
+          <TextInput testID="vl-recipient" value={recipient} onChangeText={setRecipient} placeholder="Recipient (name)"
             placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
-          <TextInput testID="vl-relationship" value={relationship} onChangeText={setRelationship} placeholder="Vzťah"
+          <TextInput testID="vl-relationship" value={relationship} onChangeText={setRelationship} placeholder="Relationship"
             placeholderTextColor="#777" style={[st.input, { width: 110, marginTop: 0 }]} />
         </View>
         <Pressable testID="vl-upload" onPress={pickAndUpload} disabled={uploading} style={st.uploadBtn}>
           {uploading ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="cloud-upload-outline" size={18} color={C.onInverse} />
-              <Text style={st.uploadText}>VYBRAŤ VIDEO A ZAPEČATIŤ</Text>
+              <Text style={st.uploadText}>PICK VIDEO & SEAL</Text>
             </>
           )}
         </Pressable>
         {!!err && <Text testID="vl-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>ZAPEČATENÉ ODKAZY ({videos.length})</Text>
-        {videos.length === 0 && <Text style={st.empty}>ZATIAĽ ŽIADNE VIDEO-ODKAZY</Text>}
+        <Text style={st.section}>SEALED MESSAGES ({videos.length})</Text>
+        {videos.length === 0 && <Text style={st.empty}>NO VIDEO MESSAGES YET</Text>}
         {videos.map(v => (
           <View testID={`vl-video-${v.video_id}`} key={v.video_id} style={st.card}>
             <View style={st.rowSpread}>
@@ -126,11 +126,11 @@ export default function VideoLegacy() {
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               {!v.released && (
                 <Pressable testID={`vl-release-${v.video_id}`} onPress={() => release(v.video_id)} disabled={busy === v.video_id} style={[st.actBtn, { backgroundColor: C.brand }]}>
-                  <Text style={st.actText}>UVOĽNIŤ RODINE</Text>
+                  <Text style={st.actText}>RELEASE TO FAMILY</Text>
                 </Pressable>
               )}
               <Pressable testID={`vl-delete-${v.video_id}`} onPress={() => remove(v.video_id)} disabled={busy === v.video_id} style={[st.actBtn, { backgroundColor: C.error }]}>
-                <Text style={st.actText}>ZMAZAŤ</Text>
+                <Text style={st.actText}>DELETE</Text>
               </Pressable>
             </View>
           </View>

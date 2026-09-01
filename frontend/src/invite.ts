@@ -16,9 +16,9 @@ export function voicePrintInviteMessage(recipientName?: string): { message: stri
   const nm = (recipientName || '').trim();
   const salut = nm ? `Ahoj ${nm}, ` : 'Ahoj, ';
   const message =
-    `${salut}prosím, nahraj svoj 5-sekundový hlasový podpis do Guardian Angel — pomôže, ` +
-    `aby babička/rodina hneď vedela, kto jej píše.\n\n` +
-    `Otvor a ťukni na mikrofón:\n${url}`;
+    `${salut}please record your 5-second voice signature in Guardian Angel — it helps ` +
+    `grandma/your family instantly know who is writing.\n\n` +
+    `Open it and tap the microphone:\n${url}`;
   return { message, url };
 }
 
@@ -34,14 +34,14 @@ export async function inviteFamilyToRecord(recipientName?: string): Promise<bool
       // navigator.share is not universally available on desktop; fall back to mailto.
       const anyNav: any = typeof navigator !== 'undefined' ? navigator : {};
       if (anyNav.share) {
-        await anyNav.share({ title: 'Guardian Angel · Hlasový podpis', text: message, url });
+        await anyNav.share({ title: 'Guardian Angel · Voice signature', text: message, url });
         return true;
       }
-      const mailto = `mailto:?subject=${encodeURIComponent('Guardian Angel · Hlasový podpis')}&body=${encodeURIComponent(message)}`;
+      const mailto = `mailto:?subject=${encodeURIComponent('Guardian Angel · Voice signature')}&body=${encodeURIComponent(message)}`;
       await Linking.openURL(mailto);
       return true;
     }
-    const res = await Share.share({ message, url, title: 'Guardian Angel · Hlasový podpis' } as any);
+    const res = await Share.share({ message, url, title: 'Guardian Angel · Voice signature' } as any);
     return res.action !== Share.dismissedAction;
   } catch {
     // Never throw from a share; the caller UI must not crash.

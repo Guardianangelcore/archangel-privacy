@@ -74,7 +74,7 @@ export default function BioScan() {
       if (glu) body.glucose_mmol = parseFloat(glu);
       if (hrM) body.heart_rate = parseInt(hrM, 10);
       await api('/bioscan/calibrate', { method: 'POST', body: JSON.stringify(body) });
-      setCalMsg('✓ MERANIE ULOŽENÉ DO HISTÓRIE');
+      setCalMsg('✓ READING SAVED TO HISTORY');
       setSys(''); setDia(''); setGlu(''); setHrM('');
       loadHistory();
     } catch (e: any) { setCalMsg(String(e.message || e)); }
@@ -90,31 +90,31 @@ export default function BioScan() {
         <Text style={st.title}>VITALS BIO-SCANNER</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>rPPG PLACEHOLDER · REÁLNA KAMERA-CV V NATÍVNOM BUILDE (PHASE 3) · NIE JE DIAGNÓZA</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>rPPG PLACEHOLDER · REAL CAMERA-CV IN NATIVE BUILD (PHASE 3) · NOT A DIAGNOSIS</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.intro}>Prilož prst na kameru a blesk. Jarvis analyzuje mikropulzácie svetla (fotopletyzmografia) a odhadne tep, SpO2, tlak a stres — bez hodiniek, bez tlakomeru.</Text>
+        <Text style={st.intro}>Place your finger on the camera and flash. Jarvis analyzes light micro-pulsations (photoplethysmography) and estimates pulse, SpO2, pressure and stress — no watch, no cuff.</Text>
 
         {locked ? (
-          <Paywall message={locked} gatLabel="ZAPLATIŤ 5 GA-T ZA 1 SKEN" onPayGat={() => startScan(true)} onUnlocked={() => startScan(false)} />
+          <Paywall message={locked} gatLabel="PAY 5 GA-T PER SCAN" onPayGat={() => startScan(true)} onUnlocked={() => startScan(false)} />
         ) : phase === 'scanning' ? (
           <View style={st.scanBox}>
             <Ionicons name="finger-print" size={64} color={C.brand} />
-            <Text style={st.scanText}>DRŽTE PRST NA KAMERE…</Text>
+            <Text style={st.scanText}>HOLD YOUR FINGER ON THE CAMERA…</Text>
             <View style={st.progBg}><View style={[st.prog, { width: `${progress}%` }]} /></View>
             <Text style={st.scanPct}>{progress} %</Text>
           </View>
         ) : (
           <Pressable testID="bs-start" onPress={() => startScan(false)} style={st.startBtn}>
             <Ionicons name="scan" size={22} color={C.onInverse} />
-            <Text style={st.startText}>SPUSTIŤ BIO-SCAN (10 s)</Text>
+            <Text style={st.startText}>START BIO-SCAN (10 s)</Text>
           </Pressable>
         )}
         {!!err && <Text testID="bs-err" style={st.err}>{err}</Text>}
 
         {result && (
           <View testID="bs-result" style={st.resultCard}>
-            <Text style={st.resultTitle}>VÝSLEDOK · {result.access === 'tier' ? 'SENTINEL' : '5 GA-T'} · SIMULÁCIA</Text>
+            <Text style={st.resultTitle}>RESULT · {result.access === 'tier' ? 'SENTINEL' : '5 GA-T'} · SIMULATION</Text>
             <View style={st.grid}>
               <Metric icon="heart" label="TEP" value={`${result.heart_rate} bpm`} />
               <Metric icon="water" label="SpO2" value={`${result.spo2} %`} />
@@ -122,26 +122,26 @@ export default function BioScan() {
               <Metric icon="pulse" label="HRV" value={`${result.hrv_ms} ms`} />
             </View>
             <Text style={[st.stress, result.stress_level === 'high' && { color: C.error }, result.stress_level === 'low' && { color: C.brand }]}>
-              STRES: {result.stress_index}/100 · {result.stress_level === 'low' ? 'NÍZKY 🟢' : result.stress_level === 'moderate' ? 'STREDNÝ 🟡' : 'VYSOKÝ 🔴'}
+              STRESS: {result.stress_index}/100 · {result.stress_level === 'low' ? 'LOW 🟢' : result.stress_level === 'moderate' ? 'MODERATE 🟡' : 'HIGH 🔴'}
             </Text>
           </View>
         )}
 
-        <Text style={st.section}>MANUÁLNA KALIBRÁCIA · VALČEK — ŽIADNE PÍSANIE</Text>
-        <Text style={st.intro}>Odmerali ste sa vlastným tlakomerom alebo glukomerom? Nastavte hodnoty valčekom a uložte ich do zdravotnej histórie.</Text>
+        <Text style={st.section}>MANUAL CALIBRATION · WHEEL — NO TYPING</Text>
+        <Text style={st.intro}>Measured with your own cuff or glucometer? Set the values with the wheel and save them to your health history.</Text>
         <View style={st.calRow}>
-          <WheelField testID="bs-sys" title="SYSTOLICKÝ TLAK" min={70} max={250} unit="mmHg" placeholder="SYS (horný)" value={sys} onChange={setSys} style={st.calField} />
-          <WheelField testID="bs-dia" title="DIASTOLICKÝ TLAK" min={40} max={150} unit="mmHg" placeholder="DIA (dolný)" value={dia} onChange={setDia} style={st.calField} />
+          <WheelField testID="bs-sys" title="SYSTOLIC PRESSURE" min={70} max={250} unit="mmHg" placeholder="SYS (upper)" value={sys} onChange={setSys} style={st.calField} />
+          <WheelField testID="bs-dia" title="DIASTOLIC PRESSURE" min={40} max={150} unit="mmHg" placeholder="DIA (lower)" value={dia} onChange={setDia} style={st.calField} />
         </View>
         <View style={st.calRow}>
-          <WheelField testID="bs-glu" title="GLUKÓZA" min={2} max={30} step={0.1} decimals={1} unit="mmol/l" placeholder="Glukóza" value={glu} onChange={setGlu} style={st.calField} />
+          <WheelField testID="bs-glu" title="GLUCOSE" min={2} max={30} step={0.1} decimals={1} unit="mmol/l" placeholder="Glucose" value={glu} onChange={setGlu} style={st.calField} />
           <WheelField testID="bs-hr" title="TEP" min={30} max={220} unit="bpm" placeholder="Tep" value={hrM} onChange={setHrM} style={st.calField} />
         </View>
         <Pressable testID="bs-calibrate" onPress={saveCalibration} disabled={!canCalibrate || calBusy} style={[st.calBtn, (!canCalibrate || calBusy) && { opacity: 0.4 }]}>
           {calBusy ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="save-outline" size={18} color={C.onInverse} />
-              <Text style={st.startText}>ULOŽIŤ MERANIE</Text>
+              <Text style={st.startText}>SAVE READING</Text>
             </>
           )}
         </Pressable>
@@ -149,13 +149,13 @@ export default function BioScan() {
 
         {history.length > 0 && (
           <>
-            <Text style={st.section}>HISTÓRIA MERANÍ</Text>
+            <Text style={st.section}>READING HISTORY</Text>
             {history.slice(0, 6).map(h => (
               <View key={h.scan_id} style={st.histRow}>
                 <Text style={st.histText}>
                   {String(h.at).slice(5, 16).replace('T', ' ')}
                   {String(h.method || '').startsWith('manual')
-                    ? ` · 📏 MANUÁL${h.bp_estimate ? ` · TK ${h.bp_estimate}` : ''}${h.glucose_mmol ? ` · GLU ${h.glucose_mmol} mmol/l` : ''}${h.heart_rate ? ` · ♥ ${h.heart_rate}` : ''}`
+                    ? ` · 📏 MANUAL${h.bp_estimate ? ` · BP ${h.bp_estimate}` : ''}${h.glucose_mmol ? ` · GLU ${h.glucose_mmol} mmol/l` : ''}${h.heart_rate ? ` · ♥ ${h.heart_rate}` : ''}`
                     : ` · ♥ ${h.heart_rate} · SpO2 ${h.spo2}% · stres ${h.stress_level}`}
                 </Text>
               </View>

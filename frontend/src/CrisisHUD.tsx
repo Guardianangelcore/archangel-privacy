@@ -77,7 +77,7 @@ export function CrisisHUD() {
         <Text style={styles.guide}>Stay calm. Breathe slowly. Pick one.</Text>
 
         <Pressable testID="hud-call" onPress={callEmergency} style={styles.callBtn}>
-          <Ionicons name="call" size={42} color="#0A0A0F" />
+          <Ionicons name="call" size={42} color="#050510" />
           <View style={{ flex: 1 }}>
             <Text style={styles.callTitle}>CALL 112</Text>
             <Text style={styles.callSub}>Emergency line · fast response</Text>
@@ -122,7 +122,7 @@ export function CrisisHUD() {
               </View>
             </ScrollView>
             <Pressable testID="hud-instr-call" onPress={callEmergency} style={styles.sheetCall}>
-              <Ionicons name="call" size={22} color="#0A0A0F" />
+              <Ionicons name="call" size={22} color="#050510" />
               <Text style={styles.sheetCallText}>CALL 112 NOW</Text>
             </Pressable>
           </View>
@@ -133,21 +133,21 @@ export function CrisisHUD() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A0F', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 30 },
+  root: { flex: 1, backgroundColor: '#050510', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 30 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   title: { color: '#FFD447', fontSize: 20, fontWeight: '900', letterSpacing: 3, flex: 1 },
   close: { padding: 6 },
   reason: { color: '#FF6B6B', fontSize: 14, fontWeight: '800', marginTop: 12, letterSpacing: 0.4, lineHeight: 20 },
   guide: { color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: 1, marginTop: 28, lineHeight: 30 },
   callBtn: { marginTop: 32, flexDirection: 'row', gap: 20, alignItems: 'center', backgroundColor: '#FFD447', borderRadius: 24, padding: 24, minHeight: 120 },
-  callTitle: { color: '#0A0A0F', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
-  callSub: { color: '#0A0A0F', fontSize: 14, fontWeight: '700', marginTop: 4, opacity: 0.85 },
+  callTitle: { color: '#050510', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
+  callSub: { color: '#050510', fontSize: 14, fontWeight: '700', marginTop: 4, opacity: 0.85 },
   instrBtn: { marginTop: 18, flexDirection: 'row', gap: 20, alignItems: 'center', backgroundColor: 'rgba(255,212,71,0.12)', borderWidth: 2, borderColor: '#FFD447', borderRadius: 24, padding: 22, minHeight: 100 },
   instrTitle: { color: '#FFD447', fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
   instrSub: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginTop: 4 },
   footer: { color: '#8A8A94', fontSize: 10, textAlign: 'center', marginTop: 'auto', letterSpacing: 1 },
   sheetWrap: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#16161E', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22 },
+  sheet: { backgroundColor: 'rgba(255,255,255,0.05)', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22 },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   sheetTitle: { color: '#FFD447', fontSize: 16, fontWeight: '900', letterSpacing: 2, flex: 1 },
   step: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,212,71,0.15)' },
@@ -158,5 +158,5 @@ const styles = StyleSheet.create({
   numLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   numValue: { color: '#FFD447', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
   sheetCall: { marginTop: 12, flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFD447', borderRadius: 16, paddingVertical: 16 },
-  sheetCallText: { color: '#0A0A0F', fontSize: 15, fontWeight: '900', letterSpacing: 2 },
+  sheetCallText: { color: '#050510', fontSize: 15, fontWeight: '900', letterSpacing: 2 },
 });

@@ -20,6 +20,7 @@ export default function GuardianMonitor() {
   const { user, setUser } = useAuth();
   const router = useRouter();
   const freeFallAt = useRef(0);
+  const freeFallStart = useRef(0);
   const lastFallNav = useRef(0);
   const lastMove = useRef(Date.now());
   const lastMag = useRef(1);
@@ -54,18 +55,29 @@ export default function GuardianMonitor() {
         api('/sentinel/gait', { method: 'POST', body: JSON.stringify({ tremor_index: Number(tremor.toFixed(2)), gait_regularity: Number(regularity.toFixed(2)) }) }).catch(() => {});
       }
       if (!fallGuard) return;
-      if (mag < 0.35) {
-        freeFallAt.current = now;
-      } else if (
-        mag > 2.7 &&
-        freeFallAt.current > 0 &&
-        now - freeFallAt.current < 1200 &&
-        now - lastFallNav.current > 60000
-      ) {
-        lastFallNav.current = now;
-        freeFallAt.current = 0;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-        router.push('/fall-verify');
+      // REAL fall = sustained free-fall (< 0.3g for >= 80ms) FOLLOWED BY a > 2.5g
+      // impact spike. Keys rattling, bumps and ambient vibration never satisfy the
+      // full two-phase sequence, so they can't false-trigger the alarm.
+      if (mag < 0.3) {
+        if (freeFallStart.current === 0) freeFallStart.current = now;        // free-fall begins
+        if (now - freeFallStart.current >= 80) freeFallAt.current = now;     // confirmed >= 80ms
+      } else {
+        if (
+          mag > 2.5 &&                              // impact spike (> 2.5g)
+          freeFallAt.current > 0 &&                 // preceded by a confirmed free-fall
+          now - freeFallAt.current < 1200 &&        // impact within 1.2s of the free-fall
+          now - lastFallNav.current > 30000         // 30s cooldown between alarms
+        ) {
+          lastFallNav.current = now;
+          freeFallAt.current = 0;
+          freeFallStart.current = 0;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+          router.push('/fall-verify');
+        } else if (mag > 0.5) {
+          // no longer in free-fall and no valid impact → reset the window
+          freeFallStart.current = 0;
+          freeFallAt.current = 0;
+        }
       }
     });
     return () => sub.remove();

@@ -115,16 +115,16 @@ class TestGeo:
         client.put(f"{BASE_URL}/api/geo/travel-mode", json={"enabled": False})
         client.patch(f"{BASE_URL}/api/me/prefs", json={"language": "sk"})
 
-        r = client.post(f"{BASE_URL}/api/geo/set-city", json={"city": "Viedeň"})
+        r = client.post(f"{BASE_URL}/api/geo/set-city", json={"city": "Vienna"})
         assert r.status_code == 200, r.text
         data = r.json()
-        assert data["geo"]["city"] == "Viedeň"
+        assert data["geo"]["city"] == "Vienna"
         assert data["geo"]["source"] == "manual"
         assert data.get("language_switched") is False
         sugg = data.get("language_suggestion") or {}
         assert sugg.get("to") == "de", sugg
         assert sugg.get("from") == "sk", sugg
-        assert sugg.get("city") == "Viedeň"
+        assert sugg.get("city") == "Vienna"
         assert sugg.get("country") == "AT"
 
     def test_geo_set_city_invalid_400(self, client):
@@ -140,7 +140,7 @@ class TestGeo:
         r = client.post(f"{BASE_URL}/api/geo/locate", json={"lat": 48.8566, "lng": 2.3522})
         assert r.status_code == 200, r.text
         data = r.json()
-        assert data["geo"]["city"] == "Paríž", data
+        assert data["geo"]["city"] == "Paris", data
         assert data.get("language_switched") is False
         sugg = data.get("language_suggestion") or {}
         assert sugg.get("to") == "fr", sugg
@@ -187,7 +187,7 @@ class TestRegression:
         client.patch(f"{BASE_URL}/api/me/prefs", json={"language": "sk"})
         r = client.post(f"{BASE_URL}/api/geo/locate", json={"lat": 50.0755, "lng": 14.4378})
         assert r.status_code == 200, r.text
-        assert r.json()["geo"]["city"] == "Praha"
+        assert r.json()["geo"]["city"] == "Prague"
 
     def test_prefs_language_update(self, client):
         r = client.patch(f"{BASE_URL}/api/me/prefs", json={"language": "sk"})

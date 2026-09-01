@@ -67,14 +67,14 @@ export default function TacticalMedic() {
         <Text style={st.title}>AI TACTICAL MEDIC</Text>
         <View style={{ width: 26 }} />
       </View>
-      {offline && <View style={st.offBanner}><Text style={st.offText}>OFFLINE REŽIM · PROTOKOLY Z LOKÁLNEJ CACHE</Text></View>}
+      {offline && <View style={st.offBanner}><Text style={st.offText}>OFFLINE MODE · PROTOCOLS FROM LOCAL CACHE</Text></View>}
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {locked ? (
           <Paywall message={locked} onUnlocked={load} />
         ) : !active ? (
           <>
-            <Text style={st.intro}>Poľný lekár vo vrecku — krok-po-kroku hlasové vedenie život zachraňujúcich úkonov (ERC/AHA 2026). Funguje offline. V núdzi vždy najprv 112.</Text>
+            <Text style={st.intro}>A field medic in your pocket — step-by-step voice guidance for life-saving procedures (ERC/AHA 2026). Works offline. In an emergency always call 112 first.</Text>
             {protocols.map(p => (
               <Pressable testID={`md-${p.id}`} key={p.id} onPress={() => { setActive(p); setStep(0); }} style={st.protoCard}>
                 <Ionicons name={p.icon as any} size={26} color={C.error} />
@@ -96,22 +96,22 @@ export default function TacticalMedic() {
             </View>
             <Pressable testID="md-speak" onPress={() => speak(active.steps[step])} disabled={speaking} style={st.voiceBtn}>
               <Ionicons name={speaking ? 'volume-high' : 'volume-high-outline'} size={22} color={C.onInverse} />
-              <Text style={st.voiceText}>{speaking ? 'JARVIS HOVORÍ…' : 'PREČÍTAŤ NAHLAS (JARVIS)'}</Text>
+              <Text style={st.voiceText}>{speaking ? 'JARVIS SPEAKING…' : 'READ ALOUD (JARVIS)'}</Text>
             </Pressable>
             <View style={st.navRow}>
               <Pressable testID="md-prev" onPress={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
                 style={[st.navBtn, step === 0 && { opacity: 0.3 }]}>
                 <Ionicons name="arrow-back" size={20} color={C.fg} />
-                <Text style={st.navText}>SPÄŤ</Text>
+                <Text style={st.navText}>BACK</Text>
               </Pressable>
               <Pressable testID="md-next" onPress={() => setStep(Math.min(active.steps.length - 1, step + 1))}
                 disabled={step >= active.steps.length - 1}
                 style={[st.navBtn, { backgroundColor: C.error, borderColor: C.error }, step >= active.steps.length - 1 && { opacity: 0.3 }]}>
-                <Text style={[st.navText, { color: C.onError }]}>ĎALŠÍ KROK</Text>
+                <Text style={[st.navText, { color: C.onError }]}>NEXT STEP</Text>
                 <Ionicons name="arrow-forward" size={20} color={C.onError} />
               </Pressable>
             </View>
-            <Text style={st.call112}>☎ KEDYKOĽVEK MÔŽETE: VOLAJTE 112</Text>
+            <Text style={st.call112}>☎ AT ANY TIME: CALL 112</Text>
           </>
         )}
       </ScrollView>

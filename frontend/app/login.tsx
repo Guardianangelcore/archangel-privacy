@@ -20,6 +20,13 @@ export default function Login() {
   const [bypassEmail, setBypassEmail] = useState(FOUNDER_EMAIL);
   const [err, setErr] = useState('');
 
+  // SECURITY — the dev/founder bypass is auto-disabled in production. It only
+  // renders on preview / localhost / native-dev builds, never on a public deploy.
+  const isDevEnv = __DEV__ || (Platform.OS === 'web' && typeof window !== 'undefined'
+    && (window.location.hostname.includes('preview')
+        || window.location.hostname === 'localhost'
+        || window.location.hostname.startsWith('127.')));
+
   const onSignIn = async () => {
     setBusy('google'); setErr('');
     try { await signIn(); }
@@ -45,7 +52,7 @@ export default function Login() {
     <View testID="login-screen" style={styles.root}>
       <Image source={BG} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
-        colors={['rgba(0,0,0,0.2)', 'rgba(17,17,17,0.85)', 'rgba(17,17,17,0.98)']}
+        colors={['rgba(10,10,46,0.30)', 'rgba(5,5,16,0.88)', 'rgba(5,5,16,0.98)']}
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={{ flex: 1 }}>
@@ -89,7 +96,9 @@ export default function Login() {
               : <Text style={styles.signBtnText}>{t('sign_in_google', lang).toUpperCase()}</Text>}
           </Pressable>
 
-          {/* SOVEREIGN BYPASS — Founder / preview access without Google OAuth */}
+          {/* SOVEREIGN BYPASS — Founder / preview access without Google OAuth.
+              Auto-hidden in production (only preview / localhost / dev). */}
+          {isDevEnv && (
           <Pressable
             testID="founder-bypass-btn"
             onPress={asFounder}
@@ -103,7 +112,9 @@ export default function Login() {
                   <Text style={styles.founderText}>ENTER AS GUARDIAN ANGEL (FOUNDER)</Text>
                 </>}
           </Pressable>
+          )}
 
+          {isDevEnv && (
           <Pressable
             testID="bypass-toggle"
             onPress={() => setShowBypass(v => !v)}
@@ -112,8 +123,9 @@ export default function Login() {
           >
             <Text style={styles.linkText}>{showBypass ? 'CLOSE' : 'OTHER EMAIL · DEVELOPER BYPASS'}</Text>
           </Pressable>
+          )}
 
-          {showBypass && (
+          {isDevEnv && showBypass && (
             <View style={styles.bypassBox}>
               <TextInput
                 testID="bypass-email"

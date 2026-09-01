@@ -55,58 +55,58 @@ export default function Duress() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.heroIcon}><Ionicons name="hand-left-outline" size={28} color={C.error} /></View>
-        <Text style={st.h1}>Ochrana pod nátlakom</Text>
+        <Text style={st.h1}>Protection Under Duress</Text>
         <Text style={st.sub}>
-          Nastavte si dva PIN kódy. Skutočný PIN odomkne plný trezor. Núdzový (duress) PIN zobrazí PRÁZDNY
-          falošný trezor a súčasne odošle TICHÝ ALARM — útočník nič nespozná.
+          Set two PIN codes. The real PIN unlocks your full vault. The emergency (duress) PIN shows an EMPTY
+          decoy vault and simultaneously sends a SILENT ALARM — the attacker notices nothing.
         </Text>
 
         <View style={[st.stateCard, { borderColor: status?.configured ? C.brand : C.borderStrong }]}>
           <Ionicons name={status?.configured ? 'shield-checkmark' : 'shield-outline'} size={20} color={status?.configured ? C.brand : C.info} />
-          <Text style={st.stateText}>{status?.configured ? 'DURESS PIN AKTÍVNY' : 'ZATIAĽ NENASTAVENÉ'}</Text>
+          <Text style={st.stateText}>{status?.configured ? 'DURESS PIN ACTIVE' : 'NOT SET UP YET'}</Text>
         </View>
 
-        <Text style={st.section}>NASTAVIŤ PIN KÓDY</Text>
+        <Text style={st.section}>SET PIN CODES</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <TextInput testID="du-real" value={realPin} onChangeText={setRealPin} keyboardType="numeric" maxLength={8} secureTextEntry
-            placeholder="Skutočný PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
+            placeholder="Real PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <TextInput testID="du-duress" value={duressPin} onChangeText={setDuressPin} keyboardType="numeric" maxLength={8} secureTextEntry
-            placeholder="Núdzový PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
+            placeholder="Duress PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
         </View>
         <Pressable testID="du-save" onPress={save} disabled={busy === 'save' || realPin.length < 4 || duressPin.length < 4} style={st.mainBtn}>
-          {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>AKTIVOVAŤ DURESS PROTOKOL</Text>}
+          {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>ACTIVATE THE DURESS PROTOCOL</Text>}
         </Pressable>
         {!!msg && <Text testID="du-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="du-err" style={st.err}>{err}</Text>}
 
         {status?.configured && (
           <>
-            <Text style={st.section}>OTESTOVAŤ ODOMKNUTIE</Text>
+            <Text style={st.section}>TEST THE UNLOCK</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               <TextInput testID="du-test-pin" value={testPin} onChangeText={setTestPin} keyboardType="numeric" maxLength={8} secureTextEntry
                 placeholder="Zadajte PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
               <Pressable testID="du-test" onPress={test} disabled={busy === 'test' || testPin.length < 4} style={st.testBtn}>
-                {busy === 'test' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.mainBtnText}>OVERIŤ</Text>}
+                {busy === 'test' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.mainBtnText}>VERIFY</Text>}
               </Pressable>
             </View>
             {testResult && (
               <View testID="du-test-result" style={[st.resultCard, {
                 borderColor: testResult.vault_mode === 'full' ? C.brand : testResult.vault_mode === 'decoy' ? C.warn : C.error,
               }]}>
-                {testResult.vault_mode === 'full' && <Text style={[st.resultText, { color: C.brand }]}>✓ PLNÝ TREZOR — skutočný PIN rozpoznaný.</Text>}
-                {testResult.vault_mode === 'decoy' && <Text style={[st.resultText, { color: C.warn }]}>👻 DECOY REŽIM — zobrazil by sa prázdny trezor a tichý alarm bol odoslaný strážcom.</Text>}
-                {testResult.vault_mode === 'invalid' && <Text style={[st.resultText, { color: C.error }]}>✗ NEPLATNÝ PIN.</Text>}
+                {testResult.vault_mode === 'full' && <Text style={[st.resultText, { color: C.brand }]}>✓ FULL VAULT — real PIN recognized.</Text>}
+                {testResult.vault_mode === 'decoy' && <Text style={[st.resultText, { color: C.warn }]}>👻 DECOY MODE — an empty vault would be shown and a silent alarm was sent to your guardians.</Text>}
+                {testResult.vault_mode === 'invalid' && <Text style={[st.resultText, { color: C.error }]}>✗ INVALID PIN.</Text>}
               </View>
             )}
           </>
         )}
 
-        <Text style={st.section}>TICHÉ ALARMY ({status?.alarms?.length ?? 0})</Text>
-        {(status?.alarms ?? []).length === 0 && <Text style={st.empty}>ŽIADNE BEZPEČNOSTNÉ UDALOSTI</Text>}
+        <Text style={st.section}>SILENT ALARMS ({status?.alarms?.length ?? 0})</Text>
+        {(status?.alarms ?? []).length === 0 && <Text style={st.empty}>NO SECURITY EVENTS</Text>}
         {(status?.alarms ?? []).map((a: any) => (
           <View key={a.event_id} style={st.alarmCard}>
             <Ionicons name="alert-circle" size={16} color={C.error} />
-            <Text style={st.alarmText}>Tichý alarm · {new Date(a.at).toLocaleString('sk-SK')}</Text>
+            <Text style={st.alarmText}>Silent alarm · {new Date(a.at).toLocaleString('en-GB')}</Text>
           </View>
         ))}
       </ScrollView>

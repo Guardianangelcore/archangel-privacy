@@ -50,7 +50,7 @@ export default function GhostMode() {
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.section}>🏛 OFICIÁLNA IDENTITA NADÁCIE</Text>
+        <Text style={st.section}>🏛 OFFICIAL FOUNDATION IDENTITY</Text>
         {foundation && (
           <View style={st.card}>
             <Text testID="gh-foundation-email" style={st.emailText} selectable>{foundation.official_email}</Text>
@@ -58,7 +58,7 @@ export default function GhostMode() {
             <Text style={st.meta}>{foundation.entity}</Text>
             <Text style={[st.meta, { marginTop: S.sm }]}>{foundation.purpose}</Text>
             <Text style={st.meta}>{foundation.pgp}</Text>
-            <View style={st.immutableBadge}><Text style={st.immutableText}>NEMENNÉ · HARDCODED ON-CHAIN</Text></View>
+            <View style={st.immutableBadge}><Text style={st.immutableText}>IMMUTABLE · HARDCODED ON-CHAIN</Text></View>
           </View>
         )}
 
@@ -66,8 +66,8 @@ export default function GhostMode() {
         <View style={st.card}>
           <View style={st.rowSpread}>
             <View style={{ flex: 1, paddingRight: S.md }}>
-              <Text style={st.cardTitle}>Anonymizovaný pacientsky token</Text>
-              <Text style={st.meta}>Kliniky (aj pri Medical Arbitrage v zahraničí) vidia iba dočasný token — nie vaše meno ani DID. Platnosť 24 hodín.</Text>
+              <Text style={st.cardTitle}>Anonymized patient token</Text>
+              <Text style={st.meta}>Clinics (even during Medical Arbitrage abroad) see only a temporary token — not your name or DID. Valid 24 hours.</Text>
             </View>
             {busy === 'ghost' ? <ActivityIndicator color={C.brand} /> : (
               <Switch testID="gh-ghost-switch" value={!!ghost?.ghost_mode} onValueChange={toggleGhost}
@@ -76,19 +76,19 @@ export default function GhostMode() {
           </View>
           {ghost?.ghost_mode && ghost?.patient_token && (
             <View style={st.tokenBox}>
-              <Text style={st.tokenLbl}>VÁŠ PACIENTSKY TOKEN</Text>
+              <Text style={st.tokenLbl}>YOUR PATIENT TOKEN</Text>
               <Text testID="gh-token" style={st.tokenVal} selectable>{ghost.patient_token}</Text>
               <Text style={st.meta}>Expiruje: {ghost.expires_at ? new Date(ghost.expires_at).toLocaleString('sk-SK') : '—'}</Text>
             </View>
           )}
         </View>
 
-        <Text style={st.section}>🔋 POWER-SAVER (SURVIVAL REŽIM)</Text>
+        <Text style={st.section}>🔋 POWER SAVER (SURVIVAL MODE)</Text>
         <View style={st.card}>
           <View style={st.rowSpread}>
             <View style={{ flex: 1, paddingRight: S.md }}>
-              <Text style={st.cardTitle}>Maximálna výdrž batérie</Text>
-              <Text style={st.meta}>Čierna téma, vypnuté animácie a skeny na pozadí — beží iba SOS maják, núdzové QR, Mesh-Messenger a offline Tactical Medic.</Text>
+              <Text style={st.cardTitle}>Maximum battery life</Text>
+              <Text style={st.meta}>Black theme, animations and background scans off — only the SOS beacon, emergency QR, Mesh Messenger and offline Tactical Medic keep running.</Text>
             </View>
             {busy === 'power' ? <ActivityIndicator color={C.brand} /> : (
               <Switch testID="gh-power-switch" value={!!power?.power_saver} onValueChange={togglePower}
@@ -97,9 +97,9 @@ export default function GhostMode() {
           </View>
           {power?.power_saver && power?.profile && (
             <View style={st.tokenBox}>
-              <Text style={st.tokenLbl}>AKTÍVNY PROFIL</Text>
-              <Text style={st.meta}>Interval synchronizácie: {power.profile.poll_interval_sec}s · Odhadovaná úspora batérie: +{power.profile.estimated_battery_gain_pct}%</Text>
-              <Text style={st.meta}>Aktívne iba: {(power.profile.essential_only || []).join(' · ')}</Text>
+              <Text style={st.tokenLbl}>ACTIVE PROFILE</Text>
+              <Text style={st.meta}>Sync interval: {power.profile.poll_interval_sec}s · Estimated battery gain: +{power.profile.estimated_battery_gain_pct}%</Text>
+              <Text style={st.meta}>Active only: {(power.profile.essential_only || []).join(' · ')}</Text>
             </View>
           )}
         </View>

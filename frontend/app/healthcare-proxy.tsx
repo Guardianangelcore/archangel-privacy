@@ -12,10 +12,10 @@ import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 
-const RELATIONSHIPS = ['partner', 'manžel/ka', 'rodina', 'priateľ/ka'];
+const RELATIONSHIPS = ['partner', 'spouse', 'family', 'friend'];
 const SCOPES = [
-  { key: 'full', label: 'PLNÉ' },
-  { key: 'info_access', label: 'INFO PRÍSTUP' },
+  { key: 'full', label: 'FULL' },
+  { key: 'info_access', label: 'INFO ACCESS' },
   { key: 'decisions', label: 'ROZHODNUTIA' },
 ];
 
@@ -63,7 +63,7 @@ export default function HealthcareProxy() {
         <Text style={styles.title}>{t('healthcare_proxy', lang).toUpperCase()}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>POWER OF ATTORNEY · PRÁVNE UZNANIE PARTNERA · DID-ANCHORED</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>POWER OF ATTORNEY · LEGAL RECOGNITION OF YOUR PARTNER · DID-ANCHORED</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <Text style={styles.lbl}>MENO SPLNOMOCNENCA</Text>
@@ -75,7 +75,7 @@ export default function HealthcareProxy() {
         <ContactSheet visible={pickOpen} onClose={() => setPickOpen(false)}
           onPick={c => setF((prev: any) => ({ ...prev, proxy_full_name: c.name || prev.proxy_full_name, proxy_phone: c.phone || prev.proxy_phone, proxy_email: c.email || prev.proxy_email }))} />
 
-        <Text style={styles.lbl}>VZŤAH</Text>
+        <Text style={styles.lbl}>RELATIONSHIP</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {RELATIONSHIPS.map(r => (
             <Pressable testID={`hp-rel-${r}`} key={r} onPress={() => setF({ ...f, proxy_relationship: r })} style={[styles.chip, f.proxy_relationship === r && styles.chipActive]}>
@@ -84,12 +84,12 @@ export default function HealthcareProxy() {
           ))}
         </View>
 
-        <Text style={styles.lbl}>TELEFÓN</Text>
+        <Text style={styles.lbl}>PHONE</Text>
         <TextInput testID="hp-phone" value={f.proxy_phone} onChangeText={(v: string) => setF({ ...f, proxy_phone: v })} keyboardType="phone-pad" style={styles.input} placeholder="+421…" placeholderTextColor="#999" />
         <Text style={styles.lbl}>E-MAIL</Text>
         <TextInput testID="hp-email" value={f.proxy_email} onChangeText={(v: string) => setF({ ...f, proxy_email: v })} keyboardType="email-address" style={styles.input} placeholder="email@…" placeholderTextColor="#999" />
 
-        <Text style={styles.lbl}>ROZSAH OPRÁVNENIA</Text>
+        <Text style={styles.lbl}>SCOPE OF AUTHORITY</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {SCOPES.map(s => (
             <Pressable testID={`hp-scope-${s.key}`} key={s.key} onPress={() => setF({ ...f, scope: s.key })} style={[styles.chip, { flex: 1, alignItems: 'center' }, f.scope === s.key && styles.chipActive]}>
@@ -99,13 +99,13 @@ export default function HealthcareProxy() {
         </View>
 
         <View style={styles.switchRow}>
-          <Text style={styles.switchLbl}>ÚČINNÉ OKAMŽITE</Text>
+          <Text style={styles.switchLbl}>EFFECTIVE IMMEDIATELY</Text>
           <Switch testID="hp-effective" value={!!f.effective_immediately} onValueChange={v => setF({ ...f, effective_immediately: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={styles.lbl}>NÁHRADNÝ ZÁSTUPCA (nepovinné)</Text>
+        <Text style={styles.lbl}>ALTERNATE AGENT (optional)</Text>
         <TextInput testID="hp-alt" value={f.alternate_name} onChangeText={(v: string) => setF({ ...f, alternate_name: v })} style={styles.input} placeholderTextColor="#999" />
-        <Text style={styles.lbl}>POZNÁMKY</Text>
+        <Text style={styles.lbl}>NOTES</Text>
         <TextInput testID="hp-notes" value={f.notes} onChangeText={(v: string) => setF({ ...f, notes: v })} multiline style={[styles.input, { minHeight: 60 }]} placeholderTextColor="#999" />
 
         <Pressable testID="hp-generate" onPress={generate} disabled={busy || !f.proxy_full_name} style={[styles.genBtn, !f.proxy_full_name && { opacity: 0.4 }]}>
@@ -121,12 +121,12 @@ export default function HealthcareProxy() {
           <View testID="hp-document" style={styles.docBox}>
             <View style={styles.docHead}>
               <Ionicons name="shield-checkmark" size={16} color={C.brand} />
-              <Text style={styles.docHeadText}>DOKUMENT · SHA-256 UKOTVENÝ</Text>
+              <Text style={styles.docHeadText}>DOCUMENT · SHA-256 ANCHORED</Text>
             </View>
             <Text style={styles.docText}>{doc.document_text}</Text>
             <Pressable testID="hp-pdf" onPress={() => sharePdf('/legal/proxy.pdf', 'guardian_healthcare_proxy.pdf')} style={styles.pdfBtn}>
               <Ionicons name="share-outline" size={18} color={C.onInverse} />
-              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTÁR / NEMOCNICA</Text>
+              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTARY / HOSPITAL</Text>
             </Pressable>
           </View>
         )}

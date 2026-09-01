@@ -53,7 +53,7 @@ export default function HealthDrop() {
     try {
       if (Platform.OS === 'web' && (navigator as any).share) await (navigator as any).share({ title: 'Guardian Health Drop', url: dropUrl });
       else if (Platform.OS === 'web') await copy();
-      else await Share.share({ message: `Guardian Health Drop — pošlite mi lekárske dokumenty bezpečne: ${dropUrl}\nGuardian-ID: ${user?.did?.slice(-6)}` });
+      else await Share.share({ message: `Guardian Health Drop — send me medical documents securely: ${dropUrl}\nGuardian-ID: ${user?.did?.slice(-6)}` });
     } catch {}
   };
 
@@ -62,10 +62,10 @@ export default function HealthDrop() {
     try {
       const token = await getToken();
       const r = await fetch(`${API_BASE}/api/health-drop/items/${item.drop_doc_id}/file`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) throw new Error('Sťahovanie zlyhalo');
+      if (!r.ok) throw new Error('Download failed');
       const ct = new Uint8Array(await r.arrayBuffer());
       const plain = await decryptDrop(ct, item.nonce, item.eph_pub);
-      if (!plain) throw new Error('Dešifrovanie zlyhalo — kľúč nesedí (dokument bol poslaný na iné zariadenie?).');
+      if (!plain) throw new Error('Decryption failed — key mismatch (was the document sent to another device?).');
       const ext = (item.orig_type || '').includes('pdf') ? 'pdf' : ((item.orig_type || '').split('/')[1] || 'bin');
       const fname = `guardian_drop_${item.drop_doc_id.slice(0, 6)}.${ext}`;
       if (Platform.OS === 'web') {
@@ -106,8 +106,8 @@ export default function HealthDrop() {
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <Text style={styles.h1}>Referral Bridge</Text>
         <Text style={styles.sub}>
-          Lekár pošle správu či žiadanku priamo do vášho trezoru — bez papiera. Dokumenty sú
-          zašifrované vaším verejným kľúčom už v prehliadači lekára (zero-knowledge).
+          Your doctor sends a report or referral straight into your vault — no paper. Documents are
+          encrypted with your public key already in the doctor browser (zero-knowledge).
         </Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -117,15 +117,15 @@ export default function HealthDrop() {
               <View style={styles.qrBox}><QRCode value={dropUrl} size={150} backgroundColor="#FFFFFF" color="#121212" /></View>
             </View>
             <Text style={styles.linkText} numberOfLines={1}>{dropUrl}</Text>
-            <Text style={styles.gid}>Guardian-ID pre lekára: <Text style={{ color: C.brand, fontWeight: '900' }}>{(user?.did || '').slice(-6).toUpperCase()}</Text></Text>
+            <Text style={styles.gid}>Guardian-ID for your doctor: <Text style={{ color: C.brand, fontWeight: '900' }}>{(user?.did || '').slice(-6).toUpperCase()}</Text></Text>
             <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
               <Pressable testID="hd-copy" onPress={copy} style={styles.ctaOutline}>
                 <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={C.brand} />
-                <Text style={styles.ctaOutlineText}>{copied ? 'SKOPÍROVANÉ' : 'KOPÍROVAŤ'}</Text>
+                <Text style={styles.ctaOutlineText}>{copied ? 'COPIED' : 'COPY'}</Text>
               </Pressable>
               <Pressable testID="hd-share" onPress={shareLink} style={styles.cta}>
                 <Ionicons name="share-social-outline" size={16} color={C.onInverse} />
-                <Text style={styles.ctaText}>ZDIEĽAŤ LINK</Text>
+                <Text style={styles.ctaText}>SHARE LINK</Text>
               </Pressable>
             </View>
           </View>
@@ -135,24 +135,24 @@ export default function HealthDrop() {
           <View style={styles.bookedBox}>
             <Ionicons name="checkmark-circle" size={22} color="#5FA779" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.bookedTitle}>TERMÍN ZAREZERVOVANÝ</Text>
+              <Text style={styles.bookedTitle}>APPOINTMENT BOOKED</Text>
               <Text style={styles.bookedSub}>{booked.specialty}: {booked.found_slot}</Text>
               <Pressable testID="hd-open-timeline" onPress={() => router.push('/health-timeline')}>
-                <Text style={styles.bookedLink}>Zobraziť v Health Timeline →</Text>
+                <Text style={styles.bookedLink}>View in Health Timeline →</Text>
               </Pressable>
             </View>
           </View>
         )}
 
-        <Text style={styles.section}>PRIJATÉ DOKUMENTY ({inbox.length})</Text>
-        {inbox.length === 0 && <Text style={styles.hint}>Zatiaľ žiadne. Pošlite Drop link svojmu lekárovi.</Text>}
+        <Text style={styles.section}>RECEIVED DOCUMENTS ({inbox.length})</Text>
+        {inbox.length === 0 && <Text style={styles.hint}>None yet. Send the Drop link to your doctor.</Text>}
         {inbox.map(item => (
           <View key={item.drop_doc_id} style={styles.docCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
               <View style={styles.docIcon}><Ionicons name="document-lock-outline" size={20} color={C.brand} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.docTitle}>{item.doc_title}</Text>
-                <Text style={styles.docSub}>{item.sender_name} · {(item.created_at || '').slice(0, 10)} · šifrované</Text>
+                <Text style={styles.docSub}>{item.sender_name} · {(item.created_at || '').slice(0, 10)} · encrypted</Text>
               </View>
               <Pressable testID={`hd-open-${item.drop_doc_id}`} onPress={() => openDoc(item)} disabled={busy === item.drop_doc_id} style={styles.openBtn}>
                 {busy === item.drop_doc_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="lock-open-outline" size={17} color={C.onInverse} />}
@@ -161,14 +161,14 @@ export default function HealthDrop() {
             {item.is_referral && !item.autobooked && (
               <View style={styles.jarvisBox}>
                 <Text style={styles.jarvisText}>
-                  🤖 Jarvis: Vidím žiadanku{item.specialty_guess ? ` na ${item.specialty_guess}` : ''}. Mám vyhľadať a rezervovať najskorší voľný termín?
+                  🤖 Jarvis: I can see a referral{item.specialty_guess ? ` for ${item.specialty_guess}` : ''}. Shall I find and book the earliest available appointment?
                 </Text>
                 <Pressable testID={`hd-autobook-${item.drop_doc_id}`} onPress={() => autobook(item)} disabled={busy === `ab-${item.drop_doc_id}`} style={styles.jarvisBtn}>
-                  {busy === `ab-${item.drop_doc_id}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.jarvisBtnText}>ÁNO, REZERVUJ (AUTO-BOOKER)</Text>}
+                  {busy === `ab-${item.drop_doc_id}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.jarvisBtnText}>YES, BOOK (AUTO-BOOKER)</Text>}
                 </Pressable>
               </View>
             )}
-            {item.autobooked && <Text style={styles.bookedFlag}>✓ Termín zarezervovaný Auto-Bookerom</Text>}
+            {item.autobooked && <Text style={styles.bookedFlag}>✓ Appointment booked by the Auto-Booker</Text>}
           </View>
         ))}
       </ScrollView>

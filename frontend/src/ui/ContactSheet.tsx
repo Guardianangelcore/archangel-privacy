@@ -54,11 +54,11 @@ export function ContactSheet({ visible, onClose, onPick }: {
   const manual = (
     <View style={{ paddingBottom: S.xl }}>
       <Text style={st.note}>
-        {web ? 'Na webe nie je adresár dostupný — zadajte kontakt ručne. V mobilnej aplikácii vyberiete kontakt jedným ťukom.' : 'Zadajte kontakt ručne.'}
+        {web ? 'The address book is not available on web — enter the contact manually. In the mobile app you pick a contact with one tap.' : 'Enter the contact manually.'}
       </Text>
       <TextInput testID="cs-manual-name" value={manualName} onChangeText={setManualName} placeholder="Meno" placeholderTextColor="#777" style={st.input} />
-      <TextInput testID="cs-manual-phone" value={manualPhone} onChangeText={setManualPhone} placeholder="Telefón alebo e-mail" placeholderTextColor="#777" style={st.input} keyboardType="email-address" autoCapitalize="none" />
-      <GoldButton testID="cs-manual-pick" title="POUŽIŤ KONTAKT" icon="checkmark"
+      <TextInput testID="cs-manual-phone" value={manualPhone} onChangeText={setManualPhone} placeholder="Phone or e-mail" placeholderTextColor="#777" style={st.input} keyboardType="email-address" autoCapitalize="none" />
+      <GoldButton testID="cs-manual-pick" title="USE CONTACT" icon="checkmark"
         disabled={!manualName.trim() || !manualPhone.trim()}
         onPress={() => { const v = manualPhone.trim(); onPick({ name: manualName.trim(), phone: v.includes('@') ? undefined : v, email: v.includes('@') ? v : undefined }); onClose(); }}
         style={{ marginTop: S.md }} />
@@ -66,22 +66,22 @@ export function ContactSheet({ visible, onClose, onPick }: {
   );
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="VYBRAŤ ZO ZOZNAMU KONTAKTOV" testID="contact-sheet">
+    <Sheet visible={visible} onClose={onClose} title="PICK FROM YOUR CONTACTS" testID="contact-sheet">
       {web ? manual : perm === 'ask' ? (
         <View style={{ paddingBottom: S.xl }}>
           <View style={st.permIcon}><Ionicons name="people" size={30} color={C.brand} /></View>
-          <Text style={st.note}>Guardian potrebuje prístup ku kontaktom, aby ste strážcu pridali jedným ťukom — žiadne prepisovanie čísel. Kontakty nikdy neopúšťajú váš telefón bez vášho súhlasu.</Text>
-          <GoldButton testID="cs-perm-request" title="POVOLIŤ PRÍSTUP KU KONTAKTOM" icon="people" onPress={request} style={{ marginTop: S.md }} />
+          <Text style={st.note}>Guardian needs access to your contacts so you can add a guardian with one tap — no retyping numbers. Contacts never leave your phone without your consent.</Text>
+          <GoldButton testID="cs-perm-request" title="ALLOW CONTACT ACCESS" icon="people" onPress={request} style={{ marginTop: S.md }} />
         </View>
       ) : perm === 'blocked' ? (
         <View style={{ paddingBottom: S.xl }}>
-          <Text style={st.note}>Prístup ku kontaktom je zablokovaný. Povoľte ho v nastaveniach telefónu — alebo zadajte kontakt ručne nižšie.</Text>
-          <GoldButton testID="cs-open-settings" title="OTVORIŤ NASTAVENIA" icon="settings-outline" onPress={() => Linking.openSettings()} style={{ marginVertical: S.md }} />
+          <Text style={st.note}>Contact access is blocked. Allow it in your phone settings — or enter the contact manually below.</Text>
+          <GoldButton testID="cs-open-settings" title="OPEN SETTINGS" icon="settings-outline" onPress={() => Linking.openSettings()} style={{ marginVertical: S.md }} />
           {manual}
         </View>
       ) : (
         <View>
-          <TextInput testID="cs-search" value={q} onChangeText={setQ} placeholder="Hľadať kontakt…" placeholderTextColor="#777" style={st.input} />
+          <TextInput testID="cs-search" value={q} onChangeText={setQ} placeholder="Search contacts…" placeholderTextColor="#777" style={st.input} />
           {loading ? <ActivityIndicator color={C.brand} style={{ marginVertical: S.xl }} /> : (
             <FlatList
               data={filtered.slice(0, 100)}
@@ -103,7 +103,7 @@ export function ContactSheet({ visible, onClose, onPick }: {
                   </Pressable>
                 );
               }}
-              ListEmptyComponent={<Text style={st.note}>Žiadne kontakty s číslom alebo e-mailom.</Text>}
+              ListEmptyComponent={<Text style={st.note}>No contacts with a number or e-mail.</Text>}
             />
           )}
         </View>

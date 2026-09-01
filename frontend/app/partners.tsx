@@ -14,36 +14,36 @@ import { C, S, R, GOLD } from '@/src/theme';
 
 const VALUE_PROPS = [
   {
-    icon: 'medkit-outline', title: 'PRE KLINIKY',
+    icon: 'medkit-outline', title: 'FOR CLINICS',
     lines: [
-      'Okamžitý prísun pacientov z Arbitrage Brain — index 10 500+ kliník, 32 krajín',
-      'Digitálne žiadanky a výsledky priamo do trezoru pacienta (zero-knowledge)',
-      'Auditovateľný kanál s HMAC podpisom — nefalšovateľná história doručenia',
+      'Instant patient inflow from Arbitrage Brain — index of 10,500+ clinics, 32 countries',
+      'Digital referrals and results straight into the patient vault (zero-knowledge)',
+      'Auditable channel with HMAC signature — tamper-proof delivery history',
     ],
   },
   {
-    icon: 'shield-checkmark-outline', title: 'PRE POISŤOVNE',
+    icon: 'shield-checkmark-outline', title: 'FOR INSURERS',
     lines: [
-      'Real-time streamy vitálnych funkcií → prediktívne riziko PRED udalosťou',
-      'Poistné udalosti (insurance_claim) s kryptografickým audit trailom',
-      'Nižšie náklady vďaka prevencii Predictive Sentinel a Bio-Digitálnemu Dvojčaťu',
+      'Real-time vitals streams → predictive risk BEFORE the event',
+      'Insurance claims (insurance_claim) with a cryptographic audit trail',
+      'Lower costs through Predictive Sentinel prevention and the Bio-Digital Twin',
     ],
   },
   {
-    icon: 'flask-outline', title: 'PRE LABORATÓRIÁ A SENZOROVÉ SIETE',
+    icon: 'flask-outline', title: 'FOR LABS & SENSOR NETWORKS',
     lines: [
-      'Fan-out 12 regiónov × 4096 shardov × 32 uzlov — 1,02 mld. súbežných streamov',
-      'Idempotentné doručenie · replay ochrana ±300 s · 240 správ/min na partnera',
+      'Fan-out 12 regions × 4096 shards × 32 nodes — 1.02 B concurrent streams',
+      'Idempotent delivery · replay protection ±300 s · 240 msgs/min per partner',
       'Kinds: vitals · lab_result · document · insurance_claim · sensor · threat_mesh',
     ],
   },
 ];
 
 const STEPS = [
-  { n: '01', title: 'REGISTRÁCIA', code: 'POST /api/uhp/partners/register', text: 'Získate partner_id, api_key a hmac_secret — zobrazí sa iba raz.' },
-  { n: '02', title: 'PODPIS SPRÁVY', code: 'HMAC-SHA256("{ts}.{body}", secret)', text: 'Každý ingest podpíšete časovou pečiatkou a surovým telom požiadavky.' },
-  { n: '03', title: 'INGEST DÁT', code: 'POST /api/uhp/ingest', text: 'UHP/1.0 envelope s idempotency_key — duplikáty sa bezpečne zahodia.' },
-  { n: '04', title: 'MONITORING', code: 'GET /api/uhp/partners/{id}/stats', text: 'Objem, stav a zdravie vášho kanála v reálnom čase.' },
+  { n: '01', title: 'REGISTRATION', code: 'POST /api/uhp/partners/register', text: 'You receive partner_id, api_key and hmac_secret — shown only once.' },
+  { n: '02', title: 'MESSAGE SIGNATURE', code: 'HMAC-SHA256("{ts}.{body}", secret)', text: 'Sign every ingest with a timestamp and the raw request body.' },
+  { n: '03', title: 'DATA INGEST', code: 'POST /api/uhp/ingest', text: 'UHP/1.0 envelope with idempotency_key — duplicates are safely dropped.' },
+  { n: '04', title: 'MONITORING', code: 'GET /api/uhp/partners/{id}/stats', text: 'Volume, status and health of your channel in real time.' },
 ];
 
 export default function Partners() {
@@ -93,11 +93,11 @@ export default function Partners() {
         {/* HERO */}
         <View style={st.hero}>
           <Text style={st.heroKicker}>UNIVERSAL HEALTH PROTOCOL · UHP/1.0</Text>
-          <Text style={st.heroTitle}>Pripojte sa k suverénnej{'\n'}zdravotnej infraštruktúre.</Text>
+          <Text style={st.heroTitle}>Join the sovereign{'\n'}health infrastructure.</Text>
           <Text style={st.heroSub}>
-            Jedna brána pre kliniky, poisťovne, laboratóriá a senzorové siete.
-            Kryptograficky podpísané dáta, ktoré patria pacientovi — a kanál, ktorému
-            môžete dôverovať.
+            One gateway for clinics, insurers, labs and sensor networks.
+            Cryptographically signed data owned by the patient — and a channel you
+            can trust.
           </Text>
         </View>
 
@@ -105,15 +105,15 @@ export default function Partners() {
         <View style={st.statsRow}>
           <View style={st.statBox}>
             <Text style={st.statVal}>{cap ? cap.stream_capacity_human : '—'}</Text>
-            <Text style={st.statLbl}>SÚBEŽNÝCH STREAMOV</Text>
+            <Text style={st.statLbl}>CONCURRENT STREAMS</Text>
           </View>
           <View style={st.statBox}>
             <Text style={st.statVal}>{cap ? cap.active_partners : '—'}</Text>
-            <Text style={st.statLbl}>AKTÍVNYCH PARTNEROV</Text>
+            <Text style={st.statLbl}>ACTIVE PARTNERS</Text>
           </View>
           <View style={st.statBox}>
             <Text style={st.statVal}>{cap ? cap.events_ingested_total : '—'}</Text>
-            <Text style={st.statLbl}>PRIJATÝCH EVENTOV</Text>
+            <Text style={st.statLbl}>EVENTS INGESTED</Text>
           </View>
         </View>
 
@@ -134,7 +134,7 @@ export default function Partners() {
         ))}
 
         {/* HOW TO CONNECT */}
-        <Text style={st.section}>AKO SA PRIPOJIŤ — 4 KROKY</Text>
+        <Text style={st.section}>HOW TO CONNECT — 4 STEPS</Text>
         {STEPS.map(s => (
           <View key={s.n} style={st.stepCard}>
             <Text style={st.stepNum}>{s.n}</Text>
@@ -154,14 +154,14 @@ export default function Partners() {
         </View>
 
         {/* SANDBOX */}
-        <Text style={st.section}>SANDBOX — VYSKÚŠAJTE SI TO HNEĎ</Text>
-        <Text style={st.sandboxNote}>Jedným ťuknutím vystavíme reálne UHP prístupové údaje pre testovaciu kliniku.</Text>
+        <Text style={st.section}>SANDBOX — TRY IT RIGHT NOW</Text>
+        <Text style={st.sandboxNote}>One tap issues real UHP credentials for a test clinic.</Text>
         <Pressable testID="pt-sandbox" onPress={() => { tap('medium'); sandbox(); }} disabled={busy} style={{ marginHorizontal: S.lg, marginTop: S.md }}>
           <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cta}>
             {busy ? <ActivityIndicator color={C.onInverse} /> : (
               <>
                 <Ionicons name="key-outline" size={18} color={C.onInverse} />
-                <Text style={st.ctaText}>VYGENEROVAŤ SANDBOX PRÍSTUP</Text>
+                <Text style={st.ctaText}>GENERATE SANDBOX ACCESS</Text>
               </>
             )}
           </LinearGradient>
@@ -173,18 +173,18 @@ export default function Partners() {
             <Text style={st.credsVal}>{creds.partner_id}</Text>
             <Text style={st.credsLbl}>API KEY</Text>
             <Text style={st.credsVal}>{creds.api_key}</Text>
-            <Text style={st.credsLbl}>HMAC SECRET (zobrazí sa iba raz)</Text>
+            <Text style={st.credsLbl}>HMAC SECRET (shown only once)</Text>
             <Text style={st.credsVal}>{String(creds.hmac_secret).slice(0, 16)}…{String(creds.hmac_secret).slice(-8)}</Text>
-            <Text style={st.credsNote}>Dokumentácia protokolu: GET /api/uhp/standard</Text>
+            <Text style={st.credsNote}>Protocol documentation: GET /api/uhp/standard</Text>
           </View>
         )}
 
         {/* CONTACT CTA */}
         <View style={st.contactCard}>
           <Ionicons name="business" size={30} color={C.brand} />
-          <Text style={st.contactTitle}>Produkčné pripojenie a SLA</Text>
+          <Text style={st.contactTitle}>Production onboarding & SLA</Text>
           <Text style={st.contactText}>
-            Pre produkčné onboardingy, dedikované shardy a zmluvné SLA kontaktujte
+            For production onboarding, dedicated shards and contractual SLAs contact
             Guardian Angel Sovereign Foundation (DAO).
           </Text>
           <Pressable testID="pt-contact" onPress={() => { tap('light'); contact(); }} style={st.contactBtn}>

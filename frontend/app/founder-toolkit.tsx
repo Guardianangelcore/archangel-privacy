@@ -59,13 +59,13 @@ export default function FounderToolkit() {
           <>
             {/* FORECAST */}
             <Text style={st.kicker}>INVESTOR DEMO</Text>
-            <Text style={st.title}>Finančná prognóza{'\n'}2026 – 2030</Text>
+            <Text style={st.title}>Financial forecast{'\n'}2026 – 2030</Text>
 
             <View style={st.assumpRow}>
               <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.arpu_paid_eur_mo} €</Text><Text style={st.assumpLbl}>ARPU / MES.</Text></View>
               <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.guardian_tax_pct} %</Text><Text style={st.assumpLbl}>GUARDIAN TAX</Text></View>
               <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.ltv_cac}×</Text><Text style={st.assumpLbl}>LTV / CAC</Text></View>
-              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.gross_margin_pct} %</Text><Text style={st.assumpLbl}>HRUBÁ MARŽA</Text></View>
+              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.gross_margin_pct} %</Text><Text style={st.assumpLbl}>GROSS MARGIN</Text></View>
             </View>
 
             {years.map((y: any) => (
@@ -78,18 +78,18 @@ export default function FounderToolkit() {
                   <View style={[st.bar, { width: `${Math.max(4, (y.arr_eur / maxArr) * 100)}%` }]} />
                 </View>
                 <Text style={st.yearLine}>
-                  {fmt(y.users)} používateľov · {fmt(y.paid_users)} platiacich · MRR {fmt(y.mrr_eur)} €
+                  {fmt(y.users)} users · {fmt(y.paid_users)} paying · MRR {fmt(y.mrr_eur)} €
                 </Text>
                 <Text style={st.yearSub}>
-                  predplatné {fmt(y.subscription_mrr_eur)} € + Guardian Tax {fmt(y.guardian_tax_mrr_eur)} € / mes.
+                  subscriptions {fmt(y.subscription_mrr_eur)} € + Guardian Tax {fmt(y.guardian_tax_mrr_eur)} € / mo.
                 </Text>
               </View>
             ))}
             <Text style={st.note}>Tier mix: Guardian 29 € (80 %) · Sentinel 149 € (17 %) · Archangel 499 € (3 %) · churn {a?.churn_mo_pct} % / mes.</Text>
 
             {/* ROADMAP */}
-            <Text style={st.kicker2}>VÍZIA</Text>
-            <Text style={st.title}>Roadmapa 22. storočia</Text>
+            <Text style={st.kicker2}>VISION</Text>
+            <Text style={st.title}>22nd-century roadmap</Text>
             <View style={st.timeline}>
               {(data.roadmap || []).map((m: any, i: number) => (
                 <View key={i} testID={`ft-road-${i}`} style={st.roadRow}>
@@ -110,9 +110,9 @@ export default function FounderToolkit() {
             </View>
 
             {/* RELEASE PACKAGE */}
-            <Text style={st.kicker2}>SÚŤAŽNÁ PRIHLÁŠKA</Text>
+            <Text style={st.kicker2}>COMPETITION ENTRY</Text>
             <Text style={st.title}>GitHub Release Package</Text>
-            <Text style={st.note}>Kompletná dokumentácia v priečinku /release_package — pripravená na odovzdanie poroty. SHA-256 odtlačky garantujú integritu.</Text>
+            <Text style={st.note}>Complete documentation in /release_package — ready for jury handover. SHA-256 fingerprints guarantee integrity.</Text>
             {(data.release_package?.docs || []).map((d: any) => (
               <Pressable key={d.name} testID={`ft-doc-${d.name}`} onPress={() => { tap('light'); openDoc(d.name); }} style={st.docRow}>
                 <View style={st.docIcon}>

@@ -12,7 +12,7 @@ import { useAuth } from './auth';
 import { speak as jarvisSpeak, stopSpeaking } from './voice';
 import { C, S, R, GOLD } from './theme';
 
-const NARRATION = 'Tridsať dní. Sovereign Blazing Guardian. Ste na vrchole svojho návyku.';
+const NARRATION = 'Thirty days. Sovereign Blazing Guardian. You are at the peak of your habit.';
 
 export function BlazingCeremony({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
@@ -52,16 +52,16 @@ export function BlazingCeremony({ onClose }: { onClose: () => void }) {
         </Animated.View>
       </View>
 
-      <Text style={styles.days}>30 DNÍ</Text>
+      <Text style={styles.days}>30 DAYS</Text>
       <Text style={styles.title}>SOVEREIGN BLAZING GUARDIAN</Text>
       <Text style={styles.tag}>
-        Vrchol návyku. Jarvis vám gratuluje — pokračujte v ceste, ktorá zachraňuje vaše telo.
+        The peak of a habit. Jarvis congratulates you — keep going on the journey that saves your body.
       </Text>
 
       <Pressable testID="blazing-ack" onPress={acknowledge} style={styles.ctaWrap}>
         <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cta}>
           <Ionicons name="checkmark" size={20} color={C.onInverse} />
-          <Text style={styles.ctaText}>PRIJÍMAM CTU</Text>
+          <Text style={styles.ctaText}>I ACCEPT THE HONOUR</Text>
         </LinearGradient>
       </Pressable>
     </View>

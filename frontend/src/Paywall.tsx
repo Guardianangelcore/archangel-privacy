@@ -9,7 +9,7 @@ import { C, S } from './theme';
 
 type Props = {
   message: string;
-  gatLabel?: string;          // e.g. "ZAPLATIŤ 5 GA-T ZA SKEN"
+  gatLabel?: string;          // e.g. "PAY 5 GA-T PER SCAN"
   onPayGat?: () => void;      // retry with pay_gat
   onUnlocked: () => void;     // called after successful trial
 };
@@ -26,18 +26,18 @@ export default function Paywall({ message, gatLabel, onPayGat, onUnlocked }: Pro
       onUnlocked();
     } catch (e: any) {
       const m = String(e.message || e);
-      setErr(m.includes('trial_used') ? 'Trial už bol využitý — pokračujte upgradom alebo GA-T platbou.' : m);
+      setErr(m.includes('trial_used') ? 'The trial has already been used — continue with an upgrade or a GA-T payment.' : m);
     } finally { setBusy(false); }
   };
 
   return (
     <View testID="paywall" style={st.box}>
       <Ionicons name="diamond" size={30} color="#E5E4E2" />
-      <Text style={st.title}>SENTINEL EXKLUZÍVNE</Text>
+      <Text style={st.title}>SENTINEL EXCLUSIVE</Text>
       <Text style={st.msg}>{message}</Text>
       {!!err && <Text style={st.err}>{err}</Text>}
       <Pressable testID="pw-trial" onPress={trial} disabled={busy} style={st.trialBtn}>
-        {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>AKTIVOVAŤ 7-DŇOVÝ TRIAL ZADARMO</Text>}
+        {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>ACTIVATE A FREE 7-DAY TRIAL</Text>}
       </Pressable>
       {!!gatLabel && onPayGat && (
         <Pressable testID="pw-gat" onPress={onPayGat} style={st.gatBtn}>
@@ -45,7 +45,7 @@ export default function Paywall({ message, gatLabel, onPayGat, onUnlocked }: Pro
         </Pressable>
       )}
       <Pressable testID="pw-upgrade" onPress={() => router.push('/subscription')} style={st.upBtn}>
-        <Text style={st.upText}>POZRIEŤ TIERY (SENTINEL €149 / ARCHANGEL €499)</Text>
+        <Text style={st.upText}>VIEW TIERS (SENTINEL €149 / ARCHANGEL €499)</Text>
       </Pressable>
     </View>
   );

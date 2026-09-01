@@ -67,7 +67,7 @@ async def legacy_video_upload(
         "unlock_condition": unlock_condition, "released": False,
         "media_type": ctype, "size": len(data), "sha256": sha,
         "storage_path": path, "ledger_hash": ledger_hash,
-        "encryption": "zero-knowledge sealed · AES-256-GCM class · kľúč viazaný na DID",
+        "encryption": "zero-knowledge sealed · AES-256-GCM class · key bound to DID",
         "created_at": datetime.now(timezone.utc),
     }
     await db.legacy_videos.insert_one(doc.copy())
@@ -95,8 +95,8 @@ async def legacy_video_list(authorization: Optional[str] = Header(None)):
     for v in rows:
         unlocked = await _video_unlocked(user["user_id"], v)
         out.append({**v, "unlocked_for_family": unlocked,
-                    "status": "UVOĽNENÉ RODINE" if unlocked else "ZAPEČATENÉ (Family Peace Treaty)"})
-    return {"videos": out, "policy": "Videá sú zapečatené zero-knowledge šifrou. Rodine sa uvoľnia po overení životného statusu (registry) alebo manuálnym uvoľnením."}
+                    "status": "RELEASED TO FAMILY" if unlocked else "SEALED (Family Peace Treaty)"})
+    return {"videos": out, "policy": "Videos are sealed with zero-knowledge encryption. They are released to the family after life-status verification (registry) or by manual release."}
 
 @api.post("/legacy/video/{video_id}/release")
 async def legacy_video_release(video_id: str, authorization: Optional[str] = Header(None)):
@@ -176,7 +176,7 @@ async def wealth_vault(authorization: Optional[str] = Header(None)):
     total = round(sum(a.get("est_value_eur") or 0 for a in assets), 2)
     return {"assets": assets, "total_est_value_eur": total,
             "anchor": anchor, "payouts": payouts,
-            "policy": "Seeds/kľúče sú zapečatené zero-knowledge (plaintext sa nikdy neukladá). Manifest hash je ukotvený na Mosaic Chain — Proof of Asset Stewardship."}
+            "policy": "Seeds/keys are sealed zero-knowledge (plaintext is never stored). The manifest hash is anchored on Mosaic Chain — Proof of Asset Stewardship."}
 
 @api.post("/wealth/assets")
 async def wealth_add(body: AssetIn, authorization: Optional[str] = Header(None)):
@@ -269,7 +269,7 @@ async def wealth_payout(body: PayoutIn, authorization: Optional[str] = Header(No
         "amount_eur": round(body.amount_eur, 2), "card_last4": body.card_last4,
         "purpose": (body.purpose or "emergency")[:60],
         "rail": "Push-to-Card (Visa Direct / Mastercard Send)",
-        "status": "instant_sent", "eta": "< 30 minút",
+        "status": "instant_sent", "eta": "< 30 minutes",
         "ledger_hash": ledger_hash, "simulated": True,
         "at": datetime.now(timezone.utc),
     }

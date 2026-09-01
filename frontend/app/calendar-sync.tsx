@@ -51,7 +51,7 @@ function buildTodayMedsItems(meds: any[]): Item[] {
           subtitle: `Liek · ${t}`,
           startISO: start.toISOString(),
           endISO: end.toISOString(),
-          notes: `Guardian Angel · Sovereign Protocol${m.dose ? `\nDávka: ${m.dose}` : ''}`,
+          notes: `Guardian Angel · Sovereign Protocol${m.dose ? `\nDose: ${m.dose}` : ''}`,
         });
       }
     });
@@ -67,7 +67,7 @@ function buildExamsItems(events: any[]): Item[] {
       key: `exam-${e.event_id || e.date}-${e.title}`,
       kind: 'exam' as const,
       title: `📅 ${e.title}`,
-      subtitle: `Vyšetrenie · ${e.date}`,
+      subtitle: `Examination · ${e.date}`,
       startISO: start.toISOString(),
       endISO: end.toISOString(),
       notes: `Guardian Angel · Sovereign Protocol\n${e.notes || ''}`,
@@ -101,7 +101,7 @@ export default function CalendarSync() {
   }, []);
 
   const askPermission = async (): Promise<boolean> => {
-    if (Platform.OS === 'web') { setErr('Kalendár je dostupný len na mobilnom zariadení.'); return false; }
+    if (Platform.OS === 'web') { setErr('The calendar is available only on a mobile device.'); return false; }
     const cur = await Calendar.getCalendarPermissionsAsync();
     let status = cur.status; let canAskAgain = cur.canAskAgain;
     if (status !== 'granted') {
@@ -148,7 +148,7 @@ export default function CalendarSync() {
       });
       const next = { ...synced, [it.key]: eventId };
       setSynced(next); await saveSynced(next);
-      setMsg(`✅ Pridané do kalendára: ${it.title}`);
+      setMsg(`✅ Added to the calendar: ${it.title}`);
       await refreshNative();
       tap('success');
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -164,7 +164,7 @@ export default function CalendarSync() {
       try { await Calendar.deleteEventAsync(nativeId); } catch {}
       const next = { ...synced }; delete next[it.key];
       setSynced(next); await saveSynced(next);
-      setMsg(`Odstránené z kalendára: ${it.title}`);
+      setMsg(`Removed from the calendar: ${it.title}`);
       await refreshNative();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -187,7 +187,7 @@ export default function CalendarSync() {
         next[it.key] = id; added += 1;
       }
       setSynced(next); await saveSynced(next);
-      setMsg(`✅ Synchronizovaných ${added} udalostí do kalendára Guardian Angel.`);
+      setMsg(`✅ Synced ${added} events into the Guardian Angel calendar.`);
       await refreshNative();
       tap('success');
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -202,30 +202,30 @@ export default function CalendarSync() {
         <Pressable testID="cal-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>NATÍVNY KALENDÁR</Text>
+        <Text style={st.title}>NATIVE CALENDAR</Text>
         <Pressable testID="cal-refresh" onPress={() => { loadSourceItems(); refreshNative(); }} hitSlop={12}>
           <Ionicons name="refresh" size={22} color={C.fg} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>LOKÁLNY MOST · ČÍTA A ZAPISUJE DO KALENDÁRA VÁŠHO TELEFÓNU</Text>
+        <Text style={st.tag}>LOCAL BRIDGE · READS AND WRITES YOUR PHONE CALENDAR</Text>
 
         {permStatus !== 'granted' && (
           <View style={st.card}>
-            <Text style={st.cardTitle}>POVOLENIE KALENDÁRA</Text>
+            <Text style={st.cardTitle}>CALENDAR PERMISSION</Text>
             <Text style={st.explain}>
-              Guardian Angel potrebuje jednorazový prístup k vášmu kalendáru, aby zobrazoval a pridával
-              pripomienky liekov a termíny vyšetrení. Dáta zostávajú vo vašom telefóne v samostatnom
-              kalendári „Guardian Angel“.
+              Guardian Angel needs one-time access to your calendar to show and add
+              medication reminders and examination appointments. Data stays on your phone in a separate
+              Guardian Angel calendar.
             </Text>
             <Pressable testID="cal-perm" onPress={askPermission} style={st.primaryBtn}>
               <Ionicons name="calendar" size={18} color={C.onInverse} />
-              <Text style={st.primaryText}>POVOLIŤ KALENDÁR</Text>
+              <Text style={st.primaryText}>ALLOW CALENDAR</Text>
             </Pressable>
             {permStatus === 'blocked' && (
               <Pressable testID="cal-settings" onPress={() => Linking.openSettings()} style={st.warnBtn}>
-                <Text style={st.warnBtnText}>KALENDÁR JE ZABLOKOVANÝ — OTVORIŤ NASTAVENIA</Text>
+                <Text style={st.warnBtnText}>CALENDAR IS BLOCKED — OPEN SETTINGS</Text>
               </Pressable>
             )}
           </View>
@@ -234,9 +234,9 @@ export default function CalendarSync() {
         {/* Native upcoming events preview (read) */}
         {permStatus === 'granted' && (
           <View style={st.card}>
-            <Text style={st.cardTitle}>NAJBLIŽŠIE UDALOSTI (30 DNÍ)</Text>
+            <Text style={st.cardTitle}>UPCOMING EVENTS (30 DAYS)</Text>
             {nativeUpcoming.length === 0
-              ? <Text style={st.empty}>Guardian Angel kalendár je zatiaľ prázdny.</Text>
+              ? <Text style={st.empty}>The Guardian Angel calendar is empty so far.</Text>
               : nativeUpcoming.slice(0, 10).map((e) => (
                 <View key={e.id} style={st.row}>
                   <Ionicons name="calendar-clear-outline" size={16} color={C.brand} />
@@ -252,16 +252,16 @@ export default function CalendarSync() {
         {/* Items to sync */}
         <View style={st.card}>
           <View style={st.cardHead}>
-            <Text style={st.cardTitle}>NA SYNCHRONIZÁCIU</Text>
+            <Text style={st.cardTitle}>TO SYNC</Text>
             <Text style={st.cardMeta}>{remaining}/{items.length}</Text>
           </View>
-          {items.length === 0 && <Text style={st.empty}>Žiadne položky. Pridajte lieky alebo termíny v aplikácii.</Text>}
+          {items.length === 0 && <Text style={st.empty}>No items. Add meds or appointments in the app.</Text>}
           {items.length > 0 && (
             <Pressable testID="cal-sync-all" onPress={syncAll} disabled={busy === 'all' || remaining === 0} style={[st.primaryBtn, remaining === 0 && { opacity: 0.5 }]}>
               {busy === 'all' ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="sync" size={18} color={C.onInverse} />
-                  <Text style={st.primaryText}>SYNCHRONIZOVAŤ VŠETKY ({remaining})</Text>
+                  <Text style={st.primaryText}>SYNC ALL ({remaining})</Text>
                 </>
               )}
             </Pressable>
@@ -291,7 +291,7 @@ export default function CalendarSync() {
 
         {!!msg && <Text testID="cal-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="cal-err" style={st.err}>{err}</Text>}
-        <Text style={st.footer}>Kalendár Guardian Angel je samostatný v natívnom kalendári zariadenia. Kedykoľvek ho môžete zrušiť aj tam.</Text>
+        <Text style={st.footer}>The Guardian Angel calendar is a separate calendar on your device. You can remove it there at any time.</Text>
       </ScrollView>
     </SafeAreaView>
   );

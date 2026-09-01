@@ -54,8 +54,8 @@ export function OptionSheet({ visible, onClose, title, options, selected, onSele
   );
 }
 
-const MONTHS_SK = ['Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún', 'Júl', 'August', 'September', 'Október', 'November', 'December'];
-const DAYS_SK = ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'];
+const MONTHS_SK = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAYS_SK = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 const ITEM_H = 52;
 
@@ -115,7 +115,7 @@ export function WheelSheet({ visible, onClose, title, min, max, step = 1, unit =
       {!!unit && <Text style={st.wheelUnit}>{unit}</Text>}
       <Pressable testID={testID ? `${testID}-confirm` : undefined}
         onPress={() => { tap('medium'); onSelect(values[idx]); onClose(); }} style={st.wheelConfirm}>
-        <Text style={st.wheelConfirmText}>POTVRDIŤ {fmt(values[idx])}{unit ? ` ${unit}` : ''}</Text>
+        <Text style={st.wheelConfirmText}>CONFIRM {fmt(values[idx])}{unit ? ` ${unit}` : ''}</Text>
       </Pressable>
       <View style={{ height: S.xl }} />
     </Sheet>
@@ -185,7 +185,7 @@ export function TimeSheet({ visible, onClose, title, initial, onSelect, testID }
       </View>
       <Pressable testID={testID ? `${testID}-confirm` : undefined}
         onPress={() => { tap('medium'); onSelect(val); onClose(); }} style={st.wheelConfirm}>
-        <Text style={st.wheelConfirmText}>POTVRDIŤ {val}</Text>
+        <Text style={st.wheelConfirmText}>CONFIRM {val}</Text>
       </Pressable>
       <View style={{ height: S.xl }} />
     </Sheet>

@@ -68,7 +68,7 @@ export default function MedicineCabinet() {
     setItems(prev => prev.filter(x => x.item_id !== it.item_id));
   };
   const respond = async (ex: Ex) => {
-    await api(`/cabinet/exchange/${ex.exchange_id}/respond`, { method: 'POST', body: JSON.stringify({ message: 'Mám záujem' }) });
+    await api(`/cabinet/exchange/${ex.exchange_id}/respond`, { method: 'POST', body: JSON.stringify({ message: 'I am interested' }) });
     load();
   };
 
@@ -108,13 +108,13 @@ export default function MedicineCabinet() {
             <View>
               <Pressable testID="mc-ddi-scan" onPress={scanInteractions} disabled={ddiBusy} style={styles.ddiBtn}>
                 <Ionicons name="warning-outline" size={16} color={C.onInverse} />
-                <Text style={styles.ddiBtnText}>{ddiBusy ? 'AI KONTROLUJE INTERAKCIE…' : 'SKONTROLOVAŤ LIEKOVÉ INTERAKCIE (AI)'}</Text>
+                <Text style={styles.ddiBtnText}>{ddiBusy ? 'AI CHECKING INTERACTIONS…' : 'CHECK DRUG INTERACTIONS (AI)'}</Text>
               </Pressable>
               {!!ddiErr && <Text style={styles.ddiErr}>{ddiErr}</Text>}
               {ddi && (
                 <View testID="mc-ddi-result" style={[styles.ddiBox, { borderColor: (ddi.interactions || []).some((x: any) => x.severity === 'high') ? C.error : C.borderStrong }]}>
                   {(ddi.interactions || []).length === 0 ? (
-                    <Text style={styles.ddiOk}>✓ ŽIADNE ZNÁME RIZIKOVÉ INTERAKCIE ({(ddi.meds_scanned || []).length} liekov){ddi.note ? `\n${ddi.note}` : ''}</Text>
+                    <Text style={styles.ddiOk}>✓ NO KNOWN RISKY INTERACTIONS ({(ddi.meds_scanned || []).length} meds){ddi.note ? `\n${ddi.note}` : ''}</Text>
                   ) : (
                     (ddi.interactions || []).map((x: any, i: number) => (
                       <View key={i} style={{ marginBottom: 8 }}>
@@ -160,7 +160,7 @@ export default function MedicineCabinet() {
           keyExtractor={i => i.exchange_id}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
           contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
-          ListHeaderComponent={<Text style={styles.exNote}>KRÍZOVÝ REŽIM · LEN VOĽNOPREDAJNÉ · ŠIFROVANÁ SIEŤ</Text>}
+          ListHeaderComponent={<Text style={styles.exNote}>CRISIS MODE · OTC ONLY · ENCRYPTED NETWORK</Text>}
           ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text> : null}
           renderItem={({ item }) => (
             <View testID={`ex-${item.exchange_id}`} style={styles.card}>
@@ -200,10 +200,10 @@ export default function MedicineCabinet() {
                 <>
                   <TextInput testID="cab-name" placeholder="Ibuprofen 400mg" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
-                    <WheelField testID="cab-qty" title="MNOŽSTVO" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="20" style={[styles.input, { flex: 1 }]} />
+                    <WheelField testID="cab-qty" title="QUANTITY" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="20" style={[styles.input, { flex: 1 }]} />
                     <TextInput testID="cab-unit" placeholder="ks" value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
                   </View>
-                  <DateField testID="cab-exp" title="EXPIRÁCIA" value={f.expires_on} onChange={v => setF({ ...f, expires_on: v })} placeholder="Expirácia (EXP)" style={styles.input} />
+                  <DateField testID="cab-exp" title="EXPIRY" value={f.expires_on} onChange={v => setF({ ...f, expires_on: v })} placeholder="Expiry (EXP)" style={styles.input} />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                     {CATS.map(c => (
                       <Pressable testID={`cab-cat-${c}`} key={c} onPress={() => setF({ ...f, category: c })} style={[styles.chip, f.category === c && styles.chipActive]}>
@@ -225,13 +225,13 @@ export default function MedicineCabinet() {
                       </Pressable>
                     ))}
                   </View>
-                  <TextInput testID="ex-name" placeholder="Paralen, obväzy…" value={ef.item_name} onChangeText={v => setEf({ ...ef, item_name: v })} style={styles.input} placeholderTextColor="#999" />
+                  <TextInput testID="ex-name" placeholder="Paracetamol, bandages…" value={ef.item_name} onChangeText={v => setEf({ ...ef, item_name: v })} style={styles.input} placeholderTextColor="#999" />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
-                    <WheelField testID="ex-qty" title="MNOŽSTVO" min={1} max={50} value={ef.quantity} onChange={v => setEf({ ...ef, quantity: v })} placeholder="1" style={[styles.input, { flex: 1 }]} />
+                    <WheelField testID="ex-qty" title="QUANTITY" min={1} max={50} value={ef.quantity} onChange={v => setEf({ ...ef, quantity: v })} placeholder="1" style={[styles.input, { flex: 1 }]} />
                     <TextInput testID="ex-city" placeholder="Bratislava" value={ef.city} onChangeText={v => setEf({ ...ef, city: v })} style={[styles.input, { flex: 2 }]} placeholderTextColor="#999" />
                   </View>
-                  <TextInput testID="ex-note" placeholder="Poznámka" value={ef.note} onChangeText={v => setEf({ ...ef, note: v })} style={styles.input} placeholderTextColor="#999" />
-                  <Text style={styles.exNote}>IBA VOĽNOPREDAJNÉ LIEKY A ZDRAVOTNÍCKY MATERIÁL</Text>
+                  <TextInput testID="ex-note" placeholder="Note" value={ef.note} onChangeText={v => setEf({ ...ef, note: v })} style={styles.input} placeholderTextColor="#999" />
+                  <Text style={styles.exNote}>OTC MEDICATIONS AND MEDICAL SUPPLIES ONLY</Text>
                 </>
               )}
             </ScrollView>

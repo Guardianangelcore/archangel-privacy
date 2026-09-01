@@ -8,8 +8,8 @@ import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 
 const EARN_META: Record<string, { icon: string; hint: string }> = {
-  proof_of_help: { icon: 'people', hint: 'Odpovedzte na pulse ping rodiny alebo pomôžte seniorovi' },
-  proof_of_health: { icon: 'pulse', hint: 'Zdieľajte anonymný signál v Sentinel sieti / Marketplace' },
+  proof_of_help: { icon: 'people', hint: 'Answer a family pulse ping or help a senior' },
+  proof_of_health: { icon: 'pulse', hint: 'Share an anonymous signal in the Sentinel network / Marketplace' },
   community_support: { icon: 'heart', hint: 'Prispejte do Solidarity Hubu alebo Barter siete' },
 };
 const SPEND_META: Record<string, string> = {
@@ -39,11 +39,11 @@ export default function TokenWallet() {
     setBusy(`e-${activity}`); setErr(''); setMsg('');
     try {
       const r: any = await api('/token/earn', { method: 'POST', body: JSON.stringify({ activity }) });
-      setMsg(`+${r.tx.amount} GA-T pripísaných. Zostatok: ${r.balance} GA-T`);
+      setMsg(`+${r.tx.amount} GA-T credited. Balance: ${r.balance} GA-T`);
       await load();
     } catch (e: any) {
       const m = String(e.message || e);
-      setErr(m.includes('daily_limit') ? 'Denný limit tejto aktivity je vyčerpaný — skúste zajtra.' : m);
+      setErr(m.includes('daily_limit') ? 'Daily limit for this activity reached — try again tomorrow.' : m);
     } finally { setBusy(null); }
   };
 
@@ -51,11 +51,11 @@ export default function TokenWallet() {
     setBusy(`s-${item}`); setErr(''); setMsg('');
     try {
       const r: any = await api('/token/spend', { method: 'POST', body: JSON.stringify({ item }) });
-      setMsg(`Kúpené ✓ (spálených ${r.burned} GA-T). Zostatok: ${r.balance} GA-T`);
+      setMsg(`Purchased ✓ (burned ${r.burned} GA-T). Balance: ${r.balance} GA-T`);
       await load();
     } catch (e: any) {
       const m = String(e.message || e);
-      setErr(m.includes('insufficient_balance') ? 'Nedostatočný zostatok GA-T — najprv zarobte tokeny.' : m);
+      setErr(m.includes('insufficient_balance') ? 'Insufficient GA-T balance — earn tokens first.' : m);
     } finally { setBusy(null); }
   };
 
@@ -76,9 +76,9 @@ export default function TokenWallet() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
         <View style={styles.hero}>
-          <Text style={styles.heroLbl}>VÁŠ ZOSTATOK</Text>
+          <Text style={styles.heroLbl}>YOUR BALANCE</Text>
           <Text testID="tk-balance" style={styles.heroVal}>{wallet ? wallet.balance.toFixed(1) : '—'} <Text style={styles.heroSym}>GA-T</Text></Text>
-          <Text style={styles.heroSub}>Zarobené {wallet?.earned_total?.toFixed(1) ?? 0} · Minuté {wallet?.spent_total?.toFixed(1) ?? 0}</Text>
+          <Text style={styles.heroSub}>Earned {wallet?.earned_total?.toFixed(1) ?? 0} · Spent {wallet?.spent_total?.toFixed(1) ?? 0}</Text>
           {vipActive && (
             <View style={styles.vipBadge}>
               <Ionicons name="shield-checkmark" size={14} color={C.onInverse} />
@@ -89,13 +89,13 @@ export default function TokenWallet() {
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
-        <Text style={styles.section}>ZAROBIŤ GA-T (PROOF-OF-HELP · PROOF-OF-HEALTH)</Text>
+        <Text style={styles.section}>EARN GA-T (PROOF-OF-HELP · PROOF-OF-HEALTH)</Text>
         {wallet && Object.entries(wallet.earn_rules || {}).map(([k, r]: any) => (
           <View key={k} style={styles.row}>
             <Ionicons name={(EARN_META[k]?.icon || 'add') as any} size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{r.label}</Text>
-              <Text style={styles.rowSub}>{EARN_META[k]?.hint} · max {r.daily_max}×/deň</Text>
+              <Text style={styles.rowSub}>{EARN_META[k]?.hint} · max {r.daily_max}×/day</Text>
             </View>
             <Pressable testID={`tk-earn-${k}`} onPress={() => earn(k)} disabled={busy === `e-${k}`} style={styles.earnBtn}>
               {busy === `e-${k}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.earnText}>+{r.amount}</Text>}
@@ -103,13 +103,13 @@ export default function TokenWallet() {
           </View>
         ))}
 
-        <Text style={styles.section}>MINÚŤ GA-T (UTILITY)</Text>
+        <Text style={styles.section}>SPEND GA-T (UTILITY)</Text>
         {wallet && Object.entries(wallet.spend_items || {}).map(([k, it]: any) => (
           <View key={k} style={styles.row}>
             <Ionicons name={(SPEND_META[k] || 'cart') as any} size={20} color={C.fg} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{it.label}</Text>
-              <Text style={styles.rowSub}>2 % z ceny sa spáli (deflačný burn)</Text>
+              <Text style={styles.rowSub}>2% of the price is burned (deflationary burn)</Text>
             </View>
             <Pressable testID={`tk-spend-${k}`} onPress={() => spend(k)} disabled={busy === `s-${k}`} style={styles.spendBtn}>
               {busy === `s-${k}` ? <ActivityIndicator size="small" color={C.brand} /> : <Text style={styles.spendText}>{it.price} GA-T</Text>}
@@ -122,14 +122,14 @@ export default function TokenWallet() {
           <View style={styles.supplyBox}>
             <SupplyBar label="Treasury (odmeny)" value={supply.treasury} pct={pct(supply.treasury)} color={C.brand} />
             <SupplyBar label={`Founder's Reserve 25% (time-lock)`} value={supply.founder_reserve} pct={pct(supply.founder_reserve)} color="#B8860B" />
-            <SupplyBar label="V obehu" value={supply.circulating} pct={pct(supply.circulating)} color="#5FA779" />
-            <SupplyBar label={`Spálené (burn ${supply.burn_stats?.burn_rate_pct}%)`} value={supply.burned} pct={pct(supply.burned)} color={C.error} />
-            <Text style={styles.lockNote}>🔒 Founder's Reserve uzamknutá do {String(supply.founder_locked_until).slice(0, 10)} — governance & dlhodobý rozvoj.</Text>
-            <Text style={styles.lockNote}>Sieť: {supply.chain} · Celkom {supply.total_supply.toLocaleString()} GA-T</Text>
+            <SupplyBar label="In circulation" value={supply.circulating} pct={pct(supply.circulating)} color="#5FA779" />
+            <SupplyBar label={`Burned (burn ${supply.burn_stats?.burn_rate_pct}%)`} value={supply.burned} pct={pct(supply.burned)} color={C.error} />
+            <Text style={styles.lockNote}>🔒 Founder’s Reserve locked until {String(supply.founder_locked_until).slice(0, 10)} — governance & long-term development.</Text>
+            <Text style={styles.lockNote}>Network: {supply.chain} · Total {supply.total_supply.toLocaleString()} GA-T</Text>
           </View>
         )}
 
-        <Text style={styles.section}>POSLEDNÉ TRANSAKCIE</Text>
+        <Text style={styles.section}>RECENT TRANSACTIONS</Text>
         {(wallet?.txs || []).slice(0, 12).map((t: any) => (
           <View key={t.tx_id} style={styles.txRow}>
             <Ionicons name={t.kind === 'earn' ? 'arrow-down-circle' : t.kind === 'burn' ? 'flame' : 'arrow-up-circle'} size={16} color={t.kind === 'earn' ? '#5FA779' : t.kind === 'burn' ? C.error : C.fg} />
@@ -137,9 +137,9 @@ export default function TokenWallet() {
             <Text style={styles.txAt}>{String(t.at).slice(5, 16).replace('T', ' ')}</Text>
           </View>
         ))}
-        {(!wallet?.txs || wallet.txs.length === 0) && <Text style={styles.rowSub}>Zatiaľ žiadne transakcie — začnite zarábať Proof-of-Help/Health.</Text>}
+        {(!wallet?.txs || wallet.txs.length === 0) && <Text style={styles.rowSub}>No transactions yet — start earning Proof-of-Help/Health.</Text>}
 
-        <Text style={styles.disclaimer}>GA-T beží na internom hash-chained ledgeri pripravenom na budúcu Layer-2 on-chain migráciu (Phase 3). Nie je to finančný produkt ani investičné poradenstvo.</Text>
+        <Text style={styles.disclaimer}>GA-T runs on an internal hash-chained ledger ready for a future Layer-2 on-chain migration (Phase 3). Not a financial product or investment advice.</Text>
       </ScrollView>
     </SafeAreaView>
   );

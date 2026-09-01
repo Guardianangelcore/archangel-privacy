@@ -9,7 +9,7 @@ import { api } from '@/src/api';
 import { WheelField, DateField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
 
-const TYPES: [string, string][] = [['health', 'Zdravotné'], ['life', 'Životné'], ['disability', 'Invalidita'], ['property', 'Majetok']];
+const TYPES: [string, string][] = [['health', 'Health'], ['life', 'Life'], ['disability', 'Disability'], ['property', 'Property']];
 const TYPE_ICON: Record<string, string> = { health: 'medkit', life: 'heart', disability: 'accessibility', property: 'home' };
 
 export default function Insurance() {
@@ -32,11 +32,11 @@ export default function Insurance() {
   const hap = () => { if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); };
 
   const add = async () => {
-    if (!provider.trim()) { setErr('Zadajte poisťovňu.'); return; }
+    if (!provider.trim()) { setErr('Enter the insurer.'); return; }
     hap(); setBusy('add'); setErr(''); setMsg('');
     try {
       await api('/insurance/policies', { method: 'POST', body: JSON.stringify({ provider, type: ptype, premium_monthly: parseFloat(premium) || 0, paid_until: paidUntil || null }) });
-      setProvider(''); setPremium(''); setPaidUntil(''); setMsg('Poistka pridaná ✓');
+      setProvider(''); setPremium(''); setPaidUntil(''); setMsg('Policy added ✓');
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -47,8 +47,8 @@ export default function Insurance() {
     hap(); setBusy('ingest'); setErr(''); setMsg('');
     try {
       const r: any = await api('/insurance/ingest', { method: 'POST', body: JSON.stringify({ text: ingestText }) });
-      if (r.found) { setMsg(`Jarvis ${r.action === 'created' ? 'vytvoril' : 'aktualizoval'} poistku: ${r.policy.provider} (${r.policy.status === 'paid' ? 'zaplatená' : 'po splatnosti'})`); setIngestText(''); await load(); }
-      else setErr(r.hint || 'Nerozpoznané — skúste inak.');
+      if (r.found) { setMsg(`Jarvis ${r.action === 'created' ? 'created' : 'updated'} the policy: ${r.policy.provider} (${r.policy.status === 'paid' ? 'paid' : 'po splatnosti'})`); setIngestText(''); await load(); }
+      else setErr(r.hint || 'Not recognized — try phrasing it differently.');
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
@@ -68,8 +68,8 @@ export default function Insurance() {
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Suverénny strážca poistiek</Text>
-        <Text style={styles.sub}>Kto vás poisťuje, čo kryje a či je zaplatené — pod dohľadom Wealth Sentinela 24/7.</Text>
+        <Text style={styles.h1}>Sovereign Insurance Guardian</Text>
+        <Text style={styles.sub}>Who insures you, what it covers and whether it is paid — watched by the Wealth Sentinel 24/7.</Text>
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -82,7 +82,7 @@ export default function Insurance() {
         {data?.microloan_suggested && (
           <Pressable testID="ins-microloan" onPress={() => { hap(); router.push('/solidarity'); }} style={styles.loanBox}>
             <Ionicons name="people" size={18} color={C.brand} />
-            <Text style={styles.loanText}>Poistka po splatnosti? Solidarity Hub ponúka mikro-pôžičku, aby krytie nezaniklo.</Text>
+            <Text style={styles.loanText}>Policy overdue? The Solidarity Hub offers a micro-loan so your coverage never lapses.</Text>
             <Ionicons name="chevron-forward" size={16} color={C.brand} />
           </Pressable>
         )}
@@ -93,33 +93,33 @@ export default function Insurance() {
             <Ionicons name={(TYPE_ICON[p.type] || 'shield') as any} size={22} color={p.status === 'paid' ? C.brand : C.error} />
             <View style={{ flex: 1 }}>
               <Text style={styles.polTitle}>{p.provider}</Text>
-              <Text style={styles.polSub}>{TYPES.find(t2 => t2[0] === p.type)?.[1] || p.type}{p.premium_monthly ? ` · ${p.premium_monthly} ${p.currency}/mes.` : ''}{p.paid_until ? ` · do ${p.paid_until}` : ' · bez dátumu'}</Text>
+              <Text style={styles.polSub}>{TYPES.find(t2 => t2[0] === p.type)?.[1] || p.type}{p.premium_monthly ? ` · ${p.premium_monthly} ${p.currency}/mo.` : ''}{p.paid_until ? ` · until ${p.paid_until}` : ' · no date'}</Text>
             </View>
             <View style={[styles.statusChip, { backgroundColor: p.status === 'paid' ? '#5FA779' : C.error }]}>
-              <Text style={styles.statusText}>{p.status === 'paid' ? 'ZAPLATENÉ' : 'PO SPLATNOSTI'}</Text>
+              <Text style={styles.statusText}>{p.status === 'paid' ? 'PAID' : 'OVERDUE'}</Text>
             </View>
             <Pressable testID={`ins-del-${p.policy_id}`} onPress={() => del(p.policy_id)} hitSlop={8}>
               <Ionicons name="trash-outline" size={16} color={C.info} />
             </Pressable>
           </View>
         ))}
-        {data && data.policies.length === 0 && <Text style={styles.empty}>Zatiaľ žiadne poistky — pridajte ručne alebo to povedzte Jarvisovi nižšie.</Text>}
+        {data && data.policies.length === 0 && <Text style={styles.empty}>No policies yet — add one manually or just tell Jarvis below.</Text>}
 
         <Text style={styles.section}>🧠 POVEDZTE TO JARVISOVI</Text>
         <TextInput
           testID="ins-ingest-text"
           style={[styles.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: S.md }]}
           multiline
-          placeholder='Napr.: „Zdravotné poistenie mám v Dôvere, zaplatené do decembra."'
+          placeholder='E.g.: "My health insurance is with Dovera, paid until December."'
           placeholderTextColor={C.info}
           value={ingestText}
           onChangeText={setIngestText}
         />
         <Pressable testID="ins-ingest-run" onPress={ingest} disabled={busy === 'ingest'} style={styles.cta}>
-          {busy === 'ingest' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>SPRACOVAŤ (AI)</Text>}
+          {busy === 'ingest' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>PROCESS (AI)</Text>}
         </Pressable>
 
-        <Text style={styles.section}>PRIDAŤ RUČNE</Text>
+        <Text style={styles.section}>ADD MANUALLY</Text>
         <View style={styles.row2}>
           {TYPES.map(([k, l]) => (
             <Pressable key={k} testID={`ins-type-${k}`} onPress={() => { hap(); setPtype(k); }} style={[styles.chip, ptype === k && { backgroundColor: C.brand, borderColor: C.brand }]}>
@@ -127,16 +127,16 @@ export default function Insurance() {
             </Pressable>
           ))}
         </View>
-        <TextInput testID="ins-provider" style={styles.input} placeholder="Poisťovňa (napr. Dôvera)" placeholderTextColor={C.info} value={provider} onChangeText={setProvider} />
+        <TextInput testID="ins-provider" style={styles.input} placeholder="Insurer (e.g. Dovera)" placeholderTextColor={C.info} value={provider} onChangeText={setProvider} />
         <View style={styles.row2}>
-          <WheelField testID="ins-premium" title="POISTNÉ €/MES." min={0} max={500} unit="€" value={premium} onChange={setPremium} placeholder="Poistné €/mes." style={[styles.input, { flex: 1 }]} />
-          <DateField testID="ins-paid-until" title="ZAPLATENÉ DO" value={paidUntil} onChange={setPaidUntil} placeholder="Zaplatené do" style={[styles.input, { flex: 1 }]} />
+          <WheelField testID="ins-premium" title="PREMIUM €/MO." min={0} max={500} unit="€" value={premium} onChange={setPremium} placeholder="Premium €/mo." style={[styles.input, { flex: 1 }]} />
+          <DateField testID="ins-paid-until" title="PAID UNTIL" value={paidUntil} onChange={setPaidUntil} placeholder="Paid until" style={[styles.input, { flex: 1 }]} />
         </View>
         <Pressable testID="ins-add" onPress={add} disabled={busy === 'add'} style={styles.cta}>
-          {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ULOŽIŤ POISTKU</Text>}
+          {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>SAVE POLICY</Text>}
         </Pressable>
 
-        <Text style={styles.section}>GLOBÁLNE ŠABLÓNY POISŤOVNÍ</Text>
+        <Text style={styles.section}>GLOBAL INSURER TEMPLATES</Text>
         {(data?.templates || []).map((tpl: any) => (
           <View key={tpl.region} style={{ marginBottom: S.sm }}>
             <Text style={styles.tplRegion}>{tpl.region}</Text>
@@ -149,7 +149,7 @@ export default function Insurance() {
             </View>
           </View>
         ))}
-        <Text style={styles.disclaimer}>Wealth Sentinel kontroluje splatnosť každé 2 minúty. Pri prepadnutí poistky dostanete Jarvis alarm a Waitlist Hunter zobrazí varovanie pri rezerváciách.</Text>
+        <Text style={styles.disclaimer}>The Wealth Sentinel checks due dates every 2 minutes. If a policy lapses you get a Jarvis alarm and the Waitlist Hunter shows a warning during bookings.</Text>
       </ScrollView>
     </SafeAreaView>
   );

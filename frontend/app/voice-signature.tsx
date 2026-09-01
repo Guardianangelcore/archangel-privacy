@@ -64,8 +64,8 @@ export default function VoiceSignature() {
 
   const start = async () => {
     setErr(''); setOkMsg('');
-    if (!label.trim()) { setErr('Napíšte, ako sa voláte alebo označte vzťah (napr. Strážca).'); return; }
-    if (Platform.OS === 'web') { setErr('Nahrávanie voice printu funguje v natívnej aplikácii (Expo Go / build).'); return; }
+    if (!label.trim()) { setErr('Write your name or your relationship (e.g. Guardian).'); return; }
+    if (Platform.OS === 'web') { setErr('Voice-print recording works in the native app (Expo Go / build).'); return; }
     try {
       let perm = await AudioModule.getRecordingPermissionsAsync();
       if (!perm.granted) {
@@ -96,10 +96,10 @@ export default function VoiceSignature() {
       await apiUpload('/family/voice-signature', uri, uri.endsWith('.m4a') ? 'voice-print.m4a' : 'voice-print.webm',
         uri.endsWith('.m4a') ? 'audio/m4a' : 'audio/webm', { label: label.trim() });
       tap('success');
-      setOkMsg(`Hlasový podpis „${label.trim()}“ uložený. Babička uvidí a počuje, keď jej píšete.`);
+      setOkMsg(`Voice signature "${label.trim()}" saved. Grandma will see and hear who is writing to her.`);
       await load();
       // Confirm audibly
-      jarvisSpeak(`Ďakujem, ${label.trim()}. Váš hlasový podpis je zaznamenaný.`,
+      jarvisSpeak(`Thank you, ${label.trim()}. Your voice signature is recorded.`,
         { voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en' });
     } catch (e: any) { setErr(String(e?.message || e)); }
     setBusy(false);
@@ -107,7 +107,7 @@ export default function VoiceSignature() {
 
   const remove = async () => {
     setBusy(true); setErr(''); setOkMsg('');
-    try { await api('/family/voice-signature', { method: 'DELETE' }); await load(); setOkMsg('Hlasový podpis odstránený.'); }
+    try { await api('/family/voice-signature', { method: 'DELETE' }); await load(); setOkMsg('Voice signature removed.'); }
     catch (e: any) { setErr(String(e?.message || e)); }
     setBusy(false);
   };
@@ -118,23 +118,23 @@ export default function VoiceSignature() {
         <Pressable testID="vs-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>HLASOVÝ PODPIS</Text>
+        <Text style={styles.title}>VOICE SIGNATURE</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Nahrajte svoj hlas na 5 sekúnd. Keď potom pošlete odkaz babičke, Jarvis oznámi:
-          <Text style={{ color: C.brand, fontWeight: '900' }}> „Máte novú správu od {label.trim() || 'Vás'}.“</Text>
+          Record your voice for 5 seconds. When you then send grandma a message, Jarvis announces:
+          <Text style={{ color: C.brand, fontWeight: '900' }}> You have a new message from {label.trim() || 'you'}.</Text>
         </Text>
 
-        <Text style={styles.lbl}>MENO, KTORÉ POUŽIJE JARVIS</Text>
+        <Text style={styles.lbl}>THE NAME JARVIS WILL USE</Text>
         <TextInput
           testID="vs-label"
           value={label}
           onChangeText={setLabel}
           style={styles.input}
-          placeholder="napr. Strážca"
+          placeholder="e.g. Guardian"
           placeholderTextColor="#999"
           maxLength={40}
         />
@@ -161,7 +161,7 @@ export default function VoiceSignature() {
           <View testID="vs-existing" style={styles.existing}>
             <Ionicons name="checkmark-circle" size={22} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.existingLbl}>MÁTE ULOŽENÝ HLASOVÝ PODPIS</Text>
+              <Text style={styles.existingLbl}>YOU HAVE A SAVED VOICE SIGNATURE</Text>
               <Text style={styles.existingText}>„{sig.label}“ · {Math.round((sig.size || 0) / 1024)} KB</Text>
             </View>
             <Pressable testID="vs-delete" onPress={remove} disabled={busy} hitSlop={10}>
@@ -176,7 +176,7 @@ export default function VoiceSignature() {
         {micBlocked && (
           <Pressable onPress={() => Linking.openSettings()} style={styles.settingsBtn}>
             <Ionicons name="settings-outline" size={14} color={C.brand} />
-            <Text style={styles.settingsText}>Mikrofón je zablokovaný — OTVORIŤ NASTAVENIA</Text>
+            <Text style={styles.settingsText}>Microphone is blocked — OPEN SETTINGS</Text>
           </Pressable>
         )}
 
@@ -185,13 +185,13 @@ export default function VoiceSignature() {
           <View testID="vs-circle" style={styles.circleWrap}>
             <View style={styles.circleHdr}>
               <Ionicons name="people-circle" size={22} color={C.brand} />
-              <Text style={styles.circleTitle}>RODINNÝ HLASOVÝ KRUH</Text>
+              <Text style={styles.circleTitle}>FAMILY VOICE CIRCLE</Text>
               <View style={styles.circleCount}>
                 <Text style={styles.circleCountText}>{circle.recorded} / {circle.total}</Text>
               </View>
             </View>
             <Text style={styles.circleSub}>
-              Každý člen rodiny nahrá vlastný hlas — Jarvis oznámi babičke, od koho odkaz je.
+              Every family member records their own voice — Jarvis tells grandma who each message is from.
             </Text>
             {circle.members.map((m) => (
               <View key={m.user_id} testID={`vs-circle-${m.user_id}`} style={styles.memberRow}>
@@ -202,8 +202,8 @@ export default function VoiceSignature() {
                   <Text style={styles.memberName}>{m.name} {m.is_self && <Text style={styles.memberYou}>· TO STE VY</Text>}</Text>
                   <Text style={styles.memberStatus}>
                     {m.has_signature
-                      ? `„${m.label}“ · nahrané`
-                      : m.is_self ? 'Nahrajte hore ↑' : 'ešte nenahral svoj hlas'}
+                      ? `"${m.label}" · recorded`
+                      : m.is_self ? 'Record above ↑' : 'has not recorded a voice yet'}
                   </Text>
                 </View>
                 {m.has_signature ? (
@@ -218,7 +218,7 @@ export default function VoiceSignature() {
                     hitSlop={8}
                   >
                     <Ionicons name="paper-plane-outline" size={14} color={C.brand} />
-                    <Text style={styles.inviteBtnText}>POZVAŤ</Text>
+                    <Text style={styles.inviteBtnText}>INVITE</Text>
                   </Pressable>
                 )}
               </View>
@@ -230,13 +230,13 @@ export default function VoiceSignature() {
               style={styles.inviteBulk}
             >
               <Ionicons name="share-social-outline" size={16} color={C.onInverse} />
-              <Text style={styles.inviteBulkText}>POZVAŤ ĎALŠIEHO ČLENA RODINY</Text>
+              <Text style={styles.inviteBulkText}>INVITE ANOTHER FAMILY MEMBER</Text>
             </Pressable>
           </View>
         )}
 
         <Text style={styles.hint}>
-          Nahrávka sa nikomu neposiela — slúži iba na to, aby vás rodina spoznala v odkazoch.
+          The recording is not sent to anyone — it only helps your family recognize you in messages.
         </Text>
       </ScrollView>
     </SafeAreaView>

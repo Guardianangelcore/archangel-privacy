@@ -23,20 +23,20 @@ FOUNDER_LOCK_YEARS = 4
 BURN_RATE = 0.02                         # 2% of every spend is burned forever
 
 EARN_RULES = {
-    "proof_of_help":     {"amount": 10.0, "daily_max": 5,  "label": "Proof-of-Help — pomoc seniorovi (Family Shield)"},
-    "proof_of_health":   {"amount": 5.0,  "daily_max": 10, "label": "Proof-of-Health — anonymný zdravotný insight"},
-    "community_support": {"amount": 5.0,  "daily_max": 5,  "label": "Komunitná podpora (Solidarita / Barter)"},
+    "proof_of_help":     {"amount": 10.0, "daily_max": 5,  "label": "Proof-of-Help — helping a senior (Family Shield)"},
+    "proof_of_health":   {"amount": 5.0,  "daily_max": 10, "label": "Proof-of-Health — anonymous health insight"},
+    "community_support": {"amount": 5.0,  "daily_max": 5,  "label": "Community support (Solidarity / Barter)"},
 }
 SPEND_ITEMS = {
-    "vip_sentinel_30d":    {"price": 100.0, "label": "VIP Sentinel tier (30 dní)"},
-    "expert_consult":      {"price": 40.0,  "label": "Expert Marketplace — konzultácia"},
-    "priority_hunter_7d":  {"price": 25.0,  "label": "Prioritný Waitlist Hunter (7 dní)"},
-    "tier_guardian_30d":   {"price": 50.0,    "label": "Guardian Tier — 30 dní (GA-T)"},
-    "tier_sentinel_30d":   {"price": 250.0,   "label": "Sentinel Tier — 30 dní (GA-T)"},
-    "tier_archangel_30d":  {"price": 800.0,   "label": "Archangel Tier — 30 dní (GA-T)"},
-    "tier_guardian_365d":  {"price": 480.0,   "label": "Guardian Tier — ročne −20 % (GA-T)"},
-    "tier_sentinel_365d":  {"price": 2400.0,  "label": "Sentinel Tier — ročne −20 % (GA-T)"},
-    "tier_archangel_365d": {"price": 7680.0,  "label": "Archangel Tier — ročne −20 % (GA-T)"},
+    "vip_sentinel_30d":    {"price": 100.0, "label": "VIP Sentinel tier (30 days)"},
+    "expert_consult":      {"price": 40.0,  "label": "Expert Marketplace — consultation"},
+    "priority_hunter_7d":  {"price": 25.0,  "label": "Priority Waitlist Hunter (7 days)"},
+    "tier_guardian_30d":   {"price": 50.0,    "label": "Guardian Tier — 30 days (GA-T)"},
+    "tier_sentinel_30d":   {"price": 250.0,   "label": "Sentinel Tier — 30 days (GA-T)"},
+    "tier_archangel_30d":  {"price": 800.0,   "label": "Archangel Tier — 30 days (GA-T)"},
+    "tier_guardian_365d":  {"price": 480.0,   "label": "Guardian Tier — yearly −20% (GA-T)"},
+    "tier_sentinel_365d":  {"price": 2400.0,  "label": "Sentinel Tier — yearly −20% (GA-T)"},
+    "tier_archangel_365d": {"price": 7680.0,  "label": "Archangel Tier — yearly −20% (GA-T)"},
     "bioscan_single":      {"price": 5.0,  "label": "Vitals Bio-Scanner — 1 meranie"},
     "ips_export_single":   {"price": 10.0, "label": "IPS Export — 1 export (HL7 FHIR)"},
 }
@@ -160,7 +160,7 @@ async def token_earn(body: EarnIn, authorization: Optional[str] = Header(None)):
         raise HTTPException(400, f"activity must be one of {list(EARN_RULES)}")
     tx = await award_tokens(user["user_id"], body.activity, body.note or "manual claim")
     if not tx:
-        raise HTTPException(429, "daily_limit: Denný limit pre túto aktivitu je vyčerpaný — skúste zajtra.")
+        raise HTTPException(429, "daily_limit: Daily limit for this activity reached — try again tomorrow.")
     acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0})
     return {"tx": tx, "balance": acct["balance"]}
 

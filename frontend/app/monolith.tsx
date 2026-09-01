@@ -14,15 +14,15 @@ import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
 
 const PROCS = [
-  { code: 'dental_implant', label: 'Zubný implantát' },
-  { code: 'hip_replacement', label: 'Endoprotéza bedra' },
-  { code: 'knee_replacement', label: 'Endoprotéza kolena' },
-  { code: 'cataract', label: 'Sivý zákal' },
+  { code: 'dental_implant', label: 'Dental implant' },
+  { code: 'hip_replacement', label: 'Hip replacement' },
+  { code: 'knee_replacement', label: 'Knee replacement' },
+  { code: 'cataract', label: 'Cataract' },
   { code: 'all_on_4', label: 'All-on-4' },
-  { code: 'mri_full', label: 'Celotelová MRI' },
+  { code: 'mri_full', label: 'Full-body MRI' },
 ];
 const URGENCIES = [
-  { id: 'low', label: 'NÍZKA' }, { id: 'medium', label: 'STREDNÁ' }, { id: 'high', label: 'VYSOKÁ' },
+  { id: 'low', label: 'LOW' }, { id: 'medium', label: 'MEDIUM' }, { id: 'high', label: 'HIGH' },
 ];
 
 function Section({ id, icon, title, sub, open, onToggle, children }: any) {
@@ -161,7 +161,7 @@ export default function Monolith() {
   const trainBp = () => run('bp', async () => { const r: any = await api('/legacy/blueprint/train', { method: 'POST' }); setBp(r); });
   const askBp = () => run('bpask', async () => {
     if (!bpQ.trim()) return;
-    const r: any = await api('/legacy/blueprint/ask', { method: 'POST', body: JSON.stringify({ question: bpQ, asker_name: 'Strážca' }) });
+    const r: any = await api('/legacy/blueprint/ask', { method: 'POST', body: JSON.stringify({ question: bpQ, asker_name: 'Guardian' }) });
     setBpA(r.answer);
   });
 
@@ -184,30 +184,30 @@ export default function Monolith() {
           <Pressable testID="mono-partners" onPress={() => { tap('light'); router.push('/partners'); }} style={st.gateTile}>
             <Ionicons name="business-outline" size={22} color={C.brand} />
             <Text style={st.gateTitle}>UHP PARTNERS</Text>
-            <Text style={st.gateSub}>Kliniky · poisťovne · pripojenie k protokolu</Text>
+            <Text style={st.gateSub}>Clinics · insurers · protocol onboarding</Text>
           </Pressable>
           <Pressable testID="mono-founder" onPress={() => { tap('light'); router.push('/founder-toolkit'); }} style={st.gateTile}>
             <Ionicons name="briefcase-outline" size={22} color={C.brand} />
             <Text style={st.gateTitle}>{"FOUNDER'S TOOLKIT"}</Text>
-            <Text style={st.gateSub}>Investor demo · prognóza · release package</Text>
+            <Text style={st.gateSub}>Investor demo · forecast · release package</Text>
           </Pressable>
         </View>
 
-        <Section id="uhp" icon="git-network-outline" title="GLOBAL SENTINEL NETWORK" sub="Universal Health Protocol · povinná brána" open={open} onToggle={setOpen}>
+        <Section id="uhp" icon="git-network-outline" title="GLOBAL SENTINEL NETWORK" sub="Universal Health Protocol · mandatory gateway" open={open} onToggle={setOpen}>
           {cap ? (
             <>
-              <Text style={st.big}>{cap.stream_capacity_human} <Text style={st.bigSub}>súbežných streamov</Text></Text>
-              <Row k="Topológia" v={`${cap.topology.regions} regiónov × ${cap.topology.shards_per_region} shardov × ${cap.topology.nodes_per_shard} uzlov`} />
-              <Row k="Aktívni partneri (kliniky/poisťovne)" v={cap.active_partners} hi />
-              <Row k="Prijaté UHP eventy" v={cap.events_ingested_total} />
-              <Row k="Otvorené senzor-streamy" v={cap.open_streams} />
+              <Text style={st.big}>{cap.stream_capacity_human} <Text style={st.bigSub}>concurrent streams</Text></Text>
+              <Row k="Topology" v={`${cap.topology.regions} regions × ${cap.topology.shards_per_region} shards × ${cap.topology.nodes_per_shard} nodes`} />
+              <Row k="Active partners (clinics/insurers)" v={cap.active_partners} hi />
+              <Row k="UHP events ingested" v={cap.events_ingested_total} />
+              <Row k="Open sensor streams" v={cap.open_streams} />
               <Row k="Konsenzus" v={cap.consensus} />
-              <Text style={st.note}>Partneri sa registrujú cez /api/uhp/partners/register — HMAC-SHA256 podpisy, ochrana proti replay, idempotencia, {'240/min'} rate-limit.</Text>
+              <Text style={st.note}>Partners register via /api/uhp/partners/register — HMAC-SHA256 signatures, replay protection, idempotency, {'240/min'} rate-limit.</Text>
             </>
           ) : <ActivityIndicator color={C.brand} />}
         </Section>
 
-        <Section id="arb" icon="trending-up-outline" title="ARBITRAGE BRAIN" sub="10 000+ kliník · cena vs. ušetrený čas" open={open} onToggle={setOpen}>
+        <Section id="arb" icon="trending-up-outline" title="ARBITRAGE BRAIN" sub="10,000+ clinics · price vs. time saved" open={open} onToggle={setOpen}>
           <View style={st.chips}>
             {PROCS.map(p => (
               <Pressable key={p.code} testID={`mono-proc-${p.code}`} onPress={() => { tap('light'); setProc(p.code); }} style={[st.chip, proc === p.code && st.chipOn]}>
@@ -223,22 +223,22 @@ export default function Monolith() {
             ))}
           </View>
           <View style={st.inRow}>
-            <WheelField testID="mono-local-price" title="LOKÁLNA CENA €" min={0} max={20000} step={100} unit="€" value={localPrice} onChange={setLocalPrice} placeholder="Lokálna cena" style={st.input} />
-            <WheelField testID="mono-local-wait" title="LOKÁLNE ČAKANIE (TÝŽ.)" min={0} max={100} unit="týž." value={localWait} onChange={setLocalWait} placeholder="Čakanie" style={st.input} />
+            <WheelField testID="mono-local-price" title="LOCAL PRICE €" min={0} max={20000} step={100} unit="€" value={localPrice} onChange={setLocalPrice} placeholder="Local price" style={st.input} />
+            <WheelField testID="mono-local-wait" title="LOCAL WAIT (WKS)" min={0} max={100} unit="wks" value={localWait} onChange={setLocalWait} placeholder="Wait" style={st.input} />
           </View>
           <Pressable testID="mono-analyze" onPress={analyze} disabled={busy === 'arb'} style={st.cta}>
-            {busy === 'arb' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ANALYZOVAŤ GLOBÁLNY TRH</Text>}
+            {busy === 'arb' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ANALYZE GLOBAL MARKET</Text>}
           </Pressable>
           {arb && (
             <>
-              <Text style={st.note}>Analyzovaných {arb.candidates_analyzed} kliník · {arb.formula}</Text>
-              {[['💎 NAJLEPŠIA HODNOTA', arb.picks.best_value], ['💶 NAJLACNEJŠIA', arb.picks.cheapest], ['⚡ NAJRÝCHLEJŠIA', arb.picks.fastest]].map(([lbl, c]: any) => (
+              <Text style={st.note}>Analyzed {arb.candidates_analyzed} clinics · {arb.formula}</Text>
+              {[['💎 BEST VALUE', arb.picks.best_value], ['💶 CHEAPEST', arb.picks.cheapest], ['⚡ FASTEST', arb.picks.fastest]].map(([lbl, c]: any) => (
                 <View key={lbl} style={st.card}>
                   <Text style={st.cardLbl}>{lbl}</Text>
                   <Text style={st.cardTitle}>{c.name} · {c.city} ({c.country})</Text>
-                  <Text style={st.cardLine}>Zákrok {c.price_eur} € + cesta {c.travel_eur} € + pobyt {c.lodging_eur} € = <Text style={{ color: C.brand, fontWeight: '900' }}>{c.total_cost_eur} €</Text></Text>
-                  <Text style={st.cardLine}>Čakanie {c.wait_days} dní · ušetríte {c.time_saved_weeks} týž. (hodnota {c.time_value_eur} €) · kvalita {c.quality}★</Text>
-                  <Text style={[st.cardLine, { color: c.net_benefit_eur > 0 ? C.brand : C.error, fontWeight: '900' }]}>ČISTÝ PRÍNOS: {c.net_benefit_eur > 0 ? '+' : ''}{c.net_benefit_eur} €</Text>
+                  <Text style={st.cardLine}>Procedure {c.price_eur} € + travel {c.travel_eur} € + lodging {c.lodging_eur} € = <Text style={{ color: C.brand, fontWeight: '900' }}>{c.total_cost_eur} €</Text></Text>
+                  <Text style={st.cardLine}>Wait {c.wait_days} days · you save {c.time_saved_weeks} wks (value {c.time_value_eur} €) · quality {c.quality}★</Text>
+                  <Text style={[st.cardLine, { color: c.net_benefit_eur > 0 ? C.brand : C.error, fontWeight: '900' }]}>NET BENEFIT: {c.net_benefit_eur > 0 ? '+' : ''}{c.net_benefit_eur} €</Text>
                 </View>
               ))}
             </>
@@ -246,8 +246,8 @@ export default function Monolith() {
         </Section>
 
         <Section id="bank" icon="card-outline" title="LIQUIDITY BANK" sub="Instant Card Payout · Data-Backed Credit" open={open} onToggle={setOpen}>
-          <Text style={st.big}>{bal ? `${bal.balance.available_eur.toFixed(2)} €` : '—'} <Text style={st.bigSub}>dostupný zostatok</Text></Text>
-          {bal && <Text style={st.note}>Rails: {bal.adapter} ({bal.rails_mode}) — adaptér sa vymení za Visa Direct / MC Send v deň pripojenia inštitúcie.</Text>}
+          <Text style={st.big}>{bal ? `${bal.balance.available_eur.toFixed(2)} €` : '—'} <Text style={st.bigSub}>available balance</Text></Text>
+          {bal && <Text style={st.note}>Rails: {bal.adapter} ({bal.rails_mode}) — adapter swaps to Visa Direct / MC Send the day an institution connects.</Text>}
           <View style={st.inRow}>
             <WheelField testID="mono-pay-amount" title="SUMA €" min={10} max={2000} step={10} unit="€" value={amount} onChange={setAmount} placeholder="Suma" style={st.input} />
             <TextInput testID="mono-pay-card" value={card} onChangeText={setCard} maxLength={4} keyboardType="number-pad" placeholder="****" placeholderTextColor="#888" style={[st.input, st.inputText, { flex: 0.6 }]} />
@@ -260,7 +260,7 @@ export default function Monolith() {
             ))}
           </View>
           <Pressable testID="mono-payout" onPress={doPayout} disabled={busy === 'pay'} style={st.cta}>
-            {busy === 'pay' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>OKAMŽITÁ VÝPLATA NA KARTU</Text>}
+            {busy === 'pay' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>INSTANT CARD PAYOUT</Text>}
           </Pressable>
           {payout && (
             <View style={st.card}>
@@ -280,44 +280,44 @@ export default function Monolith() {
             </View>
           )}
           <Pressable testID="mono-credit-score" onPress={scoreCredit} disabled={busy === 'credit'} style={st.ghost}>
-            {busy === 'credit' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>DATA-BACKED CREDIT — VYPOČÍTAŤ LIMIT</Text>}
+            {busy === 'credit' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>DATA-BACKED CREDIT — CALCULATE LIMIT</Text>}
           </Pressable>
           {credit && (
             <View style={st.card}>
-              <Text style={st.cardTitle}>Úverový limit: {credit.limit_eur} € · {credit.apr_pct}% p.a.</Text>
-              <Text style={st.cardLine}>Kolaterál = dátové bohatstvo: {credit.collateral.documents} dokumentov · {credit.collateral.bioscans} meraní · {credit.collateral.gat_balance} GA-T</Text>
+              <Text style={st.cardTitle}>Credit limit: {credit.limit_eur} € · {credit.apr_pct}% p.a.</Text>
+              <Text style={st.cardLine}>Collateral = data wealth: {credit.collateral.documents} documents · {credit.collateral.bioscans} readings · {credit.collateral.gat_balance} GA-T</Text>
               <View style={st.inRow}>
-                <WheelField testID="mono-draw" title="ČERPAŤ €" min={10} max={5000} step={10} unit="€" value={drawAmt} onChange={setDrawAmt} placeholder="Čerpať" style={st.input} />
+                <WheelField testID="mono-draw" title="DRAW €" min={10} max={5000} step={10} unit="€" value={drawAmt} onChange={setDrawAmt} placeholder="Draw" style={st.input} />
                 <Pressable testID="mono-draw-btn" onPress={drawCredit} disabled={busy === 'draw'} style={[st.cta, { flex: 1, marginTop: 0 }]}>
-                  {busy === 'draw' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ČERPAŤ</Text>}
+                  {busy === 'draw' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>DRAW</Text>}
                 </Pressable>
               </View>
             </View>
           )}
         </Section>
 
-        <Section id="twin" icon="body-outline" title="BIO-DIGITÁLNE DVOJČA" sub="Simulácia liečby PRED podaním · trajektórie" open={open} onToggle={setOpen}>
+        <Section id="twin" icon="body-outline" title="BIO-DIGITAL TWIN" sub="Simulate treatment BEFORE dosing · trajectories" open={open} onToggle={setOpen}>
           <Pressable testID="mono-traj" onPress={loadTraj} disabled={busy === 'traj'} style={st.ghost}>
-            {busy === 'traj' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>PREDIKTÍVNE TRAJEKTÓRIE (6/12/24 MES.)</Text>}
+            {busy === 'traj' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>PREDICTIVE TRAJECTORIES (6/12/24 MO.)</Text>}
           </Pressable>
           {traj && (
             <View style={st.card}>
               {Object.entries(traj.trajectories).map(([m, d]: any) => (
                 <View key={m} style={{ marginBottom: S.sm }}>
-                  <Text style={st.cardLbl}>{m === 'systolic' ? 'SYSTOLICKÝ TLAK' : 'GLUKÓZA'} ({d.history_points} meraní)</Text>
+                  <Text style={st.cardLbl}>{m === 'systolic' ? 'SYSTOLIC BP' : 'GLUCOSE'} ({d.history_points} readings)</Text>
                   <Text style={st.cardLine}>
                     teraz <Text style={{ color: bandColor(d.band_now), fontWeight: '900' }}>{d.current ?? '—'}</Text>
                     {'  →  6m '}{d.m6 ?? '—'}{'  →  12m '}<Text style={{ color: bandColor(d.band_m12), fontWeight: '900' }}>{d.m12 ?? '—'}</Text>{'  →  24m '}{d.m24 ?? '—'}
                   </Text>
                 </View>
               ))}
-              <Text style={st.cardLine}>Kompozitné riziko 12m: <Text style={{ color: traj.composite_risk_12m >= 40 ? C.error : C.brand, fontWeight: '900' }}>{traj.composite_risk_12m}/100</Text></Text>
+              <Text style={st.cardLine}>Composite 12-mo risk: <Text style={{ color: traj.composite_risk_12m >= 40 ? C.error : C.brand, fontWeight: '900' }}>{traj.composite_risk_12m}/100</Text></Text>
               <Text style={st.note}>{traj.disclaimer}</Text>
             </View>
           )}
-          <TextInput testID="mono-treatment" value={treatment} onChangeText={setTreatment} placeholder="Liek / zákrok na simuláciu (napr. Ibuprofen 400 mg)" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-treatment" value={treatment} onChangeText={setTreatment} placeholder="Drug / procedure to simulate (e.g. Ibuprofen 400 mg)" placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-simulate" onPress={simulate} disabled={busy === 'sim'} style={st.cta}>
-            {busy === 'sim' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>SIMULOVAŤ NA DVOJČATI (gpt-5.4)</Text>}
+            {busy === 'sim' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>SIMULATE ON TWIN (gpt-5.4)</Text>}
           </Pressable>
           {sim && (
             <View style={[st.card, { borderColor: sim.result.verdict === 'simulate_pass' ? C.brand : sim.result.verdict === 'caution' ? '#FFC53D' : C.error }]}>
@@ -329,74 +329,74 @@ export default function Monolith() {
           )}
         </Section>
 
-        <Section id="sentinel" icon="pulse-outline" title="PREDIKTÍVNY SENTINEL" sub="Varuje Inner Circle PRED udalosťou" open={open} onToggle={setOpen}>
+        <Section id="sentinel" icon="pulse-outline" title="PREDICTIVE SENTINEL" sub="Warns the Inner Circle BEFORE the event" open={open} onToggle={setOpen}>
           {risk ? (
             <>
               <Text style={st.big}><Text style={{ color: risk.level === 'high' ? C.error : risk.level === 'medium' ? '#FFC53D' : C.brand }}>{risk.risk_score}</Text><Text style={st.bigSub}> /100 riziko · {risk.level.toUpperCase()}</Text></Text>
               {(risk.factors || []).map((f: string, i: number) => <Text key={i} style={st.cardLine}>• {f}</Text>)}
-              <Text style={st.note}>Mikro-vibrácie a pravidelnosť chôdze sa zbierajú automaticky senzormi ({risk.samples_24h} vzoriek/24 h). Pri riziku ≥70 dostane Inner Circle push PRED udalosťou.</Text>
+              <Text style={st.note}>Micro-vibrations and gait regularity are collected automatically by sensors ({risk.samples_24h} samples/24 h). At risk ≥70 the Inner Circle receives a push BEFORE the event.</Text>
             </>
           ) : <ActivityIndicator color={C.brand} />}
         </Section>
 
-        <Section id="edge" icon="hardware-chip-outline" title="ŽIVÁ MENA · GUARDIAN BASIC INCOME" sub="GA-T za výpočty pre medicínsky výskum" open={open} onToggle={setOpen}>
+        <Section id="edge" icon="hardware-chip-outline" title="LIVING CURRENCY · GUARDIAN BASIC INCOME" sub="GA-T for compute powering medical research" open={open} onToggle={setOpen}>
           {edge && (
             <>
               <Row k="Uzly siete" v={edge.network.nodes} hi />
-              <Row k="Výskumné úlohy spolu" v={edge.network.tasks_total.toLocaleString()} />
-              <Row k="GA-T rozdelené" v={edge.network.gat_distributed} />
+              <Row k="Research tasks total" v={edge.network.tasks_total.toLocaleString()} />
+              <Row k="GA-T distributed" v={edge.network.gat_distributed} />
               <Row k="Sadzba" v={edge.rate} />
-              <Row k="Základný príjem (GBI)" v={`${edge.gbi.daily_gat} GA-T / deň`} hi />
+              <Row k="Basic income (GBI)" v={`${edge.gbi.daily_gat} GA-T / day`} hi />
             </>
           )}
           <Pressable testID="mono-edge-run" onPress={runEdge} disabled={busy === 'edge'} style={st.cta}>
-            {busy === 'edge' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>DAROVAŤ VÝPOČTOVÝ VÝKON (≈3 s)</Text>}
+            {busy === 'edge' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>DONATE COMPUTE POWER (≈3 s)</Text>}
           </Pressable>
           {edgeResult && (
             <View style={st.card}>
               <Text style={st.cardTitle}>+{edgeResult.gat_earned} GA-T</Text>
-              <Text style={st.cardLine}>{edgeResult.tasks.toLocaleString()} reálnych úloh za {edgeResult.ms} ms — zariadenie počítalo pre decentralizovaný výskumný swarm.</Text>
+              <Text style={st.cardLine}>{edgeResult.tasks.toLocaleString()} real tasks in {edgeResult.ms} ms — your device computed for the decentralized research swarm.</Text>
             </View>
           )}
         </Section>
 
-        <Section id="truth" icon="library-outline" title="COLLECTIVE HUMAN TRUTH" sub="SHA3-512 reťaz · post-kvantový hash" open={open} onToggle={setOpen}>
+        <Section id="truth" icon="library-outline" title="COLLECTIVE HUMAN TRUTH" sub="SHA3-512 chain · post-quantum hash" open={open} onToggle={setOpen}>
           {truth && (
             <>
-              <Row k="Integrita reťaze" v={truth.valid ? '✓ NEPORUŠENÁ' : '✗ PORUŠENÁ'} hi />
-              <Row k="Záznamov" v={truth.records} />
-              <Row k="Hlava reťaze" v={String(truth.head || '').slice(0, 18) + '…'} />
+              <Row k="Chain integrity" v={truth.valid ? '✓ INTACT' : '✗ BROKEN'} hi />
+              <Row k="Records" v={truth.records} />
+              <Row k="Chain head" v={String(truth.head || '').slice(0, 18) + '…'} />
             </>
           )}
-          <TextInput testID="mono-testimony" value={testimony} onChangeText={setTestimony} placeholder="Zapísať svedectvo do večného záznamu…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-testimony" value={testimony} onChangeText={setTestimony} placeholder="Write a testimony into the eternal record…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-truth-add" onPress={appendTruth} disabled={busy === 'truth'} style={st.cta}>
-            {busy === 'truth' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ZAPEČATIŤ DO REŤAZE</Text>}
+            {busy === 'truth' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>SEAL INTO THE CHAIN</Text>}
           </Pressable>
         </Section>
 
-        <Section id="bp" icon="finger-print-outline" title="PERSONALITY BLUEPRINT" sub="Kognitívne odovzdanie — Jarvis pre pozostalých" open={open} onToggle={setOpen}>
+        <Section id="bp" icon="finger-print-outline" title="PERSONALITY BLUEPRINT" sub="Cognitive handover — Jarvis for the bereaved" open={open} onToggle={setOpen}>
           <Pressable testID="mono-bp-train" onPress={trainBp} disabled={busy === 'bp'} style={st.ghost}>
-            {busy === 'bp' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{bp ? `PRETRÉNOVAŤ (v${bp.version ?? 1})` : 'NATRÉNOVAŤ MOJU OSOBNOSŤ (gpt-5.4)'}</Text>}
+            {busy === 'bp' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{bp ? `RETRAIN (v${bp.version ?? 1})` : 'TRAIN MY PERSONALITY (gpt-5.4)'}</Text>}
           </Pressable>
           {bp?.blueprint && (
             <View style={st.card}>
-              <Text style={st.cardLbl}>TÓN</Text>
+              <Text style={st.cardLbl}>TONE</Text>
               <Text style={st.cardLine}>{bp.blueprint.tone}</Text>
               <Text style={st.cardLbl}>HODNOTY</Text>
               <Text style={st.cardLine}>{(bp.blueprint.values || []).join(' · ')}</Text>
-              <Text style={st.cardLbl}>ROZHODOVACIE PRAVIDLÁ</Text>
+              <Text style={st.cardLbl}>DECISION RULES</Text>
               {(bp.blueprint.decision_rules || []).map((r: string, i: number) => <Text key={i} style={st.cardLine}>• {r}</Text>)}
             </View>
           )}
-          <TextInput testID="mono-bp-q" value={bpQ} onChangeText={setBpQ} placeholder="Otázka pre digitálne echo…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-bp-q" value={bpQ} onChangeText={setBpQ} placeholder="Question for the digital echo…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-bp-ask" onPress={askBp} disabled={busy === 'bpask'} style={st.cta}>
-            {busy === 'bpask' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>OPÝTAŤ SA DIGITÁLNEHO ECHA</Text>}
+            {busy === 'bpask' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ASK THE DIGITAL ECHO</Text>}
           </Pressable>
           {!!bpA && <View style={st.card}><Text style={st.cardLine}>{bpA}</Text></View>}
-          <Text style={st.note}>Verný hlasový klon vyžaduje ElevenLabs kľúč — echo zatiaľ hovorí najbližším OpenAI hlasom.</Text>
+          <Text style={st.note}>A faithful voice clone requires an ElevenLabs key — for now the echo speaks with the closest OpenAI voice.</Text>
         </Section>
 
-        <Text style={st.footer}>SOVEREIGN SURVIVAL OS · 22. STOROČIE · GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO)</Text>
+        <Text style={st.footer}>SOVEREIGN SURVIVAL OS · 22ND CENTURY · GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO)</Text>
       </ScrollView>
     </SafeAreaView>
   );

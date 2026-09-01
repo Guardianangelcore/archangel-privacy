@@ -52,16 +52,16 @@ export default function Gigs() {
   const create = () => run('create', async () => {
     await api('/gigs', { method: 'POST', body: JSON.stringify({ ...f, reward_gat: parseFloat(f.reward_gat) || 10, reward_eur: parseFloat(f.reward_eur) || 0 }) });
     setModal(false); setF({ kind: 'transport', title: '', note: '', city: '', reward_gat: '10', reward_eur: '0' });
-    setMsg('Požiadavka odoslaná susedom v okolí (push).');
+    setMsg('Request sent to neighbours nearby (push).');
   });
   const accept = (id: string) => run(`acc-${id}`, async () => {
     await api(`/gigs/${id}/accept`, { method: 'POST' });
-    setMsg('Gig prijatý — zadávateľ dostal push, že ste na ceste.');
+    setMsg('Gig accepted — the requester got a push that you are on your way.');
     setTab('mine');
   });
   const complete = (id: string) => run(`cmp-${id}`, async () => {
     const res: any = await api(`/gigs/${id}/complete`, { method: 'POST' });
-    setMsg(res.gat_reward ? `Hotovo — pomocník získal +${res.gat_reward} GA-T (Proof-of-Help).` : 'Hotovo — GA-T denný limit, odmena zajtra.');
+    setMsg(res.gat_reward ? `Done — the helper earned +${res.gat_reward} GA-T (Proof-of-Help).` : 'Done — daily GA-T limit reached, reward tomorrow.');
   });
 
   const data = tab === 'open' ? open : mine;
@@ -81,7 +81,7 @@ export default function Gigs() {
       <View style={st.tabRow}>
         {(['open', 'mine'] as const).map(k => (
           <Pressable testID={`gg-tab-${k}`} key={k} onPress={() => setTab(k)} style={[st.tabBtn, tab === k && st.tabBtnActive]}>
-            <Text style={[st.tabText, tab === k && st.tabTextActive]}>{k === 'open' ? 'V OKOLÍ' : 'MOJE GIGY'}</Text>
+            <Text style={[st.tabText, tab === k && st.tabTextActive]}>{k === 'open' ? 'NEARBY' : 'MY GIGS'}</Text>
           </Pressable>
         ))}
       </View>
@@ -93,7 +93,7 @@ export default function Gigs() {
         contentContainerStyle={{ padding: S.lg, paddingBottom: 140 }}
         ListHeaderComponent={
           <View>
-            <Text style={st.intro}>Susedia pomáhajú seniorom — odvoz, nákup, lieky, spoločnosť. Odmena: GA-T (Proof-of-Help) alebo hotovosť napriamo, bez provízie.</Text>
+            <Text style={st.intro}>Neighbours help seniors — rides, groceries, meds, company. Reward: GA-T (Proof-of-Help) or direct cash, zero commission.</Text>
             {!!msg && <Text testID="gg-msg" style={st.msg}>{msg}</Text>}
             {!!err && <Text testID="gg-err" style={st.err}>{err}</Text>}
           </View>
@@ -119,16 +119,16 @@ export default function Gigs() {
               <Text style={st.reward}>ODMENA: {item.reward_gat} GA-T{item.reward_eur ? ` + ${item.reward_eur} €` : ''}</Text>
               {item.status === 'open' && !isMineReq && (
                 <Pressable testID={`gg-accept-${item.gig_id}`} onPress={() => accept(item.gig_id)} style={st.acceptBtn}>
-                  {busy === `acc-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>PRIJÍMAM — IDEM POMÔCŤ 😇</Text>}
+                  {busy === `acc-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>I ACCEPT — GOING TO HELP 😇</Text>}
                 </Pressable>
               )}
               {item.status === 'taken' && isMineReq && (
                 <Pressable testID={`gg-complete-${item.gig_id}`} onPress={() => complete(item.gig_id)} style={[st.acceptBtn, { backgroundColor: C.brand }]}>
-                  {busy === `cmp-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>POTVRDIŤ DOKONČENIE + ODMENU</Text>}
+                  {busy === `cmp-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>CONFIRM COMPLETION + REWARD</Text>}
                 </Pressable>
               )}
               {item.status === 'taken' && !isMineReq && item.taker_id === user?.user_id && (
-                <Text style={st.taken}>POMÁHATE VY — po dokončení potvrdí zadávateľ odmenu</Text>
+                <Text style={st.taken}>YOU ARE HELPING — the requester confirms the reward when done</Text>
               )}
             </View>
           );
@@ -138,14 +138,14 @@ export default function Gigs() {
 
       <Pressable testID="gg-add" onPress={() => setModal(true)} style={st.fab}>
         <Ionicons name="add" size={22} color={C.onInverse} />
-        <Text style={st.fabText}>POŽIADAŤ O POMOC</Text>
+        <Text style={st.fabText}>ASK FOR HELP</Text>
       </Pressable>
 
       <Modal visible={modal} animationType="slide" transparent>
         <View style={st.modalRoot}>
           <View style={st.modalCard}>
             <View style={st.modalHead}>
-              <Text style={st.modalTitle}>NOVÁ POŽIADAVKA</Text>
+              <Text style={st.modalTitle}>NEW REQUEST</Text>
               <Pressable testID="gg-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 460 }}>
@@ -156,22 +156,22 @@ export default function Gigs() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput testID="gg-title" placeholder="Napr.: Odvoz na kardiológiu v utorok 9:00" value={f.title} onChangeText={v => setF({ ...f, title: v })} style={st.input} placeholderTextColor="#777" />
-              <TextInput testID="gg-city" placeholder="Mesto" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={st.input} placeholderTextColor="#777" />
-              <TextInput testID="gg-note" placeholder="Poznámka (nepovinné)" value={f.note} onChangeText={v => setF({ ...f, note: v })} style={st.input} placeholderTextColor="#777" />
+              <TextInput testID="gg-title" placeholder="E.g.: A ride to cardiology on Tuesday 9:00" value={f.title} onChangeText={v => setF({ ...f, title: v })} style={st.input} placeholderTextColor="#777" />
+              <TextInput testID="gg-city" placeholder="City" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={st.input} placeholderTextColor="#777" />
+              <TextInput testID="gg-note" placeholder="Note (optional)" value={f.note} onChangeText={v => setF({ ...f, note: v })} style={st.input} placeholderTextColor="#777" />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 <View style={{ flex: 1 }}>
                   <Text style={st.lbl}>ODMENA GA-T (max 50)</Text>
                   <WheelField testID="gg-gat" title="ODMENA GA-T" min={0} max={500} step={5} unit="GA-T" value={f.reward_gat} onChange={v => setF({ ...f, reward_gat: v })} placeholder="0" style={st.input} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={st.lbl}>HOTOVOSŤ € (nepovinné)</Text>
+                  <Text style={st.lbl}>CASH € (optional)</Text>
                   <WheelField testID="gg-eur" title="ODMENA €" min={0} max={500} step={5} unit="€" value={f.reward_eur} onChange={v => setF({ ...f, reward_eur: v })} placeholder="0" style={st.input} />
                 </View>
               </View>
             </ScrollView>
             <Pressable testID="gg-save" onPress={create} disabled={busy === 'create' || !f.title.trim()} style={st.saveBtn}>
-              {busy === 'create' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>ODOSLAŤ SUSEDOM</Text>}
+              {busy === 'create' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>SEND TO NEIGHBOURS</Text>}
             </Pressable>
           </View>
         </View>

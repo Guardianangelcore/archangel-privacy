@@ -27,7 +27,7 @@ export default function DropPortal() {
     (async () => {
       try {
         const r = await fetch(`${API_BASE}/api/health-drop/${dropId}/info`);
-        if (!r.ok) throw new Error('Drop link neexistuje alebo bol zrušený.');
+        if (!r.ok) throw new Error('This Drop link does not exist or was revoked.');
         setInfo(await r.json());
       } catch (e: any) { setErr(String(e.message || e)); }
     })();
@@ -50,7 +50,7 @@ export default function DropPortal() {
         const b64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' as any });
         bytes = b64decode(b64);
       }
-      if (bytes.length > 14 * 1024 * 1024) throw new Error('Súbor je príliš veľký (max 14MB).');
+      if (bytes.length > 14 * 1024 * 1024) throw new Error('The file is too large (max 14MB).');
       const { ciphertext, nonce, ephPub } = encryptForRecipient(bytes, info.public_key);
 
       const form = new FormData();
@@ -71,13 +71,13 @@ export default function DropPortal() {
       form.append('nonce', nonce);
       form.append('guardian_id', guardianId.trim());
       form.append('sender_name', senderName.trim());
-      form.append('doc_title', docTitle.trim() || file.name || 'Lekársky dokument');
+      form.append('doc_title', docTitle.trim() || file.name || 'Medical document');
       form.append('orig_type', file.mimeType || 'application/pdf');
 
       const r = await fetch(`${API_BASE}/api/health-drop/${dropId}/upload`, { method: 'POST', body: form });
       if (!r.ok) {
         const txt = await r.text();
-        throw new Error(txt.includes('Guardian-ID') || txt.includes('does not match') ? 'Guardian-ID nesedí s týmto Drop linkom.' : txt);
+        throw new Error(txt.includes('Guardian-ID') || txt.includes('does not match') ? 'The Guardian-ID does not match this Drop link.' : txt);
       }
       setDone(true);
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -88,11 +88,11 @@ export default function DropPortal() {
     <SafeAreaView testID="drop-portal" style={styles.root} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         <Text style={styles.brand}>GUARDIAN · HEALTH DROP</Text>
-        <Text style={styles.h1}>Portál pre poskytovateľa</Text>
+        <Text style={styles.h1}>Provider Portal</Text>
         <Text style={styles.sub}>
-          Bezpečné odoslanie správy / žiadanky priamo do zdravotného trezoru pacienta
-          {info?.patient_hint ? ` (${info.patient_hint})` : ''}. Súbor sa zašifruje vo vašom prehliadači
-          verejným kľúčom pacienta — nikto iný ho neprečíta.
+          Securely send a report / referral straight into the patient health vault
+          {info?.patient_hint ? ` (${info.patient_hint})` : ''}. The file is encrypted in your browser
+          with the patient public key — nobody else can read it.
         </Text>
 
         {!!err && <Text style={styles.err}>{err}</Text>}
@@ -100,41 +100,41 @@ export default function DropPortal() {
         {done ? (
           <View style={styles.doneBox}>
             <Ionicons name="checkmark-circle" size={44} color="#5FA779" />
-            <Text style={styles.doneTitle}>ODOSLANÉ A ZAŠIFROVANÉ</Text>
-            <Text style={styles.doneSub}>Pacient dostal notifikáciu. Dokument môže dešifrovať iba on.</Text>
+            <Text style={styles.doneTitle}>SENT & ENCRYPTED</Text>
+            <Text style={styles.doneSub}>The patient was notified. Only they can decrypt the document.</Text>
             <Pressable testID="dp-again" onPress={() => { setDone(false); setFile(null); setDocTitle(''); }} style={styles.ctaOutline}>
-              <Text style={styles.ctaOutlineText}>POSLAŤ ĎALŠÍ DOKUMENT</Text>
+              <Text style={styles.ctaOutlineText}>SEND ANOTHER DOCUMENT</Text>
             </Pressable>
           </View>
         ) : info && (
           <>
             {!info.has_key && (
               <View style={styles.warnBox}>
-                <Text style={styles.warnText}>Pacient ešte nemá vygenerované šifrovacie kľúče — požiadajte ho, nech otvorí Health Drop v aplikácii.</Text>
+                <Text style={styles.warnText}>The patient has not generated encryption keys yet — ask them to open Health Drop in the app.</Text>
               </View>
             )}
             <Pressable testID="dp-pick" onPress={pick} style={styles.dropZone}>
               <Ionicons name={file ? 'document-attach' : 'cloud-upload-outline'} size={34} color={C.brand} />
-              <Text style={styles.dropText}>{file ? file.name : 'Vybrať PDF alebo fotografiu správy'}</Text>
-              {!!file && <Text style={styles.dropSub}>{Math.round((file.size || 0) / 1024)} kB · pripravené na šifrovanie</Text>}
+              <Text style={styles.dropText}>{file ? file.name : 'Choose a PDF or a photo of the report'}</Text>
+              {!!file && <Text style={styles.dropSub}>{Math.round((file.size || 0) / 1024)} kB · ready for encryption</Text>}
             </Pressable>
 
             <Text style={styles.lbl}>GUARDIAN-ID PACIENTA (overenie)</Text>
-            <TextInput testID="dp-guardian-id" style={styles.input} placeholder="did:guardian:… alebo posledných 6 znakov" placeholderTextColor={C.info} value={guardianId} onChangeText={setGuardianId} autoCapitalize="none" />
-            <Text style={styles.lbl}>VAŠE MENO / AMBULANCIA</Text>
-            <TextInput testID="dp-sender" style={styles.input} placeholder="MUDr. Nováková — Ortopédia" placeholderTextColor={C.info} value={senderName} onChangeText={setSenderName} />
-            <Text style={styles.lbl}>NÁZOV DOKUMENTU</Text>
-            <TextInput testID="dp-title" style={styles.input} placeholder="Žiadanka — ortopédia / Výmenný lístok" placeholderTextColor={C.info} value={docTitle} onChangeText={setDocTitle} />
+            <TextInput testID="dp-guardian-id" style={styles.input} placeholder="did:guardian:… or the last 6 characters" placeholderTextColor={C.info} value={guardianId} onChangeText={setGuardianId} autoCapitalize="none" />
+            <Text style={styles.lbl}>YOUR NAME / PRACTICE</Text>
+            <TextInput testID="dp-sender" style={styles.input} placeholder="Dr. Smith — Orthopedics" placeholderTextColor={C.info} value={senderName} onChangeText={setSenderName} />
+            <Text style={styles.lbl}>DOCUMENT TITLE</Text>
+            <TextInput testID="dp-title" style={styles.input} placeholder="Referral — orthopedics / Transfer slip" placeholderTextColor={C.info} value={docTitle} onChangeText={setDocTitle} />
 
             <Pressable testID="dp-send" onPress={send} disabled={busy || !file || !guardianId.trim() || !info.has_key} style={[styles.cta, (busy || !file || !guardianId.trim() || !info.has_key) && { opacity: 0.5 }]}>
               {busy ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="lock-closed" size={16} color={C.onInverse} />
-                  <Text style={styles.ctaText}>ZAŠIFROVAŤ A ODOSLAŤ</Text>
+                  <Text style={styles.ctaText}>ENCRYPT & SEND</Text>
                 </>
               )}
             </Pressable>
-            <Text style={styles.foot}>Zero-knowledge: server uchováva iba šifrovaný obsah (X25519 + XSalsa20-Poly1305).</Text>
+            <Text style={styles.foot}>Zero-knowledge: the server stores only encrypted content (X25519 + XSalsa20-Poly1305).</Text>
           </>
         )}
         {!info && !err && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}

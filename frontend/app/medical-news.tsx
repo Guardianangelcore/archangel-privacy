@@ -41,7 +41,7 @@ export default function MedicalNews() {
       {personalized && (
         <View style={styles.matchBadge}>
           <Ionicons name="person" size={10} color={C.onInverse} />
-          <Text style={styles.matchText}>ZHODA S VAŠÍM TREZOROM · {n.matched_tags.slice(0, 3).join(', ')}</Text>
+          <Text style={styles.matchText}>MATCHES YOUR VAULT · {n.matched_tags.slice(0, 3).join(', ')}</Text>
         </View>
       )}
       <Text style={styles.cardTitle}>{n.high_tech ? '⚡ ' : ''}{n.title}</Text>
@@ -52,11 +52,11 @@ export default function MedicalNews() {
       <View style={styles.actions}>
         <Pressable testID={`news-hunt-${n.news_id}`} onPress={() => hunt(n)} disabled={busy === n.news_id} style={styles.huntBtn}>
           <Ionicons name="search" size={14} color={C.onInverse} />
-          <Text style={styles.huntText}>{busy === n.news_id ? '…' : 'ULOVIŤ TERMÍN'}</Text>
+          <Text style={styles.huntText}>{busy === n.news_id ? '…' : 'HUNT AN APPOINTMENT'}</Text>
         </Pressable>
         <Pressable testID={`news-jarvis-${n.news_id}`} onPress={() => { hap(); router.push('/jarvis'); }} style={styles.consultBtn}>
           <Ionicons name="sparkles" size={14} color={C.brand} />
-          <Text style={styles.consultText}>KONZULTOVAŤ S JARVISOM</Text>
+          <Text style={styles.consultText}>CONSULT WITH JARVIS</Text>
         </Pressable>
       </View>
     </View>
@@ -76,14 +76,14 @@ export default function MedicalNews() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
         <Text style={styles.h1}>Breaking Medical Insights</Text>
-        <Text style={styles.sub}>Svetové prelomy krížené s vaším Trezorom. Čo sa týka práve vás, je hore — so Jarvis alertom a tlačidlom na lov termínu.</Text>
+        <Text style={styles.sub}>World breakthroughs matched against your Vault. What concerns you is on top — with a Jarvis alert and an appointment-hunt button.</Text>
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
-        <Text style={styles.section}>🎯 PRE VÁS ({feed?.personalized?.length ?? '…'})</Text>
+        <Text style={styles.section}>🎯 FOR YOU ({feed?.personalized?.length ?? '…'})</Text>
         {(feed?.personalized || []).map((n: any) => <NewsCard key={n.news_id} n={n} personalized />)}
         {feed && feed.personalized.length === 0 && (
-          <Text style={styles.empty}>Zatiaľ žiadna osobná zhoda — nahrajte lekárske dokumenty do Trezoru a Sentinel začne párovať prelomy s vaším zdravím.</Text>
+          <Text style={styles.empty}>No personal match yet — upload medical documents to your Vault and the Sentinel starts pairing breakthroughs with your health.</Text>
         )}
 
         <Text style={styles.section}>⚡ TECH-TRACKER CZ/SK — ROBOTIKA & 3D</Text>
@@ -95,10 +95,10 @@ export default function MedicalNews() {
           </View>
         ))}
 
-        <Text style={styles.section}>🌍 GLOBÁLNY FEED</Text>
+        <Text style={styles.section}>🌍 GLOBAL FEED</Text>
         {(feed?.general || []).map((n: any) => <NewsCard key={n.news_id} n={n} />)}
 
-        <Text style={styles.disclaimer}>{feed?.note || ''} Informačný obsah — nejde o lekárske odporúčanie.</Text>
+        <Text style={styles.disclaimer}>{feed?.note || ''} Informational content — not medical advice.</Text>
       </ScrollView>
     </SafeAreaView>
   );
