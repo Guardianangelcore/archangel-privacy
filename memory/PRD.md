@@ -101,3 +101,9 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 2. **English sweep COMPLETE**: ~500 replacements across 40+ frontend screens (pass 1: lowercase-diacritic strings; pass 2: UPPERCASE headers/buttons; pass 3: diacritic-free leftovers MÔJ KRUH/HOTOVO/KROK/POTVRDZUJEM/Stav PN). Backend user-visible strings translated: routes/token.py (earn/spend catalog), compass.py (survival tips, Ambulance SK, claim kinds, errors), demo.py (seed labels), gateway.py (marketplace offers + disclaimer + errors), wealth.py (policies, video statuses, eta). PROTECTED (still Slovak per user): mosaic.tsx, subscription.tsx, arbitrage.tsx, barter.tsx, billing.py, i18n.ts, language-picker names.
 3. **Cleanup**: all temp translation scripts (tr*.py) removed from /app root.
 4. **Testing**: iter_48 (8/9 backend + frontend smoke) & iter_49 (11 pass/1 skip backend; 7/9 screens English-clean, last 2 fixed after) — test_iter48_translation_regression.py + test_iter49_english_retest.py. Known infra issue: preview objstore 401 → clinic-sync simulate-beam 502 (upload-dependent, unrelated).
+
+## Jury Cheat Sheet PDF (June 2026)
+- One-page A4 printable demo script PDF with 4 live app screenshots (Home, Jarvis, Magic Lens, Fall-verify) at /app/release_package/JURY_CHEAT_SHEET.pdf. Generator scripts + assets in /app/release_package/tools/ (regenerate: jury_capture.py needs `pip install playwright`, uses /usr/bin/google-chrome + localhost:3000; then jury_pdf.py).
+- Backend: GET /api/founder/jury-cheat-sheet (founder.py) — auth via Bearer header or ?token= (uses _auth_pdf/_pdf_response). Verified 200 auth / 401 unauth.
+- Frontend: gold download row testID ft-jury-pdf in founder-toolkit COMPETITION ENTRY section (sharePdf → web opens tab, native shares file).
+- Bonus: translated founder.py ROADMAP (8 eras) + RELEASE_DOCS descriptions to English (was Slovak on judge-facing screen).

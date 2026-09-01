@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { tap } from '@/src/ui/glass';
+import { sharePdf } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
 
 const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)} M` : n >= 1000 ? `${(n / 1000).toFixed(0)} k` : String(n);
@@ -113,6 +114,16 @@ export default function FounderToolkit() {
             <Text style={st.kicker2}>COMPETITION ENTRY</Text>
             <Text style={st.title}>GitHub Release Package</Text>
             <Text style={st.note}>Complete documentation in /release_package — ready for jury handover. SHA-256 fingerprints guarantee integrity.</Text>
+            <Pressable testID="ft-jury-pdf" onPress={() => { tap('light'); sharePdf('/founder/jury-cheat-sheet', 'GUARDIAN_JURY_CHEAT_SHEET.pdf'); }} style={[st.docRow, { borderColor: C.brand }]}>
+              <View style={st.docIcon}>
+                <Ionicons name="ribbon-outline" size={18} color={C.brand} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={st.docName}>JURY CHEAT SHEET (PDF)</Text>
+                <Text style={st.docDesc}>Printable 1-page demo script with screenshots — Jarvis · Magic Lens · Fall Detection</Text>
+              </View>
+              <Ionicons name="download-outline" size={18} color={C.brand} />
+            </Pressable>
             {(data.release_package?.docs || []).map((d: any) => (
               <Pressable key={d.name} testID={`ft-doc-${d.name}`} onPress={() => { tap('light'); openDoc(d.name); }} style={st.docRow}>
                 <View style={st.docIcon}>

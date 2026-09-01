@@ -10,14 +10,14 @@ from typing import Optional
 from pathlib import Path
 import hashlib
 
-from core import api, get_current_user
+from core import api, get_current_user, _auth_pdf, _pdf_response
 
 RELEASE_DIR = Path(__file__).resolve().parents[2] / "release_package"
 RELEASE_DOCS = {
-    "README.md": "Projektový prehľad, moduly, quickstart, kvalita",
-    "ARCHITECTURE.md": "Systémová architektúra, subsystémy, dátový model",
-    "API_SPEC.md": "Špecifikácia API + UHP/1.0 protokol s HMAC podpisom",
-    "LICENSE": "Súkromná proprietárna licencia (evaluation grant)",
+    "README.md": "Project overview, modules, quickstart, quality",
+    "ARCHITECTURE.md": "System architecture, subsystems, data model",
+    "API_SPEC.md": "API specification + UHP/1.0 protocol with HMAC signing",
+    "LICENSE": "Private proprietary license (evaluation grant)",
 }
 
 # ---- Financial forecast (deterministic, tier-mix driven) --------------------
@@ -56,22 +56,22 @@ def _forecast_rows():
 
 
 ROADMAP = [
-    {"year": "2026 Q3", "era": "LAUNCH", "title": "Globálne spustenie",
-     "detail": "iOS/Android buildy, UHP pilot SK/CZ — prvých 50 partnerských kliník, Investor Demo Mode."},
-    {"year": "2027", "era": "RAILS", "title": "Skutočné settlement rails",
-     "detail": "Visa Direct / Mastercard Send nahrádzajú SimulatedRails; S2 cezhraničná arbitráž plne automatizovaná."},
-    {"year": "2028", "era": "GRID", "title": "Sentinel Grid naživo",
-     "detail": "BLE mesh + satelitné nano-pakety na reálnom hardvéri; 1M+ súbežných senzor-streamov."},
-    {"year": "2030", "era": "TWIN", "title": "Certifikované Bio-Digitálne Dvojča",
-     "detail": "EU MDR trieda IIa — simulácia liečby PRED podaním sa stáva štandardom starostlivosti."},
-    {"year": "2035", "era": "GBI", "title": "Živá mena v národnom meradle",
-     "detail": "GA-T Guardian Basic Income — dátové dividendy pre milióny; suverénne vlastníctvo zdravotných dát."},
-    {"year": "2040", "era": "MESH", "title": "Kvantová sieť",
-     "detail": "Post-kvantová kryptografia (Kyber/Dilithium) všade; Collective Truth ledger ako verejná infraštruktúra."},
-    {"year": "2075", "era": "ECHO", "title": "Kognitívne odovzdanie",
-     "detail": "Právne uznané digitálne echá — Personality Blueprint prenáša múdrosť generácií."},
-    {"year": "2100+", "era": "ARCHANGEL", "title": "Štandard 22. storočia",
-     "detail": "UHP ako predvolený protokol ľudskej zdravotnej suverenity — Archangel OS na každom zariadení."},
+    {"year": "2026 Q3", "era": "LAUNCH", "title": "Global launch",
+     "detail": "iOS/Android builds, UHP pilot SK/CZ — first 50 partner clinics, Investor Demo Mode."},
+    {"year": "2027", "era": "RAILS", "title": "Real settlement rails",
+     "detail": "Visa Direct / Mastercard Send replace SimulatedRails; S2 cross-border arbitrage fully automated."},
+    {"year": "2028", "era": "GRID", "title": "Sentinel Grid goes live",
+     "detail": "BLE mesh + satellite nano-packets on real hardware; 1M+ concurrent sensor streams."},
+    {"year": "2030", "era": "TWIN", "title": "Certified Bio-Digital Twin",
+     "detail": "EU MDR class IIa — simulating treatment BEFORE dosing becomes the standard of care."},
+    {"year": "2035", "era": "GBI", "title": "Living currency at national scale",
+     "detail": "GA-T Guardian Basic Income — data dividends for millions; sovereign ownership of health data."},
+    {"year": "2040", "era": "MESH", "title": "Quantum network",
+     "detail": "Post-quantum cryptography (Kyber/Dilithium) everywhere; Collective Truth ledger as public infrastructure."},
+    {"year": "2075", "era": "ECHO", "title": "Cognitive handover",
+     "detail": "Legally recognized digital echoes — the Personality Blueprint carries wisdom across generations."},
+    {"year": "2100+", "era": "ARCHANGEL", "title": "The 22nd-century standard",
+     "detail": "UHP as the default protocol of human health sovereignty — Archangel OS on every device."},
 ]
 
 
@@ -113,3 +113,13 @@ async def founder_release_doc(doc_name: str, authorization: Optional[str] = Head
     raw = p.read_bytes()
     return {"name": doc_name, "content": raw.decode("utf-8"),
             "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+
+
+@api.get("/founder/jury-cheat-sheet")
+async def founder_jury_cheat_sheet(authorization: Optional[str] = Header(None), token: Optional[str] = None):
+    """Printable one-page demo cheat sheet (PDF with screenshots) for the jury packet."""
+    await _auth_pdf(authorization, token)
+    p = RELEASE_DIR / "JURY_CHEAT_SHEET.pdf"
+    if not p.exists():
+        raise HTTPException(404, "cheat_sheet_missing")
+    return _pdf_response(p.read_bytes(), "GUARDIAN_JURY_CHEAT_SHEET.pdf")
