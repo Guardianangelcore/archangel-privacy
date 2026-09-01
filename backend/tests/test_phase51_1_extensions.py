@@ -19,7 +19,7 @@ import pytest
 import requests
 from PIL import Image, ImageDraw
 
-BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 TOKEN1 = "smoketok-fresh-2026"        # smoketest-user-1
 TOKEN2 = "smoketok-fresh-2026-u2"     # smoketest-user-2
 H1 = {"Authorization": f"Bearer {TOKEN1}"}

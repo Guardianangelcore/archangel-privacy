@@ -167,8 +167,8 @@ async def uhp_ingest(request: Request,
         routed = "bioscan_results"
         try:
             await send_push(recipients=[user["user_id"]], data={
-                "title": f"🏥 {partner['org_name']} — nové vitálne dáta",
-                "message": "Klinika bezpečne vložila meranie cez Universal Health Protocol.",
+                "title": f"🏥 {partner['org_name']} — new vital data",
+                "message": "The clinic securely inserted the measurement via Universal Health Protocol.",
                 "action_url": "/bioscan"})
         except Exception:
             pass

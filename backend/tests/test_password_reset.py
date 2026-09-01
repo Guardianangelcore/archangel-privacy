@@ -16,7 +16,7 @@ import requests
 from pymongo import MongoClient
 
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL",
-                          "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+                          "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 
 # Mongo — same host as backend .env

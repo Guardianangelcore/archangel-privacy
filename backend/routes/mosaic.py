@@ -23,7 +23,7 @@ CHAIN = {
     "consensus": "zkSNARK batch attestation → L1 settlement",
     "pqc_suite": "Hybrid X25519 + ML-KEM-1024 (Kyber) · signatures ML-DSA-87 (Dilithium)",
     "secondary_chains": ["Base (mirror)", "Polygon PoS (mirror)"],
-    "gas_policy": "ZERO-FEE — gas sponsorovaný treasury nadácie (Sentinel/Archangel výnosy)",
+    "gas_policy": "ZERO-FEE — gas sponsored by the foundation treasury (Sentinel/Archangel yields)",
     "simulated": True,
 }
 LATENCY_FAILOVER_MS = 800
@@ -79,7 +79,7 @@ async def mosaic_status(authorization: Optional[str] = Header(None)):
     return {**CHAIN, "block_height": head.get("height", 0), "blocks_total": blocks,
             "last_block_hash": head.get("block_hash"), "legacy_smart_contracts": contracts,
             "bridge_watch": bridge,
-            "note": "SIMULÁCIA — reálne RPC (Mosaic/Base/Polygon) sa pripája vo Phase 3. Architektúra a hashe sú produkčné."}
+            "note": "SIMULATION — real RPC (Mosaic/Base/Polygon) connects in Phase 3. Architecture and hashes are production."}
 
 @api.get("/mosaic/blocks")
 async def mosaic_blocks(authorization: Optional[str] = Header(None)):
@@ -105,8 +105,8 @@ async def mosaic_ipfs_manifest(authorization: Optional[str] = Header(None)):
         h = d.get("sha256") or hashlib.sha256(d["doc_id"].encode()).hexdigest()
         out.append({"doc_id": d["doc_id"], "title": d.get("title"),
                     "onchain_hash": h, "ipfs_cid": _cid(h), "pinned_nodes": 3,
-                    "layer": "DePIN off-chain (simulované pinovanie)"})
-    return {"files": out, "policy": "On-chain: iba hashe. Off-chain: IPFS/DePIN obsah."}
+                    "layer": "DePIN off-chain (simulated pinning)"})
+    return {"files": out, "policy": "On-chain: hashes only. Off-chain: IPFS/DePIN content."}
 
 @api.post("/mosaic/legacy-contract")
 async def mosaic_legacy_contract(authorization: Optional[str] = Header(None)):
@@ -130,9 +130,9 @@ async def mosaic_pqc_handshake(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     sid = uuid.uuid4().hex
     return {"session_id": sid,
-            "kem": "ML-KEM-1024 (Kyber) — encapsulation OK (simulované)",
+            "kem": "ML-KEM-1024 (Kyber) — encapsulation OK (simulated)",
             "classical": "X25519 ECDH — OK",
-            "signature": "ML-DSA-87 (Dilithium) — verified (simulované)",
+            "signature": "ML-DSA-87 (Dilithium) — verified (simulated)",
             "transcript_hash": hashlib.sha256(f"{user['did']}{sid}".encode()).hexdigest(),
             "quantum_safe": True, "simulated": True}
 
@@ -155,8 +155,8 @@ async def mosaic_bridge_check(authorization: Optional[str] = Header(None)):
         except Exception:
             pass
     return {**upd, "threshold_ms": LATENCY_FAILOVER_MS,
-            "detail": ("Latencia nad prahom — kritické operácie zrkadlené na Base/Polygon." if failover
-                       else "Mosaic node group v norme — primárny reťazec aktívny.")}
+            "detail": ("Latency above threshold — critical operations mirrored to Base/Polygon." if failover
+                       else "Mosaic node group within norm — primary chain active.")}
 
 @api.post("/mosaic/stress-test")
 async def mosaic_stress_test(authorization: Optional[str] = Header(None)):
@@ -243,7 +243,7 @@ async def mosaic_explorer(authorization: Optional[str] = Header(None)):
         "block_height": head.get("height", 0), "head_hash": head.get("block_hash", "genesis"),
         "blocks_total": blocks, "tx_anchored_total": tx_total,
         "finality_ms": FAST_FINALITY_MS, "gas_price_user": 0.0,
-        "gas_policy": "ZERO-GAS — sponzorované treasury nadácie",
+        "gas_policy": "ZERO-GAS — sponsored by foundation treasury",
         "token": {"symbol": "GA-T", "standard": "ERC-20",
                   "circulating": supply.get("circulating", 0.0),
                   "burned": supply.get("burned", 0.0),

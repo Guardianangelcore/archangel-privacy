@@ -26,6 +26,7 @@ EARN_RULES = {
     "proof_of_help":     {"amount": 10.0, "daily_max": 5,  "label": "Proof-of-Help — helping a senior (Family Shield)"},
     "proof_of_health":   {"amount": 5.0,  "daily_max": 10, "label": "Proof-of-Health — anonymous health insight"},
     "community_support": {"amount": 5.0,  "daily_max": 5,  "label": "Community support (Solidarity / Barter)"},
+    "document_scan":     {"amount": 2.0,  "daily_max": 10, "label": "Document scan — Life Card enrichment (Magic Lens)"},
 }
 SPEND_ITEMS = {
     "vip_sentinel_30d":    {"price": 100.0, "label": "VIP Sentinel tier (30 days)"},
@@ -39,6 +40,7 @@ SPEND_ITEMS = {
     "tier_archangel_365d": {"price": 7680.0,  "label": "Archangel Tier — yearly −20% (GA-T)"},
     "bioscan_single":      {"price": 5.0,  "label": "Vitals Bio-Scanner — 1 meranie"},
     "ips_export_single":   {"price": 10.0, "label": "IPS Export — 1 export (HL7 FHIR)"},
+    "jarvis_query":        {"price": 0.5,  "label": "Jarvis Sovereign Search — 1 live web query"},
 }
 
 # ---------------- HASH-CHAINED LEDGER ----------------
@@ -124,6 +126,30 @@ async def award_tokens(user_id: str, activity: str, note: str = "") -> Optional[
     return clean(tx)
 
 
+async def charge_tokens(user_id: str, item: str, note: str = "") -> Optional[dict]:
+    """Soft-charge GA-T for a utility item (same burn mechanics as /token/spend).
+    Returns the tx, or None when the balance is insufficient — NEVER raises,
+    so core features keep working for users without tokens."""
+    it = SPEND_ITEMS.get(item)
+    if not it:
+        return None
+    acct = await db.token_accounts.find_one({"user_id": user_id}, {"_id": 0})
+    if not acct or acct.get("balance", 0) < it["price"]:
+        return None
+    burn = round(it["price"] * BURN_RATE, 4)
+    to_treasury = it["price"] - burn
+    await db.token_accounts.update_one(
+        {"user_id": user_id},
+        {"$inc": {"balance": -it["price"], "spent_total": it["price"]},
+         "$set": {"updated_at": datetime.now(timezone.utc)}})
+    await db.token_supply.update_one({"key": "gat"},
+                                     {"$inc": {"treasury": to_treasury,
+                                               "circulating": -it["price"], "burned": burn}})
+    tx = await _ledger_append("spend", user_id, it["price"],
+                              {"item": item, "burned": burn, "note": note[:120]})
+    return clean(tx)
+
+
 # ---------------- API ----------------
 class EarnIn(BaseModel):
     activity: str
@@ -173,7 +199,7 @@ async def token_spend(body: SpendIn, authorization: Optional[str] = Header(None)
     await _get_supply()
     acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not acct or acct.get("balance", 0.0) < item["price"]:
-        raise HTTPException(402, f"insufficient_balance: Potrebujete {item['price']} GA-T.")
+        raise HTTPException(402, f"insufficient_balance: You need {item['price']} GA-T.")
     price = item["price"]
     burn = round(price * BURN_RATE, 4)
     now = datetime.now(timezone.utc)

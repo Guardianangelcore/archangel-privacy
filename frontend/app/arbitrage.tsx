@@ -54,41 +54,41 @@ export default function Arbitrage() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <Text style={st.intro}>
-          Cezhraničná optimalizácia nákladov na operácie: 🇵🇱 Poľsko · 🇭🇺 Maďarsko · 🇹🇷 Turecko.
-          Predikcia účtov vrátane cesty, ubytovania a S2 refundácie poisťovne (EÚ 2011/24).
+          Cross-border surgery cost optimization: 🇵🇱 Poland · 🇭🇺 Hungary · 🇹🇷 Türkiye.
+          Bill prediction incl. travel, lodging and S2 insurer refund (EU 2011/24).
         </Text>
 
         {quote && (
           <View testID="ar-quote" style={st.quoteCard}>
             <View style={st.rowSpread}>
-              <Text style={st.quoteTitle}>{countries[quote.country]?.flag} PREDIKCIA ÚČTU</Text>
+              <Text style={st.quoteTitle}>{countries[quote.country]?.flag} BILL PREDICTION</Text>
               <Pressable testID="ar-quote-close" onPress={() => setQuote(null)} hitSlop={10}>
                 <Ionicons name="close" size={20} color={C.fg} />
               </Pressable>
             </View>
             <Text style={st.quoteProc}>{quote.procedure}</Text>
-            <Text style={st.meta}>{quote.clinic} · čakanie {quote.wait_days_abroad} dní</Text>
-            <View style={st.qRow}><Text style={st.qLbl}>Zákrok</Text><Text style={st.qVal}>{quote.breakdown.procedure_eur.toLocaleString('sk-SK')} €</Text></View>
+            <Text style={st.meta}>{quote.clinic} · wait {quote.wait_days_abroad} days</Text>
+            <View style={st.qRow}><Text style={st.qLbl}>Procedure</Text><Text style={st.qVal}>{quote.breakdown.procedure_eur.toLocaleString('sk-SK')} €</Text></View>
             <View style={st.qRow}><Text style={st.qLbl}>Cesta (2 os.)</Text><Text style={st.qVal}>{quote.breakdown.travel_eur} €</Text></View>
             <View style={st.qRow}><Text style={st.qLbl}>Ubytovanie sprievodu</Text><Text style={st.qVal}>{quote.breakdown.accommodation_eur} €</Text></View>
             <View style={st.qRow}><Text style={st.qLbl}>SPOLU</Text><Text style={[st.qVal, { color: C.fg }]}>{quote.breakdown.total_eur.toLocaleString('sk-SK')} €</Text></View>
-            <View style={st.qRow}><Text style={st.qLbl}>S2 refundácia (predikcia)</Text><Text style={[st.qVal, { color: '#5FA779' }]}>−{quote.breakdown.s2_predicted_refund_eur.toLocaleString('sk-SK')} €</Text></View>
+            <View style={st.qRow}><Text style={st.qLbl}>S2 refund (prediction)</Text><Text style={[st.qVal, { color: '#5FA779' }]}>−{quote.breakdown.s2_predicted_refund_eur.toLocaleString('sk-SK')} €</Text></View>
             <View style={[st.qRow, { borderTopWidth: 1, borderColor: C.borderStrong, paddingTop: S.sm }]}>
               <Text style={[st.qLbl, { fontWeight: '900', color: C.fg }]}>Z VRECKA</Text>
               <Text style={[st.qVal, { color: C.brand, fontSize: 18 }]}>{quote.breakdown.net_out_of_pocket_eur.toLocaleString('sk-SK')} €</Text>
             </View>
-            <Text style={st.saving}>💰 Úspora vs. SK: {quote.saving_vs_sk_eur.toLocaleString('sk-SK')} € · ⏱ čakanie kratšie o {quote.wait_cut_days} dní</Text>
-            <Text style={st.meta}>{quote.legal_route} · Ghost Mode kompatibilné (anonymný pacientsky token)</Text>
+            <Text style={st.saving}>💰 Savings vs. SK: {quote.saving_vs_sk_eur.toLocaleString('sk-SK')} € · ⏱ wait shorter by {quote.wait_cut_days} days</Text>
+            <Text style={st.meta}>{quote.legal_route} · Ghost Mode compatible (anonymous patient token)</Text>
           </View>
         )}
         {!!err && <Text testID="ar-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>ZÁKROKY ({data?.procedures?.length ?? 0})</Text>
+        <Text style={st.section}>PROCEDURES ({data?.procedures?.length ?? 0})</Text>
         {(data?.procedures ?? []).map((p: any) => (
           <View testID={`ar-proc-${p.procedure_id}`} key={p.procedure_id} style={st.card}>
             <Text style={st.cardTitle}>{p.name}</Text>
-            <Text style={st.meta}>🇸🇰 SK: {p.sk_price_eur.toLocaleString('sk-SK')} € · čakanie {p.sk_wait_days} dní</Text>
-            <Text style={st.best}>Najlepšie: {countries[p.best_country]?.flag} −{p.best_saving_eur.toLocaleString('sk-SK')} € · −{p.best_wait_cut_days} dní čakania</Text>
+            <Text style={st.meta}>🇸🇰 SK: {p.sk_price_eur.toLocaleString('sk-SK')} € · wait {p.sk_wait_days} days</Text>
+            <Text style={st.best}>Best: {countries[p.best_country]?.flag} −{p.best_saving_eur.toLocaleString('sk-SK')} € · −{p.best_wait_cut_days} days of waiting</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               {Object.entries(p.abroad).map(([cc, ab]: [string, any]) => (
                 <Pressable testID={`ar-cc-${p.procedure_id}-${cc}`} key={cc} onPress={() => getQuote(p.procedure_id, cc)}
@@ -97,7 +97,7 @@ export default function Arbitrage() {
                     <>
                       <Text style={st.ccFlag}>{countries[cc]?.flag} {cc}</Text>
                       <Text style={st.ccPrice}>{ab.price_eur.toLocaleString('sk-SK')} €</Text>
-                      <Text style={st.ccWait}>{ab.wait_days} dní</Text>
+                      <Text style={st.ccWait}>{ab.wait_days} days</Text>
                     </>
                   )}
                 </Pressable>
@@ -109,23 +109,23 @@ export default function Arbitrage() {
 
         <Text style={st.section}>🧬 GENOMIC BIO-IDENTITY</Text>
         <Text style={st.intro}>
-          DNA markery vo vašom suverénnom trezore — on-chain sa ukladá iba hash, surové dáta nikdy neopustia vaše chladné úložisko.
+          DNA markers in your sovereign vault — only the hash goes on-chain, raw data never leaves your cold storage.
         </Text>
         {!!genomic?.genomic_sha256 && (
           <View style={st.card}>
-            <Text style={st.meta}>Poskytovateľ: {genomic.provider || '—'} · SHA-256 #{genomic.genomic_sha256.slice(0, 14)}…</Text>
+            <Text style={st.meta}>Provider: {genomic.provider || '—'} · SHA-256 #{genomic.genomic_sha256.slice(0, 14)}…</Text>
             {(genomic.markers || []).map((m: string, i: number) => (
               <Text key={i} style={st.markerText}>• {m}</Text>
             ))}
           </View>
         )}
-        <TextInput testID="ar-genomic-provider" value={provider} onChangeText={setProvider} placeholder="Poskytovateľ sekvenovania (napr. Dante Labs)"
+        <TextInput testID="ar-genomic-provider" value={provider} onChangeText={setProvider} placeholder="Sequencing provider (e.g. Dante Labs)"
           placeholderTextColor="#777" style={st.input} />
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="ar-genomic-marker" value={marker} onChangeText={setMarker} placeholder="Marker (napr. BRCA1: negatívny)"
+          <TextInput testID="ar-genomic-marker" value={marker} onChangeText={setMarker} placeholder="Marker (e.g. BRCA1: negative)"
             placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
           <Pressable testID="ar-genomic-save" onPress={saveGenomic} disabled={busy === 'genomic' || !marker.trim()} style={st.addBtn}>
-            {busy === 'genomic' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.addText}>ULOŽIŤ</Text>}
+            {busy === 'genomic' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.addText}>SAVE</Text>}
           </Pressable>
         </View>
       </ScrollView>

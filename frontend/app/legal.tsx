@@ -171,7 +171,7 @@ export default function Legal() {
           <View>
             <Text style={styles.hint}>Without KYC: limit €{aml?.daily_limit?.toFixed(0) ?? 150}/day in Solidarity Hub. Campaigns require KYC. The attestation anchors to your DID (decentralized ID) in the AML chain.</Text>
             <TextInput testID="kyc-name" placeholder="Full name" value={kycForm.full_name} onChangeText={v => setKycForm({ ...kycForm, full_name: v })} style={styles.input} placeholderTextColor="#999" />
-            <WheelField testID="kyc-year" title="ROK NARODENIA" min={1920} max={2012} value={kycForm.birth_year} onChange={v => setKycForm({ ...kycForm, birth_year: v })} placeholder="Rok narodenia" style={styles.input} />
+            <WheelField testID="kyc-year" title="BIRTH YEAR" min={1920} max={2012} value={kycForm.birth_year} onChange={v => setKycForm({ ...kycForm, birth_year: v })} placeholder="Birth year" style={styles.input} />
             <View style={styles.switchRow}>
               <Text style={styles.switchLbl}>I DECLARE: I AM NOT ON A SANCTIONS LIST AND THE FUNDS ARE LEGAL</Text>
               <Switch testID="kyc-declaration" value={kycForm.declaration} onValueChange={v => setKycForm({ ...kycForm, declaration: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
@@ -184,14 +184,14 @@ export default function Legal() {
         {aml ? <Text style={styles.hint}>Donated today: €{aml.donated_today?.toFixed(0)} / €{aml.daily_limit?.toFixed(0)} · Transactions: {aml.tx_today}/{aml.max_tx_per_day} · AML records: {aml.ledger_entries}</Text> : null}
 
         {/* Testament */}
-        <Text style={styles.section}>{t('testament', lang).toUpperCase()} · {region?.testament_format === 'common_law_uk' ? 'UK (WILLS ACT 1837)' : region?.testament_format === 'common_law' ? 'COMMON LAW' : 'HOLOGRAF (§ 476 OZ)'}</Text>
+        <Text style={styles.section}>{t('testament', lang).toUpperCase()} · {region?.testament_format === 'common_law_uk' ? 'UK (WILLS ACT 1837)' : region?.testament_format === 'common_law' ? 'COMMON LAW' : 'HOLOGRAPH (§ 476 CIVIL CODE)'}</Text>
         <TextInput testID="tw-name" placeholder="Testator full name" value={tf.full_name} onChangeText={v => setTf({ ...tf, full_name: v })} style={styles.input} placeholderTextColor="#999" />
         <TextInput testID="tw-wishes" placeholder="My last will… (who gets what)" value={tf.wishes} onChangeText={v => setTf({ ...tf, wishes: v })} multiline style={[styles.input, { minHeight: 90 }]} placeholderTextColor="#999" />
         <TextInput testID="tw-executor" placeholder="Will executor (optional)" value={tf.executor_name} onChangeText={v => setTf({ ...tf, executor_name: v })} style={styles.input} placeholderTextColor="#999" />
         {isCommonLaw && (
           <View style={{ flexDirection: 'row', gap: S.sm }}>
-            <TextInput testID="tw-w1" placeholder="Svedok 1" value={tf.witness1} onChangeText={v => setTf({ ...tf, witness1: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
-            <TextInput testID="tw-w2" placeholder="Svedok 2" value={tf.witness2} onChangeText={v => setTf({ ...tf, witness2: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+            <TextInput testID="tw-w1" placeholder="Witness 1" value={tf.witness1} onChangeText={v => setTf({ ...tf, witness1: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+            <TextInput testID="tw-w2" placeholder="Witness 2" value={tf.witness2} onChangeText={v => setTf({ ...tf, witness2: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
           </View>
         )}
         <Pressable testID="tw-generate" onPress={generateTestament} disabled={testBusy || !tf.full_name || !tf.wishes} style={[styles.priBtn, (!tf.full_name || !tf.wishes) && { opacity: 0.4 }]}>

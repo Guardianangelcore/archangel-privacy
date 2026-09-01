@@ -164,7 +164,7 @@ async def twin_trajectory(authorization: Optional[str] = Header(None)):
         risk += {"critical": 40, "elevated": 20, "optimal": 0, "insufficient_data": 5}[m["band_m12"]]
     return {"trajectories": traj, "composite_risk_12m": min(100, risk),
             "method": "least-squares linear projection over measurement index",
-            "disclaimer": "Prediktívny model — informačný obsah, nie zdravotná starostlivosť (EU AI Act čl. 50)."}
+            "disclaimer": "Predictive model — informational content, not health care (EU AI Act art. 50)."}
 
 # =========================================================================
 # 2) PREDICTIVE SENTINEL (behavioural forecasting)
@@ -195,23 +195,23 @@ async def _sentinel_predict(uid: str) -> dict:
         gait = statistics.mean(s["gait_regularity"] for s in samples)
         if tremor > 3.5:
             risk += min(35, (tremor - 3.5) * 12)
-            factors.append(f"Zvýšené mikro-vibrácie rúk (index {tremor:.1f})")
+            factors.append(f"Increased micro-vibrations of the hands (index {tremor:.1f})")
         if gait < 0.6:
             risk += min(30, (0.6 - gait) * 80)
-            factors.append(f"Nepravidelná chôdza (pravidelnosť {gait:.2f})")
+            factors.append(f"Irregular gait (regularity {gait:.2f})")
         vt = [s["voice_tremor"] for s in samples if s.get("voice_tremor") is not None]
         if vt and statistics.mean(vt) > 4:
             risk += 15
-            factors.append("Chvenie hlasu nad normou")
+            factors.append("Voice tremor above normal")
     if scans and scans[0].get("stress_level") == "high":
         risk += 15
-        factors.append("Vysoký stres v poslednom skene")
+        factors.append("High stress in the last scan")
     bps = [s for s in scans if s.get("bp_estimate")]
     if bps:
         try:
             if int(str(bps[0]["bp_estimate"]).split("/")[0]) >= 150:
                 risk += 15
-                factors.append(f"Tlak {bps[0]['bp_estimate']} nad bezpečným pásmom")
+                factors.append(f"Pressure {bps[0]['bp_estimate']} above the safe band")
         except ValueError:
             pass
     risk = round(min(100, risk), 1)
@@ -230,8 +230,8 @@ async def _sentinel_predict(uid: str) -> dict:
             recipients = [uid] + [c["member_id"] for c in circle if c.get("member_id")]
             try:
                 await send_push(recipients=recipients, data={
-                    "title": "🔮 PREDIKTÍVNY SENTINEL — ZVÝŠENÉ RIZIKO",
-                    "message": f"Vzorce správania signalizujú riziko {risk}/100 PRED udalosťou: {'; '.join(factors[:2])}",
+                    "title": "🔮 PREDICTIVE SENTINEL — HIGHER RISK",
+                    "message": f"Behavior patterns indicate risk {risk}/100 BEFORE the event: {'; '.join(factors[:2])}",
                     "action_url": "/inner-circle"})
             except Exception:
                 pass
@@ -273,9 +273,9 @@ async def edge_contribute(body: EdgeIn, authorization: Optional[str] = Header(No
     if gat >= 0.0001:
         from routes.token import award_tokens
         await award_tokens(uid, "proof_of_health",
-                           f"Edge Computing — {body.tasks_completed:,} research úloh (+{gat} GA-T)")
+                           f"Edge Computing — {body.tasks_completed:,} research tasks (+{gat} GA-T)")
     return {"accepted": True, "gat_earned": gat,
-            "note": "Zariadenie počítalo úlohy pre decentralizovaný medicínsky výskumný swarm."}
+            "note": "The device computed tasks for a decentralized medical research swarm."}
 
 @api.get("/edge/status")
 async def edge_status(authorization: Optional[str] = Header(None)):
@@ -290,9 +290,9 @@ async def edge_status(authorization: Optional[str] = Header(None)):
     return {"my_devices": clean(mine),
             "network": {"nodes": net["nodes"], "tasks_total": net["tasks"],
                         "gat_distributed": round(net["gat"], 2)},
-            "rate": f"{EDGE_RATE_GAT_PER_MTASK} GA-T / 1M úloh",
+            "rate": f"{EDGE_RATE_GAT_PER_MTASK} GA-T / 1M tasks",
             "gbi": {"daily_gat": GBI_DAILY_GAT, "recent_payments": clean(gbi),
-                    "rule": "Guardian Basic Income — každý aktívny Guardian dostáva denný základný príjem; Swarm ho vypláca autonómne."}}
+                    "rule": "Guardian Basic Income — every active Guardian receives a daily basic income; Swarm pays it out autonomously."}}
 
 async def gbi_distribute() -> int:
     """Swarm task: pay Guardian Basic Income once per day to every user active
@@ -370,7 +370,7 @@ async def blueprint_train(authorization: Optional[str] = Header(None)):
         "traits_hint": {"data_deals": deals, "language": user.get("language", "sk")},
     }
     if not corpus["memories"] and not corpus["own_words"]:
-        raise HTTPException(400, "Nedostatok dát — porozprávajte sa najprv s Jarvisom, aby spoznal vašu osobnosť.")
+        raise HTTPException(400, "Insufficient data — talk to Jarvis first so it can learn your personality.")
     sys = (
         "You are building a PERSONALITY BLUEPRINT for a cognitive-handover system. From the user's own words, "
         "memories and notes, extract their decision-making style and tone. Respond ONLY with strict JSON "
@@ -409,7 +409,7 @@ async def blueprint_ask(body: BlueprintAskIn, authorization: Optional[str] = Hea
     uid = user["user_id"]
     bp = await db.personality_blueprints.find_one({"user_id": uid}, {"_id": 0})
     if not bp:
-        raise HTTPException(400, "Blueprint ešte nie je natrénovaný — spustite /legacy/blueprint/train")
+        raise HTTPException(400, "Blueprint is not trained yet — run /legacy/blueprint/train")
     mems = await db.agent_memories.find({"user_id": uid}, {"_id": 0}).sort("importance", -1).to_list(20)
     sys = (
         f"You are the DIGITAL ECHO of {user.get('name', 'the founder')} — a cognitive-handover assistant for their "
@@ -430,4 +430,4 @@ async def blueprint_ask(body: BlueprintAskIn, authorization: Optional[str] = Hea
         "dialogue_id": uuid.uuid4().hex, "user_id": uid, "asker": body.asker_name,
         "question": body.question, "answer": str(resp)[:2000], "at": datetime.now(timezone.utc)})
     return {"answer": str(resp), "framing": "digital_echo",
-            "voice_note": "Hlasový klon vyžaduje ElevenLabs kľúč — zatiaľ hovorí najbližší OpenAI hlas."}
+            "voice_note": "Voice clone requires an ElevenLabs key — for now, the closest OpenAI voice speaks."}

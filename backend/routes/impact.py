@@ -60,8 +60,8 @@ async def impact_dashboard(authorization: Optional[str] = Header(None)):
             "title": top[0],
             "contributions": top[1],
             "message_sk": (
-                f"Vaše dáta z {top[0]} pomohli dnes výskumnému tímu urýchliť liečbu "
-                f"o {max(1, top[1] * 6 // 10)} hodín."
+                f"Your data from {top[0]} helped the research team speed up treatment today "
+                f"by {max(1, top[1] * 6 // 10)} hours."
             ),
         }
 
@@ -92,5 +92,5 @@ async def impact_dashboard(authorization: Optional[str] = Header(None)):
             "vitals": vitals_total,
             "documents": docs_total,
         },
-        "cta_sk": "Každý záznam = kus mozaiky, ktorá lieči tento svet.",
+        "cta_sk": "Every record = a piece of the mosaic that heals this world.",
     })

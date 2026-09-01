@@ -30,20 +30,20 @@ async def guardian_add(body: GuardianIn, authorization: Optional[str] = Header(N
     c = body.contact.strip()
     target = await db.users.find_one({"$or": [{"email": c}, {"did": c}]}, {"_id": 0})
     if not target:
-        raise HTTPException(404, "Používateľ s týmto e-mailom / DID v sieti Guardian neexistuje.")
+        raise HTTPException(404, "User with this email / DID does not exist in the Guardian network.")
     if target["user_id"] == user["user_id"]:
-        raise HTTPException(400, "Nemôžete byť vlastným strážcom.")
+        raise HTTPException(400, "You cannot be your own guardian.")
     dup = await db.guardians.find_one({"user_id": user["user_id"], "guardian_user_id": target["user_id"]})
     if dup:
-        raise HTTPException(409, "Tento strážca už je pridaný.")
+        raise HTTPException(409, "This guardian is already added.")
     g = {"guardian_id": uuid.uuid4().hex, "user_id": user["user_id"],
          "guardian_user_id": target["user_id"], "guardian_name": target.get("name") or target["email"],
          "guardian_email": target["email"], "created_at": datetime.now(timezone.utc)}
     await db.guardians.insert_one(g.copy())
     try:
         await send_push(recipients=[target["user_id"]],
-                        data={"title": "🛡️ STALI STE SA STRÁŽCOM",
-                              "message": f"{user.get('name') or 'Používateľ'} vás určil za strážcu obnovy účtu (Social Recovery + 2FA).",
+                        data={"title": "🛡️ YOU HAVE BECOME A GUARDIAN",
+                              "message": f"{user.get('name') or 'User'} has appointed you as an account recovery guardian (Social Recovery + 2FA).",
                               "action_url": "/recovery-suite"})
     except Exception:
         pass
@@ -88,7 +88,7 @@ async def social_2fa_toggle(body: TwoFaIn, authorization: Optional[str] = Header
     if body.enabled:
         g = await db.guardians.count_documents({"user_id": user["user_id"]})
         if g == 0:
-            raise HTTPException(409, "Najprv pridajte aspoň jedného strážcu.")
+            raise HTTPException(409, "Please add at least one guardian first.")
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"social_2fa_enabled": body.enabled}})
     return {"social_2fa_enabled": body.enabled}
 
@@ -110,8 +110,8 @@ async def notify_login_handshake(user_doc: dict, session_token: str) -> None:
     await db.login_handshakes.insert_one(hs.copy())
     try:
         await send_push(recipients=[g["guardian_user_id"] for g in guardians],
-                        data={"title": "🔐 SOCIAL 2FA — NOVÉ PRIHLÁSENIE",
-                              "message": f"{hs['user_name']} sa práve prihlásil(a) (…{hs['session_tail']}). Potvrďte, že je to on/ona.",
+                        data={"title": "🔐 SOCIAL 2FA — NEW SIGN-IN",
+                              "message": f"{hs['user_name']} has just signed in (…{hs['session_tail']}). Please confirm that it is them.",
                               "action_url": "/recovery-suite"})
     except Exception:
         pass
@@ -146,9 +146,9 @@ async def twofa_confirm(handshake_id: str, body: ConfirmIn, authorization: Optio
         raise HTTPException(404, "Handshake not found")
     is_guardian = await db.guardians.find_one({"user_id": hs["user_id"], "guardian_user_id": user["user_id"]})
     if not is_guardian:
-        raise HTTPException(403, "Nie ste strážcom tohto používateľa.")
+        raise HTTPException(403, "You are not a guardian of this user.")
     if hs["status"] != "pending":
-        raise HTTPException(409, f"Handshake už je v stave '{hs['status']}'.")
+        raise HTTPException(409, f"Handshake is already in the '{hs['status']}' state.")
     new_status = "confirmed" if body.legit else "flagged"
     await db.login_handshakes.update_one(
         {"handshake_id": handshake_id},
@@ -157,12 +157,12 @@ async def twofa_confirm(handshake_id: str, body: ConfirmIn, authorization: Optio
     if not body.legit:
         await db.security_events.insert_one({
             "event_id": uuid.uuid4().hex, "kind": "suspicious_login", "severity": "critical",
-            "detail": f"Strážca označil prihlásenie (…{hs['session_tail']}) používateľa {hs['user_name']} ako PODOZRIVÉ.",
+            "detail": f"A guardian flagged the sign-in (…{hs['session_tail']}) of user {hs['user_name']} as SUSPICIOUS.",
             "at": datetime.now(timezone.utc)})
         try:
             await send_push(recipients=[hs["user_id"]],
-                            data={"title": "🚨 PODOZRIVÉ PRIHLÁSENIE",
-                                  "message": "Váš strážca označil nové prihlásenie ako podozrivé. Odporúčame odhlásiť všetky zariadenia.",
+                            data={"title": "🚨 SUSPICIOUS SIGN-IN",
+                                  "message": "Your guardian flagged a new sign-in as suspicious. We recommend signing out of all devices.",
                                   "action_url": "/recovery-suite"})
         except Exception:
             pass
@@ -184,10 +184,10 @@ async def social_recovery_initiate(body: RecoveryInitIn):
     ident = body.identifier.strip()
     user = await db.users.find_one({"$or": [{"email": ident}, {"did": ident}]}, {"_id": 0})
     if not user:
-        raise HTTPException(404, "Účet sa nenašiel.")
+        raise HTTPException(404, "Account not found.")
     guardians = await db.guardians.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
     if not guardians:
-        raise HTTPException(409, "no_guardians: Účet nemá nastavených strážcov — použite QR Talizman alebo Passkey.")
+        raise HTTPException(409, "no_guardians: The account has no guardians set — use QR Talizman or Passkey.")
     now = datetime.now(timezone.utc)
     needed = min(2, len(guardians))
     req = {"req_id": uuid.uuid4().hex, "user_id": user["user_id"], "needed": needed,
@@ -196,8 +196,8 @@ async def social_recovery_initiate(body: RecoveryInitIn):
     await db.recovery_requests.insert_one(req.copy())
     try:
         await send_push(recipients=[g["guardian_user_id"] for g in guardians],
-                        data={"title": "🆘 ŽIADOSŤ O OBNOVU ÚČTU",
-                              "message": f"{user.get('name') or user['email']} žiada o Social Recovery. Schváľte, len ak ste si istí, že je to on/ona.",
+                        data={"title": "🆘 ACCOUNT RECOVERY REQUEST",
+                              "message": f"{user.get('name') or user['email']} is requesting Social Recovery. Approve only if you are sure it is him/her.",
                               "action_url": "/recovery-suite"})
     except Exception:
         pass
@@ -226,12 +226,12 @@ async def social_recovery_approve(req_id: str, authorization: Optional[str] = He
     if not req:
         raise HTTPException(404, "Request not found")
     if req["status"] != "pending":
-        raise HTTPException(409, f"Žiadosť je v stave '{req['status']}'.")
+        raise HTTPException(409, f"The request is in status '{req['status']}'.")
     is_guardian = await db.guardians.find_one({"user_id": req["user_id"], "guardian_user_id": user["user_id"]})
     if not is_guardian:
-        raise HTTPException(403, "Nie ste strážcom tohto používateľa.")
+        raise HTTPException(403, "You are not a guardian of this user.")
     if user["user_id"] in req["approvals"]:
-        raise HTTPException(409, "Už ste schválili.")
+        raise HTTPException(409, "You have already approved.")
     approvals = req["approvals"] + [user["user_id"]]
     upd = {"approvals": approvals}
     if len(approvals) >= req["needed"]:
@@ -278,7 +278,7 @@ async def talisman_generate(authorization: Optional[str] = Header(None)):
         upsert=True)
     payload = f"GA-TALISMAN|{user['did']}|{secret}"
     return {"payload": payload, "did": user["did"],
-            "note": "Vytlačte QR a uložte do trezoru / peňaženky. Starý talizman bol zneplatnený. Kód sa zobrazí IBA RAZ."}
+            "note": "Print the QR and store it in the vault / wallet. The old talisman has been invalidated. The code will be shown ONLY ONCE."}
 
 class TalismanRedeemIn(BaseModel):
     did: str
@@ -288,12 +288,12 @@ class TalismanRedeemIn(BaseModel):
 async def talisman_redeem(body: TalismanRedeemIn):
     user = await db.users.find_one({"did": body.did.strip()}, {"_id": 0})
     if not user:
-        raise HTTPException(404, "Účet sa nenašiel.")
+        raise HTTPException(404, "Account not found.")
     tal = await db.talismans.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not tal or tal.get("secret_hash") != hashlib.sha256(body.secret.strip().encode()).hexdigest():
-        raise HTTPException(401, "Neplatný talizman.")
+        raise HTTPException(401, "Invalid talisman.")
     if tal.get("used_at"):
-        raise HTTPException(409, "Talizman už bol použitý — vygenerujte nový.")
+        raise HTTPException(409, "The talisman has already been used — generate a new one.")
     await db.talismans.update_one({"user_id": user["user_id"]},
                                   {"$set": {"used_at": datetime.now(timezone.utc)}})
     token = f"talis-{uuid.uuid4().hex}"
@@ -303,12 +303,12 @@ async def talisman_redeem(body: TalismanRedeemIn):
         "expires_at": datetime.now(timezone.utc) + timedelta(days=7)})
     await db.security_events.insert_one({
         "event_id": uuid.uuid4().hex, "kind": "talisman_redeemed", "severity": "warning",
-        "detail": f"QR Talizman použitý na obnovu účtu {user['user_id'][:8]}… — talizman jednorazovo zneplatnený.",
+        "detail": f"QR Talizman used to recover account {user['user_id'][:8]}… — talisman invalidated once-only.",
         "at": datetime.now(timezone.utc)})
     try:
         await send_push(recipients=[user["user_id"]],
-                        data={"title": "🔑 TALIZMAN POUŽITÝ",
-                              "message": "Váš QR Talizman práve obnovil prístup k účtu. Ak ste to neboli vy, okamžite kontaktujte strážcov.",
+                        data={"title": "🔑 TALISMAN USED",
+                              "message": "Your QR Talizman has just restored access to the account. If it was not you, contact the guardians immediately.",
                               "action_url": "/recovery-suite"})
     except Exception:
         pass
@@ -324,7 +324,7 @@ async def passkey_register(body: PasskeyIn, authorization: Optional[str] = Heade
     user = await get_current_user(authorization)
     cred = {"cred_id": uuid.uuid4().hex, "user_id": user["user_id"],
             "device_name": body.device_name.strip()[:60],
-            "algorithm": "ES256 (WebAuthn placeholder — natívna biometria po builde)",
+            "algorithm": "ES256 (WebAuthn placeholder — native biometrics after build)",
             "simulated": True, "created_at": datetime.now(timezone.utc)}
     await db.passkeys.insert_one(cred.copy())
     return clean(cred)

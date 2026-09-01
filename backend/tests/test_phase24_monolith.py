@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 BASE_URL = (os.environ.get("EXPO_BACKEND_URL")
-            or "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+            or "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 H = {"Authorization": "Bearer smoketok-fresh-2026-u2"}
 
 

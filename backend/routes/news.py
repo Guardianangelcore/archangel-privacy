@@ -15,53 +15,53 @@ from core import api, db, clean, get_current_user
 
 # Curated breakthrough database (seeded; refreshed by the swarm news agent)
 NEWS_SEED = [
-    {"news_id": "n-knee-cartilage", "tags": ["ortop", "koleno", "knee", "kĺb", "gonartr", "chrupavk"],
-     "title": "Stanford: regenerácia kolennej chrupavky bez operácie",
-     "summary": "Nová injekčná terapia (ACI 3.0) obnovuje chrupavku pri gonartróze. Podobnú technológiu nasadzuje robotická klinika v Brne.",
-     "region": "CZ", "tech": "regenerative", "specialty": "Ortopédia", "hunt_city": "Brno",
-     "savings_note": "Oproti TEP kolena úspora ~4 200 € a 6 mesiacov rekonvalescencie.", "savings_eur": 4200,
+    {"news_id": "n-knee-cartilage", "tags": ["ortop", "koleno", "knee", "joint", "gonartr", "chrupavk"],
+     "title": "Stanford: knee cartilage regeneration without surgery",
+     "summary": "A new injectable therapy (ACI 3.0) restores cartilage in knee osteoarthritis. A similar technology is being deployed by a robotic clinic in Brno.",
+     "region": "CZ", "tech": "regenerative", "specialty": "Orthopedics", "hunt_city": "Brno",
+     "savings_note": "Compared to total knee replacement: ~€4,200 saved and 6 months less recovery.", "savings_eur": 4200,
      "source": "Stanford Medicine · Nature Regen. Med. (2026)"},
-    {"news_id": "n-veins-laser", "tags": ["žil", "zil", "varix", "varikóz", "varikoz", "cievn", "vein"],
-     "title": "30-minútový laser na kŕčové žily už aj v Bratislave",
-     "summary": "Endovenózna laserová ablácia novej generácie — ambulantne, bez celkovej anestézy, návrat do práce na druhý deň.",
+    {"news_id": "n-veins-laser", "tags": ["vein", "zil", "varix", "varikóz", "varikoz", "cievn", "vein"],
+     "title": "30-minute laser for varicose veins now also in Bratislava",
+     "summary": "Next-generation endovenous laser ablation — outpatient, without general anesthesia, return to work the next day.",
      "region": "SK", "tech": "laser", "specialty": "Cievna chirurgia", "hunt_city": "Bratislava",
-     "savings_note": "Bez hospitalizácie: úspora ~900 € a 2 týždne PN.", "savings_eur": 900,
+     "savings_note": "No hospitalization: savings of ~€900 and 2 weeks of sick leave.", "savings_eur": 900,
      "source": "EuroVein Congress 2026"},
     {"news_id": "n-dental-3d", "tags": ["zub", "dental", "korunk", "implant"],
-     "title": "3D tlač zubných koruniek za 30 minút (CZ/SK siete)",
-     "summary": "Vysokorýchlostná keramická 3D tlač priamo v ambulancii — korunka na jedno sedenie namiesto 2–3 návštev.",
-     "region": "CZ/SK", "tech": "dental_3d", "specialty": "Stomatológia", "hunt_city": "Praha",
-     "savings_note": "Jedno sedenie namiesto troch: úspora ~350 € + cestovné.", "savings_eur": 350,
+     "title": "3D printing of dental crowns in 30 minutes (CZ/SK networks)",
+     "summary": "High-speed ceramic 3D printing directly in the clinic — a crown in one session instead of 2–3 visits.",
+     "region": "CZ/SK", "tech": "dental_3d", "specialty": "Dentistry", "hunt_city": "Praha",
+     "savings_note": "One session instead of three: savings of ~€350 + travel.", "savings_eur": 350,
      "source": "3Shape / Dental Summit Praha 2026"},
     {"news_id": "n-davinci-sk", "tags": ["prostat", "urol", "onko", "nádor", "nador", "chirurg"],
-     "title": "Tech-Tracker: DaVinci Xi rozšírený v Banskej Bystrici a Martine",
-     "summary": "Robotická chirurgia (urológia, onkogynekológia) — o 40 % kratšia rekonvalescencia. Poisťovne SK ju už preplácajú.",
-     "region": "SK", "tech": "robotic_surgery", "specialty": "Urológia", "hunt_city": "Banská Bystrica",
-     "savings_note": "Kratšia PN o ~3 týždne = menšia strata príjmu.", "savings_eur": 1100,
+     "title": "Tech-Tracker: DaVinci Xi expanded in Banská Bystrica and Martin",
+     "summary": "Robotic surgery (urology, onco-gynecology) — 40% shorter recovery. Slovak insurers already reimburse it.",
+     "region": "SK", "tech": "robotic_surgery", "specialty": "Urology", "hunt_city": "Banská Bystrica",
+     "savings_note": "Shorter sick leave by about 3 weeks = lower income loss.", "savings_eur": 1100,
      "source": "Roosevelt BB · Intuitive Surgical (2026)"},
-    {"news_id": "n-cuvis-cz", "tags": ["ortop", "koleno", "bedr", "knee", "hip", "kĺb", "klb"],
-     "title": "Tech-Tracker: CUVIS-joint robot na výmeny kĺbov v Brne a Ostrave",
-     "summary": "Robotická presnosť pri TEP kolena/bedra — presnejšie osadenie, dlhšia životnosť implantátu, rýchlejšia rehabilitácia.",
-     "region": "CZ", "tech": "robotic_surgery", "specialty": "Ortopédia", "hunt_city": "Brno",
-     "savings_note": "Menej revíznych operácií — dlhodobá úspora aj zdravie.", "savings_eur": 2000,
+    {"news_id": "n-cuvis-cz", "tags": ["ortop", "koleno", "bedr", "knee", "hip", "joint", "klb"],
+     "title": "Tech-Tracker: CUVIS joint robot for joint replacements in Brno and Ostrava",
+     "summary": "Robotic precision in knee/hip TEP — more precise placement, longer implant lifespan, faster rehabilitation.",
+     "region": "CZ", "tech": "robotic_surgery", "specialty": "Orthopedics", "hunt_city": "Brno",
+     "savings_note": "Fewer revision surgeries — long-term savings and better health.", "savings_eur": 2000,
      "source": "FN Brno · curexo (2026)"},
     {"news_id": "n-cardiac-ai", "tags": ["srdc", "kardio", "ekg", "arytmi"],
-     "title": "AI-EKG odhalí arytmie 2 roky pred prvými príznakmi",
-     "summary": "Nový AI skríning z bežného EKG záznamu — validovaný na 1,2 mil. pacientov. Dostupný u vybraných kardiológov v CZ/SK.",
-     "region": "CZ/SK", "tech": "ai_screening", "specialty": "Kardiológia", "hunt_city": "Praha",
-     "savings_note": "Včasný záchyt = prevencia hospitalizácie (~3 000 €).", "savings_eur": 3000,
+     "title": "AI ECG detects arrhythmias 2 years before first symptoms",
+     "summary": "New AI screening from a standard ECG record — validated on 1.2 million patients. Available from selected cardiologists in CZ/SK.",
+     "region": "CZ/SK", "tech": "ai_screening", "specialty": "Cardiology", "hunt_city": "Praha",
+     "savings_note": "Early detection = prevention of hospitalization (~€3,000).", "savings_eur": 3000,
      "source": "Mayo Clinic AI Lab (2026)"},
     {"news_id": "n-diabetes-patch", "tags": ["diabet", "cukrovk", "glykémi", "glykemi", "inzulín", "inzulin"],
-     "title": "Náplasťový CGM senzor 4. generácie — bez pichania, 21 dní",
-     "summary": "Kontinuálne meranie glukózy bez kalibrácie; dáta rovno do mobilu. V SK čiastočne hradený od júna 2026.",
-     "region": "SK", "tech": "wearable", "specialty": "Diabetológia", "hunt_city": "Bratislava",
-     "savings_note": "Úspora na prúžkoch ~25 €/mes. + lepšia kompenzácia.", "savings_eur": 300,
+     "title": "Patch CGM sensor of the 4th generation — no finger pricks, 21 days",
+     "summary": "Continuous glucose monitoring without calibration; data straight to mobile. In SK partially covered since June 2026.",
+     "region": "SK", "tech": "wearable", "specialty": "Diabetology", "hunt_city": "Bratislava",
+     "savings_note": "Savings on strips ~€25/month + better compensation.", "savings_eur": 300,
      "source": "EASD 2026"},
-    {"news_id": "n-cataract-femto", "tags": ["oč", "oc", "zrak", "katarakt", "šošovk", "sosovk"],
-     "title": "Femtosekundová operácia sivého zákalu — 8 minút, obe oči",
-     "summary": "Bezčepieľková laserová katarakta s prémiovými šošovkami; čakačky v CZ klesli pod 3 týždne.",
-     "region": "CZ", "tech": "laser", "specialty": "Oftalmológia", "hunt_city": "Brno",
-     "savings_note": "Kratšia čakačka vs. SK (~5 mes.) — mobilita = zisk.", "savings_eur": 0,
+    {"news_id": "n-cataract-femto", "tags": ["eye", "oc", "zrak", "katarakt", "lens", "sosovk"],
+     "title": "Femtosecond cataract surgery — 8 minutes, both eyes",
+     "summary": "Blade-free laser cataract surgery with premium lenses; wait times in the Czech Republic have dropped below 3 weeks.",
+     "region": "CZ", "tech": "laser", "specialty": "Ophthalmology", "hunt_city": "Brno",
+     "savings_note": "Shorter wait vs. SK (~5 mo.) — mobility = profit.", "savings_eur": 0,
      "source": "Gemini Eye Clinics (2026)"},
 ]
 
@@ -99,10 +99,10 @@ async def news_feed(authorization: Optional[str] = Header(None)):
         entry = {**n, "matched": bool(hit), "matched_tags": hit,
                  "high_tech": n["tech"] in HIGH_TECH,
                  "jarvis_alert": (f"Guardian Angel, prelom: {n['title']}. "
-                                  f"Overená klinika: {n['hunt_city']} ({n['region']}). Mám uloviť termín?") if hit else None}
+                                  f"Verified clinic: {n['hunt_city']} ({n['region']}). Should I hunt for an appointment?") if hit else None}
         (matched if hit else other).append(entry)
     return {"personalized": matched, "general": other,
-            "note": "Kurátorovaný feed (simulovaná real-time ingescia — Phase 3: živé RSS/clinical-trials API)."}
+            "note": "Curated feed (simulated real-time ingestion — Phase 3: live RSS/clinical-trials API)."}
 
 
 @api.get("/news/tech-tracker")
@@ -112,7 +112,7 @@ async def tech_tracker(authorization: Optional[str] = Header(None)):
     items = await db.medical_news.find(
         {"tech": {"$in": list(HIGH_TECH)}, "region": {"$regex": "CZ|SK"}}, {"_id": 0}).to_list(20)
     return {"deployments": items, "regions": ["CZ", "SK"],
-            "hunter_note": "Waitlist Hunter prioritizuje tieto high-tech lokality pri rezerváciách."}
+            "hunter_note": "Waitlist Hunter prioritizes these high-tech locations when making reservations."}
 
 
 @api.post("/news/{news_id}/hunt")
@@ -137,4 +137,4 @@ async def news_hunt(news_id: str, authorization: Optional[str] = Header(None)):
     except Exception:
         pass
     return {"ok": True, "waitlist_item": clean(item),
-            "message": f"Hunter aktivovaný: {n['specialty']} · {n['hunt_city']} (priorita HIGH-TECH). Swarm hľadá termín."}
+            "message": f"Hunter activated: {n['specialty']} · {n['hunt_city']} (HIGH-TECH priority). Swarm is searching for an appointment."}

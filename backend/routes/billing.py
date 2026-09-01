@@ -92,19 +92,19 @@ async def billing_checkout(body: CheckoutIn, request: Request, authorization: Op
 async def _issue_receipt(tx: dict, tier_until: datetime, family_members: int = 0):
     """Payment receipt → PDF stored directly in the user's Health Vault + timeline."""
     try:
-        label = ("Rodinný balík — Sentinel pre celú rodinu" if tx["tier"] == "family_sentinel"
+        label = ("Family plan — Sentinel for the whole family" if tx["tier"] == "family_sentinel"
                  else f"{tx['tier'].capitalize()} Tier")
-        billing_sk = "ročné predplatné (−20 %)" if tx["billing"] == "annual" else "mesačné predplatné"
+        billing_sk = "annual subscription (−20%)" if tx["billing"] == "annual" else "monthly subscription"
         now = datetime.now(timezone.utc)
         body = (
-            f"Číslo dokladu: {tx['session_id']}\n"
-            f"Dátum platby: {now.strftime('%d.%m.%Y %H:%M UTC')}\n\n"
-            f"Položka: {label} — {billing_sk}\n"
+            f"Receipt number: {tx['session_id']}\n"
+            f"Payment date: {now.strftime('%d.%m.%Y %H:%M UTC')}\n\n"
+            f"Item: {label} — {billing_sk}\n"
             f"Suma: {tx['amount_eur']:.2f} EUR\n"
-            f"Spôsob platby: Platobná karta (Stripe)\n"
-            f"Platnosť do: {tier_until.strftime('%d.%m.%Y')}\n"
-            + (f"Členovia rodinného kruhu s aktivovaným Sentinelom: {family_members}\n" if family_members else "")
-            + "\nĎakujeme, že chránite seba aj svoju rodinu s Guardian Health & Angel."
+            f"Payment method: Card (Stripe)\n"
+            f"Valid until: {tier_until.strftime('%d.%m.%Y')}\n"
+            + (f"Family circle members with Sentinel activated: {family_members}\n" if family_members else "")
+            + "\nThank you for protecting yourself and your family with Guardian Health & Angel."
         )
         pdf = await run_in_threadpool(_make_pdf, "POTVRDENIE O PLATBE — GUARDIAN HEALTH & ANGEL", body, _pdf_footer())
         doc_id = uuid.uuid4().hex
@@ -230,16 +230,16 @@ async def billing_gift(body: GiftIn, authorization: Optional[str] = Header(None)
     user = await get_current_user(authorization)
     fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "is_founder": 1})
     if not (fresh or {}).get("is_founder"):
-        raise HTTPException(403, "founder_only: Darovanie prémia môže vykonať iba zakladateľ.")
+        raise HTTPException(403, "founder_only: Only the founder can gift premium.")
     if body.tier not in ("guardian", "sentinel", "archangel"):
         raise HTTPException(400, "tier must be guardian|sentinel|archangel")
     days = max(1, min(3650, int(body.days)))
     email = body.email.strip().lower()
     target = await db.users.find_one({"email": email}, {"_id": 0, "user_id": 1, "email": 1, "inner_circle": 1, "name": 1})
     if not target:
-        raise HTTPException(404, "user_not_found: Používateľ s týmto e-mailom zatiaľ nemá účet.")
+        raise HTTPException(404, "user_not_found: No account exists for this e-mail yet.")
     if target.get("inner_circle"):
-        raise HTTPException(409, "already_inner_circle: Tento používateľ má doživotný Archangel.")
+        raise HTTPException(409, "already_inner_circle: This user already has lifetime Archangel.")
     now = datetime.now(timezone.utc)
     until = now + timedelta(days=days)
     await db.users.update_one({"user_id": target["user_id"]}, {"$set": {
@@ -251,8 +251,8 @@ async def billing_gift(body: GiftIn, authorization: Optional[str] = Header(None)
     await db.gifts.insert_one(gift.copy())
     try:
         await send_push([target["user_id"]],
-                        {"title": "🎁 Darček od Guardian Angel",
-                         "body": f"Zakladateľ vám daroval {body.tier.upper()} na {days} dní. Prémiové funkcie sú odomknuté!"},
+                        {"title": "🎁 A gift from Guardian Angel",
+                         "body": f"The founder gifted you {body.tier.upper()} for {days} days. Premium features are unlocked!"},
                         idempotency_key=f"gift-{gift['gift_id']}")
     except Exception:
         pass

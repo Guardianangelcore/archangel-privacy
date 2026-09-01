@@ -177,9 +177,9 @@ async def pantry_alerts(authorization: Optional[str] = Header(None)):
     if alerts:
         top = alerts[0]
         if top["urgency"] == "expired":
-            top_line = f"{top['name']} v {top.get('location') or 'sklade'} má prekročenú spotrebu o {abs(top['days_left'])} dní."
+            top_line = f"{top['name']} in {top.get('location') or 'storage'} is over by {abs(top['days_left'])} days."
         else:
-            top_line = f"{top['name']} v {top.get('location') or 'sklade'} vyprší o {top['days_left']} dní. Odporúčam rotovať."
+            top_line = f"{top['name']} in {top.get('location') or 'storage'} expires in {top['days_left']} days. I recommend rotating it."
     return {"alerts": clean(alerts), "count": len(alerts), "top_line": top_line}
 
 
@@ -192,7 +192,7 @@ class PantryScanIn(BaseModel):
 import re
 _EXPIRY_PATTERNS = [
     # "Best before: 12.03.2028" / "EXP 2028-03-12" / "Spotreba do 12/03/2028"
-    re.compile(r"(?:best\s*before|exp(?:iry|iration)?|spotr(?:eb[au])(?:\s+do)?|use\s*by|minim[aá]lna\s+trvanlivos[tť]|do\s+d[aá]tumu)[^0-9]{0,10}(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{2,4})\b", re.I),
+    re.compile(r"(?:best\s*before|exp(?:iry|iration)?|consumpt(?:ion)?(?:\s+by)?|use\s*by|minim[aá]lna\s+trvanlivos[tť]|by\s+the\s+date)[^0-9]{0,10}(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{2,4})\b", re.I),
     # ISO YYYY-MM-DD label-less (rare but common on batteries)
     re.compile(r"(?:best\s*before|exp|use\s*by)[^0-9]{0,10}(\d{4})-(\d{1,2})-(\d{1,2})\b", re.I),
     # "MHD 12/2028"  (month/year only)
@@ -261,7 +261,7 @@ async def pantry_scan(body: PantryScanIn, authorization: Optional[str] = Header(
         if len(ln) >= 3 and not ln.replace(" ", "").isdigit():
             name = ln[:80]
             break
-    name = name or doc.get("title") or "Zásoba"
+    name = name or doc.get("title") or "Supply"
 
     expiry_iso = _detect_expiry(text or "")
     cat = (body.hint_category or "other").lower()
@@ -296,15 +296,15 @@ class PantryVoiceParseIn(BaseModel):
     transcript: str
 
 _CATEGORY_KEYWORDS = {
-    "food":    ("konzerv", "fazu", "kukuric", "polievk", "cesto", "múk", "múka", "ryž", "jedl", "chlie", "keksy", "trvanl", "sušenk"),
+    "food":    ("konzerv", "fazu", "kukuric", "polievk", "cesto", "múk", "múka", "rice", "jedl", "chlie", "keksy", "trvanl", "biscuit"),
     # 'filter' MUST precede 'water': "filtre na vodu" is a filter, not water.
     "filter":  ("filter", "filtre", "carbon", "uhlík", "brita", "berkey"),
-    "water":   ("vod", "pitn", "flaš", "kanist"),
+    "water":   ("vod", "pitn", "bottle", "kanist"),
     "battery": ("bat", "aa", "aaa", "akumul", "cr123", "9v", "18650"),
     "gas":     ("plyn", "propan", "propán", "butan", "petrole", "bomb", "kanist"),
-    "med":     ("lie", "tablet", "sirup", "ibalgin", "paraceta", "aspirin", "vitam", "obväz", "obvaz"),
+    "med":     ("lie", "tablet", "sirup", "ibalgin", "paraceta", "aspirin", "vitam", "bandage", "obvaz"),
     "ammo":    ("nábo", "nabo", "munic", "muníc", "9mm", "ammo"),
-    "tool":    ("nôž", "noz", "mačet", "seker", "kladiv", "nára", "nara", "nastr"),
+    "tool":    ("knife", "noz", "machete", "seker", "kladiv", "nára", "nara", "nastr"),
 }
 
 
@@ -317,7 +317,7 @@ def _guess_category(text: str) -> str:
 
 
 def _parse_qty(text: str) -> int:
-    """Slovak/Czech senior speech: 'tri konzervy', 'štyri', '5 litrov'."""
+    """Slovak/Czech senior speech: 'three cans', 'four', '5 liters'."""
     t = (text or "").lower()
     # Digits win first.
     import re as _re
@@ -331,13 +331,13 @@ def _parse_qty(text: str) -> int:
         "jeden": 1, "jedna": 1, "jednu": 1, "jedno": 1,
         "dva": 2, "dve": 2, "dvě": 2,
         "tri": 3, "tři": 3, "tro": 3,
-        "štyri": 4, "styri": 4, "čtyři": 4, "ctyri": 4,
-        "päť": 5, "pat": 5, "pět": 5, "pet": 5,
-        "šesť": 6, "sest": 6, "šest": 6,
+        "four": 4, "styri": 4, "four": 4, "ctyri": 4,
+        "five": 5, "pat": 5, "pět": 5, "pet": 5,
+        "six": 6, "sest": 6, "six": 6,
         "sedem": 7, "sedm": 7,
         "osem": 8, "osm": 8,
-        "deväť": 9, "devet": 9,
-        "desať": 10, "deset": 10, "10": 10,
+        "nine": 9, "devet": 9,
+        "ten": 10, "deset": 10, "10": 10,
     }
     for w, n in words.items():
         if _re.search(rf"\b{w}\b", t):
@@ -370,7 +370,7 @@ def _parse_name(text: str, quantity: int) -> str:
         t = _re.sub(r"^(?:dva|dve|tri|štyri|styri|päť|pat|šesť|sest|sedem|osem|deväť|desať|deset)\s+", "", t, flags=_re.I)
     # Cut off the location clause
     t = _re.split(r"\s+(?:v|vo|na|do)\s+", t, maxsplit=1)[0]
-    return t.strip(" .,")[:80] or "Zásoba"
+    return t.strip(" .,")[:80] or "Supply"
 
 
 @api.post("/pantry/voice/parse")

@@ -73,8 +73,8 @@ export default function Longevity() {
         ) : needProfile ? (
           <View>
             <Text style={st.intro}>Jarvis computes your biological age from data (steps, pulse, stress, diagnoses). Basic details first:</Text>
-            <Text style={st.lbl}>ROK NARODENIA</Text>
-            <WheelField testID="lg-birth" title="ROK NARODENIA" min={1920} max={2012} value={f.birth_year} onChange={v => setF({ ...f, birth_year: v })} placeholder="1971" style={st.input} />
+            <Text style={st.lbl}>BIRTH YEAR</Text>
+            <WheelField testID="lg-birth" title="BIRTH YEAR" min={1920} max={2012} value={f.birth_year} onChange={v => setF({ ...f, birth_year: v })} placeholder="1971" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               <View style={{ flex: 1 }}>
                 <Text style={st.lbl}>HEIGHT (cm)</Text>
@@ -89,7 +89,7 @@ export default function Longevity() {
               <Text style={st.switchLbl}>SMOKER</Text>
               <Switch testID="lg-smoker" value={f.smoker} onValueChange={v => setF({ ...f, smoker: v })} trackColor={{ true: C.error, false: C.surface3 }} />
             </View>
-            <Text style={st.lbl}>AKTIVITA</Text>
+            <Text style={st.lbl}>ACTIVITY</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               {[['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH']].map(([k, v]) => (
                 <Pressable testID={`lg-act-${k}`} key={k} onPress={() => setF({ ...f, activity_level: k })} style={[st.chip, f.activity_level === k && st.chipActive]}>
@@ -116,13 +116,13 @@ export default function Longevity() {
                 <Text testID="lg-bioage" style={[st.ageVal, { color: data.delta_years > 0.5 ? C.error : C.brand }]}>{data.biological_age}</Text>
               </View>
             </View>
-            <Text style={st.verdict}>{data.verdict} · Δ {data.delta_years > 0 ? '+' : ''}{data.delta_years} r.</Text>
+            <Text style={st.verdict}>{data.verdict} · Δ {data.delta_years > 0 ? '+' : ''}{data.delta_years} yrs</Text>
 
-            <Text style={st.section}>FAKTORY</Text>
+            <Text style={st.section}>FACTORS</Text>
             {data.factors.map((fa: any, i: number) => (
               <View key={i} style={st.factorRow}>
                 <Text style={[st.factorImpact, { color: fa.impact_years > 0 ? C.error : C.brand }]}>
-                  {fa.impact_years > 0 ? '+' : ''}{fa.impact_years}r
+                  {fa.impact_years > 0 ? '+' : ''}{fa.impact_years}y
                 </Text>
                 <View style={{ flex: 1 }}>
                   <Text style={st.factorName}>{fa.factor.toUpperCase()}</Text>

@@ -14,8 +14,8 @@ import uuid, os, re
 from cryptography.fernet import Fernet
 from core import api, db, logger, get_current_user, send_push
 
-RELATIONS = {"partner": "Partner", "rodic": "Rodič", "surodenec": "Súrodenec",
-             "dieta": "Dieťa", "priatel": "Priateľ", "lekar": "Lekár", "ine": "Iné"}
+RELATIONS = {"partner": "Partner", "rodic": "Parent", "surodenec": "Sibling",
+             "dieta": "Child", "priatel": "Friend", "lekar": "Doctor", "ine": "Other"}
 _PHONE_RE = re.compile(r"^\+?[0-9 ()\-]{6,20}$")
 
 _fernet: Optional[Fernet] = None
@@ -38,7 +38,7 @@ def _view(doc: dict) -> dict:
         phone = "•••"
     return {"contact_id": doc["contact_id"], "name": doc["name"],
             "phone": phone, "relation": doc["relation"],
-            "relation_label": RELATIONS.get(doc["relation"], "Iné"),
+            "relation_label": RELATIONS.get(doc["relation"], "Other"),
             "created_at": doc.get("created_at")}
 
 
@@ -54,13 +54,13 @@ async def add_family_contact(body: ContactIn, authorization: Optional[str] = Hea
     name = (body.name or "").strip()
     phone = (body.phone or "").strip()
     if not name or len(name) > 80:
-        raise HTTPException(400, "Meno je povinné (max 80 znakov).")
+        raise HTTPException(400, "Name is required (max 80 characters).")
     if not _PHONE_RE.match(phone):
-        raise HTTPException(400, "Neplatné telefónne číslo — použite formát +421 900 000 000.")
+        raise HTTPException(400, "Invalid phone number — use format +421 900 000 000.")
     relation = body.relation if body.relation in RELATIONS else "ine"
     count = await db.family_contacts.count_documents({"user_id": user["user_id"]})
     if count >= 20:
-        raise HTTPException(400, "Maximálne 20 kontaktov.")
+        raise HTTPException(400, "Maximum of 20 contacts.")
     doc = {"contact_id": uuid.uuid4().hex, "user_id": user["user_id"], "name": name,
            "phone_enc": _enc().encrypt(phone.encode()).decode(), "relation": relation,
            "created_at": datetime.now(timezone.utc)}
@@ -82,7 +82,7 @@ async def delete_family_contact(contact_id: str, authorization: Optional[str] = 
     res = await db.family_contacts.delete_one(
         {"contact_id": contact_id, "user_id": user["user_id"]})
     if res.deleted_count == 0:
-        raise HTTPException(404, "Kontakt sa nenašiel.")
+        raise HTTPException(404, "Contact not found.")
     return {"ok": True}
 
 
@@ -92,7 +92,7 @@ async def sos_family_contact(contact_id: str, authorization: Optional[str] = Hea
     row = await db.family_contacts.find_one(
         {"contact_id": contact_id, "user_id": user["user_id"]}, {"_id": 0})
     if not row:
-        raise HTTPException(404, "Kontakt sa nenašiel.")
+        raise HTTPException(404, "Contact not found.")
     now = datetime.now(timezone.utc)
     phone = _view(row)["phone"]
 
@@ -100,8 +100,8 @@ async def sos_family_contact(contact_id: str, authorization: Optional[str] = Hea
     who = user.get("name") or "Guardian Angel"
     geo = user.get("geo") or {}
     lat, lng = user.get("lat") or geo.get("lat"), user.get("lng") or geo.get("lng")
-    loc = f" Moja poloha: https://maps.google.com/?q={lat},{lng}" if lat and lng else ""
-    sms_body = f"🆘 SOS! Potrebujem pomoc.{loc} — {who} (Guardian Health & Angel)"
+    loc = f" My location: https://maps.google.com/?q={lat},{lng}" if lat and lng else ""
+    sms_body = f"🆘 SOS! I need help.{loc} — {who} (Guardian Health & Angel)"
 
     # TWILIO — real SMS when credentials are configured; graceful device-composer
     # fallback otherwise (keys arrive later → this switches on automatically).
@@ -132,13 +132,13 @@ async def sos_family_contact(contact_id: str, authorization: Optional[str] = Hea
         "kind": "family_sos", "channel": channel, "sms_sent": sms_sent, "at": now})
     try:
         await send_push([user["user_id"]], {
-            "title": "🆘 SOS ODOSLANÉ",
-            "body": f"Núdzový signál pre kontakt {row['name']} bol zaznamenaný.",
+            "title": "🆘 SOS SENT",
+            "body": f"Emergency signal for contact {row['name']} was recorded.",
         }, idempotency_key=f"sos-{contact_id}-{now.strftime('%Y%m%d%H%M')}")
     except Exception as e:
         logger.warning(f"sos push failed: {e}")
-    message = (f"SOS SMS odoslaná {row['name']} cez Twilio." if sms_sent
-               else f"SOS pre {row['name']} zaznamenané. Zavolajte, ak je to možné.")
+    message = (f"SOS SMS sent to {row['name']} via Twilio." if sms_sent
+               else f"SOS for {row['name']} recorded. Call if possible.")
     return {"ok": True, "contact": row["name"], "phone": phone,
             "sms_sent": sms_sent, "channel": channel, "sms_error": sms_error,
             "message": message, "sms_body": sms_body}

@@ -85,9 +85,9 @@ export default function WealthVault() {
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.totalCard}>
           <Text style={st.totalLbl}>SOVEREIGN WEALTH (ESTIMATE)</Text>
-          <Text testID="wv-total" style={st.totalVal}>{(vault?.total_est_value_eur ?? 0).toLocaleString('sk-SK')} €</Text>
+          <Text testID="wv-total" style={st.totalVal}>{(vault?.total_est_value_eur ?? 0).toLocaleString('en-US')} €</Text>
           {vault?.anchor ? (
-            <Text style={st.anchorInfo}>⛓ Proof of Asset Stewardship · Mosaic blok #{vault.anchor.mosaic_block ?? '—'} · {vault.anchor.manifest_sha256?.slice(0, 14)}…</Text>
+            <Text style={st.anchorInfo}>⛓ Proof of Asset Stewardship · Mosaic block #{vault.anchor.mosaic_block ?? '—'} · {vault.anchor.manifest_sha256?.slice(0, 14)}…</Text>
           ) : (
             <Text style={st.anchorInfo}>Not yet anchored on Mosaic Chain</Text>
           )}
@@ -97,7 +97,7 @@ export default function WealthVault() {
         <Text style={st.section}>ADD ASSET</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <Pressable testID="wv-type-crypto" onPress={() => setType('crypto')} style={[st.chip, type === 'crypto' && st.chipActive]}>
-            <Text style={[st.chipText, type === 'crypto' && st.chipTextActive]}>₿ KRYPTO</Text>
+            <Text style={[st.chipText, type === 'crypto' && st.chipTextActive]}>₿ CRYPTO</Text>
           </Pressable>
           <Pressable testID="wv-type-bank" onPress={() => setType('bank')} style={[st.chip, type === 'bank' && st.chipActive]}>
             <Text style={[st.chipText, type === 'bank' && st.chipTextActive]}>🏦 BANK ACCOUNT</Text>
@@ -137,7 +137,7 @@ export default function WealthVault() {
           <View testID={`wv-asset-${a.asset_id}`} key={a.asset_id} style={st.card}>
             <View style={st.rowSpread}>
               <Text style={st.cardTitle}>{a.type === 'crypto' ? '₿' : '🏦'} {a.label}</Text>
-              <Text style={st.cardVal}>{(a.est_value_eur ?? 0).toLocaleString('sk-SK')} €</Text>
+              <Text style={st.cardVal}>{(a.est_value_eur ?? 0).toLocaleString('en-US')} €</Text>
             </View>
             {a.type === 'crypto' ? (
               <Text style={st.meta}>{a.chain} · {a.address_masked || '—'} · {a.has_sealed_secret ? '🔐 seed sealed' : 'no seed'}</Text>
@@ -157,8 +157,8 @@ export default function WealthVault() {
         <Text style={st.section}>⚡ INSTANT CARD PAYOUT</Text>
         <Text style={st.policy}>Instant card payout (Visa Direct / Mastercard Send) — credited within 30 minutes. Simulated until a real payment rail connects.</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
-          <WheelField testID="wv-pay-amount" title="SUMA €" min={10} max={5000} step={10} unit="€" value={payAmount} onChange={setPayAmount} placeholder="Suma €" style={[st.input, { flex: 1 }]} />
-          <TextInput testID="wv-pay-card" value={payCard} onChangeText={setPayCard} keyboardType="numeric" maxLength={4} placeholder="Karta ****"
+          <WheelField testID="wv-pay-amount" title="AMOUNT €" min={10} max={5000} step={10} unit="€" value={payAmount} onChange={setPayAmount} placeholder="Amount €" style={[st.input, { flex: 1 }]} />
+          <TextInput testID="wv-pay-card" value={payCard} onChangeText={setPayCard} keyboardType="numeric" maxLength={4} placeholder="Card ****"
             placeholderTextColor="#777" style={[st.input, { width: 110 }]} />
         </View>
         <Pressable testID="wv-payout" onPress={payout} disabled={busy === 'payout' || !payAmount || payCard.length !== 4} style={[st.mainBtn, { backgroundColor: '#1B4332' }]}>

@@ -19,23 +19,23 @@ from routes.hunter import _simulate_slot
 
 # ---------------- SPECIALTY DETECTION (deterministic keyword map) ----------------
 SPECIALTY_MAP = [
-    (("ortop", "kĺb", "klb", "koleno", "bedrov"), "Ortopédia"),
-    (("kardio", "srdc", "ekg", "infarkt"), "Kardiológia"),
-    (("neurol", "migrén", "epilep"), "Neurológia"),
-    (("oftalm", "očn", "ocn", "zrak"), "Oftalmológia"),
-    (("dermat", "kožn", "kozn"), "Dermatológia"),
-    (("onkol", "nádor", "nador", "biopsi"), "Onkológia"),
-    (("urol", "prostat"), "Urológia"),
-    (("gastro", "žalúd", "zalud", "čriev", "criev"), "Gastroenterológia"),
-    (("diabet", "cukrovk", "glykémi", "glykemi"), "Diabetológia"),
-    (("rtg", "röntgen", "rontgen", "rádiol", "radiol"), "Rádiológia (RTG)"),
-    (("sono", "ultrazvuk", "usg"), "Rádiológia (sono)"),
-    (("rehab", "fyzio"), "Fyzioterapia"),
-    (("pľúc", "pluc", "pneumo", "spirometri"), "Pneumológia"),
-    (("orl", "ušn", "usn", "krčn", "krcn"), "ORL"),
-    (("chirurg", "operáci", "operaci"), "Chirurgia"),
-    (("krv", "odber", "laborat", "hematol"), "Odber krvi / Laboratórium"),
-    (("intern", "interné"), "Interná medicína"),
+    (("ortop", "joint", "klb", "koleno", "bedrov"), "Orthopedics"),
+    (("kardio", "srdc", "ekg", "infarkt"), "Cardiology"),
+    (("neurol", "migrén", "epilep"), "Neurology"),
+    (("oftalm", "ophthalmic", "ocn", "zrak"), "Ophthalmology"),
+    (("dermat", "dermatologic", "kozn"), "Dermatology"),
+    (("onkol", "nádor", "nador", "biopsi"), "Oncology"),
+    (("urol", "prostat"), "Urology"),
+    (("gastro", "stomach", "zalud", "intestines", "criev"), "Gastroenterology"),
+    (("diabet", "cukrovk", "glykémi", "glykemi"), "Diabetology"),
+    (("rtg", "röntgen", "rontgen", "rádiol", "radiol"), "Radiology (X-ray)"),
+    (("sono", "ultrazvuk", "usg"), "Radiology (ultrasound)"),
+    (("rehab", "fyzio"), "Physiotherapy"),
+    (("pulmonary", "pluc", "pneumo", "spirometri"), "Pulmonology"),
+    (("orl", "ENT", "usn", "ENT", "krcn"), "ORL"),
+    (("chirurg", "operáci", "operaci"), "Surgery"),
+    (("krv", "odber", "laborat", "hematol"), "Blood draw / Laboratory"),
+    (("intern", "interné"), "Internal medicine"),
 ]
 
 def detect_specialty(text: str) -> Optional[str]:
@@ -66,9 +66,9 @@ async def orchestrate_document(user_id: str, doc_id: str, force: bool = False) -
     try:
         from routes.health import extract_doc_text
         text = await extract_doc_text(doc)
-        steps.append(_step("OCR", "ok", f"Extrahovaných {len(text)} znakov textu"))
+        steps.append(_step("OCR", "ok", f"Extracted {len(text)} characters of text"))
     except Exception as e:
-        steps.append(_step("OCR", "skipped", f"Text sa nepodarilo extrahovať ({str(e)[:60]})"))
+        steps.append(_step("OCR", "skipped", f"Text could not be extracted ({str(e)[:60]})"))
 
     # 2. AI plain-language translation (Jarvis translator)
     if text and EMERGENT_LLM_KEY:
@@ -81,12 +81,12 @@ async def orchestrate_document(user_id: str, doc_id: str, force: bool = False) -
             resp = await chat.send_message(UserMessage(text=text[:8000]))
             await db.documents.update_one({"doc_id": doc_id},
                                           {"$set": {"plain_language": resp, "translation": resp}})
-            steps.append(_step("AI Prekladač", "ok", "Dokument preložený do ľudskej reči (uložené v Trezore)"))
+            steps.append(_step("AI Translator", "ok", "Document translated into human language (stored in Vault)"))
         except Exception as e:
             logger.warning(f"autopilot translate failed: {e}")
-            steps.append(_step("AI Prekladač", "skipped", "AI preklad zlyhal — skúste manuálne v Trezore"))
+            steps.append(_step("AI Translator", "skipped", "AI translation failed — try manually in Vault"))
     else:
-        steps.append(_step("AI Prekladač", "skipped", "Bez textu nie je čo prekladať"))
+        steps.append(_step("AI Translator", "skipped", "Without text, there is nothing to translate"))
 
     # 3. Specialty detection → auto-booking → calendar
     specialty = detect_specialty(f"{doc.get('title', '')} {text[:3000]}")
@@ -107,10 +107,10 @@ async def orchestrate_document(user_id: str, doc_id: str, force: bool = False) -
             "notes": f"Jarvis Autopilot · {slot['time']} · z dokumentu: {doc.get('title', '')[:40]}",
             "booster_due": None, "source": f"autopilot:{doc_id}", "created_at": now,
         })
-        steps.append(_step("Auto-Booker", "ok", f"Termín zarezervovaný: {booked} (simulované API kliniky)"))
-        steps.append(_step("Health Calendar", "ok", f"Zapísané do kalendára na {slot['date']}"))
+        steps.append(_step("Auto-Booker", "ok", f"Appointment booked: {booked} (simulated clinic API)"))
+        steps.append(_step("Health Calendar", "ok", f"Added to calendar for {slot['date']}"))
     else:
-        steps.append(_step("Auto-Booker", "skipped", "V dokumente nebola rozpoznaná odbornosť — rezervácia sa nespustila"))
+        steps.append(_step("Auto-Booker", "skipped", "Specialty not recognized in the document — booking was not started"))
 
     # 4. Record + notify (single confirmation, no questions asked)
     action = {"action_id": uuid.uuid4().hex, "user_id": user_id, "doc_id": doc_id,
@@ -124,7 +124,7 @@ async def orchestrate_document(user_id: str, doc_id: str, force: bool = False) -
     except Exception:
         pass
     try:
-        msg = f"Termín zarezervovaný: {booked}" if booked else f"Dokument „{doc.get('title', '')[:40]}“ spracovaný a preložený."
+        msg = f"Appointment booked: {booked}" if booked else f"Document „{doc.get('title', '')[:40]}“ processed and translated."
         await send_push(recipients=[user_id],
                         data={"title": "🧠 JARVIS AUTOPILOT", "message": msg, "action_url": "/health-timeline"})
     except Exception as e:

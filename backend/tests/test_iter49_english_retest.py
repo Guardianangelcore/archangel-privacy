@@ -9,7 +9,7 @@ Backend checks:
 import os, json, re, requests, pytest
 
 BASE_URL = (os.environ.get("EXPO_PUBLIC_BACKEND_URL")
-            or "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+            or "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 FOUNDER_EMAIL = "guardian.angel.core@proton.me"
 
 # Slovak diacritic set — canary for un-translated strings

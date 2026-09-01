@@ -152,20 +152,20 @@ async def chain_healing(body: HealingChainIn, authorization: Optional[str] = Hea
         if not drop:
             raise HTTPException(404, "Drop document not found")
         if drop.get("autobooked"):
-            steps.append(_step("Referral Bridge", "skipped", "Žiadanka už bola zarezervovaná — reťaz sa nespúšťa znova (ochrana proti slučke)."))
-            return {"chain": "healing", "steps": steps, "summary": "Už vybavené.", "simulated": True}
+            steps.append(_step("Referral Bridge", "skipped", "The request has already been reserved — the chain does not start again (loop protection)."))
+            return {"chain": "healing", "steps": steps, "summary": "Already handled.", "simulated": True}
         specialty = specialty or drop.get("specialty_guess") or drop.get("doc_title")
-        steps.append(_step("Referral Bridge", "ok", f"Žiadanka: {drop['doc_title']} od {drop['sender_name']}"))
+        steps.append(_step("Referral Bridge", "ok", f"Request: {drop['doc_title']} from {drop['sender_name']}"))
     if not specialty:
         raise HTTPException(400, "specialty or drop_doc_id required")
 
-    steps.append(_step("Waitlist Hunter", "ok", f"Hľadám najskorší termín: {specialty}"))
+    steps.append(_step("Waitlist Hunter", "ok", f"Looking for the earliest appointment: {specialty}"))
 
     campaigns = await db.campaigns.find({"user_id": uid}, {"_id": 0}).to_list(5)
     raised = sum(c.get("raised_amount", 0) for c in campaigns)
     dignity = await db.dignity_funds.find_one({"user_id": uid}, {"_id": 0}) or {}
     funds = raised + dignity.get("balance", 0)
-    steps.append(_step("Solidarity Hub", "ok", f"Dostupné komunitné prostriedky: {round(funds, 2)} € " + ("(dostatočné)" if funds > 0 else "(0 € — vyšetrenie kryje poisťovňa)")))
+    steps.append(_step("Solidarity Hub", "ok", f"Available community funds: {round(funds, 2)} € " + ("(sufficient)" if funds > 0 else "(0 € — examination covered by insurance)")))
 
     slot = _simulate_slot(specialty, "")
     found = f"{slot['date']} {slot['time']} — {slot['clinic']}"
@@ -175,7 +175,7 @@ async def chain_healing(body: HealingChainIn, authorization: Optional[str] = Hea
         "city": "", "current_date": "", "target_before": slot["date"], "priority": "auto",
         "status": "booked", "last_check": now, "found_slot": found, "created_at": now,
     })
-    steps.append(_step("Auto-Booker", "ok", f"Termín zarezervovaný: {found} (simulované API kliniky)"))
+    steps.append(_step("Auto-Booker", "ok", f"Appointment reserved: {found} (simulated clinic API)"))
 
     await db.calendar_events.insert_one({
         "event_id": uuid.uuid4().hex, "user_id": uid, "category": "exam",
@@ -183,21 +183,21 @@ async def chain_healing(body: HealingChainIn, authorization: Optional[str] = Hea
         "notes": f"Healing Chain · {slot['time']}", "booster_due": None,
         "source": "chain:healing", "created_at": now,
     })
-    steps.append(_step("Health Calendar", "ok", f"Zapísané do kalendára na {slot['date']}"))
+    steps.append(_step("Health Calendar", "ok", f"Logged to the calendar for {slot['date']}"))
 
     recovery = await db.recovery.find_one({"user_id": uid}, {"_id": 0})
     if recovery:
-        steps.append(_step("Sick Leave Manager", "ok", "Hlásenie pre zamestnávateľa pripravené (PDF v Mojom zotavení)."))
+        steps.append(_step("Sick Leave Manager", "ok", "Employer report prepared (PDF in My Recovery)."))
     else:
-        steps.append(_step("Sick Leave Manager", "skipped", "Žiadna aktívna PN — hlásenie netreba."))
+        steps.append(_step("Sick Leave Manager", "skipped", "No active sick leave — report not needed."))
 
     if drop:
         await db.health_drops.update_one({"drop_doc_id": drop["drop_doc_id"]}, {"$set": {"autobooked": True}})
     try:
-        await send_push(recipients=[uid], data={"title": "🧠 HEALING CHAIN DOKONČENÁ", "message": f"{specialty}: {found}", "action_url": "/health-timeline"})
+        await send_push(recipients=[uid], data={"title": "🧠 HEALING CHAIN COMPLETED", "message": f"{specialty}: {found}", "action_url": "/health-timeline"})
     except Exception as e:
         logger.warning(f"chain push failed: {e}")
-    return {"chain": "healing", "steps": steps, "summary": f"Termín {specialty} zarezervovaný a zapísaný. {found}", "simulated": True}
+    return {"chain": "healing", "steps": steps, "summary": f"Appointment {specialty} reserved and recorded. {found}", "simulated": True}
 
 class SafetyChainIn(BaseModel):
     trigger: str = "manual"  # fall | acoustic | manual
@@ -209,31 +209,31 @@ async def chain_safety(body: SafetyChainIn, authorization: Optional[str] = Heade
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     steps: List[dict] = []
-    steps.append(_step("Detekcia", "ok", f"Spúšťač: {body.trigger}"))
+    steps.append(_step("Detekcia", "ok", f"Trigger: {body.trigger}"))
 
     await db.beacon_events.insert_one({
         "event_id": uuid.uuid4().hex, "user_id": uid, "kind": f"chain_safety_{body.trigger}",
         "created_at": now,
     })
-    steps.append(_step("Emergency Loop", "ok", "Núdzový maják aktivovaný, rodina notifikovaná."))
+    steps.append(_step("Emergency Loop", "ok", "Emergency beacon activated, family notified."))
 
     prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
     testament = await db.legal_testaments.find_one({"user_id": uid}, {"_id": 0}) or {}
     proxy = await db.proxy_directives.find_one({"user_id": uid}, {"_id": 0}) or {}
     legacy_bits = []
-    legacy_bits.append("darca orgánov: ÁNO" if prof.get("is_donor") else "darca orgánov: NIE")
-    legacy_bits.append("závet: pripravený" if testament.get("document_text") else "závet: chýba")
-    legacy_bits.append(f"splnomocnenec: {proxy.get('proxy_full_name')}" if proxy.get("proxy_full_name") else "splnomocnenec: neurčený")
+    legacy_bits.append("organ donor: YES" if prof.get("is_donor") else "organ donor: NO")
+    legacy_bits.append("will: prepared" if testament.get("document_text") else "will: missing")
+    legacy_bits.append(f"healthcare proxy: {proxy.get('proxy_full_name')}" if proxy.get("proxy_full_name") else "healthcare proxy: unspecified")
     steps.append(_step("Legacy Module", "ok", " · ".join(legacy_bits)))
 
     ice = f"{prof.get('emergency_contact_name') or ''} {prof.get('emergency_contact_phone') or ''}".strip()
     steps.append(_step("Emergency Wallpaper", "ok",
-                       f"Info pre záchranárov uvoľnené: krv {prof.get('blood_type') or '—'} · alergie {prof.get('allergies') or '—'} · ICE {ice or '—'} (QR na zamknutej obrazovke)"))
+                       f"Info for rescuers released: blood {prof.get('blood_type') or '—'} · allergies {prof.get('allergies') or '—'} · ICE {ice or '—'} (QR on locked screen)"))
     try:
-        await send_push(recipients=[uid], data={"title": "🛡️ SAFETY CHAIN AKTÍVNA", "message": "Núdzové info pripravené pre záchranárov.", "action_url": "/wallpaper"})
+        await send_push(recipients=[uid], data={"title": "🛡️ SAFETY CHAIN ACTIVE", "message": "Emergency info prepared for rescuers.", "action_url": "/wallpaper"})
     except Exception as e:
         logger.warning(f"chain push failed: {e}")
-    return {"chain": "safety", "steps": steps, "summary": "Núdzová slučka spustená, informácie pre záchranárov pripravené.", "simulated": False}
+    return {"chain": "safety", "steps": steps, "summary": "Emergency loop started, information for rescuers prepared.", "simulated": False}
 
 @api.post("/chains/recovery")
 async def chain_recovery(authorization: Optional[str] = Header(None)):
@@ -247,14 +247,14 @@ async def chain_recovery(authorization: Optional[str] = Header(None)):
     checkins = await db.wellness_checkins.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20)
     low_movement = len(checkins) == 0
     steps.append(_step("Knee Guard / Wellness", "ok",
-                       "Za 3 dni žiadny wellness check-in — pohyb je pravdepodobne nízky." if low_movement
-                       else f"{len(checkins)} check-inov za 3 dni — aktivita v poriadku."))
+                       "For 3 days no wellness check-in — movement is probably low." if low_movement
+                       else f"{len(checkins)} check-ins in 3 days — activity looks good."))
 
-    steps.append(_step("Physio-AI", "ok", "Navrhujem sprievodcu: Obnova kolena po operácii/úraze (10 min) — nájdete v Physio-AI → Expertní sprievodcovia."))
+    steps.append(_step("Physio-AI", "ok", "I suggest a guide: Knee recovery after surgery/injury (10 min) — find it in Physio-AI → Expert guides."))
 
     recovery = await db.recovery.find_one({"user_id": uid}, {"_id": 0}) or {}
     outings = recovery.get("outings", [])
-    walk = "Bez aktívnej PN — prechádzka je kedykoľvek v poriadku."
+    walk = "Without active sick leave — a walk is fine anytime."
     if outings:
         mins = now.hour * 60 + now.minute
         active = None
@@ -268,11 +268,11 @@ async def chain_recovery(authorization: Optional[str] = Header(None)):
             if fh * 60 + fm > mins and (nxt is None or fh * 60 + fm < int(nxt["from_time"][:2]) * 60 + int(nxt["from_time"][3:])):
                 nxt = o
         if active:
-            walk = f"Vychádzka je AKTÍVNA do {active['to_time']} — prechádzku odporúčam TERAZ."
+            walk = f"Walk is ACTIVE until {active['to_time']} — I recommend going for a walk NOW."
         elif nxt:
-            walk = f"Teraz ostaňte doma (kontrola PN). Prechádzku plánujte na vychádzku {nxt['from_time']}–{nxt['to_time']}."
+            walk = f"Stay home for now (sick leave check). Plan a walk during {nxt['from_time']}–{nxt['to_time']}."
         else:
-            walk = "Dnešné vychádzky už skončili — prechádzku nechajte na zajtra, dnes cvičte doma."
+            walk = "Today's walk periods are already over — save the walk for tomorrow, and exercise at home today."
     steps.append(_step("Sick Leave Manager", "ok", walk))
     return {"chain": "recovery", "steps": steps, "summary": walk, "simulated": False}
 
@@ -292,29 +292,29 @@ async def chain_supply(body: SupplyChainIn, authorization: Optional[str] = Heade
     results = _simulate_stock(body.med_name.strip(), body.region)
     hit = next((r for r in results if r["status"] == "in_stock"), None)
     steps.append(_step("Pharmacy Hunter", "ok",
-                       f"Skladom: {hit['pharmacy']} {hit['city']} ({hit['price_eur']} €) — DEMO dáta" if hit
-                       else "Liek nie je skladom v žiadnej sledovanej lekárni (DEMO dáta)."))
+                       f"In stock: {hit['pharmacy']} {hit['city']} ({hit['price_eur']} €) — DEMO data" if hit
+                       else "The medicine is out of stock in all tracked pharmacies (DEMO data)."))
 
     campaigns = await db.campaigns.find({"user_id": uid}, {"_id": 0}).to_list(5)
     raised = sum(c.get("raised_amount", 0) for c in campaigns)
     dignity = await db.dignity_funds.find_one({"user_id": uid}, {"_id": 0}) or {}
     funds = raised + dignity.get("balance", 0)
     cash_low = funds < (hit["price_eur"] if hit else 10)
-    steps.append(_step("Solidarity Hub", "ok", f"Dostupná hotovosť v komunite: {round(funds, 2)} € — {'NÍZKA' if cash_low else 'postačuje'}."))
+    steps.append(_step("Solidarity Hub", "ok", f"Available cash in the community: {round(funds, 2)} € — {'LOW' if cash_low else 'sufficient'}."))
 
     if cash_low:
         offers = await db.barter_offers.find({"user_id": {"$ne": uid}}, {"_id": 0}).sort("created_at", -1).to_list(3)
         steps.append(_step("Skill Barter", "ok",
-                           f"{len(offers)} výmenné ponuky v okolí — vymeňte zručnosť za liek (Barter Engine)." if offers
-                           else "Žiadne barter ponuky — vytvorte vlastnú v Barter Engine."))
+                           f"{len(offers)} exchange offers nearby — swap a skill for medicine (Barter Engine)." if offers
+                           else "No barter offers — create your own in Barter Engine."))
     else:
-        steps.append(_step("Skill Barter", "skipped", "Hotovosť postačuje — barter netreba."))
+        steps.append(_step("Skill Barter", "skipped", "Cash is sufficient — no barter needed."))
 
     if hit:
-        steps.append(_step("Logistics Engine", "ok", f"Trasa: {hit['pharmacy']} {hit['city']} — pri PN naplánujte vyzdvihnutie počas vychádzky."))
+        steps.append(_step("Logistics Engine", "ok", f"Route: {hit['pharmacy']} {hit['city']} — if on sick leave, plan pickup during the walk."))
     else:
-        steps.append(_step("Logistics Engine", "skipped", "Bez skladovej zásoby niet čo prepraviť — nastavte sledovanie v Pharmacy Hunter."))
-    summary = (f"{body.med_name}: vyzdvihnite v {hit['pharmacy']} {hit['city']}" if hit else f"{body.med_name}: momentálne nedostupný — sledovanie odporúčané.")
+        steps.append(_step("Logistics Engine", "skipped", "With no stock on hand, there is nothing to transport — enable tracking in Pharmacy Hunter."))
+    summary = (f"{body.med_name}: vyzdvihnite v {hit['pharmacy']} {hit['city']}" if hit else f"{body.med_name}: currently unavailable — tracking recommended.")
     return {"chain": "supply", "steps": steps, "summary": summary, "simulated": True}
 
 # --------- WEEKLY GUARDIAN PULSE REPORT (PDF) ---------
@@ -324,19 +324,19 @@ async def weekly_report_pdf(token: Optional[str] = None, authorization: Optional
     ctx = await _gather_context(user)
     h, w, s = ctx["health"], ctx["wealth"], ctx["safety"]
     parts = []
-    parts.append("1. ZDRAVIE / HEALTH")
-    parts.append(f"  PN aktívna: {'ÁNO (' + str(h['recovery']['start']) + ' → ' + str(h['recovery']['end'] or '?') + ')' if h['recovery']['active'] else 'NIE'}")
-    parts.append(f"  Nadchádzajúce vyšetrenia: " + ("; ".join([f"{e['title']} ({e['date']})" for e in h["upcoming_exams"]]) or "žiadne"))
-    parts.append(f"  Preočkovania: " + ("; ".join([f"{b['title']} do {b['due']}" for b in h["boosters"]]) or "žiadne"))
-    parts.append(f"  Prijaté dokumenty (Health Drop): " + ("; ".join([f"{d['title']} od {d['from']}" for d in h["recent_drops"]]) or "žiadne"))
-    parts.append(f"  Lieky s nízkou zásobou: " + (", ".join(h["low_stock_meds"]) or "žiadne"))
-    parts.append("\n2. FINANCIE / WEALTH")
-    parts.append(f"  Solidarity kampane: " + ("; ".join([f"{c['title']}: {c['raised']}/{c['goal']} €" for c in w["solidarity_campaigns"]]) or "žiadne"))
-    parts.append(f"  Fond dôstojnosti: {w['dignity_fund_balance']} €")
-    parts.append("\n3. BEZPEČNOSŤ / SAFETY (posledných 7 dní)")
-    parts.append(f"  Pády: {s['falls_7d']} · Akustické hrozby: {s['acoustic_events_7d']} · Majáky: {s['beacons_7d']}")
-    parts.append(f"  Závet: {'pripravený' if s['has_testament'] else 'chýba'} · Splnomocnenec: {'určený' if s['has_proxy'] else 'neurčený'} · Biometrické potvrdenie: {'áno' if s['has_biometric_will'] else 'nie'}")
-    parts.append(f"  Darca orgánov: {'ÁNO' if s['is_donor'] else 'NIE'} · ICE kontakt: {s['ice_contact'] or '—'}")
-    parts.append(f"\nVygenerované Neural Link vrstvou · {ctx['today']}")
-    pdf = await run_in_threadpool(_make_pdf, "GUARDIAN PULSE REPORT\nTÝŽDENNÝ PREHĽAD: ZDRAVIE · FINANCIE · BEZPEČNOSŤ", "\n".join(parts), _pdf_footer())
+    parts.append("1. HEALTH")
+    parts.append(f"  Sick leave active: {'YES (' + str(h['recovery']['start']) + ' → ' + str(h['recovery']['end'] or '?') + ')' if h['recovery']['active'] else 'NO'}")
+    parts.append(f"  Upcoming examinations: " + ("; ".join([f"{e['title']} ({e['date']})" for e in h["upcoming_exams"]]) or "nothing"))
+    parts.append(f"  Revaccinations: " + ("; ".join([f"{b['title']} due {b['due']}" for b in h["boosters"]]) or "nothing"))
+    parts.append(f"  Received documents (Health Drop): " + ("; ".join([f"{d['title']} from {d['from']}" for d in h["recent_drops"]]) or "nothing"))
+    parts.append(f"  Drugs with low stock: " + (", ".join(h["low_stock_meds"]) or "nothing"))
+    parts.append("\n2. WEALTH")
+    parts.append(f"  Solidarity campaigns: " + ("; ".join([f"{c['title']}: {c['raised']}/{c['goal']} €" for c in w["solidarity_campaigns"]]) or "nothing"))
+    parts.append(f"  Dignity Fund: {w['dignity_fund_balance']} €")
+    parts.append("\n3. SAFETY (last 7 days)")
+    parts.append(f"  Falls: {s['falls_7d']} · Acoustic threats: {s['acoustic_events_7d']} · Beacons: {s['beacons_7d']}")
+    parts.append(f"  Will: {'prepared' if s['has_testament'] else 'missing'} · Proxy: {'designated' if s['has_proxy'] else 'undesignated'} · Biometric confirmation: {'yes' if s['has_biometric_will'] else 'no'}")
+    parts.append(f"  Organ donor: {'YES' if s['is_donor'] else 'NO'} · ICE contact: {s['ice_contact'] or '—'}")
+    parts.append(f"\nGenerated by Neural Link layer · {ctx['today']}")
+    pdf = await run_in_threadpool(_make_pdf, "GUARDIAN PULSE REPORT\nWEEKLY OVERVIEW: HEALTH · FINANCES · SAFETY", "\n".join(parts), _pdf_footer())
     return _pdf_response(pdf, "guardian_pulse_report.pdf")

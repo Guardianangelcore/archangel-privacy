@@ -628,7 +628,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
         f" Compose a warm, personal daily briefing STRICTLY in {_lang_name(user)} (5-8 short sentences) from the JSON data: "
         "greet by name and part of day, mention weather (if present), pending meds, upcoming appointments, "
         "and IMPORTANTLY ask a caring follow-up question about any recent memory "
-        "(e.g. 'Včera si spomínal, že tvojmu blízkemu boleli žily — ako mu je dnes?'). "
+        "(e.g. 'Yesterday you mentioned your loved one had aching veins — how are they today?'). "
         "If health alerts exist, warn clearly. End with one encouraging sentence. "
         "No markdown, plain text only." + AI_COMPLIANCE_NOTE
     )
@@ -765,7 +765,10 @@ SONAR_SYSTEM = (
 
 def _strip_think(text: str) -> str:
     """Reasoning models emit hidden <think> blocks — never expose them."""
-    return re.sub(r"<think>.*?</think>", "", text or "", flags=re.S).strip()
+    t = re.sub(r"<think>.*?</think>", "", text or "", flags=re.S)
+    # Token-limit truncation can leave an UNCLOSED <think> block — drop it too.
+    t = re.sub(r"<think>.*\Z", "", t, flags=re.S)
+    return t.strip()
 
 
 class AgentSearchIn(BaseModel):
@@ -794,7 +797,7 @@ async def agent_search(body: AgentSearchIn, authorization: Optional[str] = Heade
             ],
             "search_mode": "web",
             "web_search_options": {"search_context_size": "high", "search_type": "auto"},
-            "max_tokens": 1200,
+            "max_tokens": 2200,
             "temperature": 0.1,
         }
         try:
@@ -833,8 +836,19 @@ async def agent_search(body: AgentSearchIn, authorization: Optional[str] = Heade
          "query": q[:1000], "degraded": degraded, "at": now},
     ])
     xp = await award_xp(uid, 6, "sonar_search")
+    # Small GA-T utility charge for live web search — soft: skipped when the
+    # balance is insufficient so search never breaks for token-less users.
+    gat_charged = 0.0
+    if not degraded:
+        try:
+            from routes.token import charge_tokens
+            gat_tx = await charge_tokens(uid, "jarvis_query", q[:60])
+            gat_charged = gat_tx["amount"] if gat_tx else 0.0
+        except Exception as e:
+            logger.warning(f"jarvis_query GA-T charge failed: {e}")
     return {"reply": reply, "citations": citations, "degraded": degraded,
             "live_search": bool(key) and not degraded, "mood": "thinking",
+            "gat_charged": gat_charged,
             "xp_gained": xp["gained"], "level": xp["level"], "level_up": xp["level_up"],
             "level_name": LEVEL_NAMES[xp["level"] - 1]}
 

@@ -29,8 +29,15 @@ const REGIONS = [
 ];
 const INTENSITY = ['light', 'medium', 'firm'];
 
+/** Current UI language of the signed-in user (falls back to English). */
+function useLang(): Lang {
+  const { user } = useAuth();
+  return (user?.language as Lang) || 'en';
+}
+
 /** Zero-stutter guide video — hardware-accelerated player, local FS cache + native caching. */
 function GuideVideo({ url, testID, muted = true }: { url: string; testID: string; muted?: boolean }) {
+  const lang = useLang();
   const src = cachedVideo(url);
   const player = useVideoPlayer(
     src.startsWith('file') ? src : ({ uri: src, useCaching: true } as any),
@@ -44,7 +51,7 @@ function GuideVideo({ url, testID, muted = true }: { url: string; testID: string
     <View style={styles.videoWrap}>
       <VideoView testID={testID} player={player} style={styles.video} contentFit="cover"
         nativeControls allowsFullscreen allowsPictureInPicture={false} />
-      <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>▶ VIDEO GUIDE · HD</Text></View>
+      <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>{t('ph_video_guide', lang)}</Text></View>
     </View>
   );
 }
@@ -83,6 +90,7 @@ function ConfettiBurst() {
 
 /** PAIN DIARY — record 1-10 after every exercise; the trend flows into the doctor's report. */
 function PainLogger({ guideId }: { guideId: string }) {
+  const lang = useLang();
   const [reply, setReply] = useState('');
   const [trend, setTrend] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -109,13 +117,13 @@ function PainLogger({ guideId }: { guideId: string }) {
     setBusy(false);
   };
 
-  const trendLabel = trend?.trend === 'improving' ? '↘ PAIN FALLING — HEALING'
-    : trend?.trend === 'worsening' ? '↗ PAIN RISING — CAUTION'
-    : '→ STABLE';
+  const trendLabel = trend?.trend === 'improving' ? t('ph_trend_improving', lang)
+    : trend?.trend === 'worsening' ? t('ph_trend_worsening', lang)
+    : t('ph_trend_stable', lang);
 
   return (
     <View style={styles.painBox}>
-      <Text style={styles.painLbl}>🩹 HOW WAS THE PAIN AFTER EXERCISING? (1–10)</Text>
+      <Text style={styles.painLbl}>{t('ph_pain_q', lang)}</Text>
       <View style={styles.painRow}>
         {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
           <Pressable key={n} testID={`pain-${guideId}-${n}`} onPress={() => log(n)} disabled={busy}
@@ -127,7 +135,7 @@ function PainLogger({ guideId }: { guideId: string }) {
       {!!reply && <Text testID={`pain-reply-${guideId}`} style={styles.painReply}>💛 {reply}</Text>}
       {!!milestone && <Text testID={`pain-milestone-${guideId}`} style={styles.painMilestone}>{milestone}</Text>}
       {!!trend?.avg_14d && (
-        <Text style={styles.painTrend}>14-day average: {trend.avg_14d}/10 · {trendLabel} · goes into your doctor report</Text>
+        <Text style={styles.painTrend}>{t('ph_pain_avg', lang)}: {trend.avg_14d}/10 · {trendLabel} · {t('ph_pain_report', lang)}</Text>
       )}
       {confetti > 0 && <ConfettiBurst key={confetti} />}
     </View>
@@ -136,6 +144,7 @@ function PainLogger({ guideId }: { guideId: string }) {
 
 /** WEEKLY RECOVERY PLAYLIST — 7-day plan guiding the patient through the whole week. */
 function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
+  const lang = useLang();
   const [plan, setPlan] = useState<any>(null);
   const [pct, setPct] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -158,7 +167,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
   return (
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.lbl}>📅 WEEKLY RECOVERY PLAN</Text>
+        <Text style={styles.lbl}>{t('ph_weekly_plan', lang)}</Text>
         {!!plan && (
           <Pressable testID="ph-plan-regen" onPress={gen} hitSlop={10} disabled={busy}>
             {busy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="refresh" size={16} color={C.info} />}
@@ -167,11 +176,11 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
       </View>
       {!plan ? (
         <GlassCard pad={S.md} radius={R.md}>
-          <Text style={styles.planIntro}>Jarvis arranges the guides and expert videos into a 7-day plan — day by day to relief. With an active Healing Loop it adds a daily anchor for the sore spot.</Text>
+          <Text style={styles.planIntro}>{t('ph_plan_intro', lang)}</Text>
           <Pressable testID="ph-plan-generate" onPress={gen} disabled={busy} style={styles.planGenBtn}>
             {busy ? <ActivityIndicator color={C.onInverse} /> : (<>
               <Ionicons name="calendar" size={16} color={C.onInverse} />
-              <Text style={styles.planGenText}>BUILD A 7-DAY PLAN</Text>
+              <Text style={styles.planGenText}>{t('ph_plan_build', lang)}</Text>
             </>)}
           </Pressable>
         </GlassCard>
@@ -179,7 +188,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
         <View>
           <View style={styles.planProgress}>
             <View style={[styles.planProgressFill, { width: `${pct}%` }]} />
-            <Text style={styles.planProgressText}>{plan.days.filter((d: any) => d.done).length}/7 DAYS · {pct} %</Text>
+            <Text style={styles.planProgressText}>{plan.days.filter((d: any) => d.done).length}/7 {t('ph_days', lang)} · {pct} %</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm, paddingVertical: S.sm }}>
             {plan.days.map((d: any) => (
@@ -204,7 +213,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
                 </View>
                 {!d.done && (
                   <Pressable testID={`ph-plan-done-${d.day}`} onPress={() => doneDay(d.day)} style={styles.dayDoneBtn}>
-                    <Text style={styles.dayDoneText}>DONE ✓</Text>
+                    <Text style={styles.dayDoneText}>{t('ph_done', lang)}</Text>
                   </Pressable>
                 )}
               </View>
@@ -218,6 +227,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
 
 /** FOUNDER'S EXPERT VIDEOS — upload your own massage/rehab videos per guide (authentic rehab). */
 function ExpertVideos({ guideId }: { guideId: string }) {
+  const lang = useLang();
   const [videos, setVideos] = useState<any[]>([]);
   const [tk, setTk] = useState('');
   const [busy, setBusy] = useState(false);
@@ -274,7 +284,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
   return (
     <View style={{ marginTop: S.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.evLbl}>🎬 EXPERT VIDEOS — YOUR OWN NARRATION</Text>
+        <Text style={styles.evLbl}>{t('ph_expert_videos', lang)}</Text>
         <Pressable testID={`ev-refresh-${guideId}`} onPress={load} hitSlop={10}>
           <Ionicons name="refresh" size={14} color={C.info} />
         </Pressable>
@@ -296,7 +306,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
           {v.transcript_status === 'done' && (
             <Pressable testID={`ev-cc-${v.video_id}`} onPress={() => { tap('light'); setCcOpen(ccOpen === v.video_id ? null : v.video_id); }} style={styles.ccBtn}>
               <Ionicons name="chatbox-ellipses-outline" size={13} color={C.brand} />
-              <Text style={styles.ccBtnText}>CAPTIONS FOR THE DEAF (CC)</Text>
+              <Text style={styles.ccBtnText}>{t('ph_cc', lang)}</Text>
               <Ionicons name={ccOpen === v.video_id ? 'chevron-up' : 'chevron-down'} size={12} color={C.info} />
             </Pressable>
           )}
@@ -304,41 +314,41 @@ function ExpertVideos({ guideId }: { guideId: string }) {
             <Text key={i} style={styles.ccStep}>{i + 1}. {s}</Text>
           ))}
           {(v.transcript_status === 'processing' || v.transcript_status === 'pending') && (
-            <Text style={styles.ccNote}>⏳ Jarvis is transcribing the narration into captions… (refresh in a moment)</Text>
+            <Text style={styles.ccNote}>{t('ph_cc_processing', lang)}</Text>
           )}
           {v.transcript_status === 'too_large' && (
-            <Text style={styles.ccNote}>ℹ️ Video over 24 MB — captions support shorter videos.</Text>
+            <Text style={styles.ccNote}>{t('ph_cc_too_large', lang)}</Text>
           )}
           {v.transcript_status === 'failed' && v.mine && (
             <Pressable testID={`ev-cc-retry-${v.video_id}`} onPress={() => retryCc(v.video_id)} disabled={ccBusy === v.video_id} style={styles.ccRetry}>
               {ccBusy === v.video_id ? <ActivityIndicator size="small" color={C.brand} /> : (<>
                 <Ionicons name="refresh" size={12} color={C.brand} />
-                <Text style={styles.ccBtnText}>CAPTIONS FAILED — TRY AGAIN</Text>
+                <Text style={styles.ccBtnText}>{t('ph_cc_retry', lang)}</Text>
               </>)}
             </Pressable>
           )}
         </View>
       ))}
-      {videos.length === 0 && <Text style={styles.evEmpty}>No own video for this exercise yet — upload the first one and your rehab becomes authentically yours.</Text>}
+      {videos.length === 0 && <Text style={styles.evEmpty}>{t('ph_no_videos', lang)}</Text>}
       {Platform.OS === 'web' ? (
-        <Text style={styles.evEmpty}>📱 Video upload works in the mobile app (gallery or camera).</Text>
+        <Text style={styles.evEmpty}>{t('ph_upload_mobile', lang)}</Text>
       ) : (
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
           <Pressable testID={`ev-record-${guideId}`} onPress={() => upload(true)} disabled={busy} style={styles.evBtn}>
             {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : (<>
               <Ionicons name="videocam" size={15} color={C.onInverse} />
-              <Text style={styles.evBtnText}>RECORD WITH CAMERA</Text>
+              <Text style={styles.evBtnText}>{t('ph_record', lang)}</Text>
             </>)}
           </Pressable>
           <Pressable testID={`ev-pick-${guideId}`} onPress={() => upload(false)} disabled={busy} style={[styles.evBtn, styles.evBtnGhost]}>
             <Ionicons name="images-outline" size={15} color={C.brand} />
-            <Text style={[styles.evBtnText, { color: C.brand }]}>FROM GALLERY</Text>
+            <Text style={[styles.evBtnText, { color: C.brand }]}>{t('ph_gallery', lang)}</Text>
           </Pressable>
         </View>
       )}
       {camBlocked && (
         <Pressable onPress={() => Linking.openSettings()} style={styles.evSettings}>
-          <Text style={styles.evSettingsText}>Camera is blocked — OPEN SETTINGS</Text>
+          <Text style={styles.evSettingsText}>{t('ph_cam_blocked', lang)}</Text>
         </Pressable>
       )}
       {!!err && <Text style={styles.evErr}>{err}</Text>}
@@ -406,7 +416,7 @@ export default function Physio() {
         <Text style={styles.title}>PHYSIO-AI</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>FOUNDER’S LEGACY · VIDEO-NATIVE GUIDES · SELF-MASSAGE</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>{t('ph_sub', lang)}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {/* WEEKLY RECOVERY PLAYLIST — day-by-day guidance through the whole week */}
@@ -415,7 +425,7 @@ export default function Physio() {
           setOpenGuide(id);
         }} />
 
-        <Text style={styles.lbl}>REGION</Text>
+        <Text style={styles.lbl}>{t('ph_region', lang)}</Text>
         <View style={styles.grid}>
           {REGIONS.map(r => (
             <Pressable testID={`region-${r.id}`} key={r.id} onPress={() => { tap('light'); setRegion(r.id); }} style={[styles.regTile, region === r.id && styles.regTileActive]}>
@@ -425,11 +435,11 @@ export default function Physio() {
           ))}
         </View>
 
-        <Text style={styles.lbl}>INTENSITY</Text>
+        <Text style={styles.lbl}>{t('ph_intensity', lang)}</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {INTENSITY.map(i => (
             <Pressable testID={`int-${i}`} key={i} onPress={() => { tap('light'); setIntensity(i); }} style={[styles.chip, intensity === i && styles.chipActive]}>
-              <Text style={[styles.chipText, intensity === i && styles.chipTextActive]}>{i.toUpperCase()}</Text>
+              <Text style={[styles.chipText, intensity === i && styles.chipTextActive]}>{t(`ph_int_${i}`, lang)}</Text>
             </Pressable>
           ))}
         </View>
@@ -437,13 +447,13 @@ export default function Physio() {
         <Pressable testID="ph-generate" onPress={() => { tap('medium'); run(); }} disabled={busy} style={styles.runBtn}>
           {busy ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="sparkles-outline" size={16} color={C.onInverse} />
-            <Text style={styles.runText}>GENERATE ROUTINE</Text>
+            <Text style={styles.runText}>{t('ph_generate', lang)}</Text>
           </>}
         </Pressable>
 
         {!!routine && (
           <View style={styles.outBox}>
-            <Text style={styles.outLbl}>ROUTINE</Text>
+            <Text style={styles.outLbl}>{t('ph_routine', lang)}</Text>
             <Text style={styles.outText}>{routine}</Text>
             <Pressable testID="ph-speak" onPress={() => speakText(routine)} disabled={speaking} style={styles.speakBtn}>
               {speaking ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="volume-medium-outline" size={18} color={C.brand} />}

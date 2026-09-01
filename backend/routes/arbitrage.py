@@ -29,33 +29,33 @@ COUNTRIES = {
 }
 # procedure → (code, base € at index 1.0, avg stay days, SK default wait weeks, SK default price €)
 PROCEDURES = {
-    "hip_replacement": ("Totálna endoprotéza bedra", 6800, 7, 40, 7200),
-    "knee_replacement": ("Totálna endoprotéza kolena", 6500, 7, 38, 7000),
-    "cataract": ("Operácia sivého zákalu", 950, 1, 20, 1100),
-    "hernia": ("Operácia hernie", 1900, 2, 14, 2100),
-    "gallbladder": ("Laparoskopická cholecystektómia", 2400, 2, 16, 2600),
-    "spinal_fusion": ("Spinálna fúzia", 11500, 9, 45, 12500),
-    "bypass": ("Koronárny bypass (CABG)", 17500, 12, 26, 19000),
-    "mri_full": ("Celotelová MRI diagnostika", 620, 1, 12, 750),
-    "dental_implant": ("Zubný implantát (1 zub)", 1150, 3, 8, 1400),
-    "dental_crown": ("Korunka (zirkón)", 420, 2, 6, 520),
-    "veneers_8": ("Fazety — 8 zubov", 2900, 5, 10, 3600),
-    "all_on_4": ("All-on-4 rekonštrukcia čeľuste", 6200, 6, 14, 8200),
-    "knee_arthroscopy": ("Artroskopia kolena", 2300, 2, 22, 2500),
-    "cardio_ablation": ("Katétrová ablácia arytmie", 8900, 4, 30, 9800),
+    "hip_replacement": ("Total hip arthroplasty", 6800, 7, 40, 7200),
+    "knee_replacement": ("Total knee arthroplasty", 6500, 7, 38, 7000),
+    "cataract": ("Cataract surgery", 950, 1, 20, 1100),
+    "hernia": ("Hernia repair", 1900, 2, 14, 2100),
+    "gallbladder": ("Laparoscopic cholecystectomy", 2400, 2, 16, 2600),
+    "spinal_fusion": ("Spinal fusion", 11500, 9, 45, 12500),
+    "bypass": ("Coronary bypass (CABG)", 17500, 12, 26, 19000),
+    "mri_full": ("Full-body MRI diagnostics", 620, 1, 12, 750),
+    "dental_implant": ("Dental implant (1 tooth)", 1150, 3, 8, 1400),
+    "dental_crown": ("Crown (zirconia)", 420, 2, 6, 520),
+    "veneers_8": ("Veneers — 8 teeth", 2900, 5, 10, 3600),
+    "all_on_4": ("All-on-4 jaw reconstruction", 6200, 6, 14, 8200),
+    "knee_arthroscopy": ("Knee arthroscopy", 2300, 2, 22, 2500),
+    "cardio_ablation": ("Catheter ablation of arrhythmia", 8900, 4, 30, 9800),
 }
 DENTAL = {"dental_implant", "dental_crown", "veneers_8", "all_on_4"}
 CITY_POOL = ["Central", "Royal", "Prime", "Nova", "Alfa", "Vita", "Medica", "Sana", "Aurora", "Excel"]
 CITIES = {
-    "SK": ["Bratislava", "Košice", "Žilina"], "CZ": ["Praha", "Brno", "Ostrava"], "PL": ["Krakov", "Varšava", "Gdansk"],
-    "HU": ["Budapešť", "Debrecín"], "AT": ["Viedeň", "Graz"], "DE": ["Mníchov", "Berlín", "Hamburg"],
-    "CH": ["Zürich", "Ženeva"], "TR": ["Istanbul", "Antalya", "Izmir"], "HR": ["Záhreb", "Split"],
-    "ES": ["Madrid", "Barcelona", "Valencia"], "PT": ["Lisabon", "Porto"], "IT": ["Miláno", "Rím", "Bologna"],
-    "GR": ["Atény", "Solún"], "RO": ["Bukurešť", "Kluž"], "BG": ["Sofia", "Plovdiv"], "RS": ["Belehrad", "Novi Sad"],
-    "UA": ["Ľvov", "Kyjev"], "LT": ["Vilnius", "Kaunas"], "EE": ["Tallinn", "Tartu"], "GB": ["Londýn", "Manchester"],
-    "IE": ["Dublin"], "FR": ["Paríž", "Lyon"], "BE": ["Brusel", "Antverpy"], "NL": ["Amsterdam", "Utrecht"],
-    "SE": ["Štokholm", "Göteborg"], "MX": ["Cancún", "Tijuana"], "TH": ["Bangkok", "Phuket"],
-    "IN": ["Dillí", "Chennai"], "KR": ["Soul", "Busan"], "IL": ["Tel Aviv"], "AE": ["Dubaj"], "US": ["Houston", "Cleveland"],
+    "SK": ["Bratislava", "Košice", "Žilina"], "CZ": ["Prague", "Brno", "Ostrava"], "PL": ["Krakow", "Warsaw", "Gdansk"],
+    "HU": ["Budapest", "Debrecen"], "AT": ["Vienna", "Graz"], "DE": ["Munich", "Berlin", "Hamburg"],
+    "CH": ["Zürich", "Geneva"], "TR": ["Istanbul", "Antalya", "Izmir"], "HR": ["Zagreb", "Split"],
+    "ES": ["Madrid", "Barcelona", "Valencia"], "PT": ["Lisbon", "Porto"], "IT": ["Milan", "Rome", "Bologna"],
+    "GR": ["Athens", "Thessaloniki"], "RO": ["Bucharest", "Cluj"], "BG": ["Sofia", "Plovdiv"], "RS": ["Belgrade", "Novi Sad"],
+    "UA": ["Lviv", "Kyiv"], "LT": ["Vilnius", "Kaunas"], "EE": ["Tallinn", "Tartu"], "GB": ["London", "Manchester"],
+    "IE": ["Dublin"], "FR": ["Paris", "Lyon"], "BE": ["Brussels", "Antwerp"], "NL": ["Amsterdam", "Utrecht"],
+    "SE": ["Stockholm", "Gothenburg"], "MX": ["Cancún", "Tijuana"], "TH": ["Bangkok", "Phuket"],
+    "IN": ["Delhi", "Chennai"], "KR": ["Seoul", "Busan"], "IL": ["Tel Aviv"], "AE": ["Dubai"], "US": ["Houston", "Cleveland"],
 }
 TARGET_INDEX = 10500
 _seeded = False

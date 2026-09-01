@@ -27,36 +27,36 @@ def _prices(eur_month: float, gat_month: float = 0.0) -> dict:
 TIERS = {
     "sovereign": {
         "name": "Sovereign", "order": 0, **_prices(0),
-        "tagline": "Základná suverenita — navždy zadarmo",
+        "tagline": "Core sovereignty — free forever",
         "accent": "#5FA779",
-        "features": ["Šifrovaný Trezor (zero-knowledge)", "Emergency QR + SOS",
-                     "Základný Health Timeline", "Verejný Solidarity Hub"],
+        "features": ["Encrypted Vault (zero-knowledge)", "Emergency QR + SOS",
+                     "Basic Health Timeline", "Public Solidarity Hub"],
     },
     "guardian": {
         "name": "Guardian", "order": 1, **_prices(29, 50),
-        "tagline": "Proaktívna ochrana pre teba aj rodinu",
+        "tagline": "Proactive protection for you and your family",
         "accent": "#B8860B",
-        "features": ["Všetko zo Sovereign", "Waitlist Hunter upozornenia",
-                     "AI preklady správ (Jarvis)", "Angel Mode (pády + bezpečnosť)",
-                     "Kompletná Physio-AI encyklopédia"],
+        "features": ["Everything in Sovereign", "Waitlist Hunter alerts",
+                     "AI report translations (Jarvis)", "Angel Mode (falls + safety)",
+                     "Complete Physio-AI encyclopedia"],
     },
     "sentinel": {
         "name": "Sentinel", "order": 2, **_prices(149, 250),
-        "tagline": "VIP prežitie — nemocnica vo vrecku",
+        "tagline": "VIP survival — a hospital in your pocket",
         "accent": "#E5E4E2",
-        "features": ["Všetko z Guardian", "🛰️ Satellite Emergency Handshake",
+        "features": ["Everything in Guardian", "🛰️ Satellite Emergency Handshake",
                      "🩺 Vitals Bio-Scanner — neobmedzene", "⚔️ AI Tactical Medic (offline)",
-                     "🧬 Longevity Engine + Bio-Age", "Autonómne rezervácie (Autopilot)",
+                     "🧬 Longevity Engine + Bio-Age", "Autonomous bookings (Autopilot)",
                      "Insurance Claim Recovery"],
     },
     "archangel": {
         "name": "Archangel", "order": 3, **_prices(499, 800),
-        "tagline": "Elitná suverenita — Zero-latency Swarm",
+        "tagline": "Elite sovereignty — Zero-latency Swarm",
         "accent": "#8A2BE2",
-        "features": ["Všetko zo Sentinel", "⚡ Prioritná orchestrácia Swarmu (Zero-latency)",
-                     "👤 Concierge Human Expert — 1 konzultácia/mes.",
-                     "🏛️ DAO governance — hlasovacie práva nadácie",
-                     "White-Label prístup pre rodinné officy"],
+        "features": ["Everything in Sentinel", "⚡ Priority Swarm orchestration (Zero-latency)",
+                     "👤 Concierge Human Expert — 1 consultation/mo.",
+                     "🏛️ DAO governance — foundation voting rights",
+                     "White-Label access for family offices"],
     },
 }
 
@@ -83,9 +83,9 @@ async def require_tier(user: dict, min_tier: str, feature: str) -> str:
     tier = await get_active_tier(user["user_id"])
     if TIER_RANK.get(tier, 0) < TIER_RANK[min_tier]:
         t = TIERS[min_tier]
-        raise HTTPException(402, f"{min_tier}_required: {feature} je exkluzívny pre {t['name']} tier "
+        raise HTTPException(402, f"{min_tier}_required: {feature} is exclusive to the {t['name']} tier "
                                  f"(€{t['price_eur']}/mes. alebo {t['price_gat']:.0f} GA-T). "
-                                 f"Aktivujte 7-dňový Sentinel trial zadarmo v Subscription.")
+                                 f"Activate the free 7-day Sentinel trial in Subscription.")
     return tier
 
 async def record_revenue(kind: str, amount_eur: float, user_id: str, meta: dict) -> None:
@@ -118,7 +118,7 @@ async def subscription_info(authorization: Optional[str] = Header(None)):
             "tiers": TIERS, "annual_discount_pct": int(ANNUAL_DISCOUNT * 100),
             "currencies": ["EUR", "CZK", "GA-T"], "czk_rate": CZK_RATE,
             "payperuse": {"bioscan_single": 5, "ips_export_single": 10},
-            "billing_note": "Platby kartou: Stripe TEST režim — použite testovaciu kartu 4242 4242 4242 4242. GA-T platby fungujú naplno."}
+            "billing_note": "Card payments: Stripe TEST mode — use test card 4242 4242 4242 4242. GA-T payments are fully live."}
 
 
 class UpgradeIn(BaseModel):
@@ -134,7 +134,7 @@ async def subscription_upgrade(body: UpgradeIn, authorization: Optional[str] = H
     if body.billing not in ("monthly", "annual"):
         raise HTTPException(400, "billing must be monthly|annual")
     if body.method == "card":
-        raise HTTPException(400, "use_billing_checkout: Platby kartou idú cez POST /api/billing/checkout (Stripe).")
+        raise HTTPException(400, "use_billing_checkout: Card payments go through POST /api/billing/checkout (Stripe).")
     # GA-T payment via the internal token engine (burn applies automatically)
     from routes.token import token_spend, SpendIn
     item = f"tier_{body.tier}_{'365d' if body.billing == 'annual' else '30d'}"
@@ -153,9 +153,9 @@ async def subscription_trial(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "trial_used": 1, "tier": 1, "tier_until": 1}) or {}
     if fresh.get("trial_used"):
-        raise HTTPException(409, "trial_used: 7-dňový trial už bol využitý. Pokračujte upgradom na Sentinel.")
+        raise HTTPException(409, "trial_used: The 7-day trial was already used. Continue by upgrading to Sentinel.")
     if TIER_RANK.get(current_tier(fresh), 0) >= TIER_RANK["sentinel"]:
-        raise HTTPException(409, "already_premium: Už máte Sentinel alebo vyšší tier.")
+        raise HTTPException(409, "already_premium: You already have Sentinel or a higher tier.")
     until = datetime.now(timezone.utc) + timedelta(days=7)
     await db.users.update_one({"user_id": user["user_id"]},
                               {"$set": {"tier": "sentinel", "tier_until": until,
@@ -171,14 +171,14 @@ async def subscription_cancel(authorization: Optional[str] = Header(None)):
     fresh = await db.users.find_one({"user_id": user["user_id"]},
                                     {"_id": 0, "tier": 1, "tier_until": 1, "inner_circle": 1}) or {}
     if fresh.get("inner_circle"):
-        raise HTTPException(400, "inner_circle_permanent: Doživotný Archangel (Inner Circle) sa nedá zrušiť.")
+        raise HTTPException(400, "inner_circle_permanent: Lifetime Archangel (Inner Circle) cannot be cancelled.")
     if current_tier(fresh) == "sovereign":
-        raise HTTPException(409, "no_active_subscription: Nemáte aktívne predplatné.")
+        raise HTTPException(409, "no_active_subscription: You have no active subscription.")
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
         "tier": "sovereign", "tier_until": None, "tier_paid_with": None,
         "tier_billing": None, "family_pack_owner": False}})
     return {"ok": True, "tier": "sovereign",
-            "message": "Predplatné zrušené — vraciate sa na bezplatný Sovereign. Kedykoľvek sa môžete vrátiť."}
+            "message": "Subscription cancelled — you are back on the free Sovereign tier. You can return anytime."}
 
 
 @api.get("/wealth/founder-dashboard")

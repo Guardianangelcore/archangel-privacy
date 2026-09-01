@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 import requests
 
-BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 TOKEN = "smoketok-fresh-2026"                # smoketest-user-1 (per request)
 HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
@@ -181,7 +181,7 @@ class TestJarvisLifecardVoice:
         assert rec["category"] == "disease", rec
         today = datetime.now(timezone.utc).date().isoformat()
         assert rec["date"] == today, rec
-        assert "Zapísal som do Karty života" in d["reply"], d["reply"]
+        assert ("Logged to your Life Card" in d["reply"]) or ("Zapísal som do Karty života" in d["reply"]), d["reply"]
         assert WATERMARK in d["reply"]
 
         # cleanup: find & delete this new disease event

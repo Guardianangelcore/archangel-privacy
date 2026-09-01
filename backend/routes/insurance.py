@@ -47,7 +47,7 @@ async def insurance_policies(authorization: Optional[str] = Header(None)):
     return {"policies": out, "overdue_count": len(overdue),
             "health_insurance_active": health_active,
             "hunter_warning": None if health_active else
-            "⚠ Zdravotné poistenie nie je aktívne/zaplatené — Waitlist Hunter môže mať problém s rezerváciami u zmluvných lekárov.",
+            "⚠ Health insurance is not active/paid — Waitlist Hunter may have trouble with reservations with contracted doctors.",
             "microloan_suggested": bool(overdue),
             "templates": INSURER_TEMPLATES}
 
@@ -93,7 +93,7 @@ class IngestIn(BaseModel):
 
 @api.post("/insurance/ingest")
 async def insurance_ingest(body: IngestIn, authorization: Optional[str] = Header(None)):
-    """Voice/text ingestion: 'Jarvis, zdravotné poistenie mám v Dôvere, zaplatené do decembra.'
+    """Voice/text ingestion: 'Jarvis, I have health insurance with Dôvera, paid until December.'
     → LLM parses provider/type/paid_until and upserts the policy record."""
     user = await get_current_user(authorization)
     if not body.text.strip():
@@ -120,7 +120,7 @@ async def insurance_ingest(body: IngestIn, authorization: Optional[str] = Header
         logger.error(f"insurance ingest error: {e}")
         raise HTTPException(502, "AI service unavailable")
     if not data.get("found") or not data.get("provider"):
-        return {"found": False, "hint": "Skúste: 'Zdravotné poistenie mám v Dôvere, zaplatené do decembra.'"}
+        return {"found": False, "hint": "Try: 'I have health insurance with Dôvera, paid until December.'"}
     ptype = data.get("type") if data.get("type") in POLICY_TYPES else "health"
     existing = await db.insurance_policies.find_one(
         {"user_id": user["user_id"], "type": ptype, "provider": {"$regex": f"^{re.escape(data['provider'])}$", "$options": "i"}})

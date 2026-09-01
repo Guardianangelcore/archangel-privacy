@@ -56,7 +56,7 @@ def _parse_lens_json(raw: str) -> dict:
     d = json.loads(txt)
     return {
         "kind": str(d.get("kind") or "other")[:30],
-        "name": str(d.get("name") or "Neznámy artefakt")[:120],
+        "name": str(d.get("name") or "Unknown artifact")[:120],
         "summary_sk": str(d.get("summary_sk") or "")[:1200],
         "warnings": [str(w)[:200] for w in (d.get("warnings") or [])][:3],
         "specialty": str(d.get("specialty") or "")[:60],
@@ -128,14 +128,14 @@ async def _run_vision(provider: str, model_id: str, b64: str, scan_id: str, seed
         try:
             return _parse_lens_json(resp or "")
         except json.JSONDecodeError:
-            return {"kind": "other", "name": "Neznámy artefakt",
+            return {"kind": "other", "name": "Unknown artifact",
                     "summary_sk": (resp or "").strip()[:800] or
-                                  "Obsah sa nepodarilo spoľahlivo rozpoznať. Skúste ostrejšiu fotku pri lepšom svetle.",
+                                  "The content could not be reliably recognized. Try a sharper photo in better light.",
                     "warnings": [], "specialty": "", "suggested_actions": ["save_to_vault"]}
     except Exception as e:
         logger.error(f"lens vision error ({provider}/{model_id}): {e}")
-        return {"kind": "other", "name": "Zlyhanie modelu",
-                "summary_sk": f"Model {provider}/{model_id} nedostupný.",
+        return {"kind": "other", "name": "Model failure",
+                "summary_sk": f"Model {provider}/{model_id} unavailable.",
                 "warnings": [], "specialty": "", "suggested_actions": [],
                 "_error": str(e)[:120]}
 
@@ -198,7 +198,7 @@ async def lens_analyze_consensus(file: UploadFile = File(...),
 
     merged = {
         "kind": kind,
-        "name": best.get("name", "Neznámy artefakt"),
+        "name": best.get("name", "Unknown artifact"),
         "summary_sk": best.get("summary_sk", ""),
         "warnings": warnings_all[:5],
         "specialty": best.get("specialty", ""),
@@ -243,19 +243,19 @@ async def lens_to_jarvis(scan_id: str, authorization: Optional[str] = Header(Non
     # Compose a synthetic user-side message that Jarvis will react to.
     parts = [
         f"[Guardian Eye — {scan.get('kind', 'other').upper()}]",
-        f"Názov: {scan.get('name') or '—'}",
-        f"Zhrnutie: {scan.get('summary_sk') or '—'}",
+        f"Name: {scan.get('name') or '—'}",
+        f"Summary: {scan.get('summary_sk') or '—'}",
     ]
     if scan.get("warnings"):
         parts.append("Varovania: " + " · ".join(scan["warnings"][:3]))
     if scan.get("specialty"):
-        parts.append(f"Odporúčaná špecializácia: {scan['specialty']}")
+        parts.append(f"Recommended specialization: {scan['specialty']}")
     synthetic_msg = "\n".join(parts)[:1200]
 
     # Delegate to agent chat — preserves memory + XP loop.
     from routes.agent import agent_chat, AgentChatIn
     result = await agent_chat(
-        AgentChatIn(message=f"Analyzoval som toto pomocou Guardian Eye. Poraď mi ďalšie kroky:\n{synthetic_msg}",
+        AgentChatIn(message=f"I analyzed this with Guardian Eye. Advise me on the next steps:\n{synthetic_msg}",
                     language=(user.get("language") or "sk")),
         authorization=authorization,
     )
@@ -370,4 +370,4 @@ async def voice_liveness(file: UploadFile = File(...), authorization: Optional[s
         except Exception:
             pass
     return {"transcript": transcript, "ok_detected": ok,
-            "note": "Alarm zrušený hlasom." if ok else "Fráza „som v poriadku“ nebola rozpoznaná."}
+            "note": "Alarm canceled by voice." if ok else "The phrase „I am okay“ was not recognized."}

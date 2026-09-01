@@ -16,7 +16,7 @@ import pytest
 import requests
 from PIL import Image, ImageDraw
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 LONG_TIMEOUT = 120  # AI can take 10-60s
 

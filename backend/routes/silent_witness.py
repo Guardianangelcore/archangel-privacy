@@ -37,8 +37,8 @@ async def sw_open(authorization: Optional[str] = Header(None)):
                 peer_ids.append(l["guardian_user_id"])
         if peer_ids:
             await send_push(recipients=peer_ids, data={
-                "title": "🛡️ TICHÝ SVEDOK AKTÍVNY",
-                "message": f"{user.get('name') or 'Rodinný člen'} spustil Silent Witness. Nahrávanie sa streamuje do Trezoru.",
+                "title": "🛡️ SILENT WITNESS ACTIVE",
+                "message": f"{user.get('name') or 'A family member'} started Silent Witness. The recording is streaming to the Vault.",
                 "action_url": "/silent-witness",
             })
     except Exception as e:

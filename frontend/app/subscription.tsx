@@ -50,23 +50,23 @@ export default function Subscription() {
       try {
         const s: any = await api(`/billing/status/${sid}`);
         if (s.payment_status === 'paid') {
-          const label = String(s.tier) === 'family_sentinel' ? 'SENTINEL (RODINNÝ BALÍK)' : String(s.tier).toUpperCase();
-          setMsg(`✓ Platba prijatá — ${label} je aktívny! Prémiové funkcie sú odomknuté. 🧾 Doklad o platbe bol uložený do Trezora.`);
+          const label = String(s.tier) === 'family_sentinel' ? 'SENTINEL (FAMILY PLAN)' : String(s.tier).toUpperCase();
+          setMsg(`✓ Payment received — ${label} is active! Premium features unlocked. 🧾 The receipt was saved to your Vault.`);
           await load();
           return;
         }
-        if (s.status === 'expired') { setErr('Platobná relácia expirovala — skúste znova.'); setMsg(''); return; }
+        if (s.status === 'expired') { setErr('Payment session expired — try again.'); setMsg(''); return; }
       } catch {}
       await new Promise(r => setTimeout(r, 2000));
     }
-    setMsg(''); setErr('Platba sa ešte spracováva — o chvíľu obnovte túto obrazovku.');
+    setMsg(''); setErr('Payment is still processing — refresh this screen in a moment.');
   }, [load]);
 
   // Web redirect back from Stripe Checkout: /subscription?session_id=...
   useEffect(() => {
     if (polledRef.current) return;
     if (params.session_id) { polledRef.current = true; pollPayment(String(params.session_id)); }
-    else if (params.payment === 'cancelled') { polledRef.current = true; setErr('Platba bola zrušená — nič nebolo účtované.'); }
+    else if (params.payment === 'cancelled') { polledRef.current = true; setErr('Payment cancelled — nothing was charged.'); }
   }, [params.session_id, params.payment, pollPayment]);
 
   const cardCheckout = async (tier: string) => {
@@ -96,11 +96,11 @@ export default function Subscription() {
     setBusy(`${tier}-${method}`); setErr(''); setMsg('');
     try {
       const r: any = await api('/subscription/upgrade', { method: 'POST', body: JSON.stringify({ tier, method, billing: annual ? 'annual' : 'monthly' }) });
-      setMsg(`Vitajte v ${tier.toUpperCase()} ✓ (${annual ? 'ročne −20 %' : 'mesačne'}, zaplatené GA-T, spálené ${r.burned}). Platí do ${String(r.effect?.tier_until || '').slice(0, 10)}.`);
+      setMsg(`Welcome to ${tier.toUpperCase()} ✓ (${annual ? 'yearly −20%' : 'monthly'}, paid in GA-T, burned ${r.burned}). Valid until ${String(r.effect?.tier_until || '').slice(0, 10)}.`);
       await load();
     } catch (e: any) {
       const m = String(e.message || e);
-      if (m.includes('insufficient_balance')) setErr('Nedostatok GA-T — zarobte tokeny cez Proof-of-Help (Family Shield / Angel Gigs), zaplaťte kartou alebo skúste 7-dňový Sentinel trial.');
+      if (m.includes('insufficient_balance')) setErr('Insufficient GA-T — earn tokens via Proof-of-Help (Family Shield / Angel Gigs), pay by card, or try the 7-day Sentinel trial.');
       else setErr(m);
     } finally { setBusy(null); }
   };
@@ -109,7 +109,7 @@ export default function Subscription() {
     setBusy('cancel'); setErr(''); setMsg('');
     try {
       const r: any = await api('/subscription/cancel', { method: 'POST' });
-      setMsg(r.message || 'Predplatné zrušené.');
+      setMsg(r.message || 'Subscription cancelled.');
       setCancelConfirm(false);
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -121,7 +121,7 @@ export default function Subscription() {
     setBusy('gift'); setErr(''); setMsg('');
     try {
       const r: any = await api('/billing/gift', { method: 'POST', body: JSON.stringify({ email: giftEmail.trim(), tier: giftTier, days: giftDays }) });
-      setMsg(`🎁 Darované: ${giftTier.toUpperCase()} na ${giftDays} dní pre ${r.gift.to_email}.`);
+      setMsg(`🎁 Gifted: ${giftTier.toUpperCase()} for ${giftDays} days to ${r.gift.to_email}.`);
       setGiftEmail('');
       try { setGifts(await api('/billing/gifts')); } catch {}
     } catch (e: any) { setErr(String(e.message || e)); }
@@ -132,7 +132,7 @@ export default function Subscription() {
     setBusy('trial'); setErr(''); setMsg('');
     try {
       const r: any = await api('/subscription/trial', { method: 'POST' });
-      setMsg(`🎁 SENTINEL TRIAL AKTÍVNY do ${String(r.tier_until).slice(0, 10)} — satelit, Bio-Scanner, Tactical Medic aj Longevity odomknuté.`);
+      setMsg(`🎁 SENTINEL TRIAL ACTIVE until ${String(r.tier_until).slice(0, 10)} — satellite, Bio-Scanner, Tactical Medic and Longevity unlocked.`);
       await load();
     } catch (e: any) { setErr(String(e.message || e).replace('trial_used:', '').replace('already_premium:', '').trim()); }
     finally { setBusy(null); }
@@ -151,28 +151,28 @@ export default function Subscription() {
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
-        <Text style={styles.h1}>Štyri úrovne suverenity</Text>
-        <Text style={styles.sub}>EUR · CZK · GA-T. Mesačne alebo ročne so zľavou −20 % („Secure Your Future“). Platba kartou (Stripe) alebo GA-T tokenmi.</Text>
+        <Text style={styles.h1}>Four levels of sovereignty</Text>
+        <Text style={styles.sub}>EUR · CZK · GA-T. Monthly, or yearly at −20% (“Secure Your Future”). Pay by card (Stripe) or with GA-T tokens.</Text>
         {data && (
           <View style={styles.currentBox}>
             <Ionicons name={(TIER_ICON[data.tier] || 'earth') as any} size={18} color={(data.tiers[data.tier] || {}).accent || '#5FA779'} />
-            <Text testID="sb-current" style={styles.currentText}>AKTUÁLNY TIER: {data.tier.toUpperCase()}{data.tier_until ? ` · do ${String(data.tier_until).slice(0, 10)}` : ''}</Text>
+            <Text testID="sb-current" style={styles.currentText}>CURRENT TIER: {data.tier.toUpperCase()}{data.tier_until ? ` · until ${String(data.tier_until).slice(0, 10)}` : ''}</Text>
             <Text style={styles.gat}>💎 {Number(data.gat_balance).toFixed(0)} GA-T</Text>
           </View>
         )}
 
         {data?.trial_available && (
           <Pressable testID="sb-trial" onPress={trial} disabled={busy === 'trial'} style={styles.trialBtn}>
-            {busy === 'trial' ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.trialText}>🎁 7-DŇOVÝ SENTINEL TRIAL ZADARMO</Text>}
+            {busy === 'trial' ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.trialText}>🎁 FREE 7-DAY SENTINEL TRIAL</Text>}
           </Pressable>
         )}
 
         <View style={styles.billingRow}>
           <Pressable testID="sb-monthly" onPress={() => setAnnual(false)} style={[styles.billBtn, !annual && styles.billBtnActive]}>
-            <Text style={[styles.billText, !annual && styles.billTextActive]}>MESAČNE</Text>
+            <Text style={[styles.billText, !annual && styles.billTextActive]}>MONTHLY</Text>
           </Pressable>
           <Pressable testID="sb-annual" onPress={() => setAnnual(true)} style={[styles.billBtn, annual && styles.billBtnActive]}>
-            <Text style={[styles.billText, annual && styles.billTextActive]}>ROČNE −20 % · SECURE YOUR FUTURE</Text>
+            <Text style={[styles.billText, annual && styles.billTextActive]}>YEARLY −20% · SECURE YOUR FUTURE</Text>
           </Pressable>
         </View>
 
@@ -193,7 +193,7 @@ export default function Subscription() {
               <View style={styles.tierHead}>
                 <Ionicons name={TIER_ICON[k] as any} size={24} color={accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.tierName, premium(k) && { color: PLATINUM }]}>{t2.name.toUpperCase()}{active ? '  ✓ AKTÍVNY' : ''}</Text>
+                  <Text style={[styles.tierName, premium(k) && { color: PLATINUM }]}>{t2.name.toUpperCase()}{active ? '  ✓ ACTIVE' : ''}</Text>
                   <Text style={styles.tierTagline}>{t2.tagline}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -210,7 +210,7 @@ export default function Subscription() {
               {k !== 'sovereign' && !active && (
                 <View style={styles.btnRow}>
                   <Pressable testID={`sb-upgrade-${k}-gat`} onPress={() => upgrade(k, 'gat')} disabled={!!busy} style={[styles.payBtn, { backgroundColor: accent }]}>
-                    {busy === `${k}-gat` ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, premium(k) && { color: OBSIDIAN }]}>ZAPLATIŤ {gat} GA-T</Text>}
+                    {busy === `${k}-gat` ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, premium(k) && { color: OBSIDIAN }]}>PAY {gat} GA-T</Text>}
                   </Pressable>
                   <Pressable testID={`sb-upgrade-${k}-card`} onPress={() => upgrade(k, 'card')} disabled={!!busy} style={[styles.cardBtn, { borderColor: accent }]}>
                     {busy === `${k}-card` ? <ActivityIndicator size="small" color={accent} /> : (
@@ -229,16 +229,16 @@ export default function Subscription() {
         {/* RODINNÝ BALÍK — one payer unlocks Sentinel for the whole family circle */}
         {data && (
           <View testID="sb-family-pack" style={[styles.tierCard, { borderColor: '#B8860B', backgroundColor: OBSIDIAN, borderWidth: 2.5 }]}>
-            <Text style={[styles.vipRibbon, { color: '#B8860B' }]}>👨‍👩‍👧‍👦 RODINNÝ BALÍK</Text>
+            <Text style={[styles.vipRibbon, { color: '#B8860B' }]}>👨‍👩‍👧‍👦 FAMILY PLAN</Text>
             <View style={styles.tierHead}>
               <Ionicons name="people" size={24} color="#B8860B" />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.tierName, { color: PLATINUM }]}>SENTINEL PRE CELÚ RODINU</Text>
-                <Text style={styles.tierTagline}>Jeden platca — vy + až 4 strážcovia z rodinného kruhu</Text>
+                <Text style={[styles.tierName, { color: PLATINUM }]}>SENTINEL FOR THE WHOLE FAMILY</Text>
+                <Text style={styles.tierTagline}>One payer — you + up to 4 guardians from your family circle</Text>
               </View>
               <Text style={[styles.tierPrice, { color: PLATINUM }]}>{annual ? '2390 €/rok' : '249 €/mes.'}</Text>
             </View>
-            {['Sentinel funkcie pre 5 ľudí (ušetríte až 66 %)', 'Aktivuje sa automaticky pre prepojených Strážcov', 'Nikdy neznižuje vyšší tier žiadneho člena'].map((f, i) => (
+            {['Sentinel features for 5 people (save up to 66%)', 'Activates automatically for linked Guardians', 'Never downgrades any member’s higher tier'].map((f, i) => (
               <View key={i} style={styles.featRow}>
                 <Ionicons name="checkmark" size={14} color="#B8860B" />
                 <Text style={[styles.featText, { color: '#B9B9C0' }]}>{f}</Text>
@@ -256,36 +256,36 @@ export default function Subscription() {
         )}
 
         {data && (
-          <Text style={styles.ppu}>PAY-PER-USE: Bio-Scanner {data.payperuse?.bioscan_single} GA-T/sken · IPS export {data.payperuse?.ips_export_single} GA-T · Human Second Opinion podľa sadzby špecialistu (GA-T)</Text>
+          <Text style={styles.ppu}>PAY-PER-USE: Bio-Scanner {data.payperuse?.bioscan_single} GA-T/scan · IPS export {data.payperuse?.ips_export_single} GA-T · Human Second Opinion at the specialist’s rate (GA-T)</Text>
         )}
 
         {/* SPRÁVA PREDPLATNÉHO — payment history + one-tap cancel */}
-        <Text style={styles.mgmtTitle}>SPRÁVA PREDPLATNÉHO</Text>
+        <Text style={styles.mgmtTitle}>MANAGE SUBSCRIPTION</Text>
         {data && data.tier !== 'sovereign' && !data.inner_circle && (
           cancelConfirm ? (
             <View style={styles.cancelRow}>
               <Pressable testID="sb-cancel-yes" onPress={cancelSub} disabled={busy === 'cancel'} style={[styles.cancelBtn, { backgroundColor: C.error, borderColor: C.error }]}>
-                {busy === 'cancel' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.cancelText, { color: '#fff' }]}>ÁNO, ZRUŠIŤ HNEĎ</Text>}
+                {busy === 'cancel' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.cancelText, { color: '#fff' }]}>YES, CANCEL NOW</Text>}
               </Pressable>
               <Pressable testID="sb-cancel-no" onPress={() => setCancelConfirm(false)} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>PONECHAŤ</Text>
+                <Text style={styles.cancelText}>KEEP IT</Text>
               </Pressable>
             </View>
           ) : (
             <Pressable testID="sb-cancel" onPress={() => setCancelConfirm(true)} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>ZRUŠIŤ PREDPLATNÉ</Text>
+              <Text style={styles.cancelText}>CANCEL SUBSCRIPTION</Text>
             </Pressable>
           )
         )}
-        {data?.inner_circle && <Text style={styles.txEmpty}>👑 Inner Circle — doživotný Archangel, nie je čo rušiť.</Text>}
+        {data?.inner_circle && <Text style={styles.txEmpty}>👑 Inner Circle — lifetime Archangel, nothing to cancel.</Text>}
         {txs.length === 0 ? (
-          <Text style={styles.txEmpty}>Zatiaľ žiadne platby kartou.</Text>
+          <Text style={styles.txEmpty}>No card payments yet.</Text>
         ) : txs.map((tx: any) => (
           <View key={tx.session_id} testID={`sb-tx-${tx.session_id}`} style={styles.txRow}>
             <Ionicons name={tx.processed ? 'checkmark-circle' : tx.payment_status === 'expired' ? 'close-circle' : 'time-outline'} size={16} color={tx.processed ? '#5FA779' : tx.payment_status === 'expired' ? C.error : C.info} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.txTitle}>{tx.tier === 'family_sentinel' ? 'Rodinný balík (Sentinel)' : String(tx.tier).toUpperCase()} · {tx.billing === 'annual' ? 'ročné' : 'mesačné'}</Text>
-              <Text style={styles.txMeta}>{String(tx.created_at).slice(0, 10)} · {tx.processed ? 'zaplatené · 🧾 doklad v Trezore' : tx.payment_status}</Text>
+              <Text style={styles.txTitle}>{tx.tier === 'family_sentinel' ? 'Family plan (Sentinel)' : String(tx.tier).toUpperCase()} · {tx.billing === 'annual' ? 'yearly' : 'monthly'}</Text>
+              <Text style={styles.txMeta}>{String(tx.created_at).slice(0, 10)} · {tx.processed ? 'paid · 🧾 receipt in Vault' : tx.payment_status}</Text>
             </View>
             <Text style={styles.txAmount}>{tx.amount_eur} €</Text>
           </View>
@@ -307,8 +307,8 @@ export default function Subscription() {
         {/* FOUNDER GIFTING — darovanie prémia */}
         {founder && (
           <View testID="sb-gift" style={styles.giftBox}>
-            <Text style={styles.founderTitle}>🎁 DAROVAŤ PRÉMIUM (ZAKLADATEĽ)</Text>
-            <Text style={styles.giftHint}>Darujte tier komukoľvek podľa e-mailu — zadarmo, okamžite, s notifikáciou.</Text>
+            <Text style={styles.founderTitle}>🎁 GIFT PREMIUM (FOUNDER)</Text>
+            <Text style={styles.giftHint}>Gift any tier by e-mail — free, instant, with a notification.</Text>
             <TextInput
               testID="sb-gift-email"
               value={giftEmail}
@@ -329,15 +329,15 @@ export default function Subscription() {
             <View style={styles.chipRow}>
               {[30, 90, 365].map(d => (
                 <Pressable key={d} testID={`sb-gift-days-${d}`} onPress={() => setGiftDays(d)} style={[styles.chip, giftDays === d && styles.chipActive]}>
-                  <Text style={[styles.chipText, giftDays === d && styles.chipTextActive]}>{d} DNÍ</Text>
+                  <Text style={[styles.chipText, giftDays === d && styles.chipTextActive]}>{d} DAYS</Text>
                 </Pressable>
               ))}
             </View>
             <Pressable testID="sb-gift-send" onPress={sendGift} disabled={!!busy || !giftEmail.trim()} style={[styles.payBtn, { backgroundColor: '#B8860B', marginTop: S.md, opacity: giftEmail.trim() ? 1 : 0.5 }]}>
-              {busy === 'gift' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, { color: OBSIDIAN }]}>DAROVAŤ {giftTier.toUpperCase()} · {giftDays} DNÍ</Text>}
+              {busy === 'gift' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, { color: OBSIDIAN }]}>GIFT {giftTier.toUpperCase()} · {giftDays} DAYS</Text>}
             </Pressable>
             {gifts.slice(0, 5).map((g: any) => (
-              <Text key={g.gift_id} style={styles.giftRow}>🎁 {g.to_email} — {String(g.tier).toUpperCase()} · {g.days} dní · {String(g.created_at).slice(0, 10)}</Text>
+              <Text key={g.gift_id} style={styles.giftRow}>🎁 {g.to_email} — {String(g.tier).toUpperCase()} · {g.days} days · {String(g.created_at).slice(0, 10)}</Text>
             ))}
           </View>
         )}

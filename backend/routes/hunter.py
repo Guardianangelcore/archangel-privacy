@@ -22,7 +22,6 @@ from core import (
 from models import User, EmergencyProfile, Document, WaitlistItem, FallEvent
 
 from content import MENTAL_TECHNIQUES
-MENTAL_TECHNIQUES_SK = MENTAL_TECHNIQUES['sk']
 
 # Pharmacy Hunter real-data config (future integration — currently DEMO simulation)
 PHARMACY_API_URL = os.environ.get('PHARMACY_API_URL', '')
@@ -75,8 +74,8 @@ async def scan_waitlist(item_id: str, authorization: Optional[str] = Header(None
             await send_push(
                 recipients=[user["user_id"]],
                 data={
-                    "title": "Termín nájdený! 🎯",
-                    "message": f"{item['specialty']} · {item['clinic']} — voľný termín {upd['found_slot']}",
+                    "title": "Term found! 🎯",
+                    "message": f"{item['specialty']} · {item['clinic']} — available slot {upd['found_slot']}",
                     "action_url": "/(tabs)/waitlist",
                 },
                 idempotency_key=f"slot-{item_id}-{upd['found_slot']}",
@@ -112,9 +111,9 @@ async def blackout_snapshot(authorization: Optional[str] = Header(None)):
         "contacts": contacts,
         "documents_meta": [{"doc_id": d["doc_id"], "title": d["title"], "size": d["size"]} for d in docs],
         "survival_tips": [
-            "SK: Pri výpadku sietí zdieľajte tento snapshot cez Bluetooth s dôveryhodným zariadením.",
-            "SK: Núdzové čísla: 112 · Záchranná služba 155 · Polícia 158 · Hasiči 150",
-            "SK: QR kód s DID je čitateľný aj bez internetu.",
+            "SK: In the event of network outages, share this snapshot via Bluetooth with a trusted device.",
+            "SK: Emergency numbers: 112 · Ambulance 155 · Police 158 · Firefighters 150",
+            "SK: The QR code with DID is readable even without internet.",
         ],
     }
 
@@ -183,64 +182,64 @@ async def survival_bible_pdf(token: Optional[str] = None, authorization: Optiona
     bio = await db.biometric_wills.find_one({"user_id": uid}, {"_id": 0}) or {}
 
     parts = []
-    parts.append("1. IDENTITA A NÚDZOVÉ INFO / IDENTITY & EMERGENCY")
-    parts.append(f"Meno: {prof.get('full_name') or user.get('name') or '—'}")
+    parts.append("1. IDENTITY & EMERGENCY INFO")
+    parts.append(f"Name: {prof.get('full_name') or user.get('name') or '—'}")
     parts.append(f"DID: {user['did']}")
-    parts.append(f"Krvná skupina: {prof.get('blood_type') or '—'}  ·  Alergie: {prof.get('allergies') or '—'}")
-    parts.append(f"Diagnózy: {prof.get('conditions') or '—'}")
-    parts.append(f"Lieky (voľný text): {prof.get('medications') or '—'}")
-    parts.append(f"ICE kontakt: {prof.get('emergency_contact_name') or '—'} · {prof.get('emergency_contact_phone') or '—'}")
-    parts.append(f"Darca orgánov: {'ÁNO — ' + str(prof.get('donor_organs') or 'všetky') if prof.get('is_donor') else 'NIE'}")
+    parts.append(f"Blood type: {prof.get('blood_type') or '—'}  ·  Allergies: {prof.get('allergies') or '—'}")
+    parts.append(f"Diagnoses: {prof.get('conditions') or '—'}")
+    parts.append(f"Medications (free text): {prof.get('medications') or '—'}")
+    parts.append(f"ICE contact: {prof.get('emergency_contact_name') or '—'} · {prof.get('emergency_contact_phone') or '—'}")
+    parts.append(f"Organ donor: {'YES — ' + str(prof.get('donor_organs') or 'all') if prof.get('is_donor') else 'NO'}")
 
-    parts.append("\n2. DENNÉ LIEKY / DAILY MEDICATION")
+    parts.append("\n2. DAILY MEDICATION")
     if meds:
         for m in meds:
-            parts.append(f"  • {m.get('name')} {m.get('dose') or ''} — časy: {', '.join(m.get('times') or [])}")
+            parts.append(f"  • {m.get('name')} {m.get('dose') or ''} — times: {', '.join(m.get('times') or [])}")
     else:
-        parts.append("  — žiadne pripomienky liekov")
+        parts.append("  — no medication reminders")
 
-    parts.append("\n3. LEKÁRNIČKA A ZÁSOBY / MEDICINE CABINET")
+    parts.append("\n3. MEDICINE CABINET AND SUPPLIES")
     if cabinet:
         for c in cabinet[:40]:
             parts.append(f"  • {c.get('name')} — {c.get('quantity')} {c.get('unit')}" + (f" · exp. {c.get('expires_on')}" if c.get('expires_on') else ""))
     else:
-        parts.append("  — lekárnička je prázdna")
+        parts.append("  — medicine cabinet is empty")
 
-    parts.append("\n4. ČAKACIE LISTINY / WAITLIST HUNTER")
+    parts.append("\n4. WAITING LISTS / WAITLIST HUNTER")
     if waitlist:
         for w in waitlist[:20]:
-            parts.append(f"  • {w.get('specialty') or w.get('title') or '—'} · {w.get('city') or ''} · stav: {w.get('status') or 'hunting'}")
+            parts.append(f"  • {w.get('specialty') or w.get('title') or '—'} · {w.get('city') or ''} · status: {w.get('status') or 'hunting'}")
     else:
-        parts.append("  — žiadne aktívne čakacie listiny")
+        parts.append("  — no active waiting lists")
 
-    parts.append("\n5. SPLNOMOCNENEC / HEALTHCARE PROXY")
+    parts.append("\n5. HEALTHCARE PROXY")
     if proxy.get("proxy_full_name"):
         parts.append(f"  {proxy.get('proxy_full_name')} ({proxy.get('proxy_relationship') or '—'}) · {proxy.get('proxy_phone') or '—'}")
-        parts.append(f"  Rozsah: {proxy.get('scope') or '—'}  ·  SHA-256: {proxy.get('doc_hash') or '—'}")
+        parts.append(f"  Scope: {proxy.get('scope') or '—'}  ·  SHA-256: {proxy.get('doc_hash') or '—'}")
     else:
-        parts.append("  — splnomocnenec nie je určený")
+        parts.append("  — no proxy is designated")
 
-    parts.append("\n6. ODKAZ A ZÁVET / LEGACY")
+    parts.append("\n6. LEGACY & WILL")
     if testament.get("document_text"):
         t = testament["document_text"]
         parts.append(t[:1200] + ("…" if len(t) > 1200 else ""))
-        parts.append(f"  SHA-256 závetu: {testament.get('doc_hash') or '—'}")
+        parts.append(f"  Will SHA-256: {testament.get('doc_hash') or '—'}")
     else:
-        parts.append("  — závet zatiaľ nevygenerovaný")
+        parts.append("  — no will has been generated yet")
     if bio.get("sha256"):
-        parts.append(f"  Biometrické potvrdenie: {bio.get('media_type')} · {bio.get('recorded_at', '')[:16]} · SHA-256 {bio.get('sha256')}")
+        parts.append(f"  Biometric confirmation: {bio.get('media_type')} · {bio.get('recorded_at', '')[:16]} · SHA-256 {bio.get('sha256')}")
 
-    parts.append("\n7. KRÍZOVÉ TECHNIKY BEZ TECHNOLÓGIÍ / ANALOG CRISIS TECHNIQUES")
-    for t in MENTAL_TECHNIQUES_SK:
+    parts.append("\n7. ANALOG CRISIS TECHNIQUES (NO TECHNOLOGY NEEDED)")
+    for t in MENTAL_TECHNIQUES.get((user.get("language") or "en")[:2], MENTAL_TECHNIQUES["en"]):
         parts.append(f"  ▶ {t['title']} — {t['subtitle']}")
         for i, s in enumerate(t["steps"]):
             parts.append(f"     {i+1}. {s}")
 
-    parts.append("\n8. NÚDZOVÉ ČÍSLA / EMERGENCY NUMBERS")
-    parts.append("  112 — tieseň EÚ · 155 — záchranka (SK/CZ) · 158 — polícia CZ · 0800 800 566 — Linka dôvery Nezábudka")
+    parts.append("\n8. EMERGENCY NUMBERS")
+    parts.append("  112 — EU emergency · 155 — ambulance (SK/CZ) · 158 — police CZ · 0800 800 566 — Nezábudka helpline")
 
     body = "\n".join(parts)
-    pdf = await run_in_threadpool(_make_pdf, "SURVIVAL BIBLE — ANALOG RECOVERY KIT\nVYTLAČTE A ULOŽTE NA BEZPEČNÉ MIESTO", body, _pdf_footer())
+    pdf = await run_in_threadpool(_make_pdf, "SURVIVAL BIBLE — ANALOG RECOVERY KIT\nPRINT AND STORE IN A SAFE PLACE", body, _pdf_footer())
     return _pdf_response(pdf, "guardian_survival_bible.pdf")
 
 
@@ -321,7 +320,7 @@ async def pharmacy_watch_scan(watch_id: str, authorization: Optional[str] = Head
     if hit:
         upd.update({"status": "found", "found_at": now, "found_pharmacy": f"{hit['pharmacy']} {hit['city']}"})
         try:
-            await send_push(recipients=[user["user_id"]], data={"title": "💊 LIEK NÁJDENÝ", "message": f"{w['med_name']} skladom: {hit['pharmacy']} {hit['city']}", "action_url": "/pharmacy-hunter"})
+            await send_push(recipients=[user["user_id"]], data={"title": "💊 MEDICATION FOUND", "message": f"{w['med_name']} in stock: {hit['pharmacy']} {hit['city']}", "action_url": "/pharmacy-hunter"})
         except Exception as e:
             logger.warning(f"pharmacy push failed: {e}")
     await db.pharmacy_watches.update_one({"watch_id": watch_id}, {"$set": upd})
@@ -345,7 +344,7 @@ _CLINICS_BY_CITY = {
     "brno": ["FN Brno", "Úrazová nemocnice Brno", "SurGal Clinic Brno"],
     "ostrava": ["FN Ostrava", "Vítkovická nemocnica"],
     "bratislava": ["Poliklinika Ružinov", "Nemocnica Bory", "ProCare Central", "Klinika Kramáre"],
-    "košice": ["MedPark Košice", "UNLP Košice"],
+    "Košice": ["MedPark Košice", "UNLP Košice"],
 }
 
 def _simulate_slot(specialty: str, city: str) -> dict:
@@ -390,7 +389,7 @@ async def autobook(body: AutobookIn, authorization: Optional[str] = Header(None)
         await db.health_drops.update_one({"drop_doc_id": body.source_id, "user_id": user["user_id"]}, {"$set": {"autobooked": True}})
     try:
         await send_push(recipients=[user["user_id"]],
-                        data={"title": "✅ TERMÍN ZAREZERVOVANÝ", "message": f"{item['specialty']}: {item['found_slot']}", "action_url": "/health-timeline"})
+                        data={"title": "✅ APPOINTMENT BOOKED", "message": f"{item['specialty']}: {item['found_slot']}", "action_url": "/health-timeline"})
     except Exception as e:
         logger.warning(f"autobook push failed: {e}")
     return {"booking": clean(item), "calendar_event": clean(cal), "simulated": True}
@@ -415,7 +414,7 @@ async def waitlist_autobook(item_id: str, authorization: Optional[str] = Header(
     await db.calendar_events.insert_one(cal.copy())
     try:
         await send_push(recipients=[user["user_id"]],
-                        data={"title": "✅ TERMÍN ZAREZERVOVANÝ", "message": f"{w['specialty']}: {found}", "action_url": "/health-timeline"})
+                        data={"title": "✅ APPOINTMENT BOOKED", "message": f"{w['specialty']}: {found}", "action_url": "/health-timeline"})
     except Exception as e:
         logger.warning(f"autobook push failed: {e}")
     return {"booking": {"item_id": item_id, "status": "booked", "found_slot": found}, "calendar_event": clean(cal), "simulated": True}

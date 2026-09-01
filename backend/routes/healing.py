@@ -547,11 +547,11 @@ async def companion_reminder_sweep(force: bool = False) -> int:
         if await db.companion_reminders.find_one({"user_id": uid, "date": today}):
             continue
         u = await db.users.find_one({"user_id": uid}, {"_id": 0, "name": 1})
-        n = ((u or {}).get("name") or "").split(" ")[0] or "priateľu"
+        n = ((u or {}).get("name") or "").split(" ")[0] or "friend"
         try:
             await send_push(recipients=[uid], data={
-                "title": "💛 JARVIS SA PÝTA",
-                "message": f"Dobré ráno, {n}. Ešte ste mi dnes nepovedali, ako sa máte — ťuknite na smajlíka, poteší ma to.",
+                "title": "💛 JARVIS IS ASKING",
+                "message": f"Good morning, {n}. You still haven’t told me how you are today — tap the smiley, it will make me happy.",
                 "action_url": "/"})
         except Exception as e:
             logger.warning(f"companion reminder push: {e}")
@@ -572,13 +572,13 @@ async def _save_report_to_vault(uid: str) -> dict:
     """Build the healing report PDF and file it into the user's Health Vault."""
     parts = await _report_parts(uid)
     pdf = await run_in_threadpool(
-        _make_pdf, "TÝŽDENNÝ REPORT UZDRAVENIA\nKOLOTOČ · FINANČNÝ ŠTÍT · NÁLADA — pre lekára aj rodinu",
+        _make_pdf, "WEEKLY RECOVERY REPORT\nCAROUSEL · FINANCIAL SHIELD · MOOD — for doctor and family",
         "\n".join(parts), _pdf_footer())
     now = _now()
     doc_id = uuid.uuid4().hex
     path = f"{APP_NAME}/uploads/{uid}/{doc_id}.pdf"
     await run_in_threadpool(put_object_sync, path, pdf, "application/pdf")
-    title = f"Týždenný report uzdravenia — {now.date().isoformat()}"
+    title = f"Recovery weekly report — {now.date().isoformat()}"
     doc = {"doc_id": doc_id, "user_id": uid, "title": title,
            "file_name": f"healing_report_{now.date().isoformat()}.pdf",
            "content_type": "application/pdf", "size": len(pdf),
@@ -588,7 +588,7 @@ async def _save_report_to_vault(uid: str) -> dict:
     await db.calendar_events.insert_one({
         "event_id": uuid.uuid4().hex, "user_id": uid, "category": "history",
         "title": f"📄 {title}"[:140], "date": now.date().isoformat(),
-        "notes": "Automatický report Kolotoča uzdravenia (Jarvis)", "booster_due": None,
+        "notes": "Automatic report of the Healing Carousel (Jarvis)", "booster_due": None,
         "source": "healing_report", "doc_id": doc_id, "created_at": now,
     })
     return clean(doc)
@@ -599,7 +599,7 @@ async def healing_report_to_vault(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     doc = await _save_report_to_vault(user["user_id"])
     return {"ok": True, "document": doc,
-            "note": "Report uložený do Zdravotného trezora. Jarvis ho ukladá automaticky každú nedeľu."}
+            "note": "Report saved to the Health Vault. Jarvis stores it automatically every Sunday."}
 
 
 async def weekly_report_sweep(force: bool = False) -> int:
@@ -625,8 +625,8 @@ async def weekly_report_sweep(force: bool = False) -> int:
                 {"user_id": uid, "week": iso_week, "doc_id": doc["doc_id"], "created_at": now})
             try:
                 await send_push(recipients=[uid], data={
-                    "title": "📄 NEDEĽNÝ REPORT V TREZORE",
-                    "message": "Jarvis uložil týždenný report uzdravenia do Zdravotného trezora — pripravený pre lekára aj rodinu.",
+                    "title": "📄 SUNDAY REPORT IN THE VAULT",
+                    "message": "Jarvis saved the weekly recovery report to the Health Vault — ready for the doctor and family.",
                     "action_url": "/(tabs)/vault"})
             except Exception:
                 pass
@@ -636,7 +636,7 @@ async def weekly_report_sweep(force: bool = False) -> int:
     return saved
 
 _MOOD_BAR = {1: "█░░░░", 2: "██░░░", 3: "███░░", 4: "████░", 5: "█████"}
-_TREND_SK = {"improving": "ZLEPŠUJE SA ↗", "declining": "ZHORŠUJE SA ↘", "stable": "STABILNÁ →"}
+_TREND_SK = {"improving": "IMPROVING ↗", "declining": "WORSENING ↘", "stable": "STABLE →"}
 
 
 async def _report_parts(uid: str) -> list:
@@ -650,33 +650,33 @@ async def _report_parts(uid: str) -> list:
         {"user_id": uid, "created_at": {"$gte": since}}, {"_id": 0}).sort("created_at", 1).to_list(60)
 
     parts = []
-    parts.append("1. KOLOTOČ UZDRAVENIA / HEALING CAROUSEL")
+    parts.append("1. HEALING CAROUSEL")
     if j:
         done = sum(1 for s in j["steps"].values() if s == "done")
-        parts.append(f"  Stav: {'AKTÍVNY' if j['status'] == 'active' else j['status'].upper()} · {j['kind_label']}"
+        parts.append(f"  Status: {'ACTIVE' if j['status'] == 'active' else j['status'].upper()} · {j['kind_label']}"
                      f"{(' · ' + j['body_part']) if j.get('body_part') else ''} · {j['specialty']}")
-        parts.append(f"  Postup: {int(done / len(STEP_KEYS) * 100)} % ({done}/{len(STEP_KEYS)} krokov)")
+        parts.append(f"  Progress: {int(done / len(STEP_KEYS) * 100)} % ({done}/{len(STEP_KEYS)} steps)")
         for i, k in enumerate(STEP_KEYS):
             st = j["steps"].get(k, "pending")
             mark = "[X]" if st == "done" else ("[!]" if st == "action_needed" else "[ ]")
             parts.append(f"    {mark} {i + 1}. {STEP_META[k]['title']} — {STEP_META[k]['sub']}")
         if (j.get("access") or {}).get("slot"):
-            parts.append(f"  Zarezervovaný termín: {j['access']['slot']}")
+            parts.append(f"  Reserved appointment: {j['access']['slot']}")
     else:
-        parts.append("  Žiadny kolotoč zatiaľ nebol spustený.")
-    parts.append("\n2. FINANČNÝ ŠTÍT / INSURANCE CLAIM")
+        parts.append("  No carousel has been started yet.")
+    parts.append("\n2. FINANCIAL SHIELD / INSURANCE CLAIM")
     if claim:
-        parts.append(f"  Poisťovňa: {claim['provider']} · Stav žiadosti: {claim['status'].upper()}")
-        parts.append(f"  Denná dávka: {claim['daily_benefit_eur']} EUR · Odhad spolu ({claim['estimated_days']} dní): {claim['estimated_total_eur']} EUR")
+        parts.append(f"  Insurer: {claim['provider']} · Claim status: {claim['status'].upper()}")
+        parts.append(f"  Daily benefit: {claim['daily_benefit_eur']} EUR · Estimated total ({claim['estimated_days']} days): {claim['estimated_total_eur']} EUR")
     else:
-        parts.append("  Žiadna poistná žiadosť v tomto kolotoči.")
-    parts.append("\n3. NESCHOPENKA / SICK LEAVE")
+        parts.append("  No insurance claim in this carousel.")
+    parts.append("\n3. SICK LEAVE")
     if recovery.get("start_date"):
-        parts.append(f"  PN: {recovery['start_date']} → {recovery.get('end_date') or '?'} · vychádzky: "
-                     + (", ".join(f"{o['from_time']}–{o['to_time']}" for o in recovery.get("outings", [])) or "žiadne"))
+        parts.append(f"  Sick leave: {recovery['start_date']} → {recovery.get('end_date') or '?'} · outings: "
+                     + (", ".join(f"{o['from_time']}–{o['to_time']}" for o in recovery.get("outings", [])) or "none"))
     else:
-        parts.append("  Bez aktívnej PN.")
-    parts.append("\n4. GRAF NÁLADY (14 dní) / MOOD TREND")
+        parts.append("  No active sick leave.")
+    parts.append("\n4. MOOD TREND (14 days)")
     if checkins:
         for c in checkins[-14:]:
             d = str(c.get("created_at", ""))[:10]
@@ -688,13 +688,13 @@ async def _report_parts(uid: str) -> list:
             half = len(moods) // 2
             a, b = sum(moods[:half]) / half, sum(moods[half:]) / (len(moods) - half)
             direction = "improving" if b - a > 0.3 else ("declining" if a - b > 0.3 else "stable")
-        parts.append(f"  Priemer: {avg}/5 · Tendencia: {_TREND_SK[direction]}")
+        parts.append(f"  Average: {avg}/5 · Trend: {_TREND_SK[direction]}")
     else:
-        parts.append("  Žiadne denné check-iny za posledných 14 dní.")
+        parts.append("  No daily check-ins in the last 14 days.")
     # PAIN DIARY — 1-10 after every exercise, the doctor sees the healing curve
     pain = await db.pain_diary.find(
         {"user_id": uid, "created_at": {"$gte": since}}, {"_id": 0}).sort("created_at", 1).to_list(100)
-    parts.append("\n5. BOLESŤOVÝ DENNÍK (14 dní) / PAIN DIARY — 1 až 10")
+    parts.append("\n5. PAIN DIARY (14 days) — 1 to 10")
     if pain:
         for p in pain[-14:]:
             d = str(p.get("created_at", ""))[:10]
@@ -708,12 +708,12 @@ async def _report_parts(uid: str) -> list:
             half = len(levels) // 2
             a, b = sum(levels[:half]) / half, sum(levels[half:]) / (len(levels) - half)
             pdir = "improving" if a - b > 0.5 else ("worsening" if b - a > 0.5 else "stable")
-        pdir_sk = {"improving": "BOLESŤ KLESÁ ↘ (hojenie)", "worsening": "BOLESŤ RASTIE ↗ (konzultujte lekára)",
-                   "stable": "STABILNÁ →"}[pdir]
-        parts.append(f"  Priemer: {avgp}/10 · Tendencia: {pdir_sk} · Záznamov: {len(levels)}")
+        pdir_sk = {"improving": "PAIN DECREASING ↘ (healing)", "worsening": "PAIN INCREASING ↗ (consult a doctor)",
+                   "stable": "STABLE →"}[pdir]
+        parts.append(f"  Average: {avgp}/10 · Trend: {pdir_sk} · Entries: {len(levels)}")
     else:
-        parts.append("  Žiadne záznamy bolesti — pacient zatiaľ necvičil alebo nezapisoval.")
-    parts.append(f"\nVygenerované Sovereign Healing Loop · {_now().date().isoformat()}")
+        parts.append("  No pain records — the patient has not exercised or recorded anything yet.")
+    parts.append(f"\nGenerated by Sovereign Healing Loop · {_now().date().isoformat()}")
     return parts
 
 
@@ -722,6 +722,6 @@ async def healing_report_pdf(token: Optional[str] = None, authorization: Optiona
     user = await _auth_pdf(authorization, token)
     parts = await _report_parts(user["user_id"])
     pdf = await run_in_threadpool(
-        _make_pdf, "TÝŽDENNÝ REPORT UZDRAVENIA\nKOLOTOČ · FINANČNÝ ŠTÍT · NÁLADA — pre lekára aj rodinu",
+        _make_pdf, "WEEKLY RECOVERY REPORT\nCAROUSEL · FINANCIAL SHIELD · MOOD — for doctor and family",
         "\n".join(parts), _pdf_footer())
     return _pdf_response(pdf, "guardian_healing_report.pdf")

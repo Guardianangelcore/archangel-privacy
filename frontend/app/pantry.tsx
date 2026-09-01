@@ -3,7 +3,7 @@
 // List of tracked items with color-coded urgency + a big Jarvis alert if
 // something is expiring within 30 days.
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl, TextInput, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,22 +28,22 @@ type Item = {
 };
 
 const CATS = [
-  { key: 'food', label: 'Konzervy · potraviny', icon: 'nutrition' },
-  { key: 'water', label: 'Voda', icon: 'water' },
+  { key: 'food', label: 'Canned · food', icon: 'nutrition' },
+  { key: 'water', label: 'Water', icon: 'water' },
   { key: 'battery', label: 'Batteries', icon: 'battery-charging' },
-  { key: 'gas', label: 'Plyn · palivo', icon: 'flame' },
-  { key: 'med', label: 'Lieky', icon: 'medkit' },
-  { key: 'filter', label: 'Filtre', icon: 'funnel' },
+  { key: 'gas', label: 'Gas · fuel', icon: 'flame' },
+  { key: 'med', label: 'Medicine', icon: 'medkit' },
+  { key: 'filter', label: 'Filters', icon: 'funnel' },
   { key: 'ammo', label: 'Ammo', icon: 'shield' },
   { key: 'tool', label: 'Tools', icon: 'construct' },
   { key: 'other', label: 'Other', icon: 'cube' },
 ];
 
 const URGENCY_STYLE: Record<Item['urgency'], { color: string; label: string }> = {
-  expired:  { color: '#EF4444', label: 'PO SPOTREBE' },
+  expired:  { color: '#EF4444', label: 'EXPIRED' },
   critical: { color: '#F59E0B', label: 'ROTATE NOW' },
   soon:     { color: '#EAB308', label: 'SOON' },
-  healthy:  { color: '#22C55E', label: 'V PORIADKU' },
+  healthy:  { color: '#22C55E', label: 'OK' },
   fresh:    { color: '#10B981', label: 'FRESH' },
   unknown:  { color: '#94A3B8', label: 'NO DATE' },
 };
@@ -161,7 +161,7 @@ export default function Pantry() {
       const name = uri.endsWith('.m4a') ? 'pantry.m4a' : 'pantry.webm';
       const ct = uri.endsWith('.m4a') ? 'audio/m4a' : 'audio/webm';
       const parsed: any = await apiUpload('/pantry/voice', uri, name, ct, {});
-      setVoiceHeard(`${parsed.quantity}× „${parsed.name}"${parsed.location ? ` v „${parsed.location}"` : ''}`);
+      setVoiceHeard(`${parsed.quantity}× "${parsed.name}"${parsed.location ? ` in "${parsed.location}"` : ''}`);
       jarvisSpeak(`Added: ${parsed.quantity} pcs of ${parsed.name}${parsed.location ? `, in ${parsed.location}` : ''}.`, {
         voice: 'onyx', speed: 0.95, language: (user?.language as any) || 'en',
       });
@@ -262,7 +262,7 @@ export default function Pantry() {
           </LinearGradient>
         </Pressable>
 
-        {/* VOICE-FIRST — nula ťukania, iba hlas */}
+        {/* VOICE-FIRST — zero typing, voice only */}
         <Pressable
           testID="pantry-voice"
           onPress={startVoice}
@@ -334,7 +334,7 @@ export default function Pantry() {
             </View>
             <TextInput testID="pantry-exp" value={newExp} onChangeText={setNewExp} placeholder="Expiry date (2028-03-15)" placeholderTextColor="#999" style={styles.input} maxLength={10} />
             <TextInput testID="pantry-qty" value={newQty} onChangeText={setNewQty} placeholder="Quantity" placeholderTextColor="#999" keyboardType="number-pad" style={styles.input} maxLength={4} />
-            <TextInput testID="pantry-loc" value={newLoc} onChangeText={setNewLoc} placeholder="Miesto (Bunker A · polica 2)" placeholderTextColor="#999" style={styles.input} maxLength={80} />
+            <TextInput testID="pantry-loc" value={newLoc} onChangeText={setNewLoc} placeholder="Location (Bunker A · shelf 2)" placeholderTextColor="#999" style={styles.input} maxLength={80} />
             <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
               <Pressable onPress={() => setAddOpen(false)} style={[styles.mBtn, styles.mBtnGhost]}>
                 <Text style={styles.mBtnGhostText}>Cancel</Text>

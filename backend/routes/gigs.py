@@ -12,11 +12,11 @@ import uuid
 from core import api, db, clean, get_current_user, send_push
 
 GIG_KINDS = {
-    "transport": "Odvoz na kliniku / úrad",
-    "grocery": "Nákup potravín",
-    "pharmacy": "Vyzdvihnutie liekov",
-    "company": "Spoločnosť / prechádzka",
-    "tech": "Pomoc s telefónom / TV",
+    "transport": "Ride to a clinic / office",
+    "grocery": "Food shopping",
+    "pharmacy": "Medication pickup",
+    "company": "Company / walk",
+    "tech": "Help with phone / TV",
 }
 
 class GigIn(BaseModel):
@@ -58,8 +58,8 @@ async def gig_create(body: GigIn, authorization: Optional[str] = Header(None)):
         eur_part = f" + {gig['reward_eur']} €" if gig["reward_eur"] else ""
         if others:
             await send_push(recipients=[o["user_id"] for o in others],
-                            data={"title": "🤝 SUSED POTREBUJE POMOC",
-                                  "message": f"{GIG_KINDS[body.kind]}: {gig['title']} · odmena {gig['reward_gat']} GA-T{eur_part}",
+                            data={"title": "🤝 A NEIGHBOR NEEDS HELP",
+                                  "message": f"{GIG_KINDS[body.kind]}: {gig['title']} · reward {gig['reward_gat']} GA-T{eur_part}",
                                   "action_url": "/gigs"})
     except Exception:
         pass
@@ -72,17 +72,17 @@ async def gig_accept(gig_id: str, authorization: Optional[str] = Header(None)):
     if not gig:
         raise HTTPException(404, "Gig not found")
     if gig["status"] != "open":
-        raise HTTPException(409, "Gig už nie je voľný")
+        raise HTTPException(409, "Gig is no longer available")
     if gig["user_id"] == user["user_id"]:
-        raise HTTPException(400, "Vlastnú požiadavku nemôžete prijať")
+        raise HTTPException(400, "You cannot accept your own request")
     await db.gigs.update_one({"gig_id": gig_id},
                              {"$set": {"status": "taken", "taker_id": user["user_id"],
                                        "taker_name": (user.get("name") or "Anjel").split(" ")[0],
                                        "taken_at": datetime.now(timezone.utc)}})
     try:
         await send_push(recipients=[gig["user_id"]],
-                        data={"title": "😇 ANJEL PRIJAL VAŠU POŽIADAVKU",
-                              "message": f"{gig['title']} — pomocník je na ceste. Po dokončení potvrďte odmenu.",
+                        data={"title": "😇 THE ANGEL ACCEPTED YOUR REQUEST",
+                              "message": f"{gig['title']} — the helper is on the way. After completion, confirm the reward.",
                               "action_url": "/gigs"})
     except Exception:
         pass
@@ -96,7 +96,7 @@ async def gig_complete(gig_id: str, authorization: Optional[str] = Header(None))
     if not gig:
         raise HTTPException(404, "Gig not found")
     if gig["user_id"] != user["user_id"]:
-        raise HTTPException(403, "Dokončenie potvrdzuje zadávateľ")
+        raise HTTPException(403, "Completion is confirmed by the requester")
     if gig["status"] != "taken":
         raise HTTPException(409, "Gig nie je v stave 'taken'")
     await db.gigs.update_one({"gig_id": gig_id},
@@ -120,8 +120,8 @@ async def gig_complete(gig_id: str, authorization: Optional[str] = Header(None))
         await bus_publish("gigs.completed", "solidarity",
                           {"gig_id": gig_id, "kind": gig["kind"], "gat_rewarded": bool(reward)})
         await send_push(recipients=[gig["taker_id"]],
-                        data={"title": "💎 ODMENA ZA POMOC",
-                              "message": f"Ďakujeme! {'+' + str(reward['amount']) + ' GA-T pripísaných.' if reward else 'GA-T denný limit — odmena zajtra.'}",
+                        data={"title": "💎 REWARD FOR HELPING",
+                              "message": f"Thank you! {''+ str(reward['amount']) + ' GA-T credited.' if reward else 'GA-T daily limit — reward tomorrow.'}",
                               "action_url": "/token"})
     except Exception:
         pass

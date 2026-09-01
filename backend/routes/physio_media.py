@@ -48,7 +48,7 @@ async def physio_video_upload(
     path = f"{APP_NAME}/physio/{user['user_id']}/{video_id}.mp4"
     await run_in_threadpool(put_object_sync, path, data, ctype)
     doc = {"video_id": video_id, "user_id": user["user_id"],
-           "guide_id": guide_id.strip()[:60], "title": title.strip()[:120] or "Expertné video",
+           "guide_id": guide_id.strip()[:60], "title": title.strip()[:120] or "Expert video",
            "author_name": user.get("name") or "Expert",
            "is_global": bool(user.get("is_founder")),
            "content_type": ctype, "size": len(data),
@@ -57,7 +57,7 @@ async def physio_video_upload(
     await db.physio_videos.insert_one(doc.copy())
     # ACCESSIBILITY: auto-caption in the background — Jarvis transcribes the narration for the deaf
     if len(data) <= MAX_TRANSCRIBE:
-        asyncio.create_task(_transcribe_video_task(video_id, user.get("language") or "sk"))
+        asyncio.create_task(_transcribe_video_task(video_id, user.get("language") or "en"))
     return {"ok": True, "video": clean(doc)}
 
 
@@ -115,7 +115,7 @@ async def _structure_steps(transcript: str, language: str) -> list:
             system_message=(
                 "You convert a rehab/massage video narration transcript into clear numbered exercise steps "
                 "for deaf users. Reply ONLY with a JSON array of 3-10 short strings, no markdown. "
-                f"Write the steps in language code '{language[:2] or 'sk'}'."
+                f"Write the steps in language code '{language[:2] or 'en'}'."
             ),
         ).with_model("anthropic", "claude-sonnet-5")
         resp = await chat.send_message(UserMessage(text=transcript[:3000]))
@@ -143,12 +143,12 @@ async def _transcribe_video_task(video_id: str, language: str):
             raise RuntimeError("AI key not configured")
         content, _ = await run_in_threadpool(get_object_sync, v["storage_path"])
         if len(content) > MAX_TRANSCRIBE:
-            raise RuntimeError("Video je väčšie ako 24 MB — titulky podporujú kratšie videá")
+            raise RuntimeError("Video is larger than 24 MB — subtitles support shorter videos")
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
             tmp.write(content)
             tmp_path = tmp.name
         stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
-        result = stt.transcribe(open(tmp_path, "rb"), model="whisper-1", language=language[:2] or "sk")
+        result = stt.transcribe(open(tmp_path, "rb"), model="whisper-1", language=language[:2] or "en")
         if inspect.isawaitable(result):
             result = await result
         if isinstance(result, str):
@@ -158,7 +158,7 @@ async def _transcribe_video_task(video_id: str, language: str):
         else:
             transcript = str(getattr(result, "text", "")).strip()
         if not transcript:
-            raise RuntimeError("Vo videu sa nenašla hovorená narácia")
+            raise RuntimeError("No spoken narration was found in the video")
         steps = await _structure_steps(transcript, language)
         await db.physio_videos.update_one(
             {"video_id": video_id},
@@ -184,7 +184,7 @@ async def physio_video_transcribe(video_id: str, authorization: Optional[str] = 
     v = await db.physio_videos.find_one({"video_id": video_id, "user_id": user["user_id"]}, {"_id": 0})
     if not v:
         raise HTTPException(404, "Video not found or not yours")
-    await _transcribe_video_task(video_id, user.get("language") or "sk")
+    await _transcribe_video_task(video_id, user.get("language") or "en")
     out = await db.physio_videos.find_one({"video_id": video_id}, {"_id": 0})
     return {"ok": out.get("transcript_status") == "done", "video": clean(out)}
 
@@ -216,16 +216,68 @@ DAY_THEMES = {
 ANCHOR_MAP = [("kolen", "knee"), ("chrbt", "spine"), ("záda", "spine"), ("ramen", "shoulders"),
               ("zápäst", "wrists"), ("ruk", "wrists"), ("krk", "cervical"), ("krčn", "cervical")]
 
+# --------- Localized physio messages (pain diary, milestones, pushes) ---------
+PHYSIO_MSG = {
+    "pain_high": {
+        "sk": "Zapísané. Bolesť 8+/10 je signál STOP — dnes už necvičte a ak potrvá do zajtra, kontaktujte lekára.",
+        "cs": "Zapsáno. Bolest 8+/10 je signál STOP — dnes už necvičte a pokud potrvá do zítřka, kontaktujte lékaře.",
+        "en": "Logged. Pain 8+/10 is a STOP signal — no more exercise today, and if it lasts until tomorrow, contact a doctor.",
+        "de": "Notiert. Schmerz 8+/10 ist ein STOPP-Signal — heute nicht mehr trainieren; hält er bis morgen an, kontaktieren Sie einen Arzt.",
+    },
+    "pain_mid": {
+        "sk": "Zapísané. Stredná bolesť — znížte intenzitu a skráťte sériu. Trend sledujem za vás.",
+        "cs": "Zapsáno. Střední bolest — snižte intenzitu a zkraťte sérii. Trend sleduji za vás.",
+        "en": "Logged. Moderate pain — lower the intensity and shorten the set. I'm tracking the trend for you.",
+        "de": "Notiert. Mittlerer Schmerz — Intensität senken und Serie verkürzen. Ich beobachte den Trend für Sie.",
+    },
+    "pain_low": {
+        "sk": "Zapísané. Nízka bolesť — výborné, telo sa hojí. Len tak ďalej!",
+        "cs": "Zapsáno. Nízká bolest — výborně, tělo se hojí. Jen tak dál!",
+        "en": "Logged. Low pain — excellent, your body is healing. Keep it up!",
+        "de": "Notiert. Geringer Schmerz — ausgezeichnet, der Körper heilt. Weiter so!",
+    },
+    "milestone": {
+        "sk": "🎉 MÍĽNIK ZOTAVENIA! Priemer bolesti klesol na {avg}/10 — hojenie krásne napreduje. Oslavujeme!",
+        "cs": "🎉 MILNÍK ZOTAVENÍ! Průměr bolesti klesl na {avg}/10 — hojení krásně postupuje. Slavíme!",
+        "en": "🎉 RECOVERY MILESTONE! Average pain dropped to {avg}/10 — healing is progressing beautifully. Celebrate!",
+        "de": "🎉 GENESUNGS-MEILENSTEIN! Der Schmerzdurchschnitt fiel auf {avg}/10 — die Heilung macht schöne Fortschritte!",
+    },
+    "week_done_title": {
+        "sk": "🏆 TÝŽDEŇ ZOTAVENIA DOKONČENÝ", "cs": "🏆 TÝDEN ZOTAVENÍ DOKONČEN",
+        "en": "🏆 RECOVERY WEEK COMPLETED", "de": "🏆 GENESUNGSWOCHE ABGESCHLOSSEN",
+    },
+    "week_done_msg": {
+        "sk": "Celý 7-dňový plán splnený — Jarvis vám gratuluje. Zajtra môžete zostaviť nový.",
+        "cs": "Celý 7denní plán splněn — Jarvis vám gratuluje. Zítra můžete sestavit nový.",
+        "en": "Full 7-day plan completed — Jarvis congratulates you. You can build a new one tomorrow.",
+        "de": "Der ganze 7-Tage-Plan ist erfüllt — Jarvis gratuliert. Morgen können Sie einen neuen erstellen.",
+    },
+    "reminder_title": {
+        "sk": "🧘 JARVIS — VEČERNÁ PRIPOMIENKA", "cs": "🧘 JARVIS — VEČERNÍ PŘIPOMÍNKA",
+        "en": "🧘 JARVIS — EVENING REMINDER", "de": "🧘 JARVIS — ABENDERINNERUNG",
+    },
+    "reminder_msg": {
+        "sk": "Dnešný deň plánu ({theme}) ešte nie je odškrtnutý. 10 minút pred spaním stačí — telo sa vám poďakuje.",
+        "cs": "Dnešní den plánu ({theme}) ještě není odškrtnutý. 10 minut před spaním stačí — tělo vám poděkuje.",
+        "en": "Today's plan day ({theme}) is not checked off yet. 10 minutes before bed is enough — your body will thank you.",
+        "de": "Der heutige Plantag ({theme}) ist noch nicht abgehakt. 10 Minuten vor dem Schlafen genügen — Ihr Körper dankt es Ihnen.",
+    },
+}
+
+def _pmsg(key: str, lang: Optional[str], **kw) -> str:
+    d = PHYSIO_MSG[key]
+    return d.get((lang or "en")[:2], d["en"]).format(**kw)
+
 
 def _guide_index(lang: str) -> list:
     from content import PHYSIO_GUIDES
     from content_physio import PHYSIO_EXTRA, PHYSIO_CATEGORY
-    lk = lang[:2] if lang[:2] in PHYSIO_EXTRA else "sk"
+    lk = lang[:2] if lang[:2] in PHYSIO_EXTRA else "en"
     out = []
-    for g in PHYSIO_GUIDES.get(lk, PHYSIO_GUIDES["sk"]):
+    for g in PHYSIO_GUIDES.get(lk, PHYSIO_GUIDES["en"]):
         out.append({"id": g["id"], "title": g["title"], "icon": g.get("icon", "body-outline"),
                     "category": PHYSIO_CATEGORY.get(g["id"], "body")})
-    for g in PHYSIO_EXTRA.get(lk, PHYSIO_EXTRA["sk"]):
+    for g in PHYSIO_EXTRA.get(lk, PHYSIO_EXTRA["en"]):
         out.append({"id": g["id"], "title": g["title"], "icon": g.get("icon", "body-outline"),
                     "category": g.get("category", "body")})
     return out
@@ -235,8 +287,8 @@ def _guide_index(lang: str) -> list:
 async def physio_plan_generate(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
-    lang = (user.get("language") or "sk")[:2]
-    lk = lang if lang in DAY_THEMES else "sk"
+    lang = (user.get("language") or "en")[:2]
+    lk = lang if lang in DAY_THEMES else "en"
     guides = _guide_index(lk)
     by_cat: dict = {"body": [], "expert": [], "stress": []}
     for g in guides:
@@ -308,6 +360,21 @@ async def physio_plan_get(authorization: Optional[str] = Header(None)):
     plan = await db.physio_plans.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not plan:
         return {"plan": None}
+    # LANGUAGE CONSISTENCY — if the user switched language after generating the plan,
+    # re-localize weekdays, day themes and guide titles on the fly.
+    lang = (user.get("language") or "en")[:2]
+    lk = lang if lang in DAY_THEMES else "en"
+    if plan.get("language") != lk:
+        titles = {g["id"]: g["title"] for g in _guide_index(lk)}
+        for i, d in enumerate(plan["days"][:7]):
+            d["weekday"] = WEEKDAYS[lk][i]
+            d["theme"] = DAY_THEMES[lk][i][1]
+            for it in d.get("items", []):
+                if it.get("type") == "guide" and it.get("id") in titles:
+                    it["title"] = titles[it["id"]]
+        plan["language"] = lk
+        await db.physio_plans.update_one({"plan_id": plan["plan_id"]},
+                                         {"$set": {"days": plan["days"], "language": lk}})
     done = sum(1 for d in plan["days"] if d.get("done"))
     return {"plan": clean(plan), "done_days": done, "progress_pct": int(done / 7 * 100)}
 
@@ -325,9 +392,10 @@ async def physio_plan_day_done(day: int, authorization: Optional[str] = Header(N
     done = sum(1 for d in plan["days"] if d.get("done"))
     if done == 7:
         try:
+            _wl = user.get("language")
             await send_push(recipients=[user["user_id"]], data={
-                "title": "🏆 TÝŽDEŇ ZOTAVENIA DOKONČENÝ",
-                "message": "Celý 7-dňový plán splnený — Jarvis vám gratuluje. Zajtra môžete zostaviť nový.",
+                "title": _pmsg("week_done_title", _wl),
+                "message": _pmsg("week_done_msg", _wl),
                 "action_url": "/physio"})
         except Exception:
             pass
@@ -352,9 +420,11 @@ async def physio_reminder_sweep(force: bool = False) -> int:
         if await db.physio_reminders.find_one({"user_id": plan["user_id"], "date": today}):
             continue
         try:
+            _ru = await db.users.find_one({"user_id": plan["user_id"]}, {"_id": 0, "language": 1}) or {}
+            _rl = _ru.get("language")
             await send_push(recipients=[plan["user_id"]], data={
-                "title": "🧘 JARVIS — VEČERNÁ PRIPOMIENKA",
-                "message": f"Dnešný deň plánu ({day.get('theme', '')}) ešte nie je odškrtnutý. 10 minút pred spaním stačí — telo sa vám poďakuje.",
+                "title": _pmsg("reminder_title", _rl),
+                "message": _pmsg("reminder_msg", _rl, theme=day.get('theme', '')),
                 "action_url": "/physio"})
         except Exception as e:
             logger.warning(f"physio reminder push: {e}")
@@ -393,18 +463,19 @@ async def pain_log(body: PainIn, authorization: Optional[str] = Header(None)):
            "level": body.level, "guide_id": (body.guide_id or "")[:60] or None,
            "note": (body.note or "")[:200], "created_at": datetime.now(timezone.utc)}
     await db.pain_diary.insert_one(doc.copy())
+    _pl = user.get("language")
     if body.level >= 8:
-        reply = "Zapísané. Bolesť 8+/10 je signál STOP — dnes už necvičte a ak potrvá do zajtra, kontaktujte lekára."
+        reply = _pmsg("pain_high", _pl)
     elif body.level >= 5:
-        reply = "Zapísané. Stredná bolesť — znížte intenzitu a skráťte sériu. Trend sledujem za vás."
+        reply = _pmsg("pain_mid", _pl)
     else:
-        reply = "Zapísané. Nízka bolesť — výborné, telo sa hojí. Len tak ďalej!"
-    milestone, m_msg = await check_pain_milestone(user["user_id"])
+        reply = _pmsg("pain_low", _pl)
+    milestone, m_msg = await check_pain_milestone(user["user_id"], _pl)
     return {"ok": True, "reply": reply, "entry": clean(doc),
             "milestone": milestone, "milestone_message": m_msg}
 
 
-async def check_pain_milestone(uid: str):
+async def check_pain_milestone(uid: str, lang: Optional[str] = None):
     """RECOVERY MILESTONE — celebrate every full-point drop of the 14-day pain average."""
     since = datetime.now(timezone.utc) - timedelta(days=14)
     rows = await db.pain_diary.find(
@@ -422,7 +493,7 @@ async def check_pain_milestone(uid: str):
     if floor_now < prev["best_floor"]:
         await db.pain_milestones.update_one(
             {"user_id": uid}, {"$set": {"best_floor": floor_now, "updated_at": now}})
-        return True, f"🎉 MÍĽNIK ZOTAVENIA! Priemer bolesti klesol na {avg}/10 — hojenie krásne napreduje. Oslavujeme!"
+        return True, _pmsg("milestone", lang, avg=avg)
     return False, ""
 
 

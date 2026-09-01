@@ -118,13 +118,13 @@ async def streak_freeze(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     if not await _freeze_available(uid):
-        raise HTTPException(409, "Tento týždeň už máte využitú ochranu série (jedna na týždeň).")
+        raise HTTPException(409, "You have already used this week’s series protection (one per week).")
     now = datetime.now(timezone.utc)
     # 1) Insert a phantom physio_video so the streak counter includes today.
     await db.physio_videos.insert_one({
         "video_id": f"freeze-{uuid.uuid4().hex}",
         "user_id": uid,
-        "title": "❄ Ochrana série (Save-Freeze)",
+        "title": "❄ Streak Shield (Save-Freeze)",
         "created_at": now,
         "is_freeze": True,
     })
@@ -135,7 +135,7 @@ async def streak_freeze(authorization: Optional[str] = Header(None)):
         "used_at": now,
         "kind": "weekly",
     })
-    return {"ok": True, "used_at": now.isoformat(), "message": "Séria zachránená. Odpočiňte si — vrátite sa silnejší."}
+    return {"ok": True, "used_at": now.isoformat(), "message": "Series saved. Take a break — you’ll come back stronger."}
 
 
 @api.post("/streaks/blazing/celebrated")

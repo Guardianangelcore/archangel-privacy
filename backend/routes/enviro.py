@@ -15,18 +15,18 @@ import uuid
 from core import api, db, clean, get_current_user
 
 THREAT_KINDS = {
-    "heat": {"label": "Extrémne teplo", "icon": "sunny", "sensor": "Teplotný senzor / batéria zariadenia",
-             "guidance": "Hydratácia 3 l/deň, tieň 11:00–16:00, kontrolujte seniorov 2× denne."},
-    "cold": {"label": "Extrémny mráz", "icon": "snow", "sensor": "Teplotný senzor zariadenia",
-             "guidance": "Vrstvenie, chráňte hlavu/krk, pozor na podchladenie (Tactical Medic)."},
-    "radiation": {"label": "Radiačný vzorec", "icon": "nuclear", "sensor": "CMOS kamera (gama šum) — placeholder",
-                  "guidance": "Zostaňte vnútri, utesnite okná, jód len na pokyn autorít. Sledujte mesh."},
-    "air": {"label": "Kvalita vzduchu / dym", "icon": "cloud", "sensor": "Barometer + mikrofón (kašeľ index)",
-            "guidance": "FFP2/FFP3 vonku, čistička alebo mokré plachty vnútri, obmedzte fyzickú záťaž."},
-    "bio": {"label": "Bio-indikátor (epidémia)", "icon": "bug", "sensor": "Anonymný symptóm-mesh komunity",
-            "guidance": "Hygiena rúk, rúško v interiéroch, sledujte teplotu 2× denne, izolujte symptómy."},
-    "flood": {"label": "Povodeň / voda", "icon": "water", "sensor": "GPS + komunitné hlásenia",
-              "guidance": "Presuňte sa vyššie, nevstupujte do prúdiacej vody ani autom."},
+    "heat": {"label": "Extreme heat", "icon": "sunny", "sensor": "Temperature sensor / device battery",
+             "guidance": "Hydration 3 l/day, shade 11:00–16:00, check seniors 2× daily."},
+    "cold": {"label": "Extreme cold", "icon": "snow", "sensor": "Temperature sensor device",
+             "guidance": "Layering, protect head/neck, watch for hypothermia (Tactical Medic)."},
+    "radiation": {"label": "Radiation pattern", "icon": "nuclear", "sensor": "CMOS camera (gamma noise) — placeholder",
+                  "guidance": "Stay indoors, seal windows, iodine only on authority guidance. Monitor mesh."},
+    "air": {"label": "Kvalita vzduchu / dym", "icon": "cloud", "sensor": "Barometer + microphone (cough index)",
+            "guidance": "FFP2/FFP3 outdoors, purifier or wet sheets indoors, limit physical exertion."},
+    "bio": {"label": "Bio-indicator (epidemic)", "icon": "bug", "sensor": "Anonymous symptom mesh of the community",
+            "guidance": "Hand hygiene, mask indoors, monitor temperature 2× daily, isolate symptoms."},
+    "flood": {"label": "Flood / water", "icon": "water", "sensor": "GPS + community reports",
+              "guidance": "Move to higher ground, do not enter flowing water, not even by car."},
 }
 
 class ThreatReportIn(BaseModel):
@@ -47,7 +47,7 @@ async def enviro_report(body: ThreatReportIn, authorization: Optional[str] = Hea
            "reporter": (user.get("name") or "Guardian").split(" ")[0],
            "kind": body.kind, "severity": sev, "city": body.city.strip()[:60],
            "note": (body.note or "")[:200], "lat": body.lat, "lng": body.lng,
-           "mesh_hop": "P2P mesh (simulované šírenie)", "at": datetime.now(timezone.utc)}
+           "mesh_hop": "P2P mesh (simulated propagation)", "at": datetime.now(timezone.utc)}
     await db.enviro_reports.insert_one(rec.copy())
     try:
         from routes.swarm import bus_publish
@@ -76,4 +76,4 @@ async def enviro_threats(authorization: Optional[str] = Header(None)):
     for t in threats:
         t["status"] = "CONFIRMED" if t["reports"] >= 2 else "UNVERIFIED"
     return {"threats": threats, "kinds": THREAT_KINDS, "window_h": 24,
-            "note": "Fúzia senzorov zariadenia + P2P mesh hlásení (SIMULÁCIA). Konsenzus = 2+ nezávislé hlásenia."}
+            "note": "Device sensor fusion + P2P mesh reports (SIMULATION). Consensus = 2+ independent reports."}

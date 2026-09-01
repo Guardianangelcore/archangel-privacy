@@ -5,7 +5,7 @@ import requests
 
 BASE_URL = (os.environ.get("EXPO_BACKEND_URL")
             or os.environ.get("EXPO_PUBLIC_BACKEND_URL")
-            or "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+            or "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 H1 = {"Authorization": "Bearer smoketok-fresh-2026"}      # founder
 H2 = {"Authorization": "Bearer smoketok-fresh-2026-u2"}   # regular user
 
@@ -34,7 +34,7 @@ class TestDemoMode:
         seeded = r.json()["seeded"]
         assert "150 €" in seeded["refund_claim"]
         assert "slot_found" in seeded["waitlist_hunt"]
-        assert "Strážca" in seeded["family_pulse"]
+        assert "Guardian" in seeded["family_pulse"]
         # visible in real dashboards:
         wl = _get("/waitlist").json()
         assert any(w.get("demo") and w.get("status") == "slot_found" for w in wl)

@@ -63,20 +63,20 @@ def _classify(hr, spo2, stress_level, voice_tremor) -> tuple[str, list[str]]:
     if hr is not None:
         if hr >= HR_CRISIS:
             is_crisis = True
-            reasons.append(f"tep {hr} bpm ≥ {HR_CRISIS}")
+            reasons.append(f"heart rate {hr} bpm ≥ {HR_CRISIS}")
         elif hr >= HR_ELEVATED:
             is_elevated = True
-            reasons.append(f"tep {hr} bpm zvýšený")
+            reasons.append(f"heart rate {hr} bpm elevated")
     if spo2 is not None:
         if spo2 < SPO2_CRISIS:
             is_crisis = True
             reasons.append(f"SpO₂ {spo2}% < {SPO2_CRISIS}%")
     if stress_level == STRESS_CRISIS:
         is_elevated = True
-        reasons.append("stres: vysoký")
+        reasons.append("stress: high")
     if voice_tremor is not None and voice_tremor >= VOICE_TREMOR_CRISIS:
         is_crisis = True
-        reasons.append(f"hlasové chvenie {voice_tremor:.2f}")
+        reasons.append(f"voice tremor {voice_tremor:.2f}")
     level = "crisis" if is_crisis else ("elevated" if is_elevated else "calm")
     return level, reasons
 
@@ -100,9 +100,9 @@ async def _resolve_state(user: dict) -> dict:
                     "instructions": [], "emergency_numbers": EMERGENCY_NUMBERS}
     if override.get("manual_trigger"):
         lang = (user.get("language") or "sk")[:2]
-        return {"crisis_level": "crisis", "reasons": ["ručne aktivované"],
+        return {"crisis_level": "crisis", "reasons": ["manually activated"],
                 "source": "manual", "auto_open_hud": True,
-                "instructions": SURVIVAL_INSTRUCTIONS.get(lang, SURVIVAL_INSTRUCTIONS["sk"]),
+                "instructions": SURVIVAL_INSTRUCTIONS.get(lang, SURVIVAL_INSTRUCTIONS["en"]),
                 "emergency_numbers": EMERGENCY_NUMBERS,
                 "guardian_ping_at": override.get("triggered_at").isoformat() if override.get("triggered_at") else None}
     # Automatic: latest bioscan within last 15 minutes
@@ -165,8 +165,8 @@ async def triage_trigger(body: TriggerIn, authorization: Optional[str] = Header(
         if guardians:
             await send_push(
                 recipients=[g["guardian_user_id"] for g in guardians],
-                data={"title": "🚨 GUARDIAN — KRÍZOVÝ REŽIM",
-                      "message": f"{user.get('name') or 'Váš blízky'} má aktivovaný Crisis HUD. Overte stav.",
+                data={"title": "🚨 GUARDIAN — CRISIS MODE",
+                      "message": f"{user.get('name') or 'Your loved one'} has the Crisis HUD active. Please check on them.",
                       "action_url": "/family-dashboard"},
                 idempotency_key=f"triage-{uid}-{int(now.timestamp() // 60)}",
             )
@@ -219,6 +219,6 @@ async def triage_instructions(language: str = "sk", authorization: Optional[str]
     """Fetch the localized 5-step crisis survival instructions (also embedded in state)."""
     _ = await get_current_user(authorization)
     lang = (language or "sk")[:2]
-    instructions = SURVIVAL_INSTRUCTIONS.get(lang, SURVIVAL_INSTRUCTIONS["sk"])
-    header = apply_watermark("Zostaňte v pokoji — Guardian Angel Vás vedie krok za krokom.")
+    instructions = SURVIVAL_INSTRUCTIONS.get(lang, SURVIVAL_INSTRUCTIONS["en"])
+    header = apply_watermark("Stay calm — Guardian Angel is guiding you step by step.")
     return {"instructions": instructions, "header": header, "emergency_numbers": EMERGENCY_NUMBERS}

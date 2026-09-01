@@ -16,14 +16,14 @@ LOCK_VENDORS = ["nuki", "somfy", "tedee", "yale"]
 
 class LockIn(BaseModel):
     vendor: str = "nuki"
-    name: str = "Vchodové dvere"
+    name: str = "Entrance door"
 
 @api.get("/paramedic/locks")
 async def paramedic_locks(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     locks = await db.smart_locks.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
     return {"locks": locks, "vendors": LOCK_VENDORS,
-            "note": "API integrácia Nuki/Somfy je placeholder — kódy sa generujú, reálne odomknutie sa aktivuje po prepojení účtu výrobcu (Phase 3)."}
+            "note": "API integration with Nuki/Somfy is a placeholder — codes are generated, real unlocking is activated after linking the manufacturer's account (Phase 3)."}
 
 @api.post("/paramedic/locks")
 async def paramedic_lock_add(body: LockIn, authorization: Optional[str] = Header(None)):
@@ -72,10 +72,10 @@ async def paramedic_access(body: AccessIn, authorization: Optional[str] = Header
     uid = user["user_id"]
     emergency = await _verified_emergency(uid)
     if not emergency and not body.confirm:
-        raise HTTPException(409, "no_verified_emergency: Za posledných 30 min nebola overená núdzová udalosť (maják/pád/pulse). Pošlite confirm=true pre manuálne vydanie kódu.")
+        raise HTTPException(409, "no_verified_emergency: No verified emergency event (beacon/fall/pulse) in the last 30 min. Send confirm=true to manually issue the code.")
     locks = await db.smart_locks.find({"user_id": uid}, {"_id": 0}).to_list(10)
     if not locks:
-        raise HTTPException(404, "Najprv zaregistrujte smart zámok.")
+        raise HTTPException(404, "First, register the smart lock.")
     code = f"{random.randint(0, 999999):06d}"
     expires = datetime.now(timezone.utc) + timedelta(minutes=60)
     rec = {"access_id": uuid.uuid4().hex, "user_id": uid, "code": code,
@@ -89,8 +89,8 @@ async def paramedic_access(body: AccessIn, authorization: Optional[str] = Header
     try:
         if recipients:
             await send_push(recipients=recipients,
-                            data={"title": "🔑 PARAMEDIC KEY — DOČASNÝ VSTUP",
-                                  "message": f"Núdzový vstupný kód: {code} (platí 60 min). Dôvod: {body.reason}.",
+                            data={"title": "🔑 PARAMEDIC KEY — TEMPORARY ENTRY",
+                                  "message": f"Emergency entry code: {code} (valid for 60 min). Reason: {body.reason}.",
                                   "action_url": "/paramedic"})
     except Exception:
         pass
@@ -112,8 +112,8 @@ async def paramedic_active(authorization: Optional[str] = Header(None)):
 
 
 # ---------------- STATE REGISTRY VERIFICATION (NCZI / ÚZIS — simulated) ----------------
-REGISTRIES = {"SK": "NCZI — Národné centrum zdravotníckych informácií",
-              "CZ": "ÚZIS — Ústav zdravotnických informací a statistiky"}
+REGISTRIES = {"SK": "NCZI — National Centre for Health Information",
+              "CZ": "ÚZIS — Institute of Health Information and Statistics"}
 
 class RegistryVerifyIn(BaseModel):
     license_number: str          # e.g. A12345678
@@ -130,7 +130,7 @@ async def paramedic_verify_registry(body: RegistryVerifyIn, authorization: Optio
         raise HTTPException(400, "country must be SK|CZ")
     lic = body.license_number.strip().upper().replace(" ", "")
     if not (4 <= len(lic) <= 12) or not any(ch.isdigit() for ch in lic):
-        raise HTTPException(400, "Číslo licencie musí mať 4–12 znakov a obsahovať číslice.")
+        raise HTTPException(400, "The license number must be 4–12 characters and contain digits.")
     # Deterministic mock: registry hit when digit-sum is even (stable per licence)
     digit_sum = sum(int(c) for c in lic if c.isdigit())
     valid = digit_sum % 2 == 0
@@ -138,8 +138,8 @@ async def paramedic_verify_registry(body: RegistryVerifyIn, authorization: Optio
            "license_number": lic, "responder_name": body.responder_name.strip()[:80],
            "country": country, "registry": REGISTRIES[country],
            "valid": valid, "simulated": True,
-           "detail": ("Licencia nájdená v registri — zdravotnícky pracovník OVERENÝ." if valid
-                      else "Licencia sa v registri nenašla — vstupný kód NEVYDÁVAJTE."),
+           "detail": ("License found in the register — healthcare worker VERIFIED." if valid
+                      else "License was not found in the register — DO NOT ISSUE the entry code."),
            "at": datetime.now(timezone.utc)}
     await db.registry_verifications.insert_one(rec.copy())
     try:
@@ -155,4 +155,4 @@ async def paramedic_registry_info(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     rows = await db.registry_verifications.find({"user_id": user["user_id"]}, {"_id": 0}).sort("at", -1).to_list(10)
     return {"registries": REGISTRIES, "history": rows,
-            "note": "SIMULÁCIA — reálne NCZI/ÚZIS API vyžaduje štátnu autorizáciu (Phase 3)."}
+            "note": "SIMULATION — the real NCZI/ÚZIS API requires government authorization (Phase 3)."}

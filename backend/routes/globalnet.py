@@ -68,7 +68,7 @@ async def satellite_queue(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     rows = await db.satellite_queue.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(10)
     return {"queue": rows, "protocols": SAT_PROTOCOLS,
-            "note": "SIMULÁCIA — reálny satelitný uplink sa aktivuje po prepojení so Starlink/Globalstar API (Phase 3). Nano-Packety sú plne funkčné a odvysiela ich Swarm."}
+            "note": "SIMULATION — the real satellite uplink activates after linking with the Starlink/Globalstar API (Phase 3). Nano-Packages are fully functional and will be transmitted by Swarm."}
 
 
 # ---------------- 2. UNIVERSAL HEALTH RESUME (HL7 FHIR IPS) ----------------
@@ -208,14 +208,14 @@ async def ips_summary_pdf(token: Optional[str] = None, authorization: Optional[s
 
 # ---------------- 3. GLOBAL HUMANITARIAN LINK (Humanitarian Shield) ----------------
 CATASTROPHE_KINDS = {
-    "war": "Vojnový konflikt / evakuácia",
-    "earthquake": "Zemetrasenie",
-    "flood": "Povodne",
-    "pandemic": "Pandémia",
-    "blackout": "Rozsiahly výpadok infraštruktúry",
+    "war": "War conflict / evacuation",
+    "earthquake": "Earthquake",
+    "flood": "Floods",
+    "pandemic": "Pandemic",
+    "blackout": "Large-scale infrastructure outage",
 }
-_VERIFY_SOURCES = ["GDACS (Global Disaster Alert — simulované)", "WHO Emergency Feed (simulované)",
-                   "ReliefWeb OCHA (simulované)"]
+_VERIFY_SOURCES = ["GDACS (Global Disaster Alert — simulated)", "WHO Emergency Feed (simulated)",
+                   "ReliefWeb OCHA (simulated)"]
 
 class CatastropheIn(BaseModel):
     kind: str = "war"
@@ -228,8 +228,8 @@ async def humanitarian_status(authorization: Optional[str] = Header(None)):
     profile = await db.humanitarian_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0})
     return {"catastrophe_verified": bool(ev), "event": ev, "profile": profile,
             "kinds": CATASTROPHE_KINDS,
-            "recognized_by": ["ICRC / Červený kríž (Restoring Family Links)", "UNHCR PRIMES-kompatibilný záznam", "UN OCHA humanitárne koridory"],
-            "note": "SIMULÁCIA — overenie katastrofy beží na mockovaných feedoch. Reálne API (GDACS/WHO) sa pripája vo Phase 3."}
+            "recognized_by": ["ICRC / Red Cross (Restoring Family Links)", "UNHCR PRIMES-compatible record", "UN OCHA humanitarian corridors"],
+            "note": "SIMULATION — catastrophe verification runs on mocked feeds. The real API (GDACS/WHO) is connected in Phase 3."}
 
 @api.post("/humanitarian/verify")
 async def humanitarian_verify(body: CatastropheIn, authorization: Optional[str] = Header(None)):
@@ -256,7 +256,7 @@ async def humanitarian_profile(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     ev = await db.humanitarian_events.find_one({"verified": True}, {"_id": 0}, sort=[("at", -1)])
     if not ev:
-        raise HTTPException(409, "no_verified_catastrophe: Humanitárny štít sa aktivuje až po overení globálnej katastrofy.")
+        raise HTTPException(409, "no_verified_catastrophe: The humanitarian shield activates only after a global catastrophe is verified.")
     prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     vaccines = await db.calendar_events.find({"user_id": user["user_id"], "child_id": None, "category": "vaccine"},
                                              {"_id": 0, "title": 1, "date": 1}).sort("date", -1).to_list(10)
@@ -286,7 +286,7 @@ async def humanitarian_card_pdf(token: Optional[str] = None, authorization: Opti
     user = await _auth_pdf(authorization, token)
     p = await db.humanitarian_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not p:
-        raise HTTPException(404, "Najprv vygenerujte humanitárny profil.")
+        raise HTTPException(404, "First generate a humanitarian profile.")
     vax = "\n".join([f"  • {v['title']} — {v['date']}" for v in p.get("vaccinations", [])]) or "  — none recorded"
     body_txt = (
         f"HUMANITARIAN ID: {p['hum_id']}\n"

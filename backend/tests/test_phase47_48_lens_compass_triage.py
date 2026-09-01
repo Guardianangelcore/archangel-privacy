@@ -12,7 +12,7 @@ import requests
 from PIL import Image, ImageDraw
 
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL",
-                         "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+                         "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 TOKEN = "smoketok-fresh-2026"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
 WATERMARK = "AI Content · Sovereign Protocol"

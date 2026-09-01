@@ -68,7 +68,7 @@ async def upload_document(
         "event_id": uuid.uuid4().hex, "user_id": user["user_id"],
         "category": "history", "title": f"📄 {doc['title']}"[:140],
         "date": datetime.now(timezone.utc).date().isoformat(),
-        "notes": "Dokument uložený v Zdravotnom trezore", "booster_due": None,
+        "notes": "Document stored in the Health Vault", "booster_due": None,
         "source": "vault", "doc_id": doc_id,
         "created_at": datetime.now(timezone.utc),
     })
@@ -253,9 +253,9 @@ def build_translator_system(lang_code: str) -> str:
         f"You are Jarvis, the Guardian Health medical translator. "
         f"Translate medical reports, diagnoses, and jargon into simple, warm, plain {lang} "
         f"that a senior patient with no medical background can understand. "
-        f"Structure the response as: 1) Súhrn / Summary in 1-2 sentences, "
-        f"2) Čo to znamená / What this means (bullet list of plain-language points), "
-        f"3) Odporúčania / Recommendations (2-3 practical next steps). "
+        f"Structure the response as: 1) Summary in 1-2 sentences, "
+        f"2) What this means (bullet list of plain-language points), "
+        f"3) Recommendations (2-3 practical next steps) — section headings in {lang}. "
         f"NEVER invent medications or diagnoses. If information is unclear, say so. "
         f"Respond ONLY in {lang}." + AI_COMPLIANCE_NOTE
     )
@@ -264,7 +264,7 @@ def build_translator_system(lang_code: str) -> str:
 APPT_SYSTEM = (
     "You extract the next upcoming medical appointment from medical text. "
     'Reply ONLY with strict JSON: {"found": true/false, "date": "YYYY-MM-DD" or null, '
-    '"time": "HH:MM" or null, "title": "short Slovak label, e.g. Kontrola — ortopédia"}. '
+    '"time": "HH:MM" or null, "title": "short label in the language of the document, e.g. Check-up — orthopedics"}. '
     "Only report a date explicitly stated as a FUTURE appointment / check-up "
     "(kontrola, termín, vyšetrenie, dostavte sa, objednaný na). If none, found=false. No prose."
 )
@@ -283,7 +283,7 @@ async def extract_next_appointment(text: str, tag: str) -> Optional[dict]:
         if data.get("found") and data.get("date"):
             datetime.strptime(str(data["date"]), "%Y-%m-%d")
             return {"date": data["date"], "time": data.get("time"),
-                    "title": (data.get("title") or "Kontrola u lekára")[:140]}
+                    "title": (data.get("title") or "Doctor's appointment")[:140]}
     except Exception as e:
         logger.warning(f"appointment extraction failed: {e}")
     return None
@@ -548,7 +548,7 @@ async def exchange_respond(exchange_id: str, body: ExchangeRespondIn, authorizat
     try:
         await send_push(
             recipients=[ex["user_id"]],
-            data={"title": "P2P Výmena 🤝", "message": f"{user.get('name') or 'Sused'} reaguje na: {ex['item_name']}", "action_url": "/medicine-cabinet"},
+            data={"title": "P2P Exchange 🤝", "message": f"{user.get('name') or 'A neighbor'} is responding to: {ex['item_name']}", "action_url": "/medicine-cabinet"},
         )
     except Exception as e:
         logger.warning(f"push failed: {e}")
@@ -713,7 +713,7 @@ async def border_certificate_pdf(token: Optional[str] = None, authorization: Opt
 # --------- MENTAL FORTRESS (Crisis Audio Guide — SK/CS/EN/DE) ---------
 def _content_lang(language: str) -> str:
     lk = (language or "sk").lower()[:2]
-    return lk if lk in ("sk", "cs", "en", "de") else "sk"
+    return lk if lk in ("sk", "cs", "en", "de") else "en"
 
 @api.get("/mental/techniques")
 async def mental_techniques(language: str = "sk", authorization: Optional[str] = Header(None)):
@@ -757,7 +757,7 @@ def _attach_video(g: dict) -> dict:
     vid = PHYSIO_VIDEOS.get(g["id"])
     if vid:
         g["video_url"], g["video_url_sd"] = vid
-        g["video_note"] = "Video: Mixkit free license · demonštračný záber"
+        g["video_note"] = "Video: Mixkit free license · demo clip"
     return g
 
 @api.get("/physio/guides")
@@ -788,9 +788,9 @@ REFERRAL_HINTS = ("ortop", "kardio", "neuro", "chirurg", "onko", "reuma", "urolo
 
 def _guess_specialty(title: str) -> str:
     t = (title or "").lower()
-    for kw, name in (("ortop", "Ortopédia"), ("kardio", "Kardiológia"), ("neuro", "Neurológia"),
-                     ("chirurg", "Chirurgia"), ("onko", "Onkológia"), ("reuma", "Reumatológia"),
-                     ("urolog", "Urológia"), ("gastro", "Gastroenterológia")):
+    for kw, name in (("ortop", "Orthopedics"), ("kardio", "Cardiology"), ("neuro", "Neurology"),
+                     ("chirurg", "Surgery"), ("onko", "Oncology"), ("reuma", "Rheumatology"),
+                     ("urolog", "Urology"), ("gastro", "Gastroenterology")):
         if kw in t:
             return name
     return ""
@@ -1298,7 +1298,7 @@ async def growth_list(child_id: str, authorization: Optional[str] = Header(None)
                       "birth_date": ch.get("birth_date"), "age": _age_from(ch.get("birth_date"))},
             "logs": views, "curves": _growth_curves(sex, max_m),
             "sex_required": sex not in ("m", "f"),
-            "note": "Orientačné percentily podľa rastových štandardov WHO. Váhové percentily do 10 rokov (ďalej sa sleduje BMI)."}
+            "note": "Indicative percentiles per WHO growth standards. Weight percentiles up to age 10 (BMI is tracked afterwards)."}
 
 @api.delete("/lifecard/growth/{log_id}")
 async def growth_delete(log_id: str, authorization: Optional[str] = Header(None)):
@@ -1346,7 +1346,7 @@ async def lifecard_trends_summary(body: Optional[TrendSummaryIn] = None,
         {"user_id": uid, "child_id": child_id, "category": {"$in": list(LIFECARD_CATS)}},
         {"_id": 0, "category": 1, "date": 1, "title": 1}).sort("date", -1).to_list(300)
     if not events:
-        return {"summary": "Zatiaľ nie sú žiadne záznamy na vyhodnotenie trendov. Pridajte prvé záznamy do Karty života.", "ai": False}
+        return {"summary": "No records to evaluate trends yet. Add your first records to the Life Card.", "ai": False}
     lang = (user.get("language") or "sk")[:2]
     out_lang = "Slovak" if lang in ("sk", "cs") else f"the user's app language ({lang})"
     chat = LlmChat(
@@ -1597,8 +1597,8 @@ async def lifecard_ocr(file: UploadFile = File(...), authorization: Optional[str
     return {"found": found, "full_name": name, "birth_date": birth, "blood_type": blood, "ai": True}
 
 # --- PDF KARTY ŽIVOTA — printable health axis for the doctor / family ---
-LIFECARD_LABELS_SK = {"vaccine": "OČKOVANIA", "disease": "CHOROBY", "surgery": "OPERÁCIE",
-                      "injury": "ÚRAZY", "exam": "PREHLIADKY", "dental": "ZUBÁR"}
+LIFECARD_LABELS = {"vaccine": "VACCINATIONS", "disease": "DISEASES", "surgery": "SURGERIES",
+                   "injury": "INJURIES", "exam": "CHECK-UPS", "dental": "DENTAL"}
 
 @api.get("/lifecard/report.pdf")
 async def lifecard_report_pdf(child_id: Optional[str] = None, token: Optional[str] = None,
@@ -1614,22 +1614,22 @@ async def lifecard_report_pdf(child_id: Optional[str] = None, token: Optional[st
     events = await db.calendar_events.find(
         {"user_id": user["user_id"], "child_id": child_id, "category": {"$in": list(LIFECARD_CATS)}},
         {"_id": 0}).sort("date", -1).to_list(500)
-    age = f" (vek {ident['age']} r.)" if ident.get("age") is not None else ""
+    age = f" (age {ident['age']})" if ident.get("age") is not None else ""
     lines = [
-        f"Meno: {ident['full_name'] or '—'}" + ("   (karta dieťaťa)" if child_id else ""),
-        f"Dátum narodenia: {ident['birth_date'] or ident.get('birth_year') or '—'}{age}",
-        f"Krvná skupina: {ident['blood_type'] or '—'}",
+        f"Name: {ident['full_name'] or '—'}" + ("   (child card)" if child_id else ""),
+        f"Date of birth: {ident['birth_date'] or ident.get('birth_year') or '—'}{age}",
+        f"Blood type: {ident['blood_type'] or '—'}",
         f"DID (Guardian ID): {user['did']}",
         "",
     ]
     for cat in LIFECARD_CATS:
-        lines.append(f"{LIFECARD_LABELS_SK[cat]}:")
+        lines.append(f"{LIFECARD_LABELS[cat]}:")
         rows = [e for e in events if e["category"] == cat]
         if not rows:
-            lines.append("   — žiadne záznamy")
+            lines.append("   — no records")
         for e in rows:
             note = f" — {e['notes']}" if e.get("notes") else ""
-            extra = f" · booster do {e['booster_due']}" if e.get("booster_due") else ""
+            extra = f" · booster due {e['booster_due']}" if e.get("booster_due") else ""
             tooth = f" · zub {e['tooth']}" if e.get("tooth") else ""
             lines.append(f"   • {e['date']}   {e['title']}{tooth}{note}{extra}")
         lines.append("")
@@ -1712,12 +1712,12 @@ async def booster_guard_sweep() -> int:
         if e.get("child_id"):
             ch = await db.lifecard_children.find_one({"child_id": e["child_id"]}, {"_id": 0, "name": 1})
             if ch:
-                who = f" (dieťa {ch['name']})"
-        msg = (f"⏰ Blíži sa preskočkovanie{who}: {e['title']} — booster do {e['booster_due']} "
-               f"(o {days_left} dní). Nájdete to v Karte života. Chcete, aby som pohľadal termín u lekára?")
+                who = f" (child {ch['name']})"
+        msg = (f"⏰ Booster shot coming up{who}: {e['title']} — booster due {e['booster_due']} "
+               f"(in {days_left} days). You'll find it in the Life Card. Want me to look for a doctor's appointment?")
         try:
             await send_push(recipients=[e["user_id"]], data={
-                "title": "💉 PRESKOČKOVANIE SA BLÍŽI",
+                "title": "💉 BOOSTER SHOT COMING UP",
                 "message": f"{e['title']}{who} — booster do {e['booster_due']} (o {days_left} dní).",
                 "action_url": "/health-timeline"})
         except Exception as ex:
@@ -1825,12 +1825,12 @@ async def recovery_sickpay(body: SickPayIn, authorization: Optional[str] = Heade
 
     if country in ("SK", "CZ"):
         if body.contract_type in ("dpp", "dpc"):
-            warnings.append("DPP/DPČ: nárok na nemocenské máte len ak ste nemocensky poistený (pravidelný príjem). Overte si to v Sociálnej poisťovni / ČSSZ.")
+            warnings.append("DPP/DPČ contracts: you are entitled to sick pay only if you are covered by sickness insurance (regular income). Verify with Sociálna poisťovňa / ČSSZ.")
         d1_3 = min(days, 3); d4_10 = max(0, min(days, 10) - 3); d11p = max(0, days - 10)
         breakdown = [
-            {"period": "Deň 1–3 (zamestnávateľ, 25 %)", "days": d1_3, "amount": round(d1_3 * dvz * 0.25, 2)},
-            {"period": "Deň 4–10 (zamestnávateľ, 55 %)", "days": d4_10, "amount": round(d4_10 * dvz * 0.55, 2)},
-            {"period": "Deň 11+ (Sociálna poisťovňa / ČSSZ, 55 %)", "days": d11p, "amount": round(d11p * dvz * 0.55, 2)},
+            {"period": "Day 1–3 (employer, 25 %)", "days": d1_3, "amount": round(d1_3 * dvz * 0.25, 2)},
+            {"period": "Day 4–10 (employer, 55 %)", "days": d4_10, "amount": round(d4_10 * dvz * 0.55, 2)},
+            {"period": "Day 11+ (Sociálna poisťovňa / ČSSZ, 55 %)", "days": d11p, "amount": round(d11p * dvz * 0.55, 2)},
         ]
     elif country == "EU":
         d1_14 = min(days, 14); d15p = max(0, days - 14)
@@ -1863,7 +1863,7 @@ async def recovery_sickpay(body: SickPayIn, authorization: Optional[str] = Heade
         "shortfall": shortfall, "shortfall_pct": shortfall_pct,
         "solidarity_suggested": shortfall_pct >= 30,
         "warnings": warnings,
-        "disclaimer": "Orientačný výpočet (zjednodušené pravidlá 2026). Presné sumy určí príslušná poisťovňa / úrad.",
+        "disclaimer": "Indicative calculation (simplified 2026 rules). Exact amounts are determined by the relevant insurer / authority.",
         "simulated": True,
     }
 
@@ -1873,24 +1873,24 @@ async def recovery_report_pdf(kind: str = "employer", token: Optional[str] = Non
     rec = await db.recovery.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not rec:
         raise HTTPException(404, "No sick leave record")
-    outs = ", ".join([f"{o['from_time']}–{o['to_time']}" for o in rec.get("outings", [])]) or "bez vychádzok"
+    outs = ", ".join([f"{o['from_time']}–{o['to_time']}" for o in rec.get("outings", [])]) or "no outings"
     if kind == "social":
-        title = "HLÁSENIE PRE SOCIÁLNU POISŤOVŇU / ČSSZ\nSTATUS DOČASNEJ PRÁCENESCHOPNOSTI"
+        title = "REPORT FOR THE SOCIAL INSURANCE AGENCY (Sociálna poisťovňa / ČSSZ)\nTEMPORARY SICK LEAVE STATUS"
         recipient = "Sociálna poisťovňa / ČSSZ"
     else:
-        title = "HLÁSENIE PRE ZAMESTNÁVATEĽA\nSTATUS DOČASNEJ PRÁCENESCHOPNOSTI (ePN)"
-        recipient = "Zamestnávateľ"
+        title = "REPORT FOR THE EMPLOYER\nTEMPORARY SICK LEAVE STATUS (ePN)"
+        recipient = "Employer"
     body_txt = (
-        f"Adresát: {recipient}\n"
-        f"Meno: {user.get('name') or '—'}\n"
+        f"Recipient: {recipient}\n"
+        f"Name: {user.get('name') or '—'}\n"
         f"DID (Guardian ID): {user['did']}\n\n"
-        f"Začiatok PN: {rec['start_date']}\n"
-        f"Predpokladané ukončenie: {rec.get('end_date') or 'podľa rozhodnutia lekára'}\n"
-        f"Povolené vychádzky: {outs}\n"
-        f"Typ úväzku: {rec.get('contract_type', 'fulltime').upper()}\n"
-        f"Stav rekonvalescencie: {rec.get('note') or 'prebieha podľa pokynov lekára'}\n\n"
-        f"Toto hlásenie bolo vygenerované aplikáciou Guardian Health & Angel na žiadosť pacienta.\n"
-        f"Vygenerované: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        f"Sick leave start: {rec['start_date']}\n"
+        f"Expected end: {rec.get('end_date') or 'per doctor’s decision'}\n"
+        f"Permitted outings: {outs}\n"
+        f"Contract type: {rec.get('contract_type', 'fulltime').upper()}\n"
+        f"Recovery status: {rec.get('note') or 'progressing per doctor’s instructions'}\n\n"
+        f"This report was generated by the Guardian Health & Angel app at the patient's request.\n"
+        f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
     )
     pdf = await run_in_threadpool(_make_pdf, title, body_txt, _pdf_footer())
     return _pdf_response(pdf, f"guardian_pn_report_{kind}.pdf")
@@ -1925,7 +1925,7 @@ class MagicLensIn(BaseModel):
 
 @api.post("/magic-lens")
 async def magic_lens(body: MagicLensIn, authorization: Optional[str] = Header(None)):
-    await get_current_user(authorization)
+    ml_user = await get_current_user(authorization)
     b64 = (body.image_base64 or "").split(",")[-1].strip()
     if not b64:
         raise HTTPException(400, "Empty image")
@@ -1948,6 +1948,15 @@ async def magic_lens(body: MagicLensIn, authorization: Optional[str] = Header(No
     cat = str(d.get("detected_category") or "other").lower()
     if cat not in MAGIC_TO_LIFECARD:
         cat = "other"
+    # GA-T reward for enriching the Life Card with a scanned document (Mosaic data flow)
+    gat_reward = 0.0
+    if bool(d.get("found")):
+        try:
+            from routes.token import award_tokens
+            gat_tx = await award_tokens(ml_user["user_id"], "document_scan", f"magic lens: {cat}")
+            gat_reward = gat_tx["amount"] if gat_tx else 0.0
+        except Exception as e:
+            logger.warning(f"document_scan GA-T award failed: {e}")
     return {
         "found": bool(d.get("found")),
         "extracted_text": str(d.get("extracted_text") or "")[:8000],
@@ -1955,4 +1964,5 @@ async def magic_lens(body: MagicLensIn, authorization: Optional[str] = Header(No
         "detected_category": cat,
         "suggested_title": str(d.get("suggested_title") or "Health document")[:80],
         "lifecard_category": MAGIC_TO_LIFECARD[cat],
+        "gat_reward": gat_reward,
     }

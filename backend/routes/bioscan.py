@@ -46,7 +46,7 @@ async def bioscan_measure(body: ScanIn, authorization: Optional[str] = Header(No
         access = "tier"
     else:
         if not body.pay_gat:
-            raise HTTPException(402, "payment_required: Bio-Scanner = 5 GA-T za sken, alebo Sentinel (€149/mes.) neobmedzene. Aktivujte 7-dňový trial zadarmo v Subscription.")
+            raise HTTPException(402, "payment_required: Bio-Scanner = 5 GA-T per scan, or unlimited with Sentinel (€149/mo.). Activate the free 7-day trial in Subscription.")
         from routes.token import token_spend, SpendIn
         await token_spend(SpendIn(item="bioscan_single"), authorization)  # raises 402 if insufficient
         await record_revenue("payperuse", 0.5, uid, {"item": "bioscan_single", "gat": 5})
@@ -74,7 +74,7 @@ async def bioscan_history(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     rows = await db.bioscan_results.find({"user_id": user["user_id"]}, {"_id": 0}).sort("at", -1).to_list(20)
     return {"scans": rows,
-            "note": "SIMULÁCIA — rPPG signál z kamery sa aktivuje v natívnom CV builde (Phase 3). Hodnoty sú orientačné, nie diagnóza."}
+            "note": "SIMULATION — the camera rPPG signal activates in the native CV build (Phase 3). Values are indicative, not a diagnosis."}
 
 # --------- MANUAL CALIBRATION (Wheel-Picker) — BP / glucose / HR ---------
 class CalibrateIn(BaseModel):

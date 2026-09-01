@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/auth';
 import { api as apiCall } from '@/src/api';
 import { C, S } from '@/src/theme';
@@ -15,6 +16,7 @@ const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
 
 export default function Login() {
   const { signIn, signInDev, signInPassword, registerPassword, authError } = useAuth();
+  const router = useRouter();
   const [lang, setLang] = useState<Lang>('en');
   const [busy, setBusy] = useState<'google' | 'dev' | 'pw' | null>(null);
   const [showBypass, setShowBypass] = useState(false);
@@ -25,6 +27,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   // Forgot-password flow
   const [resetMode, setResetMode] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
@@ -65,6 +68,7 @@ export default function Login() {
     try {
       if (pwMode === 'register') {
         if (password.length < 12) throw new Error('Password must be at least 12 characters.');
+        if (!agreeTerms) throw new Error('You must agree to the Terms of Service and Privacy Policy.');
         await registerPassword(email, password);
       } else {
         await signInPassword(email, password);
@@ -218,13 +222,28 @@ export default function Login() {
               />
             </>
           )}
+          {/* MANDATORY CONSENT — required before an account can be created */}
+          {!resetMode && pwMode === 'register' && (
+            <View style={styles.agreeRow}>
+              <Pressable testID="reg-agree" onPress={() => setAgreeTerms(v => !v)} hitSlop={12}>
+                <Ionicons name={agreeTerms ? 'checkbox' : 'square-outline'} size={24}
+                  color={agreeTerms ? '#7BE0AD' : 'rgba(255,255,255,0.7)'} />
+              </Pressable>
+              <Text style={styles.agreeText}>
+                I agree to the{' '}
+                <Text testID="reg-tos-link" style={styles.agreeLink} onPress={() => router.push('/terms-of-service')}>Terms of Service</Text>
+                {' '}and the{' '}
+                <Text testID="reg-privacy-link" style={styles.agreeLink} onPress={() => router.push('/privacy-policy')}>Privacy Policy</Text>
+              </Text>
+            </View>
+          )}
           {!resetMode ? (
           <Pressable
             testID="pw-submit"
             onPress={onPassword}
-            disabled={busy !== null || !email.includes('@') || password.length === 0}
+            disabled={busy !== null || !email.includes('@') || password.length === 0 || (pwMode === 'register' && !agreeTerms)}
             style={({ pressed }) => [styles.signBtn, pressed && { opacity: 0.85 },
-              (busy !== null || !email.includes('@') || password.length === 0) && { opacity: 0.55 }]}
+              (busy !== null || !email.includes('@') || password.length === 0 || (pwMode === 'register' && !agreeTerms)) && { opacity: 0.55 }]}
           >
             {busy === 'pw'
               ? <ActivityIndicator color={C.inverse} />
@@ -389,6 +408,9 @@ const styles = StyleSheet.create({
   err: { color: C.error, fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   info: { color: '#7BE0AD', fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   resetTitle: { color: C.onInverse, fontSize: 12, fontWeight: '900', letterSpacing: 2, textAlign: 'center', paddingVertical: 6 },
+  agreeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  agreeText: { flex: 1, color: C.onInverse, opacity: 0.85, fontSize: 11.5, lineHeight: 17 },
+  agreeLink: { color: '#7BE0AD', fontWeight: '900', textDecorationLine: 'underline' },
   linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 2 },
   footer: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center', marginTop: 6 },
   footerArt50: { color: C.onInverse, opacity: 0.45, fontSize: 8, letterSpacing: 1, textAlign: 'center', marginTop: 2 },

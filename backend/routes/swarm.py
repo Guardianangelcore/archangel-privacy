@@ -54,33 +54,33 @@ async def seed_depin():
 # ---------------- AGENT SWARM ----------------
 AGENTS = {
     "waitlist_hunter":   {"interval": 60, "label": "Waitlist Hunter Agent",
-                          "desc": "Autonómne hľadá a rezervuje uvoľnené termíny"},
+                          "desc": "Autonomously searches for and reserves available appointments"},
     "marketplace":       {"interval": 90, "label": "Data Marketplace Agent",
-                          "desc": "Spravuje anonymné datasety a GA-T odmeny (Proof-of-Health)"},
+                          "desc": "Manages anonymous datasets and GA-T rewards (Proof-of-Health)"},
     "data_broker":       {"interval": 180, "label": "Wealth-Agent (Data Broker)",
-                          "desc": "Autonómne vyjednáva predaj anonymných dát — kolá, protiponuky, uzávierka +15-40 %"},
+                          "desc": "Autonomously negotiates the sale of anonymous data — rounds, counteroffers, close +15-40 %"},
     "gbi_distributor":   {"interval": 300, "label": "GBI Distributor (Living Currency)",
-                          "desc": "Vypláca Guardian Basic Income — denný GA-T príjem každému aktívnemu Guardianovi"},
+                          "desc": "Pays out Guardian Basic Income — a daily GA-T income to every active Guardian"},
     "safety":            {"interval": 45, "label": "Safety Monitoring Agent",
-                          "desc": "24/7 dohľad — eskaluje nezodpovedané pulse pingy"},
+                          "desc": "24/7 monitoring — escalates unanswered pulse pings"},
     "security_sentinel": {"interval": 30, "label": "Security Sentinel",
-                          "desc": "Behaviorálna detekcia anomálií + self-healing uzlov"},
+                          "desc": "Behavioral anomaly detection + self-healing nodes"},
     "wealth_sentinel":   {"interval": 120, "label": "Wealth Sentinel (Insurance Guard)",
-                          "desc": "Stráži poistky — pri prepadnutí spustí Jarvis alarm + mikro-pôžičku"},
+                          "desc": "Watches over insurance safeguards — if they fail, triggers a Jarvis alarm + micro-loan"},
     "news_sentinel":     {"interval": 300, "label": "Medical News Sentinel",
-                          "desc": "Krížuje svetové medicínske prelomy s tvojím Trezorom → prioritné alerty"},
+                          "desc": "Cross-references global medical breakthroughs with your Vault → priority alerts"},
     "sovereign_guard":   {"interval": 45, "label": "Sovereign Guard (Recovery · 2FA · SAT-uplink)",
-                          "desc": "Spravuje obnovu účtov, 2FA handshaky, Bio-Beacony a satelitné Nano-Packety"},
+                          "desc": "Manages account recovery, 2FA handshakes, Bio-Beacons, and satellite Nano-Packets"},
     "system_janitor":    {"interval": 120, "label": "System Janitor (Self-Repair)",
-                          "desc": "Autonómne skenuje a opravuje nekonzistencie — chýbajúce záznamy časovej osi, geo kontext, integritu dát"},
-    "companion_care":    {"interval": 600, "label": "Companion Care (Ranná pripomienka)",
-                          "desc": "Jemne pripomenie seniorom dennú otázku Spoločníka, keď ráno zabudnú odpovedať"},
-    "weekly_reporter":   {"interval": 3600, "label": "Weekly Reporter (Nedeľný report)",
-                          "desc": "Každú nedeľu uloží týždenný report uzdravenia priamo do Zdravotného trezora"},
-    "physio_coach":      {"interval": 900, "label": "Physio Coach (Večerná pripomienka)",
-                          "desc": "Večer pripomenie, keď dnešný deň týždenného plánu zotavenia nie je odškrtnutý"},
-    "booster_guard":     {"interval": 3600, "label": "Booster Guard (Preskočkovanie)",
-                          "desc": "Stráži boostery vakcín — Jarvis sa ohlási 30 a 7 dní pred termínom"},
+                          "desc": "Autonomously scans and fixes inconsistencies — missing timeline entries, geo context, data integrity"},
+    "companion_care":    {"interval": 600, "label": "Companion Care (Morning reminder)",
+                          "desc": "Gently reminds seniors of the Companion’s daily question when they forget to answer in the morning"},
+    "weekly_reporter":   {"interval": 3600, "label": "Weekly Reporter (Sunday report)",
+                          "desc": "Every Sunday saves the weekly healing report directly into the Health Vault"},
+    "physio_coach":      {"interval": 900, "label": "Physio Coach (Evening Reminder)",
+                          "desc": "The evening reminds when today's day of the weekly recovery plan is not checked off"},
+    "booster_guard":     {"interval": 3600, "label": "Booster Guard (Skipping)",
+                          "desc": "Guards vaccine boosters — Jarvis will remind 30 and 7 days before the due date"},
 }
 
 async def _agent_waitlist_hunter() -> int:
@@ -100,12 +100,12 @@ async def _agent_waitlist_hunter() -> int:
                                                "found_at": datetime.now(timezone.utc), "found_by": "swarm"}})
         await db.calendar_events.insert_one({
             "event_id": uuid.uuid4().hex, "user_id": item["user_id"], "category": "exam",
-            "title": f"{item.get('specialty', 'Termín')} — {slot['clinic']}", "date": slot["date"],
-            "notes": f"Swarm Agent · {slot['time']} · autonómne nájdený", "booster_due": None,
+            "title": f"{item.get('specialty', 'Appointment')} — {slot['clinic']}", "date": slot["date"],
+            "notes": f"Swarm Agent · {slot['time']} · autonomously found", "booster_due": None,
             "source": "swarm:waitlist_hunter", "created_at": datetime.now(timezone.utc)})
         try:
             await send_push(recipients=[item["user_id"]],
-                            data={"title": "🤖 SWARM NAŠIEL TERMÍN", "message": f"{item.get('specialty', '')}: {found}",
+                            data={"title": "🤖 SWARM FOUND APPOINTMENT", "message": f"{item.get('specialty', '')}: {found}",
                                   "action_url": "/health-timeline"})
         except Exception:
             pass
@@ -117,7 +117,7 @@ async def _agent_marketplace() -> int:
     actions = 0
     optins = await db.marketplace_optins.find({"enabled": True}, {"_id": 0, "user_id": 1}).to_list(100)
     for o in optins:
-        tx = await award_tokens(o["user_id"], "proof_of_health", "dataset drip — anonymný insight (swarm)")
+        tx = await award_tokens(o["user_id"], "proof_of_health", "dataset drip — anonymous insight (swarm)")
         if tx:
             actions += 1
     if actions:
@@ -132,8 +132,8 @@ async def _agent_data_broker() -> int:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     buyers = ["NordicHealth Analytics", "Zurich Re Research", "Tokyo Wellness Lab",
               "Berlin BioData Exchange", "Andes Longevity Institute"]
-    datasets = ["anonymné vitálne trendy", "liekové adherencie", "spánkové vzorce",
-                "environmentálne expozície", "rehabilitačné metriky"]
+    datasets = ["anonymous vital trends", "medication adherence", "sleep patterns",
+                "environmental exposures", "rehabilitation metrics"]
     optins = await db.marketplace_optins.find({"enabled": True}, {"_id": 0, "user_id": 1}).to_list(100)
     for o in optins:
         dup = await db.data_deals.find_one({"user_id": o["user_id"], "date": today})
@@ -151,11 +151,11 @@ async def _agent_data_broker() -> int:
             "uplift_pct": round((uplift - 1) * 100, 1), "status": "closed",
             "negotiated_by": "wealth_agent", "at": datetime.now(timezone.utc)})
         await award_tokens(o["user_id"], "proof_of_health",
-                           f"Wealth-Agent: predaj dát ({final} GA-T, +{round((uplift - 1) * 100)} % vyjednané)")
+                           f"Wealth-Agent: data sale ({final} GA-T, +{round((uplift - 1) * 100)} % negotiated)")
         try:
             await send_push(recipients=[o["user_id"]], data={
                 "title": "🤝 WEALTH-AGENT UZAVREL OBCHOD",
-                "message": f"Predaj anonymných dát vyjednaný z {opening} na {final} GA-T ({rounds} kolá).",
+                "message": f"Anonymous data sale negotiated from {opening} to {final} GA-T ({rounds} rounds).",
                 "action_url": "/marketplace"})
         except Exception:
             pass
@@ -175,7 +175,7 @@ async def _agent_safety() -> int:
                                            {"$set": {"escalated": True, "escalated_at": datetime.now(timezone.utc)}})
         try:
             await send_push(recipients=[req["from_user"]],
-                            data={"title": "⚠️ BEZ ODPOVEDE 15 MIN", "message": "Tichý ping bez reakcie — odporúčame zavolať alebo navštíviť.",
+                            data={"title": "⚠️ BEZ ODPOVEDE 15 MIN", "message": "Silent ping with no response — we recommend calling or visiting.",
                                   "action_url": "/pulse-check"})
         except Exception:
             pass
@@ -196,8 +196,8 @@ async def _agent_safety() -> int:
                                              "at": datetime.now(timezone.utc)})
         try:
             await send_push(recipients=[a["user_id"]], data={
-                "title": "🛡 SAFETY-AGENT: QR TALIZMAN NEÚPLNÝ",
-                "message": "Chýba krvná skupina alebo ICE kontakt — záchranári potrebujú kompletný talizman.",
+                "title": "🛡 SAFETY-AGENT: QR TALISMAN INCOMPLETE",
+                "message": "Missing blood type or ICE contact — rescuers need the complete talisman.",
                 "action_url": "/emergency-qr"})
         except Exception:
             pass
@@ -245,7 +245,7 @@ async def _agent_security_sentinel() -> int:
             await db.security_events.insert_one({
                 "event_id": uuid.uuid4().hex, "kind": "self_heal", "severity": "info",
                 "node_id": n["node_id"],
-                "detail": f"Uzol {n['node_id']} degradoval ({health:.0f}%) — re-imaged, shard re-pinned, kľúče rotované.",
+                "detail": f"Node {n['node_id']} degraded ({health:.0f}%) — re-imaged, shard re-pinned, keys rotated.",
                 "at": now})
             await bus_publish("security.self_heal", "security_sentinel", {"node_id": n["node_id"]})
             actions += 1
@@ -265,7 +265,7 @@ async def _agent_security_sentinel() -> int:
         await db.security_events.insert_one({
             "event_id": uuid.uuid4().hex, "kind": "rate_anomaly", "severity": "warning",
             "partner": b["_id"], "bucket": bucket,
-            "detail": f"Neobvyklý nápor {b['count']} požiadaviek/10 min od '{b['_id']}' — kľúč dočasne priškrtený (throttled).",
+            "detail": f"Unusual surge of {b['count']} requests/10 min from '{b['_id']}' — key temporarily throttled.",
             "at": now})
         await bus_publish("security.rate_anomaly", "security_sentinel", {"partner": b["_id"], "count": b["count"]})
         actions += 1
@@ -288,7 +288,7 @@ async def _agent_wealth_sentinel() -> int:
         try:
             await send_push(recipients=[p["user_id"]],
                             data={"title": "🚨 JARVIS ALARM: POISTKA PREPADLA",
-                                  "message": f"{p['provider']} ({p['type']}) nie je zaplatená. Hrozí zánik krytia — otvorte Insurance Guard alebo požiadajte o mikro-pôžičku v Solidarity Hube.",
+                                  "message": f"{p['provider']} ({p['type']}) is unpaid. Coverage is at risk — open Insurance Guard or request a micro-loan in Solidarity Hub.",
                                   "action_url": "/insurance"})
         except Exception:
             pass
@@ -322,7 +322,7 @@ async def _agent_news_sentinel() -> int:
             # autonomously — no question asked, the slot lands in the calendar.
             udoc = await db.users.find_one({"user_id": u["user_id"]}, {"_id": 0, "jarvis_autopilot": 1})
             if (udoc or {}).get("jarvis_autopilot", True):
-                spec = (n.get("tags") or ["Špecialista"])[0].capitalize()
+                spec = (n.get("tags") or ["Specialist"])[0].capitalize()
                 await db.waitlist.insert_one({
                     "item_id": uuid.uuid4().hex, "user_id": u["user_id"],
                     "specialty": spec, "city": n.get("hunt_city", ""),
@@ -333,8 +333,8 @@ async def _agent_news_sentinel() -> int:
                                   {"user": u["user_id"][:8], "specialty": spec, "news_id": n["news_id"]})
             try:
                 await send_push(recipients=[u["user_id"]],
-                                data={"title": "🔬 MEDICÍNSKY PRELOM PRE VÁS",
-                                      "message": f"{n['title']} — klinika {n['hunt_city']} ({n['region']}). Mám uloviť termín?",
+                                data={"title": "🔬 MEDICAL BREAKTHROUGH FOR YOU",
+                                      "message": f"{n['title']} — clinic {n['hunt_city']} ({n['region']}). Should I hunt down an appointment?",
                                       "action_url": "/medical-news"})
             except Exception:
                 pass
@@ -371,11 +371,11 @@ async def _agent_sovereign_guard() -> int:
     for p in queued:
         await db.satellite_queue.update_one({"packet_id": p["packet_id"]},
                                             {"$set": {"status": "broadcasted", "broadcast_at": now,
-                                                      "constellation": "GA-SAT/1 (simulované vysielanie)"}})
+                                                      "constellation": "GA-SAT/1 (simulated broadcast)"}})
         try:
             await send_push(recipients=[p["user_id"]],
-                            data={"title": "🛰️ NANO-PACKET ODVYSIELANÝ",
-                                  "message": f"Satelitná núdzová správa ({p['packet_bytes']} B) bola odvysielaná (simulácia).",
+                            data={"title": "🛰️ NANO-PACKET TRANSMITTED",
+                                  "message": f"Satellite emergency report ({p['packet_bytes']} B) was broadcast (simulation).",
                                   "action_url": "/compass"})
         except Exception:
             pass
@@ -400,8 +400,8 @@ async def _agent_sovereign_guard() -> int:
         recipients = [u["user_id"] async for u in db.users.find({}, {"_id": 0, "user_id": 1}).limit(100)]
         try:
             await send_push(recipients=recipients,
-                            data={"title": "🌍 POTVRDENÁ ENVIRONMENTÁLNA HROZBA",
-                                  "message": f"Mesh konsenzus ({len(reps)} hlásení): {kind.upper()} — {reps[0]['city'] or 'región'}. Otvorte pokyny.",
+                            data={"title": "🌍 CONFIRMED ENVIRONMENTAL THREAT",
+                                  "message": f"Mesh consensus ({len(reps)} reports): {kind.upper()} — {reps[0]['city'] or 'region'}. Open instructions.",
                                   "action_url": "/enviro"})
         except Exception:
             pass
@@ -441,7 +441,7 @@ async def _agent_system_janitor() -> int:
         await db.calendar_events.insert_one({
             "event_id": uuid.uuid4().hex, "user_id": d["user_id"], "category": "history",
             "title": f"📄 {d.get('title', 'Dokument')}"[:140], "date": date,
-            "notes": "Doplnené System Janitorom (self-repair)", "booster_due": None,
+            "notes": "Completed by System Janitor (self-repair)", "booster_due": None,
             "source": "janitor:backfill", "doc_id": d["doc_id"],
             "created_at": datetime.now(timezone.utc)})
         repaired_timeline += 1
@@ -586,7 +586,7 @@ async def janitor_status(authorization: Optional[str] = Header(None)):
 async def depin_status(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     nodes = await db.depin_nodes.find({}, {"_id": 0}).sort("node_id", 1).to_list(20)
-    return {"nodes": nodes, "topology": "P2P mesh (simulácia — Phase 3: reálny DePIN)",
+    return {"nodes": nodes, "topology": "P2P mesh (simulation — Phase 3: real DePIN)",
             "single_point_of_failure": False,
             "core_shard_on": [n["node_id"] for n in nodes if "core-logic" in n.get("shard", "")]}
 
@@ -611,7 +611,7 @@ async def depin_safe_migration(authorization: Optional[str] = Header(None)):
         new_ids.append(t["node_id"])
     report = {"migration_id": uuid.uuid4().hex, "from": old, "to": new_ids,
               "triggered_by": user["user_id"], "at": datetime.now(timezone.utc),
-              "note": "Core-logic shard presunutý na najzdravšie overené uzly. Žiadny výpadok (hot hand-off)."}
+              "note": "Core-logic shard moved to the healthiest verified nodes. No outage (hot hand-off)."}
     await db.security_events.insert_one({"event_id": uuid.uuid4().hex, "kind": "safe_migration",
                                          "severity": "info", "detail": f"Safe-Migration: {old} → {new_ids}",
                                          "at": report["at"]})
@@ -634,7 +634,7 @@ async def stability_audit(authorization: Optional[str] = Header(None)):
     # 1. Database
     try:
         await db.command("ping")
-        checks.append({"check": "database", "ok": True, "detail": "MongoDB odpovedá"})
+        checks.append({"check": "database", "ok": True, "detail": "MongoDB responds"})
     except Exception as e:
         checks.append({"check": "database", "ok": False, "detail": str(e)})
 
@@ -644,19 +644,19 @@ async def stability_audit(authorization: Optional[str] = Header(None)):
     agents = await db.swarm_agents.find({}, {"_id": 0}).to_list(len(AGENTS) + 10)
     fresh = [a for a in agents if a.get("last_status") == "ok"]
     checks.append({"check": "swarm_agents", "ok": len(fresh) == len(AGENTS),
-                   "detail": f"{len(fresh)}/{len(AGENTS)} agentov beží autonómne (loop_active={_loop_started})"})
+                   "detail": f"{len(fresh)}/{len(AGENTS)} agents are running autonomously (loop_active={_loop_started})"})
 
     # 3. Neural Bus
     try:
         await bus_publish("audit.probe", "audit", {"probe": now.isoformat()})
-        checks.append({"check": "neural_bus", "ok": True, "detail": "Bus zapisuje so ZK-commitment obálkami"})
+        checks.append({"check": "neural_bus", "ok": True, "detail": "Bus writes with ZK-commitment envelopes"})
     except Exception as e:
         checks.append({"check": "neural_bus", "ok": False, "detail": str(e)})
 
     # 4. GA-T ledger chain
     chain = await verify_ledger_chain()
     checks.append({"check": "token_ledger_chain", "ok": chain["intact"],
-                   "detail": f"Hash-chain intact: {chain['intact']} ({chain['entries']} záznamov)"})
+                   "detail": f"Hash-chain intact: {chain['intact']} ({chain['entries']} entries)"})
 
     # 5. Supply invariant
     s = await db.token_supply.find_one({"key": "gat"}, {"_id": 0})
@@ -669,24 +669,24 @@ async def stability_audit(authorization: Optional[str] = Header(None)):
     healthy = [n for n in nodes if n["health"] >= 70 and n["verified"]]
     core_ok = any("core-logic" in n.get("shard", "") for n in nodes)
     checks.append({"check": "depin_quorum", "ok": len(healthy) >= 4 and core_ok,
-                   "detail": f"{len(healthy)}/{len(nodes)} uzlov zdravých, core shard pripnutý: {core_ok}"})
+                   "detail": f"{len(healthy)}/{len(nodes)} healthy nodes, core shard pinned: {core_ok}"})
 
     # 7. E2E / ZK layer (Health Drop tweetnacl pubkeys)
     e2e_users = await db.users.count_documents({"drop_public_key": {"$exists": True, "$ne": None}})
     checks.append({"check": "e2e_encryption", "ok": True,
-                   "detail": f"Zero-knowledge Health Drop aktívny ({e2e_users} užívateľov s E2E kľúčom)"})
+                   "detail": f"Zero-knowledge Health Drop active ({e2e_users} users with E2E key)"})
 
     # 8. Proof of Origin anchored
     origin = await db.ip_protection.find_one({"kind": "proof_of_origin"}, {"_id": 0}, sort=[("anchored_at", -1)])
     checks.append({"check": "proof_of_origin", "ok": bool(origin and origin.get("anchored")),
-                   "detail": f"Build {ORIGIN.get('build', '?')} ukotvený na Bitcoin (OpenTimestamps)"})
+                   "detail": f"Build {ORIGIN.get('build', '?')} anchored on Bitcoin (OpenTimestamps)"})
 
     # 9. Medical News Sentinel feed
     from routes.news import ensure_news_seed
     await ensure_news_seed()
     news_count = await db.medical_news.count_documents({})
     checks.append({"check": "news_sentinel_feed", "ok": news_count >= 5,
-                   "detail": f"Kurátorovaný medicínsky feed aktívny ({news_count} prelomov, CZ/SK Tech-Tracker)"})
+                   "detail": f"Curated medical feed active ({news_count} breakthroughs, CZ/SK Tech-Tracker)"})
 
     passed = sum(1 for c in checks if c["ok"])
     score = round(passed / len(checks) * 100)
@@ -701,4 +701,4 @@ async def stability_audit(authorization: Optional[str] = Header(None)):
 async def audit_latest(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     rep = await db.audit_reports.find_one({}, {"_id": 0}, sort=[("at", -1)])
-    return rep or {"score": None, "note": "Zatiaľ žiadny audit — spustite Stability & Integrity Audit."}
+    return rep or {"score": None, "note": "No audit yet — launch Stability & Integrity Audit."}

@@ -8,7 +8,7 @@ import requests
 import pytest
 from pathlib import Path
 
-BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 SMOKE_TOKEN = "smoketok-fresh-2026"
 AUTH = {"Authorization": f"Bearer {SMOKE_TOKEN}"}
 # Read the current anchored build dynamically — origin.json is regenerated whenever the

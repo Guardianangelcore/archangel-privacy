@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 53 — English-translation sweep + consent gate + new public ToS/Privacy pages. Backend regression 5/5 green (register 201, register-short-password rejected, login demo 200, login wrong-pw 401, dev-bypass founder 200 + /auth/me OK). Frontend E2E all green: (a) /login CREATE ACCOUNT tab shows reg-agree checkbox + reg-tos-link + reg-privacy-link; pw-submit is DISABLED with a valid email+password until the checkbox is checked; checking the box enables pw-submit and registering TEST_iter53_<rand>@guardian.app succeeds and lands on the TOS gate as expected; (b) SIGN IN tab has NO checkbox and demo.judge@guardian.app / guardian-demo-2026 signs in successfully; (c) /terms-of-service loads WITHOUT login, shows tos-medical-disclaimer with required phrases ('NOT a medical device', 'does NOT replace', 'consult a physician'), tos-privacy-link → /privacy-policy; (d) /privacy-policy loads WITHOUT login, shows privacy-local-first, privacy-tos-link → back to /terms-of-service; (e) English regression on the 7 screens after founder-bypass with language forced to 'en' (via PATCH /api/me/prefs — founder was seeded with sk in DB) — /monolith, /pantry, /compass, /token, /legal, /wealth-vault return 0 hardcoded Slovak strings from the requested watchlist; /longevity shows exactly 1 remaining leak — the factor label 'AKTIVITA' — which is emitted by the BACKEND (routes/longevity.py:71,73 hardcode 'Aktivita', and lines 81,83 also hardcode 'Kroky') and only rendered via fa.factor.toUpperCase() in longevity.tsx. Not a frontend miss. Note: with founder still on language=sk (default seed) many screens legitimately render the sk i18n locale (art50_waiver contains 'riziko', etc.) — this matches the 'Slovak in i18n sk locale is legit' contract in the request.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/longevity/bioage (factors[].factor)", "issue": "Hardcoded Slovak factor names 'Aktivita' (lines 71, 73) and 'Kroky' (lines 81, 83) in /app/backend/routes/longevity.py leak through to the /longevity screen as 'AKTIVITA' / 'KROKY' regardless of the user's language. Translate to 'Activity' and 'Steps' (or make them i18n keys the frontend resolves)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Deprecated style props (all screens)", "issue": "Console warnings still surface: 'shadow*' style props are deprecated (use 'boxShadow'); 'textShadow*' is deprecated (use 'textShadow'); props.pointerEvents is deprecated (use style.pointerEvents). Non-blocking on web but should be migrated for React Native new-arch. Same warnings noted in iter-52 report — carried forward."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter53_regression.py",
+    "/app/test_reports/pytest/pytest_iter53.xml"
+  ],
+  "action_items": [
+    "BACKEND (minor, out-of-scope but easy): /app/backend/routes/longevity.py lines 71 & 73 replace 'Aktivita' → 'Activity'; lines 81 & 83 replace 'Kroky' → 'Steps'. Re-run /longevity as founder(en) — 'AKTIVITA' should disappear from FACTORS list.",
+    "OPTIONAL (carried from iter-52): migrate deprecated React Native Web style props ('shadow*', 'textShadow*', pointerEvents) for new-arch readiness."
+  ],
+  "critical_code_review_comments": [
+    "login.tsx: consent gate is implemented CORRECTLY — pw-submit is disabled while (pwMode==='register' && !agreeTerms) (line 244-246) AND onPassword() double-checks in code (line 71 throws before calling registerPassword). reg-agree only renders on register tab (line 226). SIGN IN tab is verified clean. Link handlers use router.push('/terms-of-service' | '/privacy-policy'). Good.",
+    "_layout.tsx: isPublic gate now includes 'terms-of-service' and 'privacy-policy' (line 74) — public routing works. Verified: hitting /terms-of-service in a fresh (uncookied) session lands directly on the page without redirect to /login.",
+    "terms-of-service.tsx & privacy-policy.tsx: both are single-file, self-contained, use SafeAreaView + ScrollView + React Native primitives (no HTML), and expose the required testIDs (tos-screen / tos-medical-disclaimer / tos-back / tos-privacy-link / privacy-screen / privacy-local-first / privacy-back / privacy-tos-link). Medical disclaimer text is prominent and legally accurate.",
+    "pantry.tsx: Platform is now imported from react-native (line matches the fix described in the change-log). No 'Platform is not defined' error observed on load — validated by opening /pantry and getting no red-screen and no console error.",
+    "longevity.tsx: renders factor.toUpperCase() directly from backend payload; needs backend-side i18n for factor labels OR a frontend-side mapping table. See action_items."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter53_regression.py (new — 5 auth-regression tests)"
+  ],
+  "success_rate": {"backend": "100% (5/5 auth-regression)", "frontend": "100% on the reviewed flows — 4 UX flows (consent gate, sign-in without checkbox, public ToS, public Privacy) + 7/7 screens clean for hardcoded Slovak in EN mode. The single 'AKTIVITA' hit on /longevity originates from the backend and is called out separately."},
+  "seed_data_creation": "Created 1 registration user (TEST_iter53_<6-digit>@guardian.app / iter53-test-password-01) plus 1 short-pw reject probe (TEST_iter53_short_*). Also mutated founder's language from 'sk' → 'en' via PATCH /api/me/prefs to run the EN regression accurately (main-agent may want to revert to 'sk' via the same endpoint if founder must default to sk for other tests). demo.judge@guardian.app untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Founder (guardian.angel.core@proton.me) language is now 'en' in DB (I PATCHed /api/me/prefs during EN-regression). Revert with `curl -X PATCH .../api/me/prefs -H 'Authorization: Bearer <bypass_token>' -d '{\"language\":\"sk\"}'` if needed. The one remaining Slovak leak is BACKEND: /app/backend/routes/longevity.py:71,73,81,83 — 'Aktivita' and 'Kroky' hardcoded factor names. All other 6 target screens are clean for the requested Slovak watchlist. Public ToS + Privacy routes both live and require no auth; reg consent gate is enforced client-side (pw-submit disabled prop + onPassword throw). SIGN IN tab is confirmed clean — no checkbox rendered, no gate on submit.",
+  "rca_of_issue": "Only issue found is the 'AKTIVITA' Slovak leak on /longevity. RCA: /app/backend/routes/longevity.py add(...) calls at lines 71 and 73 pass the literal string 'Aktivita' (and lines 81/83 pass 'Kroky') as the factor's display name. The frontend at /app/frontend/app/longevity.tsx line 128 renders it as {fa.factor.toUpperCase()} directly. Because the display strings are baked into the JSON payload, changing the user's language on the frontend has no effect — the fix must be at the source. Reproduction: (1) POST /api/auth/dev-bypass founder; (2) PATCH /api/me/prefs {language:'en'}; (3) GET /api/longevity/bioage → factors[].factor still contains 'Aktivita'; (4) navigate to /longevity → uppercased to 'AKTIVITA' in the FACTORS list. Mitigation: replace the Slovak literals with 'Activity' / 'Steps' (or introduce a factor_key + resolve client-side)."
+}

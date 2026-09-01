@@ -27,10 +27,10 @@ from core import api, db, logger, clean, get_current_user, send_push, _aml_ledge
 FOUNDATION_EMAIL = "guardian.angel.core@proton.me"
 FOUNDATION_IDENTITY = {
     "official_email": FOUNDATION_EMAIL,
-    "provider": "ProtonMail (E2E šifrovaná pošta, Švajčiarsko)",
+    "provider": "ProtonMail (E2E encrypted mail, Switzerland)",
     "entity": "Guardian Angel Sovereign Foundation (DAO)",
-    "purpose": "Jediný oficiálny komunikačný kanál nadácie — všetky right-of-erasure žiadosti, súdne výzvy a partnerstvá smerujú sem.",
-    "pgp": "PGP fingerprint zverejnený on-chain (Mosaic block #1, Proof of Origin)",
+    "purpose": "The foundation's only official communication channel — all right-of-erasure requests, court subpoenas, and partnerships go here.",
+    "pgp": "PGP fingerprint published on-chain (Mosaic block #1, Proof of Origin)",
     "immutable": True,
 }
 
@@ -58,7 +58,7 @@ async def ghost_toggle(body: GhostToggleIn, authorization: Optional[str] = Heade
                                   {"$set": {"ghost_mode": True, "ghost_token": token, "ghost_expires": exp}})
         await _aml_ledger_append(user["user_id"], "ghost_mode_on", {"token_sha256": hashlib.sha256(token.encode()).hexdigest()})
         return {"ghost_mode": True, "patient_token": token, "expires_at": exp.isoformat(),
-                "note": "Anonymizovaný pacientsky token — kliniky vidia iba token, nie vašu identitu. Platnosť 24 h."}
+                "note": "Anonymized patient token — clinics see only the token, not your identity. Valid for 24 h."}
     await db.users.update_one({"user_id": user["user_id"]},
                               {"$set": {"ghost_mode": False}, "$unset": {"ghost_token": "", "ghost_expires": ""}})
     return {"ghost_mode": False}
@@ -92,7 +92,7 @@ class InnerCircleIn(BaseModel):
 async def _require_founder(user: dict) -> None:
     from routes.subscription import _is_founder
     if not await _is_founder(user):
-        raise HTTPException(403, "founder_only: Inner Circle spravuje výhradne zakladateľ.")
+        raise HTTPException(403, "founder_only: Inner Circle is managed exclusively by the founder.")
 
 @api.get("/inner-circle")
 async def inner_circle_list(authorization: Optional[str] = Header(None)):
@@ -100,7 +100,7 @@ async def inner_circle_list(authorization: Optional[str] = Header(None)):
     await _require_founder(user)
     rows = await db.inner_circle.find({}, {"_id": 0}).sort("added_at", -1).to_list(100)
     return {"members": rows,
-            "policy": "Členovia Inner Circle majú DOŽIVOTNÝ Archangel status — nikdy neexpiruje, neplatí sa."}
+            "policy": "Members of Inner Circle have LIFETIME Archangel status — never expires, no payment required."}
 
 @api.post("/inner-circle")
 async def inner_circle_add(body: InnerCircleIn, authorization: Optional[str] = Header(None)):
@@ -147,40 +147,40 @@ async def inner_circle_remove(member_id: str, authorization: Optional[str] = Hea
 # MEDICAL ARBITRAGE — cross-border surgery optimizer (PL/HU/TR)
 # ============================================================
 ARBITRAGE_COUNTRY = {
-    "PL": {"flag": "🇵🇱", "name": "Poľsko", "travel_eur": 120, "night_eur": 55, "eu_member": True},
-    "HU": {"flag": "🇭🇺", "name": "Maďarsko", "travel_eur": 90, "night_eur": 50, "eu_member": True},
+    "PL": {"flag": "🇵🇱", "name": "Poland", "travel_eur": 120, "night_eur": 55, "eu_member": True},
+    "HU": {"flag": "🇭🇺", "name": "Hungary", "travel_eur": 90, "night_eur": 50, "eu_member": True},
     "TR": {"flag": "🇹🇷", "name": "Turecko", "travel_eur": 340, "night_eur": 45, "eu_member": False},
 }
 ARBITRAGE_PROCEDURES = [
-    {"procedure_id": "hip-replacement", "name": "Totálna endoprotéza bedrového kĺbu",
+    {"procedure_id": "hip-replacement", "name": "Total hip replacement",
      "sk_price_eur": 9800, "sk_wait_days": 420, "recovery_nights": 6,
-     "abroad": {"PL": {"price_eur": 5200, "wait_days": 35, "clinic": "Carolina Medical Center, Varšava"},
-                "HU": {"price_eur": 6100, "wait_days": 42, "clinic": "Budai Egészségközpont, Budapešť"},
+     "abroad": {"PL": {"price_eur": 5200, "wait_days": 35, "clinic": "Carolina Medical Center, Warsaw"},
+                "HU": {"price_eur": 6100, "wait_days": 42, "clinic": "Budai Egészségközpont, Budapest"},
                 "TR": {"price_eur": 4300, "wait_days": 21, "clinic": "Acıbadem Hospital, Istanbul"}}},
-    {"procedure_id": "knee-replacement", "name": "Totálna endoprotéza kolena",
+    {"procedure_id": "knee-replacement", "name": "Total knee replacement",
      "sk_price_eur": 9200, "sk_wait_days": 390, "recovery_nights": 6,
-     "abroad": {"PL": {"price_eur": 4900, "wait_days": 30, "clinic": "Ortopedika, Varšava"},
-                "HU": {"price_eur": 5800, "wait_days": 45, "clinic": "Duna Medical Center, Budapešť"},
+     "abroad": {"PL": {"price_eur": 4900, "wait_days": 30, "clinic": "Ortopedika, Warsaw"},
+                "HU": {"price_eur": 5800, "wait_days": 45, "clinic": "Duna Medical Center, Budapest"},
                 "TR": {"price_eur": 4100, "wait_days": 18, "clinic": "Memorial Şişli, Istanbul"}}},
-    {"procedure_id": "cataract", "name": "Operácia sivého zákalu (katarakta)",
+    {"procedure_id": "cataract", "name": "Cataract surgery (cataract)",
      "sk_price_eur": 1450, "sk_wait_days": 180, "recovery_nights": 1,
      "abroad": {"PL": {"price_eur": 750, "wait_days": 10, "clinic": "Optegra, Krakov"},
-                "HU": {"price_eur": 820, "wait_days": 14, "clinic": "Focus Medical, Budapešť"},
+                "HU": {"price_eur": 820, "wait_days": 14, "clinic": "Focus Medical, Budapest"},
                 "TR": {"price_eur": 590, "wait_days": 7, "clinic": "Dünyagöz, Istanbul"}}},
-    {"procedure_id": "cardiac-bypass", "name": "Koronárny bypass (CABG)",
+    {"procedure_id": "cardiac-bypass", "name": "Coronary bypass (CABG)",
      "sk_price_eur": 24500, "sk_wait_days": 120, "recovery_nights": 10,
      "abroad": {"PL": {"price_eur": 14800, "wait_days": 28, "clinic": "American Heart of Poland, Katovice",},
-                "HU": {"price_eur": 16200, "wait_days": 35, "clinic": "Gottsegen Kardiológiai Intézet, Budapešť"},
+                "HU": {"price_eur": 16200, "wait_days": 35, "clinic": "Gottsegen Cardiology Institute, Budapest"},
                 "TR": {"price_eur": 11900, "wait_days": 14, "clinic": "Florence Nightingale, Istanbul"}}},
-    {"procedure_id": "spinal-fusion", "name": "Stabilizácia chrbtice (spinal fusion)",
+    {"procedure_id": "spinal-fusion", "name": "Spine stabilization (spinal fusion)",
      "sk_price_eur": 16800, "sk_wait_days": 300, "recovery_nights": 7,
-     "abroad": {"PL": {"price_eur": 9600, "wait_days": 40, "clinic": "Paley European Institute, Varšava"},
-                "HU": {"price_eur": 10400, "wait_days": 50, "clinic": "Buda Health Center, Budapešť"},
+     "abroad": {"PL": {"price_eur": 9600, "wait_days": 40, "clinic": "Paley European Institute, Warsaw"},
+                "HU": {"price_eur": 10400, "wait_days": 50, "clinic": "Buda Health Center, Budapest"},
                 "TR": {"price_eur": 8200, "wait_days": 21, "clinic": "Liv Hospital, Istanbul"}}},
-    {"procedure_id": "dental-implants", "name": "Zubné implantáty (4 ks + korunky)",
+    {"procedure_id": "dental-implants", "name": "Dental implants (4 pcs + crowns)",
      "sk_price_eur": 6400, "sk_wait_days": 60, "recovery_nights": 3,
      "abroad": {"PL": {"price_eur": 3400, "wait_days": 14, "clinic": "Dentim Clinic, Katovice"},
-                "HU": {"price_eur": 2900, "wait_days": 10, "clinic": "Helvetic Clinics, Budapešť"},
+                "HU": {"price_eur": 2900, "wait_days": 10, "clinic": "Helvetic Clinics, Budapest"},
                 "TR": {"price_eur": 2200, "wait_days": 7, "clinic": "DentGroup, Istanbul"}}},
 ]
 
@@ -195,7 +195,7 @@ async def arbitrage_procedures(authorization: Optional[str] = Header(None)):
                     "best_saving_eur": round(p["sk_price_eur"] - best["price_eur"], 0),
                     "best_wait_cut_days": p["sk_wait_days"] - best["wait_days"]})
     return {"procedures": out, "countries": ARBITRAGE_COUNTRY,
-            "legal_note": "EÚ smernica 2011/24/EÚ o cezhraničnej zdravotnej starostlivosti + formulár S2 — poisťovňa môže preplatiť náklady do výšky domácej ceny. Turecko: mimo EÚ rámca, plná samoplatba."}
+            "legal_note": "EU Directive 2011/24/EU on cross-border healthcare + S2 form — the insurer may reimburse costs up to the domestic price. Turkey: outside the EU framework, full self-pay."}
 
 class ArbitrageQuoteIn(BaseModel):
     procedure_id: str
@@ -235,7 +235,7 @@ async def arbitrage_quote(body: ArbitrageQuoteIn, authorization: Optional[str] =
         "saving_vs_sk_eur": round(proc["sk_price_eur"] - net, 0),
         "wait_cut_days": proc["sk_wait_days"] - ab["wait_days"],
         "ghost_mode_compatible": True,
-        "legal_route": "EÚ 2011/24 + S2 (predbežný súhlas poisťovne)" if country["eu_member"] else "Samoplatba mimo EÚ rámca — bez S2 refundácie",
+        "legal_route": "EU 2011/24 + S2 (prior insurer approval)" if country["eu_member"] else "Self-pay outside the EU framework — no S2 reimbursement",
         "simulated": True, "at": datetime.now(timezone.utc),
     }
     await db.arbitrage_quotes.insert_one(quote.copy())
@@ -272,7 +272,7 @@ async def bioidentity_put(body: GenomicIn, authorization: Optional[str] = Header
     doc = {
         "user_id": user["user_id"], "did": user["did"], **body.model_dump(),
         "genomic_sha256": hashlib.sha256(payload.encode()).hexdigest(),
-        "storage_policy": "On-chain iba hash — surové DNA dáta NIKDY neopustia vaše chladné úložisko (zero-knowledge).",
+        "storage_policy": "On-chain hash only — raw DNA data NEVER leave your cold storage (zero-knowledge).",
         "updated_at": now,
     }
     await db.bio_identity.update_one({"user_id": user["user_id"]}, {"$set": doc}, upsert=True)
@@ -303,7 +303,7 @@ async def duress_set(body: DuressSetIn, authorization: Optional[str] = Header(No
         "duress_pin_hash": _pin_hash(user["did"], body.duress_pin),
         "updated_at": datetime.now(timezone.utc),
     }}, upsert=True)
-    return {"ok": True, "note": "Duress PIN aktívny — pri zadaní pod nátlakom sa zobrazí prázdny trezor a odošle tichý alarm."}
+    return {"ok": True, "note": "Duress PIN active — when entered under duress, an empty Vault is shown and a silent alarm is sent."}
 
 class DuressVerifyIn(BaseModel):
     pin: str
@@ -328,8 +328,8 @@ async def duress_verify(body: DuressVerifyIn, authorization: Optional[str] = Hea
         await _aml_ledger_append(user["user_id"], "duress_alarm", {"event_id": event["event_id"]})
         try:
             await send_push(recipients=[user["user_id"]], data={
-                "title": "⚠️ Bezpečnostná udalosť",
-                "message": "Tichý alarm: trezor bol otvorený núdzovým PIN-om (decoy režim).",
+                "title": "⚠️ Security event",
+                "message": "Silent alarm: the Vault was opened with the emergency PIN (decoy mode).",
                 "action_url": "/duress",
             }, idempotency_key=f"duress-{event['event_id']}")
         except Exception as e:
@@ -360,7 +360,7 @@ async def mesh_status(authorization: Optional[str] = Header(None)):
     queued = await db.mesh_messages.count_documents({"from_user_id": user["user_id"], "status": "queued"})
     return {"protocol": "Guardian Mesh v1 — store-and-forward · BLE/Wi-Fi Direct relay",
             "reachable_peers": peers, "queued_outbox": queued,
-            "native_note": "Reálne BLE mesh rádio vyžaduje natívny build (nefunguje v Expo Go/webe) — server relay je plne funkčný.",
+            "native_note": "Real BLE mesh radio requires a native build (does not work in Expo Go/web) — server relay is fully functional.",
             "simulated_radio": True}
 
 @api.post("/mesh/messages")
@@ -376,7 +376,7 @@ async def mesh_send(body: MeshSendIn, authorization: Optional[str] = Header(None
         "text": body.text.strip(),
         "hops": 1 if recipient else 0,
         "status": "delivered" if recipient else "queued",
-        "transport": "server-relay (BLE mesh v natívnom builde)",
+        "transport": "server-relay (BLE mesh in native build)",
         "sha256": hashlib.sha256(f"{user['did']}|{to_did}|{body.text}".encode()).hexdigest(),
         "at": datetime.now(timezone.utc),
     }
@@ -384,7 +384,7 @@ async def mesh_send(body: MeshSendIn, authorization: Optional[str] = Header(None
     if recipient:
         try:
             await send_push(recipients=[recipient["user_id"]], data={
-                "title": "📡 Mesh správa", "message": f"{msg['from_name']}: {msg['text'][:80]}", "action_url": "/mesh",
+                "title": "📡 Mesh message", "message": f"{msg['from_name']}: {msg['text'][:80]}", "action_url": "/mesh",
             })
         except Exception as e:
             logger.warning(f"mesh push failed: {e}")
@@ -404,7 +404,7 @@ async def mesh_inbox(authorization: Optional[str] = Header(None)):
 # ============================================================
 POWER_PROFILE = {
     "poll_interval_sec": 300, "animations": False, "theme": "pure_black",
-    "background_scans": "off", "essential_only": ["SOS maják", "Núdzové QR", "Mesh-Messenger", "Tactical Medic (offline)"],
+    "background_scans": "off", "essential_only": ["SOS beacons", "Emergency QR", "Mesh-Messenger", "Tactical Medic (offline)"],
     "estimated_battery_gain_pct": 38,
 }
 

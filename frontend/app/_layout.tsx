@@ -71,7 +71,7 @@ function RootNav() {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === 'login' || segments[0] === undefined || segments[0] === 'index';
-    const isPublic = segments[0] === 'drop'; // Health Drop provider portal — no login
+    const isPublic = segments[0] === 'drop' || segments[0] === 'terms-of-service' || segments[0] === 'privacy-policy'; // public — no login
     if (isPublic) return;
     if (!user && !inAuthGroup) {
       router.replace('/login');

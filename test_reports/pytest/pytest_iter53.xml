@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.539" timestamp="2026-09-01T20:24:39.272143+00:00" hostname="agent-env-722a006a-7f7b-40c9-9f64-99622e7d64bb"><testcase classname="tests.test_iter53_regression" name="test_dev_bypass_founder" time="0.179" /></testsuite></testsuites>

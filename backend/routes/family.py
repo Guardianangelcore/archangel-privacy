@@ -222,7 +222,7 @@ async def wellness_checkin(body: CheckinIn, authorization: Optional[str] = Heade
         summary = parsed.get("summary", summary)
     except Exception as e:
         logger.error(f"wellness ai err {e}")
-        reply = "Ďakujem, zaznamenal som to. Prajem pekný deň!"
+        reply = "Thank you, I have recorded it. Have a nice day!"
     doc = {
         "checkin_id": uuid.uuid4().hex,
         "user_id": user["user_id"],
@@ -280,7 +280,7 @@ async def inactivity_alert(body: InactivityIn, authorization: Optional[str] = He
             recipients=[user["user_id"]],
             data={
                 "title": "Guardian Angel ⚠️",
-                "message": f"Žiadny pohyb {body.hours_inactive} h. Kontaktujeme: {prof.get('emergency_contact_name') or 'rodinu'}.",
+                "message": f"No movement {body.hours_inactive} h. Contacting: {prof.get('emergency_contact_name') or 'family'}.",
                 "action_url": "/wellness",
             },
         )
@@ -374,7 +374,7 @@ async def scam_check(body: ScamCheckIn, authorization: Optional[str] = Header(No
         session_id=f"scam-{user['user_id']}-{uuid.uuid4().hex[:8]}",
         system_message=system,
     ).with_model("anthropic", "claude-sonnet-5")
-    risk, verdict, reasons, advice = "medium", "Analýza zlyhala — buďte opatrní.", [], "Nikdy neposielajte peniaze ani kódy."
+    risk, verdict, reasons, advice = "medium", "Analysis failed — be careful.", [], "Never send money or codes."
     try:
         resp = await chat.send_message(UserMessage(text=body.text[:4000]))
         m = re.search(r"\{.*\}", resp, re.DOTALL)
@@ -396,7 +396,7 @@ async def scam_check(body: ScamCheckIn, authorization: Optional[str] = Header(No
         try:
             await send_push(
                 recipients=[user["user_id"]],
-                data={"title": "🛡️ SCAM SHIELD — VYSOKÉ RIZIKO", "message": f"Podvodná správa zachytená. Upozorňujeme: {prof.get('emergency_contact_name') or 'rodinu'}.", "action_url": "/scam-shield"},
+                data={"title": "🛡️ SCAM SHIELD — HIGH RISK", "message": f"Fraudulent message detected. Alerting: {prof.get('emergency_contact_name') or 'family'}.", "action_url": "/scam-shield"},
             )
         except Exception as e:
             logger.warning(f"push failed: {e}")
@@ -425,11 +425,11 @@ async def beacon_trigger(body: BeaconIn, authorization: Optional[str] = Header(N
         "created_at": datetime.now(timezone.utc),
     }
     await db.beacon_events.insert_one(doc.copy())
-    loc = f"https://maps.google.com/?q={body.lat},{body.lng}" if body.lat is not None else "poloha nedostupná"
+    loc = f"https://maps.google.com/?q={body.lat},{body.lng}" if body.lat is not None else "location unavailable"
     try:
         await send_push(
             recipients=[user["user_id"]],
-            data={"title": "🔴 TICHÝ MAJÁK AKTIVOVANÝ", "message": f"Signál odoslaný rodine. {loc}", "action_url": "/family-dashboard"},
+            data={"title": "🔴 SILENT BEACON ACTIVATED", "message": f"Signal sent to family. {loc}", "action_url": "/family-dashboard"},
         )
     except Exception as e:
         logger.warning(f"push failed: {e}")
@@ -461,14 +461,14 @@ def _make_wallpaper(user: dict, prof: dict) -> bytes:
 
     # Lockscreen clock occupies top ~30% — keep it clear
     y = 640
-    center("＋ MEDICAL ID · V PRÍPADE NÚDZE ＋", y, f_med, gold); y += 90
+    center("＋ MEDICAL ID · IN EMERGENCY ＋", y, f_med, gold); y += 90
     name = prof.get("full_name") or user.get("name") or ""
     if name:
         center(name, y, f_big, "#F5F5F5"); y += 100
     rows = [
-        ("KRVNÁ SKUPINA / BLOOD", prof.get("blood_type")),
-        ("ALERGIE / ALLERGIES", prof.get("allergies")),
-        ("ICE KONTAKT", f"{prof.get('emergency_contact_name') or ''} {prof.get('emergency_contact_phone') or ''}".strip()),
+        ("BLOOD TYPE", prof.get("blood_type")),
+        ("ALLERGIES", prof.get("allergies")),
+        ("ICE CONTACT", f"{prof.get('emergency_contact_name') or ''} {prof.get('emergency_contact_phone') or ''}".strip()),
     ]
     for label, val in rows:
         if not val:
@@ -526,7 +526,7 @@ async def acoustic_event(body: AcousticIn, authorization: Optional[str] = Header
     try:
         await send_push(
             recipients=[user["user_id"]],
-            data={"title": "🔊 AKUSTICKÁ HROZBA DETEGOVANÁ", "message": f"Hlasný zvuk ({body.kind}) — overte stav seniora.", "action_url": "/family-dashboard"},
+            data={"title": "🔊 ACOUSTIC THREAT DETECTED", "message": f"Loud sound ({body.kind}) — check the senior's condition.", "action_url": "/family-dashboard"},
         )
     except Exception as e:
         logger.warning(f"acoustic push failed: {e}")
@@ -551,7 +551,7 @@ async def pulse_request(body: PulseRequestIn, authorization: Optional[str] = Hea
     if target["user_id"] == user["user_id"]:
         raise HTTPException(400, "Cannot ping yourself")
     if not target.get("pulse_check_optin"):
-        raise HTTPException(403, "opt_in_required: Používateľ nepovolil Guardian Pulse Check (súkromie je opt-in).")
+        raise HTTPException(403, "opt_in_required: The user did not enable Guardian Pulse Check (privacy is opt-in).")
     doc = {
         "req_id": uuid.uuid4().hex,
         "from_user": user["user_id"], "from_name": user.get("name") or "Rodina",
@@ -561,7 +561,7 @@ async def pulse_request(body: PulseRequestIn, authorization: Optional[str] = Hea
     }
     await db.pulse_requests.insert_one(doc.copy())
     try:
-        await send_push(recipients=[target["user_id"]], data={"title": "💛 TICHÝ PING OD RODINY", "message": f"{doc['from_name']} sa pýta, či ste v poriadku. Odpovedzte jedným ťukom.", "action_url": "/pulse-check"})
+        await send_push(recipients=[target["user_id"]], data={"title": "💛 SILENT PING FROM FAMILY", "message": f"{doc['from_name']} is asking whether you are okay. Reply with one tap.", "action_url": "/pulse-check"})
     except Exception as e:
         logger.warning(f"pulse push failed: {e}")
     return clean(doc)
@@ -583,9 +583,9 @@ async def pulse_respond(req_id: str, body: PulseRespondIn, authorization: Option
     if not req:
         raise HTTPException(404, "Not found")
     await db.pulse_requests.update_one({"req_id": req_id}, {"$set": {"status": body.status, "responded_at": datetime.now(timezone.utc)}})
-    title = "💚 V PORIADKU" if body.status == "ok" else "🔴 POTREBUJE POMOC"
+    title = "💚 ALL GOOD" if body.status == "ok" else "🔴 NEEDS HELP"
     try:
-        await send_push(recipients=[req["from_user"]], data={"title": title, "message": f"Odpoveď na tichý ping: {body.status}", "action_url": "/pulse-check"})
+        await send_push(recipients=[req["from_user"]], data={"title": title, "message": f"Reply to silent ping: {body.status}", "action_url": "/pulse-check"})
     except Exception as e:
         logger.warning(f"pulse respond push failed: {e}")
     # GA-T Proof-of-Help — reward the family member who checked in (loop completed)
@@ -731,7 +731,7 @@ async def angel_pulse_send(body: AngelPulseIn, authorization: Optional[str] = He
     try:
         await send_push(recipients=[recipient["user_id"]], data={
             "title": "💓 TEP ANJELA",
-            "message": f"{pulse['from_name']} vám poslal svoj tep. Ťuknite pre pocit spojenia.",
+            "message": f"{pulse['from_name']} sent you their heartbeat. Tap for a feeling of connection.",
             "action_url": f"/angel-pulse?id={pulse['pulse_id']}",
             "pulse_pattern": pattern,
             "pulse_bpm": str(bpm),
@@ -766,8 +766,8 @@ async def angel_pulse_felt(pulse_id: str, authorization: Optional[str] = Header(
     # Notify sender that the pulse was felt.
     try:
         await send_push(recipients=[r["from_user_id"]], data={
-            "title": "💛 TEP POCÍTENÝ",
-            "message": f"Váš anjelský tep dorazil.",
+            "title": "💛 HEARTBEAT FELT",
+            "message": f"Your angelic heartbeat has arrived.",
             "action_url": "/",
         })
     except Exception:
@@ -814,7 +814,7 @@ async def voice_circle(authorization: Optional[str] = Header(None)):
 
     members = []
     for m_uid in member_ids:
-        u = users_by_id.get(m_uid) or {"user_id": m_uid, "name": "Neznámy", "email": ""}
+        u = users_by_id.get(m_uid) or {"user_id": m_uid, "name": "Unknown", "email": ""}
         sig = sigs_by_uid.get(m_uid)
         members.append({
             "user_id": m_uid,

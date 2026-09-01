@@ -46,7 +46,7 @@ export default function Mosaic() {
         <Text style={st.title}>MOSAIC PROTOCOL</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SIMULOVANÝ L2 · REÁLNE RPC (MOSAIC / BASE / POLYGON) VO PHASE 3</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>SIMULATED L2 · REAL RPC (MOSAIC / BASE / POLYGON) IN PHASE 3</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {!!err && <Text style={st.err}>{err}</Text>}
@@ -58,7 +58,7 @@ export default function Mosaic() {
             <Row lbl="PQC" val={status.pqc_suite} />
             <Row lbl="GAS" val={status.gas_policy} />
             <Row lbl="LEGACY SC" val={`${status.legacy_smart_contracts} smart kontraktov (dead-man switch)`} />
-            <Row lbl="BRIDGE" val={`aktívny: ${status.bridge_watch?.active || 'Mosaic Chain'} · ${status.bridge_watch?.latency_ms ?? 0} ms`} />
+            <Row lbl="BRIDGE" val={`active: ${status.bridge_watch?.active || 'Mosaic Chain'} · ${status.bridge_watch?.latency_ms ?? 0} ms`} />
           </View>
         )}
 
@@ -82,19 +82,19 @@ export default function Mosaic() {
           </View>
         )}
 
-        <Text style={st.section}>POSLEDNÉ ZK-ROLLUP BLOKY</Text>
+        <Text style={st.section}>LATEST ZK-ROLLUP BLOCKS</Text>
         {blocks.map(b => (
           <View key={b.height} style={st.blockRow}>
             <Text style={st.blockH}>#{b.height}</Text>
             <View style={{ flex: 1 }}>
               <Text style={st.mono} numberOfLines={1}>{b.block_hash}</Text>
-              <Text style={st.blockMeta}>tx: {b.tx_batched} · {b.zk_proof.slice(0, 18)}… · gas užívateľ: 0 (treasury)</Text>
+              <Text style={st.blockMeta}>tx: {b.tx_batched} · {b.zk_proof.slice(0, 18)}… · user gas: 0 (treasury)</Text>
             </View>
           </View>
         ))}
-        {blocks.length === 0 && <Text style={st.emptyLine}>— zatiaľ žiadne bloky. Ťuknite ANCHOR BLOK alebo počkajte na Swarm.</Text>}
+        {blocks.length === 0 && <Text style={st.emptyLine}>— no blocks yet. Tap ANCHOR BLOCK or wait for the Swarm.</Text>}
 
-        <Text style={st.zeroFee}>👵 ZERO-FEE ABSTRAKCIA: babičky nikdy nevidia gas ani kryptomeny — všetko platí treasury nadácie zo Sentinel/Archangel výnosov.</Text>
+        <Text style={st.zeroFee}>👵 ZERO-FEE ABSTRACTION: grandmas never see gas or crypto — the foundation treasury pays everything from Sentinel/Archangel revenue.</Text>
       </ScrollView>
     </SafeAreaView>
   );

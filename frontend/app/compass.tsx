@@ -161,16 +161,16 @@ export default function Compass() {
             {!!msg && <Text testID="cp-msg" style={st.msg}>{msg}</Text>}
 
             {/* ICE */}
-            <Section title="IDENTITA · ICE">
-              <Row lbl="MENO" val={pack.identity?.name || '—'} />
+            <Section title="IDENTITY · ICE">
+              <Row lbl="NAME" val={pack.identity?.name || '—'} />
               <Row lbl="BLOOD TYPE" val={pack.identity?.blood_type || '—'} />
-              <Row lbl="ALERGIE" val={pack.identity?.allergies || '—'} />
+              <Row lbl="ALLERGIES" val={pack.identity?.allergies || '—'} />
               <Row lbl="DIAGNOSES" val={pack.identity?.conditions || '—'} />
-              <Row lbl="KONTAKT" val={`${pack.emergency_contact?.name || '—'} · ${pack.emergency_contact?.phone || '—'}`} />
+              <Row lbl="CONTACT" val={`${pack.emergency_contact?.name || '—'} · ${pack.emergency_contact?.phone || '—'}`} />
             </Section>
 
             {/* MEDS */}
-            <Section title="LIEKY DNES">
+            <Section title="MEDS TODAY">
               {(pack.meds_today || []).length ? pack.meds_today.map((m: any, i: number) => (
                 <Row key={i} lbl={m.time} val={`${m.name} — ${m.dose}`} />
               )) : <Text style={st.emptyLine}>— no medication reminders</Text>}
@@ -180,7 +180,7 @@ export default function Compass() {
             <Section title="SICK LEAVE (ePN) · OUTINGS" testID="cp-sickleave">
               {sl?.active ? (
                 <>
-                  <Row lbl="STAV" val={`ACTIVE SICK LEAVE from ${sl.start_date}${sl.end_date ? ` to ${sl.end_date}` : ''}`} />
+                  <Row lbl="STATUS" val={`ACTIVE SICK LEAVE from ${sl.start_date}${sl.end_date ? ` to ${sl.end_date}` : ''}`} />
                   <Row lbl="CONTRACT" val={(sl.contract_type || 'fulltime').toUpperCase()} />
                   <Row lbl="PERMITTED OUTINGS" val={(sl.outings || []).map((o: any) => `${o.from_time}–${o.to_time}`).join(' · ') || 'no outings'} />
                   <Text style={st.warnLine}>⚠ Stay home outside outing windows — social insurance inspections.</Text>
@@ -188,7 +188,7 @@ export default function Compass() {
               ) : <Text style={st.emptyLine}>— no active sick leave (manage in My Recovery)</Text>}
             </Section>
 
-            {/* OČKOVANIA */}
+            {/* VACCINATIONS */}
             <Section title="VACCINATIONS · BOOSTERS" testID="cp-vaccines">
               {(vac?.booster_alerts || []).map((b: any, i: number) => (
                 <Text key={`b${i}`} style={st.warnLine}>⚠ {b.title} — booster due by {b.booster_due}</Text>

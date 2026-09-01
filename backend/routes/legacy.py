@@ -772,7 +772,7 @@ async def dignity_release(authorization: Optional[str] = Header(None)):
     ledger = await _aml_ledger_append(user["user_id"], "dignity_release", {"amount": amount, "to": ben.get("name"), "type": ben.get("type")})
     try:
         await send_push(recipients=[user["user_id"]], data={
-            "title": "🕊 FINAL DIGNITY", "message": f"Fond {amount:.0f} {fund.get('currency','EUR')} uvoľnený pre: {ben.get('name')}", "action_url": "/dignity",
+            "title": "🕊 FINAL DIGNITY", "message": f"Fund of {amount:.0f} {fund.get('currency','EUR')} released to: {ben.get('name')}", "action_url": "/dignity",
         })
     except Exception as e:
         logger.warning(f"push failed: {e}")
@@ -846,24 +846,24 @@ async def biometric_will_delete(authorization: Optional[str] = Header(None)):
 
 # --------- DIGITAL EXECUTOR — Digital Legacy checklist + subscription liquidator ---------
 LEGACY_CHECKLIST_TEMPLATE = [
-    {"item_id": "fin-accounts", "cat": "financial", "title": "Zoznam bankových účtov a prístupov pre notára"},
-    {"item_id": "fin-insurance", "cat": "financial", "title": "Poistné zmluvy (životné, úrazové, majetkové) na jednom mieste"},
-    {"item_id": "fin-pension", "cat": "financial", "title": "Dôchodkové sporenie (II./III. pilier) — určená oprávnená osoba"},
-    {"item_id": "fin-crypto", "cat": "financial", "title": "Krypto peňaženky: seed frázy v trezore / u notára (NIE v telefóne)"},
-    {"item_id": "fin-debts", "cat": "financial", "title": "Zoznam dlhov a záväzkov (aby dedičia neprevzali prekvapenia)"},
-    {"item_id": "soc-google", "cat": "social", "title": "Google Inactive Account Manager nastavený"},
-    {"item_id": "soc-facebook", "cat": "social", "title": "Facebook/Instagram: zvolený memorializačný kontakt"},
-    {"item_id": "soc-email", "cat": "social", "title": "Prístup k hlavnému e-mailu pre vykonávateľa závetu"},
-    {"item_id": "soc-photos", "cat": "social", "title": "Rodinné fotky a videá: export/záloha pre rodinu"},
-    {"item_id": "prop-deeds", "cat": "property", "title": "List vlastníctva / nájomné zmluvy — kópie v trezore"},
-    {"item_id": "prop-vehicle", "cat": "property", "title": "Vozidlo / loď: technický preukaz + kľúče (miesto uloženia)"},
-    {"item_id": "prop-keys", "cat": "property", "title": "Fyzické kľúče a kódy (dom, schránka, bunker) — kto ich má"},
-    {"item_id": "dig-passwords", "cat": "digital", "title": "Správca hesiel: núdzový prístup pre dôveryhodnú osobu"},
-    {"item_id": "dig-cloud", "cat": "digital", "title": "Cloud úložiská (Drive/iCloud): plán odovzdania"},
-    {"item_id": "dig-domains", "cat": "digital", "title": "Domény a weby: predĺženie/prevod zabezpečený"},
-    {"item_id": "dig-subs", "cat": "digital", "title": "Predplatné: zoznam v Likvidátore nižšie (auto-zrušenie)"},
+    {"item_id": "fin-accounts", "cat": "financial", "title": "List of bank accounts and access details for the notary"},
+    {"item_id": "fin-insurance", "cat": "financial", "title": "Insurance policies (life, accident, property) in one place"},
+    {"item_id": "fin-pension", "cat": "financial", "title": "Pension savings (2nd/3rd pillar) — designated beneficiary"},
+    {"item_id": "fin-crypto", "cat": "financial", "title": "Crypto wallets: seed phrases in a safe / at the notary (NOT on the phone)"},
+    {"item_id": "fin-debts", "cat": "financial", "title": "List of debts and liabilities (so heirs face no surprises)"},
+    {"item_id": "soc-google", "cat": "social", "title": "Google Inactive Account Manager configured"},
+    {"item_id": "soc-facebook", "cat": "social", "title": "Facebook/Instagram: memorialization contact chosen"},
+    {"item_id": "soc-email", "cat": "social", "title": "Access to the primary e-mail for the executor of the will"},
+    {"item_id": "soc-photos", "cat": "social", "title": "Family photos and videos: export/backup for the family"},
+    {"item_id": "prop-deeds", "cat": "property", "title": "Title deeds / lease agreements — copies in the vault"},
+    {"item_id": "prop-vehicle", "cat": "property", "title": "Vehicle / boat: registration papers + keys (storage location)"},
+    {"item_id": "prop-keys", "cat": "property", "title": "Physical keys and codes (house, mailbox, safe) — who holds them"},
+    {"item_id": "dig-passwords", "cat": "digital", "title": "Password manager: emergency access for a trusted person"},
+    {"item_id": "dig-cloud", "cat": "digital", "title": "Cloud storage (Drive/iCloud): handover plan"},
+    {"item_id": "dig-domains", "cat": "digital", "title": "Domains and websites: renewal/transfer secured"},
+    {"item_id": "dig-subs", "cat": "digital", "title": "Subscriptions: list in the Liquidator below (auto-cancel)"},
 ]
-CHECKLIST_CATS = {"financial": "FINANCIE", "social": "SOCIÁLNE SIETE", "property": "MAJETOK", "digital": "DIGITÁLNY SVET"}
+CHECKLIST_CATS = {"financial": "FINANCES", "social": "SOCIAL MEDIA", "property": "PROPERTY", "digital": "DIGITAL WORLD"}
 
 @api.get("/legacy/checklist")
 async def legacy_checklist(authorization: Optional[str] = Header(None)):
@@ -902,7 +902,7 @@ async def legacy_subscriptions(authorization: Optional[str] = Header(None)):
     subs = await db.legacy_subscriptions.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
     saving = round(sum(s.get("cost_monthly", 0) for s in subs if s.get("action") == "cancel"), 2)
     return {"subscriptions": subs, "monthly_liquidation_saving": saving,
-            "note": "Likvidátor sa spustí pri vykonaní digitálneho závetu — inštrukcie dostane vykonávateľ/notár."}
+            "note": "The Liquidator runs when the digital will is executed — the executor/notary receives the instructions."}
 
 @api.post("/legacy/subscriptions")
 async def legacy_subscription_add(body: SubscriptionIn, authorization: Optional[str] = Header(None)):

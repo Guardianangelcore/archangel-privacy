@@ -10,7 +10,7 @@ import { C, S, R } from '@/src/theme';
 const EARN_META: Record<string, { icon: string; hint: string }> = {
   proof_of_help: { icon: 'people', hint: 'Answer a family pulse ping or help a senior' },
   proof_of_health: { icon: 'pulse', hint: 'Share an anonymous signal in the Sentinel network / Marketplace' },
-  community_support: { icon: 'heart', hint: 'Prispejte do Solidarity Hubu alebo Barter siete' },
+  community_support: { icon: 'heart', hint: 'Contribute to the Solidarity Hub or the Barter network' },
 };
 const SPEND_META: Record<string, string> = {
   vip_sentinel_30d: 'shield-checkmark',
@@ -82,7 +82,7 @@ export default function TokenWallet() {
           {vipActive && (
             <View style={styles.vipBadge}>
               <Ionicons name="shield-checkmark" size={14} color={C.onInverse} />
-              <Text style={styles.vipText}>VIP SENTINEL do {String(wallet.vip_until).slice(0, 10)}</Text>
+              <Text style={styles.vipText}>VIP SENTINEL until {String(wallet.vip_until).slice(0, 10)}</Text>
             </View>
           )}
         </View>
@@ -117,10 +117,10 @@ export default function TokenWallet() {
           </View>
         ))}
 
-        <Text style={styles.section}>TOKENOMIKA · SUPPLY</Text>
+        <Text style={styles.section}>TOKENOMICS · SUPPLY</Text>
         {supply && (
           <View style={styles.supplyBox}>
-            <SupplyBar label="Treasury (odmeny)" value={supply.treasury} pct={pct(supply.treasury)} color={C.brand} />
+            <SupplyBar label="Treasury (rewards)" value={supply.treasury} pct={pct(supply.treasury)} color={C.brand} />
             <SupplyBar label={`Founder's Reserve 25% (time-lock)`} value={supply.founder_reserve} pct={pct(supply.founder_reserve)} color="#B8860B" />
             <SupplyBar label="In circulation" value={supply.circulating} pct={pct(supply.circulating)} color="#5FA779" />
             <SupplyBar label={`Burned (burn ${supply.burn_stats?.burn_rate_pct}%)`} value={supply.burned} pct={pct(supply.burned)} color={C.error} />

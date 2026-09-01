@@ -102,16 +102,16 @@ async def clinic_sync_beam(code: str, body: BeamIn):
         {"$set": {"status": "received"}, "$push": {"received_docs": received}})
     try:
         await send_push(recipients=[sess["user_id"]], data={
-            "title": "🏥 CLINIC SYNC", "message": f"{body.clinic_name}: {body.title} — uložené do Trezora",
+            "title": "🏥 CLINIC SYNC", "message": f"{body.clinic_name}: {body.title} — saved to Vault",
             "action_url": "/clinic-sync"})
     except Exception as e:
         logger.warning(f"clinic sync push failed: {e}")
     return {"ok": True, "beamed": True, "doc_id": doc_id, "patient": sess["patient_label"]}
 
 _RADAR_CLINICS = [
-    ("Poliklinika Ružinov", "Kardiológia · Interná"), ("ProCare Central", "Všeobecná ambulancia"),
-    ("Nemocnica Bory", "Rádiológia · MRI"), ("GA Labs Ortho Clinic", "Súkromná ambulancia"),
-    ("Alpha Medical Lab", "Laboratórne výsledky"),
+    ("Poliklinika Ružinov", "Cardiology · Internal Medicine"), ("ProCare Central", "General Outpatient Clinic"),
+    ("Nemocnica Bory", "Radiology · MRI"), ("GA Labs Ortho Clinic", "Private Outpatient Clinic"),
+    ("Alpha Medical Lab", "Laboratory Results"),
 ]
 
 @api.get("/clinic-sync/radar")
@@ -122,8 +122,8 @@ async def clinic_sync_radar(authorization: Optional[str] = Header(None)):
     n = rng.randint(2, 4)
     picks = rng.sample(_RADAR_CLINICS, n)
     return {"simulated": True,
-            "transport": "BLE / NFC (simulácia — reálne rádio v natívnom builde)",
-            "nearby": [{"clinic": c, "dept": d, "distance_m": rng.randint(3, 40), "signal": rng.choice(["silný", "stredný"])} for c, d in picks]}
+            "transport": "BLE / NFC (simulation — real radio in native build)",
+            "nearby": [{"clinic": c, "dept": d, "distance_m": rng.randint(3, 40), "signal": rng.choice(["strong", "medium"])} for c, d in picks]}
 
 class SimulateBeamIn(BaseModel):
     clinic_name: Optional[str] = "Poliklinika Ružinov"
@@ -139,11 +139,11 @@ async def clinic_sync_simulate(body: SimulateBeamIn, authorization: Optional[str
     demo = BeamIn(
         clinic_name=body.clinic_name or "Poliklinika Ružinov",
         doctor_name="Dr. Guardian Angel",
-        title="Kardiologický nález — kontrola",
-        report_text=("SIMULOVANÝ NÁLEZ (demo Clinic Sync)\n\n"
-                     "Pacient absolvoval kontrolné kardiologické vyšetrenie. EKG: sínusový rytmus, 72/min. "
-                     "TK 128/82 mmHg. Echokardiografia: EF 60 %, bez regurgitácií. "
-                     "Odporúčanie: pokračovať v nastavenej medikácii, kontrola o 6 mesiacov, "
-                     "pri ťažkostiach skôr. Pohyb 30 min denne."),
+        title="Cardiology Finding — Checkup",
+        report_text=("SIMULATED REPORT (Clinic Sync demo)\n\n"
+                     "The patient underwent a follow-up cardiology examination. ECG: sinus rhythm, 72/min. "
+                     "BP 128/82 mmHg. Echocardiography: EF 60 %, no regurgitations. "
+                     "Recommendation: continue the prescribed medication, checkup in 6 months, "
+                     "or sooner if symptoms occur. Exercise 30 min daily."),
     )
     return await clinic_sync_beam(sess["code"], demo)

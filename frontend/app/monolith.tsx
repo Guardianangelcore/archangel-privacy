@@ -201,7 +201,7 @@ export default function Monolith() {
               <Row k="Active partners (clinics/insurers)" v={cap.active_partners} hi />
               <Row k="UHP events ingested" v={cap.events_ingested_total} />
               <Row k="Open sensor streams" v={cap.open_streams} />
-              <Row k="Konsenzus" v={cap.consensus} />
+              <Row k="Consensus" v={cap.consensus} />
               <Text style={st.note}>Partners register via /api/uhp/partners/register — HMAC-SHA256 signatures, replay protection, idempotency, {'240/min'} rate-limit.</Text>
             </>
           ) : <ActivityIndicator color={C.brand} />}
@@ -249,7 +249,7 @@ export default function Monolith() {
           <Text style={st.big}>{bal ? `${bal.balance.available_eur.toFixed(2)} €` : '—'} <Text style={st.bigSub}>available balance</Text></Text>
           {bal && <Text style={st.note}>Rails: {bal.adapter} ({bal.rails_mode}) — adapter swaps to Visa Direct / MC Send the day an institution connects.</Text>}
           <View style={st.inRow}>
-            <WheelField testID="mono-pay-amount" title="SUMA €" min={10} max={2000} step={10} unit="€" value={amount} onChange={setAmount} placeholder="Suma" style={st.input} />
+            <WheelField testID="mono-pay-amount" title="AMOUNT €" min={10} max={2000} step={10} unit="€" value={amount} onChange={setAmount} placeholder="Amount" style={st.input} />
             <TextInput testID="mono-pay-card" value={card} onChangeText={setCard} maxLength={4} keyboardType="number-pad" placeholder="****" placeholderTextColor="#888" style={[st.input, st.inputText, { flex: 0.6 }]} />
           </View>
           <View style={st.chips}>
@@ -276,7 +276,7 @@ export default function Monolith() {
                   );
                 })}
               </View>
-              <Text style={st.cardLine}>{payout.amount_eur} € · poplatok {payout.fee_eur} € · trace {payout.trace_id}</Text>
+              <Text style={st.cardLine}>{payout.amount_eur} € · fee {payout.fee_eur} € · trace {payout.trace_id}</Text>
             </View>
           )}
           <Pressable testID="mono-credit-score" onPress={scoreCredit} disabled={busy === 'credit'} style={st.ghost}>
@@ -306,7 +306,7 @@ export default function Monolith() {
                 <View key={m} style={{ marginBottom: S.sm }}>
                   <Text style={st.cardLbl}>{m === 'systolic' ? 'SYSTOLIC BP' : 'GLUCOSE'} ({d.history_points} readings)</Text>
                   <Text style={st.cardLine}>
-                    teraz <Text style={{ color: bandColor(d.band_now), fontWeight: '900' }}>{d.current ?? '—'}</Text>
+                    now <Text style={{ color: bandColor(d.band_now), fontWeight: '900' }}>{d.current ?? '—'}</Text>
                     {'  →  6m '}{d.m6 ?? '—'}{'  →  12m '}<Text style={{ color: bandColor(d.band_m12), fontWeight: '900' }}>{d.m12 ?? '—'}</Text>{'  →  24m '}{d.m24 ?? '—'}
                   </Text>
                 </View>
@@ -321,7 +321,7 @@ export default function Monolith() {
           </Pressable>
           {sim && (
             <View style={[st.card, { borderColor: sim.result.verdict === 'simulate_pass' ? C.brand : sim.result.verdict === 'caution' ? '#FFC53D' : C.error }]}>
-              <Text style={st.cardTitle}>{sim.treatment} — kompatibilita {sim.result.compatibility_pct}% · {String(sim.result.verdict).toUpperCase()}</Text>
+              <Text style={st.cardTitle}>{sim.treatment} — compatibility {sim.result.compatibility_pct}% · {String(sim.result.verdict).toUpperCase()}</Text>
               <Text style={st.cardLine}>{sim.result.expected_benefit}</Text>
               {(sim.result.interactions || []).map((x: string, i: number) => <Text key={i} style={[st.cardLine, { color: '#FFC53D' }]}>⚠ {x}</Text>)}
               {(sim.result.risks || []).map((x: string, i: number) => <Text key={i} style={st.cardLine}>• {x}</Text>)}
@@ -332,7 +332,7 @@ export default function Monolith() {
         <Section id="sentinel" icon="pulse-outline" title="PREDICTIVE SENTINEL" sub="Warns the Inner Circle BEFORE the event" open={open} onToggle={setOpen}>
           {risk ? (
             <>
-              <Text style={st.big}><Text style={{ color: risk.level === 'high' ? C.error : risk.level === 'medium' ? '#FFC53D' : C.brand }}>{risk.risk_score}</Text><Text style={st.bigSub}> /100 riziko · {risk.level.toUpperCase()}</Text></Text>
+              <Text style={st.big}><Text style={{ color: risk.level === 'high' ? C.error : risk.level === 'medium' ? '#FFC53D' : C.brand }}>{risk.risk_score}</Text><Text style={st.bigSub}> /100 risk · {risk.level.toUpperCase()}</Text></Text>
               {(risk.factors || []).map((f: string, i: number) => <Text key={i} style={st.cardLine}>• {f}</Text>)}
               <Text style={st.note}>Micro-vibrations and gait regularity are collected automatically by sensors ({risk.samples_24h} samples/24 h). At risk ≥70 the Inner Circle receives a push BEFORE the event.</Text>
             </>
@@ -342,10 +342,10 @@ export default function Monolith() {
         <Section id="edge" icon="hardware-chip-outline" title="LIVING CURRENCY · GUARDIAN BASIC INCOME" sub="GA-T for compute powering medical research" open={open} onToggle={setOpen}>
           {edge && (
             <>
-              <Row k="Uzly siete" v={edge.network.nodes} hi />
+              <Row k="Network nodes" v={edge.network.nodes} hi />
               <Row k="Research tasks total" v={edge.network.tasks_total.toLocaleString()} />
               <Row k="GA-T distributed" v={edge.network.gat_distributed} />
-              <Row k="Sadzba" v={edge.rate} />
+              <Row k="Rate" v={edge.rate} />
               <Row k="Basic income (GBI)" v={`${edge.gbi.daily_gat} GA-T / day`} hi />
             </>
           )}
@@ -382,7 +382,7 @@ export default function Monolith() {
             <View style={st.card}>
               <Text style={st.cardLbl}>TONE</Text>
               <Text style={st.cardLine}>{bp.blueprint.tone}</Text>
-              <Text style={st.cardLbl}>HODNOTY</Text>
+              <Text style={st.cardLbl}>VALUES</Text>
               <Text style={st.cardLine}>{(bp.blueprint.values || []).join(' · ')}</Text>
               <Text style={st.cardLbl}>DECISION RULES</Text>
               {(bp.blueprint.decision_rules || []).map((r: string, i: number) => <Text key={i} style={st.cardLine}>• {r}</Text>)}

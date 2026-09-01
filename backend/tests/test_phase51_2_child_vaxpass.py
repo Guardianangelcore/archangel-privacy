@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 import requests
 
-BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://guardian-vault-13.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 TOKEN1 = "smoketok-fresh-2026"
 TOKEN2 = "smoketok-fresh-2026-u2"
 H1 = {"Authorization": f"Bearer {TOKEN1}"}
