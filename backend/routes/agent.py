@@ -643,7 +643,7 @@ async def agent_briefing(language: str = "sk", force: bool = False,
         logger.error(f"briefing error: {e}")
         pend = sum(1 for m in meds_today if not m["taken"])
         text = (f"Good {part}, {user.get('name') or ''}! " +
-                (f"Vonku je {weather['now_c']} °C, {weather['desc']}. " if weather else "") +
+                (f"It's {weather['now_c']} °C, {weather['desc']}. " if weather else "") +
                 (f"You have {pend} medications ahead today. " if pend else "All your medications are taken. ") +
                 "Have a peaceful day — I am here for you.")
     mood = "concerned" if anomalies else "energetic" if part == "morning" else "calm"

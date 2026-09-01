@@ -34,7 +34,7 @@ COL_W = (W - 36 * 2 - 2 * 14) / 3   # 3 cols, 14pt gutters
 IMG_H = 300
 
 sections = [
-    ("0:20-1:20  ·  JARVIS", "/app/jury_assets/jarvis.png", GOLD, [
+    ("0:20-1:20  ·  JARVIS", "/app/release_package/tools/assets/jarvis.png", GOLD, [
         "1. Home -> tap the glowing orb",
         "2. Tap orb -> speak: \"What's on my",
         "    health timeline this year?\"",
@@ -43,7 +43,7 @@ sections = [
         "5. Hands-free: just say \"JARVIS\"",
         "    -- wake-word opens the mic",
     ]),
-    ("1:20-2:20  ·  MAGIC LENS", "/app/jury_assets/lens.png", ACC, [
+    ("1:20-2:20  ·  MAGIC LENS", "/app/release_package/tools/assets/lens.png", ACC, [
         "1. Home -> gold MAGIC LENS tile",
         "2. OPEN CAMERA -> aim at any",
         "    medical paper -> shutter",
@@ -52,7 +52,7 @@ sections = [
         "4. YES -- SAVE IT -> OPEN LIFE",
         "    CARD: entry is on the timeline",
     ]),
-    ("2:20-3:00  ·  FALL DETECTION", "/app/jury_assets/fall.png", HexColor("#2DD4BF"), [
+    ("2:20-3:00  ·  FALL DETECTION", "/app/release_package/tools/assets/fall.png", HexColor("#2DD4BF"), [
         "Prep: Profile -> Fall Guard ON",
         "1. Real physics: 80 ms free-fall",
         "    + 2.5 g impact (no shake trick)",
@@ -96,7 +96,7 @@ home_h = 120
 c.setStrokeColor(GOLD); c.setLineWidth(1)
 hx = 36
 c.roundRect(hx - 2, STRIP_TOP - home_h - 2, home_h * (390 / 844) + 4, home_h + 4, 5, stroke=1, fill=0)
-c.drawImage(ImageReader("/app/jury_assets/home.png"), hx, STRIP_TOP - home_h,
+c.drawImage(ImageReader("/app/release_package/tools/assets/home.png"), hx, STRIP_TOP - home_h,
             width=home_h * (390 / 844), height=home_h)
 c.setFillColor(MUT); c.setFont("Helvetica", 6.5)
 c.drawString(hx, STRIP_TOP - home_h - 12, "HOME — orb + Magic Lens tile")
@@ -125,6 +125,123 @@ c.drawString(tx, py - 25, "Fall demo re-run -> wait 30 s cooldown · Jarvis/Fall
 c.setFillColor(CARD); c.rect(0, 0, W, 26, stroke=0, fill=1)
 c.setFillColor(MUT); c.setFont("Helvetica", 6.8)
 c.drawString(36, 10, "© 2026 Guardian Angel. All Rights Reserved. Proprietary — competition evaluation only. Proof of Origin: /api/origin.")
+c.setFillColor(GOLD)
+c.drawRightString(W - 36, 10, "guardian.angel.core@proton.me")
+
+# ============================ PAGE 2 — INVESTOR ONE-PAGER ============================
+c.showPage()
+c.setFillColor(BG); c.rect(0, 0, W, H, stroke=0, fill=1)
+c.setFillColor(GOLD); c.rect(0, H - 6, W, 6, stroke=0, fill=1)
+c.setFillColor(FG); c.setFont("Helvetica-Bold", 21)
+c.drawString(36, H - 42, "INVESTOR ONE-PAGER")
+c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 10.5)
+c.drawString(36, H - 58, "FINANCIAL FORECAST 2026-2030 · 22ND-CENTURY ROADMAP")
+c.setFillColor(MUT); c.setFont("Helvetica", 8)
+c.drawRightString(W - 36, H - 42, "Guardian Angel Sovereign Foundation (DAO)")
+c.drawRightString(W - 36, H - 54, "Deterministic tier-mix model — live at /api/founder/toolkit")
+
+# ---- Forecast (mirrors backend routes/founder.py exactly) ----
+TIER_MIX = {"guardian": (29.0, 0.80), "sentinel": (149.0, 0.17), "archangel": (499.0, 0.03)}
+ARPU = round(sum(p * w for p, w in TIER_MIX.values()), 2)
+YEARS = [(2026, 12_000, 0.05, 1.5), (2027, 85_000, 0.06, 2.5), (2028, 420_000, 0.07, 3.5),
+         (2029, 1_600_000, 0.08, 4.5), (2030, 5_000_000, 0.09, 5.5)]
+
+def fmt(n):
+    if n >= 1_000_000: return f"{n/1_000_000:.1f}M"
+    if n >= 1_000: return f"{n/1_000:.0f}k"
+    return str(int(n))
+
+# assumptions strip
+ay = H - 84
+c.setFillColor(CARD); c.roundRect(36, ay - 40, W - 72, 40, 4, stroke=0, fill=1)
+c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 8)
+c.drawString(46, ay - 12, "ASSUMPTIONS")
+c.setFillColor(FG); c.setFont("Helvetica", 8)
+c.drawString(46, ay - 24, f"Blended ARPU €{ARPU}/mo (Guardian €29 · Sentinel €149 · Archangel €499)   ·   Guardian Tax 15% of marketplace GMV")
+c.drawString(46, ay - 34, "Gross margin 87%   ·   LTV/CAC 4.8   ·   Churn 2.1%/mo   ·   Paid conversion 5% → 9% (2026 → 2030)")
+
+# forecast table
+ty = ay - 56
+cols = [(36, "YEAR"), (86, "USERS"), (156, "PAID"), (226, "SUBSCRIPTION MRR"), (330, "GUARDIAN TAX MRR"), (434, "TOTAL MRR"), (500, "ARR")]
+c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 7.5)
+for x, hcol in cols:
+    c.drawString(x + 6, ty - 10, hcol)
+ty -= 16
+c.setFont("Helvetica", 8.5)
+for i, (year, users, conv, gmv) in enumerate(YEARS):
+    paid = int(users * conv)
+    sub = paid * ARPU
+    tax = users * gmv * 0.15
+    mrr = sub + tax
+    if i % 2 == 0:
+        c.setFillColor(CARD); c.rect(36, ty - 14, W - 72, 15, stroke=0, fill=1)
+    c.setFillColor(FG)
+    c.drawString(42, ty - 10, str(year))
+    c.drawString(92, ty - 10, fmt(users))
+    c.drawString(162, ty - 10, fmt(paid))
+    c.drawString(232, ty - 10, f"EUR {fmt(round(sub))}/mo")
+    c.drawString(336, ty - 10, f"EUR {fmt(round(tax))}/mo")
+    c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 8.5)
+    c.drawString(440, ty - 10, f"EUR {fmt(round(mrr))}")
+    c.drawString(506, ty - 10, f"EUR {fmt(round(mrr * 12))}")
+    c.setFillColor(FG); c.setFont("Helvetica", 8.5)
+    ty -= 15
+
+# revenue bar mini-chart (ARR growth)
+ty -= 14
+c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 8)
+c.drawString(36, ty, "ARR TRAJECTORY")
+max_arr = (YEARS[-1][1] * YEARS[-1][3] * 0.15 + int(YEARS[-1][1] * YEARS[-1][2]) * ARPU) * 12
+bx = 36
+for year, users, conv, gmv in YEARS:
+    arr = (int(users * conv) * ARPU + users * gmv * 0.15) * 12
+    bw = max(4, (W - 72) * (arr / max_arr) * 0.92)
+    ty -= 14
+    c.setFillColor(HexColor("#3a3120")); c.roundRect(bx + 40, ty - 2, W - 72 - 44, 9, 2, stroke=0, fill=1)
+    c.setFillColor(GOLD); c.roundRect(bx + 40, ty - 2, bw * ((W - 72 - 44) / (W - 72)), 9, 2, stroke=0, fill=1)
+    c.setFillColor(MUT); c.setFont("Helvetica", 7)
+    c.drawString(bx, ty, str(year))
+
+# ---- Roadmap ----
+ROADMAP = [
+    ("2026 Q3", "LAUNCH", "Global launch", "iOS/Android builds, UHP pilot SK/CZ — first 50 partner clinics, Investor Demo Mode."),
+    ("2027", "RAILS", "Real settlement rails", "Visa Direct / Mastercard Send replace SimulatedRails; cross-border arbitrage fully automated."),
+    ("2028", "GRID", "Sentinel Grid goes live", "BLE mesh + satellite nano-packets on real hardware; 1M+ concurrent sensor streams."),
+    ("2030", "TWIN", "Certified Bio-Digital Twin", "EU MDR class IIa — simulating treatment BEFORE dosing becomes the standard of care."),
+    ("2035", "GBI", "Living currency at national scale", "GA-T Guardian Basic Income — data dividends for millions; sovereign health-data ownership."),
+    ("2040", "MESH", "Quantum network", "Post-quantum cryptography (Kyber/Dilithium); Collective Truth ledger as public infrastructure."),
+    ("2075", "ECHO", "Cognitive handover", "Legally recognized digital echoes — the Personality Blueprint carries wisdom across generations."),
+    ("2100+", "ARCHANGEL", "The 22nd-century standard", "UHP as the default protocol of human health sovereignty — Archangel OS on every device."),
+]
+ty -= 28
+c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 11)
+c.drawString(36, ty, "ROADMAP — FROM LAUNCH TO THE 22ND CENTURY")
+ty -= 8
+era_colors = [GOLD, ACC, HexColor("#2DD4BF"), GOLD, ACC, HexColor("#2DD4BF"), GOLD, ACC]
+row_h = 42
+for i, (year, era, title, detail) in enumerate(ROADMAP):
+    ty -= row_h
+    ec = era_colors[i]
+    # timeline dot + line
+    c.setStrokeColor(HexColor("#2A2A33")); c.setLineWidth(1.4)
+    if i < len(ROADMAP) - 1:
+        c.line(46, ty + 6, 46, ty - row_h + 20)
+    c.setFillColor(ec); c.circle(46, ty + 14, 3.4, stroke=0, fill=1)
+    # card
+    c.setFillColor(CARD); c.roundRect(60, ty - 8, W - 96, 36, 4, stroke=0, fill=1)
+    c.setFillColor(ec); c.setFont("Helvetica-Bold", 8.5)
+    c.drawString(70, ty + 16, year)
+    c.setFillColor(FG); c.setFont("Helvetica-Bold", 9)
+    c.drawString(114, ty + 16, title)
+    c.setFillColor(ec); c.setFont("Helvetica-Bold", 6.5)
+    c.drawRightString(W - 46, ty + 17, era)
+    c.setFillColor(MUT); c.setFont("Helvetica", 7.4)
+    c.drawString(70, ty + 4, detail[:118])
+
+# footer page 2
+c.setFillColor(CARD); c.rect(0, 0, W, 26, stroke=0, fill=1)
+c.setFillColor(MUT); c.setFont("Helvetica", 6.8)
+c.drawString(36, 10, "© 2026 Guardian Angel. All Rights Reserved. Forward-looking projections — not investment advice. Live model: /api/founder/toolkit.")
 c.setFillColor(GOLD)
 c.drawRightString(W - 36, 10, "guardian.angel.core@proton.me")
 

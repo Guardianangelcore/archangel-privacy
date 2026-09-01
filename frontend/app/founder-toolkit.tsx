@@ -120,7 +120,7 @@ export default function FounderToolkit() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={st.docName}>JURY CHEAT SHEET (PDF)</Text>
-                <Text style={st.docDesc}>Printable 1-page demo script with screenshots — Jarvis · Magic Lens · Fall Detection</Text>
+                <Text style={st.docDesc}>Printable 2-pager: demo script with screenshots + investor forecast & roadmap</Text>
               </View>
               <Ionicons name="download-outline" size={18} color={C.brand} />
             </Pressable>

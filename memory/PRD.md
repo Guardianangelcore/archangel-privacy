@@ -107,3 +107,9 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 - Backend: GET /api/founder/jury-cheat-sheet (founder.py) — auth via Bearer header or ?token= (uses _auth_pdf/_pdf_response). Verified 200 auth / 401 unauth.
 - Frontend: gold download row testID ft-jury-pdf in founder-toolkit COMPETITION ENTRY section (sharePdf → web opens tab, native shares file).
 - Bonus: translated founder.py ROADMAP (8 eras) + RELEASE_DOCS descriptions to English (was Slovak on judge-facing screen).
+
+## Investor Page + Final Smoke + Deploy Readiness (Iter 50, June 2026)
+1. **Jury PDF page 2** — INVESTOR ONE-PAGER: forecast table 2026-2030 (mirrors founder.py formulas: ARPU €63.5, Guardian Tax 15%, margin 87%), ARR bar chart, 8-era roadmap timeline. Same endpoint /api/founder/jury-cheat-sheet (now 2 pages, ~244 kB). Generator: /app/release_package/tools/jury_pdf.py.
+2. **Final smoke test (iter 50)** — 15/15 pytest (test_iter50_final_smoke.py) + 10/10 frontend screens green. CRITICAL FIX: EMERGENT_LLM_KEY had expired → rotated in backend/.env (Jarvis chat + Magic Lens 502 → 200). Test's 1x1 PNG replaced with valid PIL-generated document image (OpenAI vision rejects tiny images). Testing agent also fixed agent.py:646 Slovak weather fallback.
+3. **Deploy readiness fixes** — removed unused python-bitcoinlib from requirements.txt (deploy blocker); added NSFaceIDUsageDescription to app.json infoPlist; added ACCESS_FINE/COARSE_LOCATION to android permissions; added unauthenticated GET /health (root level, 200) in server.py for deploy probes.
+4. **Remaining user decision** — push notifications: frontend/google-services.json is a placeholder; real Firebase file needed only if push should work on Android builds. AUTH_SESSION_URL fallback in core.py = standard Emergent auth playbook URL (intentional).

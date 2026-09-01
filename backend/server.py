@@ -15,6 +15,10 @@ from routes.origin import ORIGIN
 app = FastAPI(title="Guardian Health & Angel API")
 app.include_router(api)
 
+@app.get("/health")
+async def health_probe():
+    return {"status": "ok"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True,
