@@ -20,8 +20,11 @@ export type User = {
 type Ctx = {
   user: User | null;
   loading: boolean;
+  authError: string | null;
   signIn: () => Promise<void>;
   signInDev: (email: string, name?: string) => Promise<void>;
+  signInPassword: (email: string, password: string) => Promise<void>;
+  registerPassword: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   setUser: (u: User | null) => void;
@@ -38,10 +41,11 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const handledIds = useRef<Set<string>>(new Set());
 
-  const exchangeSessionId = useCallback(async (session_id: string) => {
-    if (handledIds.current.has(session_id)) return;
+  const exchangeSessionId = useCallback(async (session_id: string): Promise<boolean> => {
+    if (handledIds.current.has(session_id)) return false;
     handledIds.current.add(session_id);
     try {
       const res: any = await api('/auth/session', {
@@ -50,8 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       await saveToken(res.session_token);
       setUser(res.user);
-    } catch (e) {
+      setAuthError(null);
+      return true;
+    } catch (e: any) {
       console.log('session exchange failed', e);
+      // Surface the failure — a silent logged-out state looks like "nothing happened".
+      setAuthError('Google sign-in failed. Please try again, or use e-mail & password below.');
+      return false;
     }
   }, []);
 
@@ -86,12 +95,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const url = typeof window !== 'undefined' ? (window.location.hash + '&' + window.location.search) : '';
           const sid = extractSessionId(url);
           if (sid) {
-            await exchangeSessionId(sid);
-            try {
-              const u = new URL(window.location.href);
-              u.hash = ''; u.searchParams.delete('session_id');
-              window.history.replaceState(window.history.state, '', u.toString());
-            } catch {}
+            const ok = await exchangeSessionId(sid);
+            // Clean the URL fragment only after the exchange SUCCEEDS.
+            if (ok) {
+              try {
+                const u = new URL(window.location.href);
+                u.hash = ''; u.searchParams.delete('session_id');
+                window.history.replaceState(window.history.state, '', u.toString());
+              } catch {}
+            }
           }
         } catch {}
       } else {
@@ -153,8 +165,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   }, []);
 
+  // Classic e-mail & password auth (coexists with Google OAuth).
+  const signInPassword = useCallback(async (email: string, password: string) => {
+    const res: any = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+    });
+    await saveToken(res.session_token);
+    setAuthError(null);
+    setUser(res.user);
+  }, []);
+
+  const registerPassword = useCallback(async (email: string, password: string, name?: string) => {
+    const res: any = await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password, name }),
+    });
+    await saveToken(res.session_token);
+    setAuthError(null);
+    setUser(res.user);
+  }, []);
+
   return (
-    <AuthCtx.Provider value={{ user, loading, signIn, signInDev, signOut, refresh, setUser }}>
+    <AuthCtx.Provider value={{ user, loading, authError, signIn, signInDev, signInPassword, registerPassword, signOut, refresh, setUser }}>
       {children}
     </AuthCtx.Provider>
   );

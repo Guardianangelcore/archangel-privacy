@@ -11,7 +11,7 @@ class User(BaseModel):
     name: Optional[str] = None
     picture: Optional[str] = None
     did: str
-    language: str = "sk"
+    language: str = "en"
     angel_mode: bool = False
     fall_guard: bool = False
     inactivity_guard: bool = False

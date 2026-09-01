@@ -113,3 +113,10 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 2. **Final smoke test (iter 50)** — 15/15 pytest (test_iter50_final_smoke.py) + 10/10 frontend screens green. CRITICAL FIX: EMERGENT_LLM_KEY had expired → rotated in backend/.env (Jarvis chat + Magic Lens 502 → 200). Test's 1x1 PNG replaced with valid PIL-generated document image (OpenAI vision rejects tiny images). Testing agent also fixed agent.py:646 Slovak weather fallback.
 3. **Deploy readiness fixes** — removed unused python-bitcoinlib from requirements.txt (deploy blocker); added NSFaceIDUsageDescription to app.json infoPlist; added ACCESS_FINE/COARSE_LOCATION to android permissions; added unauthenticated GET /health (root level, 200) in server.py for deploy probes.
 4. **Remaining user decision** — push notifications: frontend/google-services.json is a placeholder; real Firebase file needed only if push should work on Android builds. AUTH_SESSION_URL fallback in core.py = standard Emergent auth playbook URL (intentional).
+
+## Email/Password Auth + Google Sign-in Fix (Iter 51, June 2026)
+- User reported Google login failing + missing classic login. ADDED playbook-compliant email/password auth: POST /api/auth/register (201, min 12 chars/max 72 bytes, bcrypt-12 threadpool, generic 409) + POST /api/auth/login (generic 401, timing-safe dummy hash, case-insensitive email). Opaque gs-* tokens in user_sessions (30d) — get_current_user untouched; coexists with Google + dev-bypass.
+- Login screen: SIGN IN/CREATE ACCOUNT tabs, email+password+eye, OR divider, Google button, founder bypass (preview only). testIDs pw-*.
+- Google fix: exchangeSessionId no longer swallows errors (authError surfaced on login screen); web URL fragment cleaned only on success (playbook rules 7+8). Backend logs showed exchange 200s — failures were silent UI state.
+- models.py User.language default sk→en (new users get English TOS gate; en TOS existed in legacy.py TOS_TEXT).
+- Tested iter 51: 11/11 backend + full UI E2E green. Test account: demo.judge@guardian.app / guardian-demo-2026 (in test_credentials.md).

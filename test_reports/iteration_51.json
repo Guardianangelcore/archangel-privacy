@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 51 - Email/Password auth + Google regression - ALL GREEN. Backend: 11/11 pytest passed (register happy path with default lang=en, duplicate 409, short-password 422, >72 UTF-8 bytes 422, login correct + case-insensitive, wrong-pw generic 401, unknown-email SAME generic 401 body ('Incorrect email or password'), session_token→/auth/me→/auth/logout revocation, bogus Google session_id 401, dev-bypass founder 200). Frontend E2E on /login (mobile viewport 390×844): all testIDs present (pw-tab-login, pw-tab-register, pw-email, pw-password, pw-eye, pw-submit, google-signin-button, founder-bypass-btn); SIGN IN with demo.judge@guardian.app / guardian-demo-2026 lands user → TOS gate → tos-gate-accept → standard-home; wrong password shows 'Incorrect email or password.' via login-err; CREATE ACCOUNT with short pw shows 'Password must be at least 12 characters.'; CREATE ACCOUNT with fresh email + 12-char pw registers → lands on ENGLISH TOS gate ('TERMS OF SERVICE · v2026-06.1'), confirming models.py default language='en' for new users works. No password_hash leaked in any response.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Console warnings", "issue": "'shadow*' style props are deprecated - use 'boxShadow'; 'textShadow*' style props are deprecated - use 'textShadow'; props.pointerEvents is deprecated - use style.pointerEvents. Non-blocking but should be migrated across app styles."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_password_auth.py",
+    "/app/test_reports/pytest/pytest_iter51.xml"
+  ],
+  "action_items": [
+    "Optional: pre-existing demo.judge account still has language='sk' (created before the sk→en default change) so TOS gate/home render in Slovak for it. Fresh registrations correctly get English. If English is desired for the demo account too, main agent can PATCH /api/me/prefs {language:'en'} for demo.judge or re-seed it.",
+    "Optional cleanup: migrate deprecated style props (shadow*/textShadow*/pointerEvents) to modern equivalents to silence RN Web warnings."
+  ],
+  "critical_code_review_comments": [
+    "auth.py: password_hash is properly stripped from all responses (register + login). bcrypt 12 rounds via run_in_threadpool - good. Timing-safe dummy hash check for unknown emails prevents enumeration - verified via identical 401 body.",
+    "Register endpoint casefolds email before uniqueness check and _provision_user also lowercases - consistent.",
+    "Pydantic Field(min_length=12, max_length=72) on RegisterIn handles char-length; explicit _validate_password_bytes handles UTF-8 byte cap. Good defense in depth.",
+    "auth.tsx: exchangeSessionId correctly sets authError on failure and login.tsx surfaces it via testID='login-err'; URL fragment is cleaned only after successful exchange (playbook rules 7+8) - verified in code."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_password_auth.py (new)"
+  ],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% (5/5 E2E flows)"},
+  "seed_data_creation": "Tests created a handful of TEST_reg_*, TEST_dup_*, TEST_life_*, e2e_reg_*, e2e_short_* users (all with TEST_/e2e_ prefixes). Safe to leave; low volume.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Email/password auth is fully working. Endpoints: POST /api/auth/register (201, min 12 chars, max 72 bytes, dup=409), POST /api/auth/login (200, generic 401), token 'gs-*' works on all auth-guarded endpoints, /auth/logout revokes. Frontend login screen testIDs: pw-tab-login, pw-tab-register, pw-email, pw-password, pw-eye, pw-submit, google-signin-button, founder-bypass-btn, login-err. New users default language='en' → English TOS gate.",
+  "rca_of_issue": "N/A - feature verification only, no bugs found."
+}

@@ -173,6 +173,96 @@ async def auth_dev_bypass(body: DevBypassIn):
     return {"session_token": session_token, "user": clean(user_doc)}
 
 
+# --------- CLASSIC EMAIL / PASSWORD AUTH ---------
+# Playbook-compliant: bcrypt (threadpool), 72-byte limit, timing-safe dummy check,
+# generic errors (no account enumeration), opaque session tokens in user_sessions
+# (same contract as Google OAuth + dev-bypass — get_current_user needs no changes).
+import bcrypt as _bcrypt
+from pymongo.errors import DuplicateKeyError
+
+_BCRYPT_ROUNDS = 12
+_DUMMY_HASH = _bcrypt.hashpw(b"dummy-password", _bcrypt.gensalt(_BCRYPT_ROUNDS))
+_PASSWORD_SESSION_DAYS = 30
+
+
+class RegisterIn(BaseModel):
+    email: str
+    password: str = Field(min_length=12, max_length=72)
+    name: Optional[str] = None
+
+
+class LoginIn(BaseModel):
+    email: str
+    password: str = Field(min_length=1, max_length=72)
+
+
+def _validate_password_bytes(password: str):
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(422, "password must be at most 72 UTF-8 bytes")
+
+
+async def _hash_password(password: str) -> str:
+    hashed = await run_in_threadpool(_bcrypt.hashpw, password.encode("utf-8"), _bcrypt.gensalt(_BCRYPT_ROUNDS))
+    return hashed.decode("utf-8")
+
+
+async def _verify_password(password: str, stored_hash: Optional[str]) -> bool:
+    candidate = stored_hash.encode("utf-8") if stored_hash else _DUMMY_HASH
+    try:
+        ok = await run_in_threadpool(_bcrypt.checkpw, password.encode("utf-8"), candidate)
+    except (ValueError, TypeError):
+        return False
+    return ok and stored_hash is not None
+
+
+async def _issue_password_session(user_doc: dict) -> dict:
+    session_token = f"gs-{uuid.uuid4().hex}"
+    now = datetime.now(timezone.utc)
+    await db.user_sessions.insert_one({
+        "session_token": session_token,
+        "user_id": user_doc["user_id"],
+        "created_at": now,
+        "expires_at": now + timedelta(days=_PASSWORD_SESSION_DAYS),
+        "via": "password",
+    })
+    return {"session_token": session_token, "user": clean(user_doc)}
+
+
+@api.post("/auth/register", status_code=201)
+async def auth_register(body: RegisterIn):
+    email_l = body.email.strip().casefold()
+    if "@" not in email_l or "." not in email_l.split("@")[-1]:
+        raise HTTPException(422, "invalid email")
+    _validate_password_bytes(body.password)
+    if await db.users.find_one({"email": email_l}, {"_id": 1}):
+        raise HTTPException(409, "Unable to create account")
+    password_hash = await _hash_password(body.password)
+    await _ensure_founder_whitelist()
+    try:
+        user_doc = await _provision_user(email_l, body.name)
+    except DuplicateKeyError:
+        raise HTTPException(409, "Unable to create account")
+    await db.users.update_one({"user_id": user_doc["user_id"]},
+                              {"$set": {"password_hash": password_hash,
+                                        "auth_providers": ["password"]}})
+    user_doc = await db.users.find_one({"user_id": user_doc["user_id"]}, {"_id": 0})
+    user_doc.pop("password_hash", None)
+    return await _issue_password_session(user_doc)
+
+
+@api.post("/auth/login")
+async def auth_login(body: LoginIn):
+    email_l = body.email.strip().casefold()
+    _validate_password_bytes(body.password)
+    user = await db.users.find_one({"email": email_l}, {"_id": 0})
+    ok = await _verify_password(body.password, user.get("password_hash") if user else None)
+    if not user or not ok:
+        # Same generic message for unknown email and wrong password (no enumeration).
+        raise HTTPException(401, "Incorrect email or password")
+    user.pop("password_hash", None)
+    return await _issue_password_session(user)
+
+
 # --------- USER PREFS ---------
 class PrefIn(BaseModel):
     language: Optional[str] = None

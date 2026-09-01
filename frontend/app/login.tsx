@@ -13,12 +13,17 @@ const BG = 'https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg
 const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
 
 export default function Login() {
-  const { signIn, signInDev } = useAuth();
+  const { signIn, signInDev, signInPassword, registerPassword, authError } = useAuth();
   const [lang, setLang] = useState<Lang>('en');
-  const [busy, setBusy] = useState<'google' | 'dev' | null>(null);
+  const [busy, setBusy] = useState<'google' | 'dev' | 'pw' | null>(null);
   const [showBypass, setShowBypass] = useState(false);
   const [bypassEmail, setBypassEmail] = useState(FOUNDER_EMAIL);
   const [err, setErr] = useState('');
+  // Classic e-mail & password login/registration
+  const [pwMode, setPwMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
 
   // SECURITY — the dev/founder bypass is auto-disabled in production. It only
   // renders on preview / localhost / native-dev builds, never on a public deploy.
@@ -46,6 +51,24 @@ export default function Login() {
     setBusy('dev'); setErr('');
     try { await signInDev(FOUNDER_EMAIL, 'Guardian Angel'); }
     catch (e: any) { setErr(String(e?.message || e)); setBusy(null); }
+  };
+
+  const onPassword = async () => {
+    setBusy('pw'); setErr('');
+    try {
+      if (pwMode === 'register') {
+        if (password.length < 12) throw new Error('Password must be at least 12 characters.');
+        await registerPassword(email, password);
+      } else {
+        await signInPassword(email, password);
+      }
+    } catch (e: any) {
+      const m = String(e?.message || e);
+      if (m.startsWith('401')) setErr('Incorrect email or password.');
+      else if (m.startsWith('409')) setErr('Unable to create account — try signing in instead.');
+      else if (m.includes('at least 12')) setErr('Password must be at least 12 characters.');
+      else setErr(m);
+    } finally { setBusy(null); }
   };
 
   return (
@@ -85,15 +108,76 @@ export default function Login() {
         </ScrollView>
 
         <View style={styles.bottom}>
+          {/* CLASSIC E-MAIL & PASSWORD */}
+          <View style={styles.pwTabs}>
+            <Pressable testID="pw-tab-login" onPress={() => { setPwMode('login'); setErr(''); }}
+              style={[styles.pwTab, pwMode === 'login' && styles.pwTabActive]}>
+              <Text style={[styles.pwTabText, pwMode === 'login' && styles.pwTabTextActive]}>SIGN IN</Text>
+            </Pressable>
+            <Pressable testID="pw-tab-register" onPress={() => { setPwMode('register'); setErr(''); }}
+              style={[styles.pwTab, pwMode === 'register' && styles.pwTabActive]}>
+              <Text style={[styles.pwTabText, pwMode === 'register' && styles.pwTabTextActive]}>CREATE ACCOUNT</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            testID="pw-email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="E-mail"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            style={styles.pwInput}
+          />
+          <View style={styles.pwRow}>
+            <TextInput
+              testID="pw-password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder={pwMode === 'register' ? 'Password (min. 12 characters)' : 'Password'}
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              secureTextEntry={!showPw}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete={pwMode === 'register' ? 'new-password' : 'password'}
+              style={[styles.pwInput, { flex: 1, marginTop: 0 }]}
+            />
+            <Pressable testID="pw-eye" onPress={() => setShowPw(v => !v)} hitSlop={8} style={styles.pwEye}>
+              <Ionicons name={showPw ? 'eye-off' : 'eye'} size={20} color="rgba(255,255,255,0.7)" />
+            </Pressable>
+          </View>
+          <Pressable
+            testID="pw-submit"
+            onPress={onPassword}
+            disabled={busy !== null || !email.includes('@') || password.length === 0}
+            style={({ pressed }) => [styles.signBtn, pressed && { opacity: 0.85 },
+              (busy !== null || !email.includes('@') || password.length === 0) && { opacity: 0.55 }]}
+          >
+            {busy === 'pw'
+              ? <ActivityIndicator color={C.inverse} />
+              : <Text style={styles.signBtnText}>{pwMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}</Text>}
+          </Pressable>
+
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>OR</Text>
+            <View style={styles.orLine} />
+          </View>
+
           <Pressable
             testID="google-signin-button"
             onPress={onSignIn}
             disabled={busy !== null}
-            style={({ pressed }) => [styles.signBtn, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.googleBtn, pressed && { opacity: 0.85 }]}
           >
             {busy === 'google'
-              ? <ActivityIndicator color={C.inverse} />
-              : <Text style={styles.signBtnText}>{t('sign_in_google', lang).toUpperCase()}</Text>}
+              ? <ActivityIndicator color={C.onInverse} />
+              : <>
+                  <Ionicons name="logo-google" size={18} color={C.onInverse} />
+                  <Text style={styles.googleBtnText}>{t('sign_in_google', lang).toUpperCase()}</Text>
+                </>}
           </Pressable>
 
           {/* SOVEREIGN BYPASS — Founder / preview access without Google OAuth.
@@ -149,7 +233,7 @@ export default function Login() {
             </View>
           )}
 
-          {!!err && <Text testID="login-err" style={styles.err}>{err}</Text>}
+          {(!!err || !!authError) && <Text testID="login-err" style={styles.err}>{err || authError}</Text>}
 
           <Text style={styles.footer}>© 2026 GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO) · PROPRIETARY · ZERO-KNOWLEDGE</Text>
           <Text style={styles.footerArt50}>EU AI ACT ART. 50 · AI OUTPUTS ARE INFORMATIONAL ONLY · YOU ACT AT YOUR OWN RISK</Text>
@@ -175,7 +259,20 @@ const styles = StyleSheet.create({
   langChipText: { color: C.onInverse, fontWeight: '800', letterSpacing: 1, fontSize: 13 },
   langChipTextActive: { color: C.inverse },
   bottom: { padding: S.lg, gap: S.sm },
-  signBtn: { backgroundColor: C.onInverse, paddingVertical: 20, alignItems: 'center', borderWidth: 2, borderColor: C.onInverse, minHeight: 56 },
+  pwTabs: { flexDirection: 'row', gap: 8 },
+  pwTab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' },
+  pwTabActive: { borderColor: C.onInverse, backgroundColor: 'rgba(255,255,255,0.10)' },
+  pwTabText: { color: C.onInverse, opacity: 0.6, fontSize: 11.5, fontWeight: '800', letterSpacing: 1.5 },
+  pwTabTextActive: { opacity: 1 },
+  pwInput: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', color: C.onInverse, paddingHorizontal: 14, minHeight: 50, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.45)' },
+  pwRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pwEye: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', minHeight: 50, minWidth: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
+  orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.25)' },
+  orText: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, fontWeight: '800' },
+  googleBtn: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)', paddingVertical: 16, minHeight: 52 },
+  googleBtnText: { color: C.onInverse, fontSize: 13.5, fontWeight: '900', letterSpacing: 1.5 },
+  signBtn: { backgroundColor: C.onInverse, paddingVertical: 18, alignItems: 'center', borderWidth: 2, borderColor: C.onInverse, minHeight: 54 },
   signBtnText: { color: C.inverse, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
   founderBtn: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.10)', paddingVertical: 16, minHeight: 52 },
   founderText: { color: C.brand, fontSize: 12.5, fontWeight: '900', letterSpacing: 1.5 },
