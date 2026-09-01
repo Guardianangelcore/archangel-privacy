@@ -37,6 +37,9 @@ _push_client = httpx.AsyncClient(base_url=PUSH_BASE_URL, headers={"X-Push-Key": 
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
 STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
 APP_NAME = "guardian-health-angel"
+# Single source of truth for the legal document version (ToS + Privacy Policy).
+# Must match LEGAL_VERSION in frontend/src/legal.ts.
+TOS_VERSION = "2026-06.1"
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]

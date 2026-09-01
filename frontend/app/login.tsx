@@ -69,7 +69,7 @@ export default function Login() {
       if (pwMode === 'register') {
         if (password.length < 12) throw new Error('Password must be at least 12 characters.');
         if (!agreeTerms) throw new Error('You must agree to the Terms of Service and Privacy Policy.');
-        await registerPassword(email, password);
+        await registerPassword(email, password, agreeTerms);
       } else {
         await signInPassword(email, password);
       }
@@ -78,6 +78,7 @@ export default function Login() {
       if (m.startsWith('401')) setErr('Incorrect email or password.');
       else if (m.startsWith('409')) setErr('Unable to create account — try signing in instead.');
       else if (m.includes('at least 12')) setErr('Password must be at least 12 characters.');
+      else if (m.includes('Terms of Service')) setErr(m.includes('outdated') ? 'Terms of Service version is outdated — please update the app.' : 'You must agree to the Terms of Service and Privacy Policy.');
       else setErr(m);
     } finally { setBusy(null); }
   };
@@ -246,7 +247,7 @@ export default function Login() {
               (busy !== null || !email.includes('@') || password.length === 0 || (pwMode === 'register' && !agreeTerms)) && { opacity: 0.55 }]}
           >
             {busy === 'pw'
-              ? <ActivityIndicator color={C.inverse} />
+              ? <ActivityIndicator color={C.onInverse} />
               : <Text style={styles.signBtnText}>{pwMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}</Text>}
           </Pressable>
           ) : (
@@ -258,7 +259,7 @@ export default function Login() {
               (busy !== null || !email.includes('@')) && { opacity: 0.55 }]}
           >
             {busy === 'pw'
-              ? <ActivityIndicator color={C.inverse} />
+              ? <ActivityIndicator color={C.onInverse} />
               : <Text style={styles.signBtnText}>{codeSent ? 'RESET PASSWORD' : 'SEND RESET CODE'}</Text>}
           </Pressable>
           )}
@@ -295,9 +296,9 @@ export default function Login() {
             style={({ pressed }) => [styles.googleBtn, pressed && { opacity: 0.85 }]}
           >
             {busy === 'google'
-              ? <ActivityIndicator color={C.onInverse} />
+              ? <ActivityIndicator color={C.fg} />
               : <>
-                  <Ionicons name="logo-google" size={18} color={C.onInverse} />
+                  <Ionicons name="logo-google" size={18} color={C.fg} />
                   <Text style={styles.googleBtnText}>{t('sign_in_google', lang).toUpperCase()}</Text>
                 </>}
           </Pressable>
@@ -369,50 +370,50 @@ export default function Login() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   creditRow: { paddingHorizontal: S.lg, paddingTop: S.sm, alignItems: 'flex-end' },
-  credit: { color: C.onInverse, fontSize: 10, letterSpacing: 2, opacity: 0.9, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
+  credit: { color: C.fg, fontSize: 10, letterSpacing: 2, opacity: 0.9, fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }) },
   body: { padding: S.xl, minHeight: '60%' },
-  hero: { color: C.onInverse, fontSize: 40, fontWeight: '900', letterSpacing: 2 },
-  hero2: { color: C.onInverse, fontSize: 28, fontWeight: '900', letterSpacing: 1, marginTop: -4 },
-  divider: { height: 3, backgroundColor: C.onInverse, width: 64, marginTop: S.lg },
-  tagline: { color: C.onInverse, opacity: 0.9, fontSize: 16, marginTop: S.lg, lineHeight: 22 },
-  langLabel: { color: C.onInverse, marginTop: S.xxl, fontSize: 11, letterSpacing: 2 },
+  hero: { color: C.fg, fontSize: 40, fontWeight: '900', letterSpacing: 2 },
+  hero2: { color: C.fg, fontSize: 28, fontWeight: '900', letterSpacing: 1, marginTop: -4 },
+  divider: { height: 3, backgroundColor: C.fg, width: 64, marginTop: S.lg },
+  tagline: { color: C.fg, opacity: 0.9, fontSize: 16, marginTop: S.lg, lineHeight: 22 },
+  langLabel: { color: C.fg, marginTop: S.xxl, fontSize: 11, letterSpacing: 2 },
   langRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: S.md, gap: S.sm },
-  langChip: { paddingHorizontal: S.lg, paddingVertical: S.md, borderWidth: 1.5, borderColor: C.onInverse, backgroundColor: 'transparent' },
-  langChipActive: { backgroundColor: C.onInverse },
-  langChipText: { color: C.onInverse, fontWeight: '800', letterSpacing: 1, fontSize: 13 },
-  langChipTextActive: { color: C.inverse },
+  langChip: { paddingHorizontal: S.lg, paddingVertical: S.md, borderWidth: 1.5, borderColor: C.fg, backgroundColor: 'transparent' },
+  langChipActive: { backgroundColor: C.inverse },
+  langChipText: { color: C.fg, fontWeight: '800', letterSpacing: 1, fontSize: 13 },
+  langChipTextActive: { color: C.onInverse },
   bottom: { padding: S.lg, gap: S.sm },
   pwTabs: { flexDirection: 'row', gap: 8 },
   pwTab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' },
-  pwTabActive: { borderColor: C.onInverse, backgroundColor: 'rgba(255,255,255,0.10)' },
-  pwTabText: { color: C.onInverse, opacity: 0.6, fontSize: 11.5, fontWeight: '800', letterSpacing: 1.5 },
+  pwTabActive: { borderColor: C.fg, backgroundColor: 'rgba(255,255,255,0.10)' },
+  pwTabText: { color: C.fg, opacity: 0.6, fontSize: 11.5, fontWeight: '800', letterSpacing: 1.5 },
   pwTabTextActive: { opacity: 1 },
-  pwInput: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', color: C.onInverse, paddingHorizontal: 14, minHeight: 50, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.45)' },
+  pwInput: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', color: C.fg, paddingHorizontal: 14, minHeight: 50, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.45)' },
   pwRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   pwEye: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', minHeight: 50, minWidth: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
   orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.25)' },
-  orText: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, fontWeight: '800' },
+  orText: { color: C.fg, opacity: 0.6, fontSize: 10, letterSpacing: 2, fontWeight: '800' },
   googleBtn: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)', paddingVertical: 16, minHeight: 52 },
-  googleBtnText: { color: C.onInverse, fontSize: 13.5, fontWeight: '900', letterSpacing: 1.5 },
-  signBtn: { backgroundColor: C.onInverse, paddingVertical: 18, alignItems: 'center', borderWidth: 2, borderColor: C.onInverse, minHeight: 54 },
-  signBtnText: { color: C.inverse, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
+  googleBtnText: { color: C.fg, fontSize: 13.5, fontWeight: '900', letterSpacing: 1.5 },
+  signBtn: { backgroundColor: C.inverse, paddingVertical: 18, alignItems: 'center', borderWidth: 2, borderColor: C.inverse, minHeight: 54 },
+  signBtnText: { color: C.onInverse, fontSize: 17, fontWeight: '900', letterSpacing: 1.5 },
   founderBtn: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.10)', paddingVertical: 16, minHeight: 52 },
   founderText: { color: C.brand, fontSize: 12.5, fontWeight: '900', letterSpacing: 1.5 },
   linkBtn: { alignItems: 'center', paddingVertical: 6 },
-  linkText: { color: C.onInverse, opacity: 0.7, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
+  linkText: { color: C.fg, opacity: 0.7, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
   bypassBox: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  bypassInput: { flex: 1, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.5)', color: C.onInverse, paddingHorizontal: 12, minHeight: 48, fontSize: 13, backgroundColor: 'rgba(0,0,0,0.4)' },
+  bypassInput: { flex: 1, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.5)', color: C.fg, paddingHorizontal: 12, minHeight: 48, fontSize: 13, backgroundColor: 'rgba(0,0,0,0.4)' },
   bypassSubmit: { backgroundColor: C.brand, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
   bypassSubmitText: { color: C.onInverse, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
   err: { color: C.error, fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   info: { color: '#7BE0AD', fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
-  resetTitle: { color: C.onInverse, fontSize: 12, fontWeight: '900', letterSpacing: 2, textAlign: 'center', paddingVertical: 6 },
+  resetTitle: { color: C.fg, fontSize: 12, fontWeight: '900', letterSpacing: 2, textAlign: 'center', paddingVertical: 6 },
   agreeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  agreeText: { flex: 1, color: C.onInverse, opacity: 0.85, fontSize: 11.5, lineHeight: 17 },
+  agreeText: { flex: 1, color: C.fg, opacity: 0.85, fontSize: 11.5, lineHeight: 17 },
   agreeLink: { color: '#7BE0AD', fontWeight: '900', textDecorationLine: 'underline' },
   linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 2 },
-  footer: { color: C.onInverse, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center', marginTop: 6 },
-  footerArt50: { color: C.onInverse, opacity: 0.45, fontSize: 8, letterSpacing: 1, textAlign: 'center', marginTop: 2 },
+  footer: { color: C.fg, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center', marginTop: 6 },
+  footerArt50: { color: C.fg, opacity: 0.45, fontSize: 8, letterSpacing: 1, textAlign: 'center', marginTop: 2 },
   rtl: { writingDirection: 'rtl', textAlign: 'right' },
 });

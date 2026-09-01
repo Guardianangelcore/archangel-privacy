@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { Platform, Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { api, saveToken, getToken, clearToken } from './api';
+import { LEGAL_VERSION } from './legal';
 import type { Lang } from './i18n';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -24,7 +25,7 @@ type Ctx = {
   signIn: () => Promise<void>;
   signInDev: (email: string, name?: string) => Promise<void>;
   signInPassword: (email: string, password: string) => Promise<void>;
-  registerPassword: (email: string, password: string, name?: string) => Promise<void>;
+  registerPassword: (email: string, password: string, tosAccepted: boolean, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   setUser: (u: User | null) => void;
@@ -176,10 +177,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   }, []);
 
-  const registerPassword = useCallback(async (email: string, password: string, name?: string) => {
+  const registerPassword = useCallback(async (email: string, password: string, tosAccepted: boolean, name?: string) => {
+    // tos_accepted + tos_version become the user's GDPR consent receipt (server-timestamped).
     const res: any = await api('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password, name }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password, name,
+        tos_accepted: tosAccepted, tos_version: LEGAL_VERSION }),
     });
     await saveToken(res.session_token);
     setAuthError(null);

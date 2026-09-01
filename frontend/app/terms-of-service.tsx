@@ -6,9 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { C, S, R } from '@/src/theme';
-
-const VERSION = '2026-06.1';
-const EFFECTIVE = 'June 1, 2026';
+import { LEGAL_VERSION as VERSION, LEGAL_EFFECTIVE as EFFECTIVE } from '@/src/legal';
 
 function Section({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (

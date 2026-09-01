@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-from fastapi import HTTPException, Header, UploadFile, File, Form
+from fastapi import HTTPException, Header, UploadFile, File, Form, Request
 from fastapi.responses import Response, StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ from core import (
     AML_UNVERIFIED_DAILY, AML_VERIFIED_DAILY, AML_MAX_TX_PER_DAY,
     _FONT_R, _FONT_B, _make_pdf, _auth_pdf, _pdf_footer, _pdf_response,
     APP_NAME, put_object_sync, get_object_sync, init_storage,
-    EMERGENT_LLM_KEY, AUTH_SESSION_URL,
+    EMERGENT_LLM_KEY, AUTH_SESSION_URL, TOS_VERSION,
 )
 from models import User, EmergencyProfile, Document, WaitlistItem, FallEvent
 
@@ -189,6 +189,9 @@ class RegisterIn(BaseModel):
     email: str
     password: str = Field(min_length=12, max_length=72)
     name: Optional[str] = None
+    # GDPR consent receipt — the checkbox on the Create Account screen.
+    tos_accepted: bool = False
+    tos_version: Optional[str] = None
 
 
 class LoginIn(BaseModel):
@@ -229,11 +232,15 @@ async def _issue_password_session(user_doc: dict) -> dict:
 
 
 @api.post("/auth/register", status_code=201)
-async def auth_register(body: RegisterIn):
+async def auth_register(body: RegisterIn, request: Request):
     email_l = body.email.strip().casefold()
     if "@" not in email_l or "." not in email_l.split("@")[-1]:
         raise HTTPException(422, "invalid email")
     _validate_password_bytes(body.password)
+    if not body.tos_accepted:
+        raise HTTPException(422, "You must accept the Terms of Service and Privacy Policy")
+    if body.tos_version and body.tos_version != TOS_VERSION:
+        raise HTTPException(422, "Terms of Service version is outdated — please update the app")
     if await db.users.find_one({"email": email_l}, {"_id": 1}):
         raise HTTPException(409, "Unable to create account")
     password_hash = await _hash_password(body.password)
@@ -242,12 +249,51 @@ async def auth_register(body: RegisterIn):
         user_doc = await _provision_user(email_l, body.name)
     except DuplicateKeyError:
         raise HTTPException(409, "Unable to create account")
+    receipt = await _record_consent_receipt(user_doc["user_id"], request)
+    now = datetime.now(timezone.utc)
     await db.users.update_one({"user_id": user_doc["user_id"]},
                               {"$set": {"password_hash": password_hash,
-                                        "auth_providers": ["password"]}})
+                                        "auth_providers": ["password"],
+                                        "consent_receipt": receipt,
+                                        "tos_accepted_version": TOS_VERSION,
+                                        "tos_accepted_at": now}})
     user_doc = await db.users.find_one({"user_id": user_doc["user_id"]}, {"_id": 0})
     user_doc.pop("password_hash", None)
     return await _issue_password_session(user_doc)
+
+
+async def _record_consent_receipt(user_id: str, request: Request) -> dict:
+    """GDPR Art. 7(1) proof of consent: timestamp + document version + tamper-evident
+    hash-chain entry in the audit ledger. IP is stored only as a SHA-256 hash."""
+    now = datetime.now(timezone.utc)
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = (fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")) or ""
+    receipt = {
+        "receipt_id": f"cr_{uuid.uuid4().hex[:16]}",
+        "accepted_at": now.isoformat(timespec="seconds").replace("+00:00", "Z"),  # unambiguous UTC
+        "tos_version": TOS_VERSION,
+        "privacy_policy_version": TOS_VERSION,
+        "documents": ["terms-of-service", "privacy-policy"],
+        "method": "registration_checkbox",
+        "ip_hash": hashlib.sha256(ip.encode()).hexdigest() if ip else None,
+        "user_agent": (request.headers.get("user-agent") or "")[:200] or None,
+    }
+    receipt["ledger_hash"] = await _aml_ledger_append(user_id, "consent_receipt", {
+        "receipt_id": receipt["receipt_id"], "tos_version": TOS_VERSION,
+        "accepted_at": now.isoformat(), "method": receipt["method"]})
+    return receipt
+
+
+@api.get("/auth/consent-receipt")
+async def auth_consent_receipt(authorization: Optional[str] = Header(None)):
+    """Return the stored consent receipt (GDPR proof) for the signed-in user."""
+    user = await get_current_user(authorization)
+    doc = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "consent_receipt": 1,
+                                                                  "tos_accepted_version": 1, "tos_accepted_at": 1})
+    return {"consent_receipt": clean(doc.get("consent_receipt")) if doc and doc.get("consent_receipt") else None,
+            "tos_accepted_version": (doc or {}).get("tos_accepted_version"),
+            "tos_accepted_at": (doc or {}).get("tos_accepted_at"),
+            "current_tos_version": TOS_VERSION}
 
 
 @api.post("/auth/login")

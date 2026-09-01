@@ -33,8 +33,10 @@ def _cid(sha256_hex: str) -> str:
     raw = base64.b32encode(bytes.fromhex(sha256_hex)).decode().lower().rstrip("=")
     return f"bafy{raw[:46]}"
 
+_LIVE = {"orphaned": {"$ne": True}}  # fork-healed blocks are soft-marked, never hard-deleted
+
 async def _chain_head() -> dict:
-    return await db.mosaic_blocks.find_one({}, {"_id": 0}, sort=[("height", -1)]) or \
+    return await db.mosaic_blocks.find_one(_LIVE, {"_id": 0}, sort=[("height", -1)]) or \
         {"height": 0, "block_hash": "mosaic-genesis"}
 
 async def produce_block(trigger: str) -> Optional[dict]:
@@ -72,7 +74,7 @@ async def produce_block(trigger: str) -> Optional[dict]:
 async def mosaic_status(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     head = await _chain_head()
-    blocks = await db.mosaic_blocks.count_documents({})
+    blocks = await db.mosaic_blocks.count_documents(_LIVE)
     bridge = await db.mosaic_bridge.find_one({"key": "bridge"}, {"_id": 0}) or \
         {"primary": "Mosaic Chain", "active": "Mosaic Chain", "latency_ms": 0, "mirrored_ops": 0}
     contracts = await db.legacy_contracts.count_documents({})
@@ -84,7 +86,7 @@ async def mosaic_status(authorization: Optional[str] = Header(None)):
 @api.get("/mosaic/blocks")
 async def mosaic_blocks(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
-    rows = await db.mosaic_blocks.find({}, {"_id": 0}).sort("height", -1).to_list(15)
+    rows = await db.mosaic_blocks.find(_LIVE, {"_id": 0}).sort("height", -1).to_list(15)
     return {"blocks": rows}
 
 @api.post("/mosaic/anchor")
@@ -232,11 +234,11 @@ async def mosaic_explorer(authorization: Optional[str] = Header(None)):
     """Simulated Mosaic Explorer API — chain telemetry the agents (and Jarvis) monitor."""
     await get_current_user(authorization)
     head = await _chain_head()
-    blocks = await db.mosaic_blocks.count_documents({})
+    blocks = await db.mosaic_blocks.count_documents(_LIVE)
     supply = await db.token_supply.find_one({"key": "gat"}, {"_id": 0}) or {}
     bridge = await db.mosaic_bridge.find_one({"key": "bridge"}, {"_id": 0}) or {}
     tx_total = 0
-    async for b in db.mosaic_blocks.find({}, {"_id": 0, "tx_batched": 1}):
+    async for b in db.mosaic_blocks.find(_LIVE, {"_id": 0, "tx_batched": 1}):
         tx_total += b.get("tx_batched", 0)
     return {
         "chain": "Mosaic L2 (EVM-compatible)", "chain_id": MOSAIC_CHAIN_ID,
@@ -289,14 +291,19 @@ async def verify_chain_and_wealth() -> dict:
     """Blueprint autonomy: verify the Mosaic hash-chain (fork detection → autonomous
     GA-T contract redeploy) + anchor unverified Wealth Hub payouts into a block."""
     out = {"fork_detected": False, "orphaned": 0, "redeployed": False, "wealth_anchored": 0}
-    blocks = await db.mosaic_blocks.find({}, {"_id": 0, "height": 1, "block_hash": 1, "prev_hash": 1}) \
+    blocks = await db.mosaic_blocks.find(_LIVE, {"_id": 0, "height": 1, "block_hash": 1, "prev_hash": 1}) \
                                    .sort("height", 1).to_list(1000)
     prev_hash = "mosaic-genesis"
     for b in blocks:
         if b["prev_hash"] != prev_hash:
             out["fork_detected"] = True
-            res = await db.mosaic_blocks.delete_many({"height": {"$gte": b["height"]}})
-            out["orphaned"] = res.deleted_count
+            # Non-destructive self-heal: soft-mark forked blocks as orphaned (records are preserved
+            # for audit); every live-chain query filters them out via _LIVE.
+            res = await db.mosaic_blocks.update_many(
+                {**_LIVE, "height": {"$gte": b["height"]}},
+                {"$set": {"orphaned": True, "orphaned_at": datetime.now(timezone.utc),
+                          "orphaned_reason": "chain_fork_detected"}})
+            out["orphaned"] = res.modified_count
             await deploy_gat_contract("chain_fork_detected_self_heal")
             out["redeployed"] = True
             try:

@@ -349,7 +349,7 @@ async def barter_del(offer_id: str, authorization: Optional[str] = Header(None))
 
 
 # --------- GLOBAL LEGAL ENGINE (2026 standards) ---------
-TOS_VERSION = "2026-06.1"
+from core import TOS_VERSION
 EU_CC = {"SK","CZ","DE","AT","PL","HU","FR","IT","ES","PT","NL","BE","LU","IE","DK","SE","FI","EE","LV","LT","SI","HR","RO","BG","GR","CY","MT"}
 COMMON_LAW_CC = {"US","CA","AU","NZ","IE"}
 
