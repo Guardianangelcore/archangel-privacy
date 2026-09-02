@@ -27,6 +27,19 @@ export async function clearToken() {
 
 export const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+/** Human-readable message from an `api()` error ("503: {"detail":"..."}" → "..."; HTML proxy pages → generic). */
+export function errMsg(e: any): string {
+  const m = String(e?.message || e);
+  const status = /^(\d{3}):\s/.exec(m)?.[1];
+  const body = status ? m.slice(status.length + 2) : m;
+  try {
+    const j = JSON.parse(body);
+    if (j?.detail) return typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
+  } catch {}
+  if (/<html|<!doctype/i.test(body)) return `Server error (${status || 'network'}) — please try again in a moment.`;
+  return m;
+}
+
 export async function api<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = await getToken();
   const headers: any = { 'Content-Type': 'application/json', ...(opts.headers || {}) };

@@ -2,7 +2,7 @@
 // JARVIS 2.0 — THE LIVING SOUL: breathing AI Orb · Level 1→10 companion · full voice
 // conversation (Whisper→gpt-5.4→emotional TTS) · self-teaching memory · visual thinking.
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, Modal, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, Modal, Platform, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -14,7 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
-import { api, API_BASE, getToken } from '@/src/api';
+import { api, API_BASE, getToken, errMsg } from '@/src/api';
+import * as Location from 'expo-location';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
 import { tap } from '@/src/ui/glass';
@@ -279,7 +280,7 @@ export default function Jarvis() {
           if (viaVoice) speak(res.reply, (res.mood as Mood) || 'calm');
         }
       }
-    } catch (e: any) { setErr(String(e.message || e)); setMood('calm'); setStatus(''); }
+    } catch (e: any) { setErr(errMsg(e)); setMood('calm'); setStatus(''); }
     setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy, mode, user?.language, speak, loadState, loadMems, loadHist]);
@@ -373,6 +374,31 @@ export default function Jarvis() {
   const delMemory = async (id: string) => {
     try { await api(`/agent/memories/${id}`, { method: 'DELETE' }); loadMems(); loadState(); } catch {}
   };
+
+  // BRIEFING LOCATION — contextual, user-initiated: GPS (asks permission on tap) or IP
+  // fallback on web/denied. Regenerates the briefing so weather matches the real place.
+  const [locBusy, setLocBusy] = useState(false);
+  const useMyLocation = async () => {
+    tap('light'); setLocBusy(true); setErr('');
+    try {
+      let located = false;
+      if (Platform.OS !== 'web') {
+        let p = await Location.getForegroundPermissionsAsync();
+        if (!p.granted && p.canAskAgain) p = await Location.requestForegroundPermissionsAsync();
+        if (p.granted) {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
+          located = true;
+        } else if (!p.canAskAgain) {
+          Alert.alert('Location is blocked', 'Allow location in Settings so your briefing shows local weather. Using approximate (IP) location for now.',
+            [{ text: 'Later' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]);
+        }
+      }
+      if (!located) await api('/geo/ip-locate', { method: 'POST' });
+      const b: any = await api('/agent/briefing?force=true'); setBriefing(b);
+    } catch (e: any) { setErr(errMsg(e)); }
+    finally { setLocBusy(false); }
+  };
   const toggleAutopilot = async (v: boolean) => {
     setAuto({ ...(auto || {}), autopilot: v });
     try { await api('/jarvis/autopilot', { method: 'PUT', body: JSON.stringify({ enabled: v }) }); } catch {}
@@ -437,8 +463,14 @@ export default function Jarvis() {
               </Pressable>
             </View>
             {!!briefing.weather && (
-              <Text style={st.weather}>🌤 {briefing.weather.city}: {briefing.weather.now_c} °C · {briefing.weather.desc} · min {briefing.weather.min_c} / max {briefing.weather.max_c} °C</Text>
+              <Text testID="jv-weather" style={st.weather}>🌤 {briefing.weather.city}: {briefing.weather.now_c} °C · {briefing.weather.desc} · min {briefing.weather.min_c} / max {briefing.weather.max_c} °C</Text>
             )}
+            <Pressable testID="jv-use-location" onPress={useMyLocation} disabled={locBusy} style={st.locBtn}>
+              {locBusy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="location-outline" size={14} color={C.brand} />}
+              <Text style={st.locBtnText}>
+                {briefing.weather?.source === 'gps' ? 'UPDATE MY LOCATION' : briefing.weather ? 'USE MY GPS LOCATION' : 'SET MY LOCATION FOR LOCAL WEATHER'}
+              </Text>
+            </Pressable>
             <Text style={st.briefText}>{briefing.briefing}</Text>
             {(briefing.alerts || []).map((a: any, i: number) => (
               <View key={i} style={[st.alertRow, a.severity === 'high' && { borderColor: C.error }]}>
@@ -712,6 +744,8 @@ const st = StyleSheet.create({
   cardTitle: { color: C.fg, fontWeight: '900', fontSize: 12, letterSpacing: 2 },
   playBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
   weather: { color: C.onS3, fontSize: 12, marginBottom: S.sm, fontWeight: '700' },
+  locBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 32, paddingHorizontal: S.sm, borderRadius: R.pill, borderWidth: 1, borderColor: C.borderStrong, marginBottom: S.sm },
+  locBtnText: { color: C.brand, fontSize: 10.5, fontWeight: '900', letterSpacing: 1 },
   briefText: { color: C.fg, fontSize: 14, lineHeight: 21 },
   alertRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: S.sm, borderWidth: 1, borderColor: '#FFC53D', borderRadius: R.sm, padding: S.sm },
   alertText: { flex: 1, color: C.fg, fontSize: 12, lineHeight: 17 },

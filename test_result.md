@@ -807,3 +807,26 @@ dental+tooth event, dental filter+counts, trends, trends summary LLM, voice dent
 Test data cleaned (Nina TEST child cascade, dental events). Founder untouched.
 Screenshots: Karta života with 3 buttons + TRENDY ZDRAVIA screen render correctly.
 NOTE: smoketest-user-1 has ~123 exam events from previous suites (pollution, harmless).
+
+## Iteration 55 (3 urgent bug fixes — SOS false trigger · Jarvis 502 · Briefing location, Jun 2026)
+1) SOS NEVER auto-triggers from noise (frontend/src/acoustic.ts + app/(tabs)/index.tsx AngelHome):
+- Loud noise (> -8 dBFS) now ONLY shows an in-place card testID noise-alert ("LOUD NOISE DETECTED — ARE YOU OK?")
+  and records 5 s → POST /api/voice/sos-keyword (Whisper) → opens /fall-verify ONLY if an explicit keyword
+  ("SOS", "help", "pomoc", …) is detected. Otherwise status text (noise-status) says nothing was sent; card
+  auto-dismisses after 30 s. Buttons: noise-fine (dismiss) / noise-sos (HOLD 1.5 s → /fall-verify; tap = hint only).
+- Angel Mode SOS button (angel-sos): tap shows "HOLD 1.5 S" hint; only onLongPress (1500 ms) opens /fall-verify.
+- Backend: POST /api/voice/sos-keyword (lens.py) → {sos_detected, transcript}; logs kind=sos_keyword_check in acoustic_events.
+  NOTE: Whisper needs the LLM key → currently 503/502 while budget is exhausted; keyword gate then returns sos=false (safe).
+2) Jarvis 502 root cause = EMERGENT_LLM_KEY budget exceeded ("Budget has been exceeded… Max budget: 7.4"). Code fix:
+  core.ai_http_error() → 503 JSON {"detail": "AI budget exhausted — the Universal LLM key needs a top-up (...)"} instead of
+  502 (which Cloudflare replaced with an HTML "error code: 502" page). Applied to /agent/chat, /agent/chat/stream (SSE error
+  payload), /agent/transcribe. Frontend src/api.ts errMsg() extracts detail; jarvis.tsx shows it in the err line.
+3) Briefing location: geo.py geo_resolved()/ensure_geo(); DEFAULT_GEO (New York) is now treated as "unknown": _weather returns
+  None when unresolved; GET /agent/briefing + GET /geo/context call ensure_geo (IP-locate via X-Forwarded-For) for never-located
+  users; /geo/locate stores REAL GPS coords + reverse-geocoded city (BigDataCloud keyless) with nearest_city kept as label;
+  weather uses timezone=auto and returns {city,country,source}. /geo/context returns resolved flag; home pin hidden if not.
+  Frontend: guardian.tsx startup effect — GPS silently if permission already granted, else IP-locate for unresolved users;
+  jarvis.tsx briefing card button jv-use-location (asks location permission contextually, IP fallback on web, then
+  /agent/briefing?force=true). Weather text testID jv-weather.
+Self-tested: /agent/chat → 503 with budget detail; /geo/locate 48.72,21.26 → Kosice (gps); /agent/briefing?force=true →
+weather Kosice; fresh user + X-Forwarded-For 195.28.64.1 → Bratislava (ip). Founder geo reset to unset afterwards.

@@ -2,19 +2,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } from 'expo-audio';
+import { API_BASE, getToken } from './api';
+
+export type KeywordResult = { sos: boolean; transcript: string };
 
 /**
  * Acoustic Threat Detection — local processing only.
- * Monitors mic metering (dBFS) and fires onThreat on a sudden very loud noise
- * (glass break / scream / bang heuristic). No audio ever leaves the device.
+ * Monitors mic metering (dBFS) and fires onLoud on a sudden very loud noise
+ * (glass break / scream / bang heuristic). No audio ever leaves the device
+ * on its own. A loud noise NEVER triggers an alarm by itself — the caller must
+ * gate any emergency action behind `captureKeyword()` (explicit spoken "SOS"/
+ * "help") or an intentional long-press.
  */
-export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
+export function useAcousticGuard(onLoud: (dbLevel: number) => void) {
   const recorder = useAudioRecorder({ ...RecordingPresets.LOW_QUALITY, isMeteringEnabled: true } as any);
   const [active, setActive] = useState(false);
+  const activeRef = useRef(false);
+  const capturing = useRef(false);
   const lastFire = useRef(0);
   const startedAt = useRef(0);
-  const onThreatRef = useRef(onThreat);
-  onThreatRef.current = onThreat;
+  const onLoudRef = useRef(onLoud);
+  onLoudRef.current = onLoud;
 
   const showBlocked = () => {
     Alert.alert(
@@ -39,6 +47,7 @@ export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
       await recorder.prepareToRecordAsync();
       recorder.record();
       startedAt.current = Date.now();
+      activeRef.current = true;
       setActive(true);
     } catch (e) {
       console.log('acoustic start err', e);
@@ -46,13 +55,57 @@ export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
   };
 
   const stop = async () => {
+    activeRef.current = false;
     setActive(false);
     try { await recorder.stop(); } catch {}
+  };
+
+  /**
+   * EXPLICIT SOS GATE — records ~5 s right after a loud noise and asks the server
+   * (Whisper) whether an intentional keyword ("SOS", "help", "pomoc"…) was spoken.
+   * Metering is paused during the capture and resumed afterwards.
+   */
+  const captureKeyword = async (): Promise<KeywordResult> => {
+    if (capturing.current) return { sos: false, transcript: '' };
+    capturing.current = true;
+    try {
+      try { await recorder.stop(); } catch {}
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      await new Promise(r => setTimeout(r, 5000));
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri) return { sos: false, transcript: '' };
+      const form = new FormData();
+      if (Platform.OS === 'web') {
+        const blob = await (await fetch(uri)).blob();
+        form.append('file', blob, 'sos.webm');
+      } else {
+        const m4a = uri.endsWith('.m4a');
+        form.append('file', { uri, name: m4a ? 'sos.m4a' : 'sos.webm', type: m4a ? 'audio/mp4' : 'audio/webm' } as any);
+      }
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/voice/sos-keyword`, {
+        method: 'POST', body: form, headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.detail || 'STT failed');
+      return { sos: !!body.sos_detected, transcript: String(body.transcript || '') };
+    } catch (e) {
+      console.log('sos keyword err', e);
+      return { sos: false, transcript: '' };
+    } finally {
+      capturing.current = false;
+      if (activeRef.current) {
+        try { await recorder.prepareToRecordAsync(); recorder.record(); startedAt.current = Date.now(); } catch {}
+      }
+    }
   };
 
   useEffect(() => {
     if (!active) return;
     const t = setInterval(() => {
+      if (capturing.current) return;
       try {
         const st: any = recorder.getStatus();
         const m = st?.metering;
@@ -64,7 +117,7 @@ export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
           Date.now() - lastFire.current > 10000
         ) {
           lastFire.current = Date.now();
-          onThreatRef.current(m);
+          onLoudRef.current(m);
         }
       } catch {}
     }, Platform.OS === 'web' ? 500 : 300);
@@ -78,5 +131,5 @@ export function useAcousticGuard(onThreat: (dbLevel: number) => void) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = () => (active ? stop() : start());
-  return { active, toggle };
+  return { active, toggle, captureKeyword };
 }

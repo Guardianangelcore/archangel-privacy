@@ -8,7 +8,7 @@ Grows with the user (Level 1→10 gamification), remembers everything
 briefing + anomaly alarms without asking) and powers the living Orb UI.
 Model: gpt-5.4 (Ultra Mode) via Emergent LLM key.
 """
-from fastapi import HTTPException, Header, UploadFile, File
+from fastapi import HTTPException, Header, UploadFile, File, Request
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
@@ -19,7 +19,7 @@ from emergentintegrations.llm.openai import OpenAISpeechToText
 
 from core import (
     api, db, logger, clean, get_current_user, send_push,
-    AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY, apply_watermark,
+    AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY, apply_watermark, ai_http_error, ai_error_message,
 )
 from routes.neural import _gather_context
 
@@ -251,7 +251,9 @@ async def agent_anomalies(authorization: Optional[str] = Header(None)):
 # WEATHER (open-meteo, keyless, graceful fallback) — geo-aware for the briefing
 # =========================================================================
 async def _weather(user: Optional[dict] = None) -> Optional[dict]:
-    from routes.geo import geo_of
+    from routes.geo import geo_of, geo_resolved
+    if not geo_resolved(user or {}):
+        return None   # location unknown — never show the default city's weather as the user's
     g = geo_of(user or {})
     try:
         async with httpx.AsyncClient(timeout=3.5) as cli:
@@ -259,13 +261,14 @@ async def _weather(user: Optional[dict] = None) -> Optional[dict]:
                               params={"latitude": g["lat"], "longitude": g["lng"],
                                       "current": "temperature_2m,weather_code",
                                       "daily": "temperature_2m_max,temperature_2m_min",
-                                      "timezone": g["tz"], "forecast_days": 1})
+                                      "timezone": "auto", "forecast_days": 1})
             d = r.json()
             code = int(d["current"]["weather_code"])
             desc = ("clear" if code == 0 else "partly cloudy" if code in (1, 2) else
                     "overcast" if code == 3 else "fog" if code in (45, 48) else
                     "rain" if code < 70 else "snow" if code < 80 else "showers")
-            return {"city": g["city"], "now_c": round(d["current"]["temperature_2m"]),
+            return {"city": g["city"], "country": g.get("country"), "source": g.get("source"),
+                    "now_c": round(d["current"]["temperature_2m"]),
                     "max_c": round(d["daily"]["temperature_2m_max"][0]),
                     "min_c": round(d["daily"]["temperature_2m_min"][0]), "desc": desc}
     except Exception as e:
@@ -517,7 +520,7 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
         resp = await chat.send_message(UserMessage(text=body.message[:1000]))
     except Exception as e:
         logger.error(f"agent chat error: {e}")
-        raise HTTPException(502, "AI service unavailable")
+        raise ai_http_error(e)
     reply, mood = str(resp or ""), "calm"
     try:
         raw = re.sub(r"^```(json)?|```$", "", reply.strip(), flags=re.M).strip()
@@ -580,7 +583,7 @@ def _edge_invalidate_prefix(prefix: str):
 
 
 @api.get("/agent/briefing")
-async def agent_briefing(language: str = "sk", force: bool = False,
+async def agent_briefing(request: Request, language: str = "sk", force: bool = False,
                          authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
@@ -597,6 +600,8 @@ async def agent_briefing(language: str = "sk", force: bool = False,
             return payload
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
+    from routes.geo import ensure_geo
+    user = await ensure_geo(user, request)   # never-located users: resolve by IP, not "New York"
     weather = await _weather(user)
     # today's meds
     rems = await db.med_reminders.find({"user_id": uid}, {"_id": 0}).to_list(20)
@@ -736,7 +741,7 @@ async def agent_transcribe(file: UploadFile = File(...), authorization: Optional
         raise
     except Exception as e:
         logger.error(f"agent transcribe error: {e}")
-        raise HTTPException(502, "Transcription provider failed")
+        raise ai_http_error(e)
     finally:
         if tmp_path:
             try:
@@ -1006,7 +1011,7 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
         except Exception as e:
             logger.error(f"agent stream error: {e}")
             if not full:
-                yield f"data: {json.dumps({'error': 'AI service unavailable'})}\n\n"
+                yield f"data: {json.dumps({'error': ai_error_message(e)})}\n\n"
                 return
         reply = apply_watermark(full)
         tail = reply[len(full):]

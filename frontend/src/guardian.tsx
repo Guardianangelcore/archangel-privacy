@@ -108,6 +108,29 @@ export default function GuardianMonitor() {
   // GEOGRAPHIC FLUIDITY — Travel Mode: GPS → nearest city → re-index providers,
   // switch UI/voice language. Never prompts for permission here (asked in Profile).
   const travelMode = !!(user as any)?.travel_mode;
+
+  // STARTUP LOCATION — every session: if location permission is ALREADY granted use the
+  // device GPS silently (no prompt); otherwise, for never-located users, resolve by IP.
+  // Prevents the briefing/home pin from ever showing the default city.
+  useEffect(() => {
+    if (!user) return;
+    const src = (user as any)?.geo?.source;
+    const resolved = !!src && src !== 'default' && src !== 'ip-fallback';
+    (async () => {
+      try {
+        if (Platform.OS !== 'web') {
+          const p = await Location.getForegroundPermissionsAsync();
+          if (p.granted) {
+            const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
+            return;
+          }
+        }
+        if (!resolved) await api('/geo/ip-locate', { method: 'POST' });
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.user_id]);
   useEffect(() => {
     if (Platform.OS === 'web' || !user || !travelMode) return;
     let cancelled = false;

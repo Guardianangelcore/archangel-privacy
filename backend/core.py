@@ -143,6 +143,22 @@ def did_hash(user_id: str) -> str:
     return "did:" + hashlib.sha256(str(user_id).encode()).hexdigest()[:12]
 
 
+AI_BUDGET_MSG = ("AI budget exhausted — the Universal LLM key needs a top-up "
+                 "(Emergent → Profile → Manage plan → Universal Key → Add Balance).")
+AI_DOWN_MSG = "AI is temporarily unavailable — please try again in a moment."
+
+
+def ai_error_message(e: Exception) -> str:
+    """Human-readable reason for an LLM failure (never leaks provider internals)."""
+    return AI_BUDGET_MSG if "budget has been exceeded" in str(e).lower() else AI_DOWN_MSG
+
+
+def ai_http_error(e: Exception) -> HTTPException:
+    """503 (not 502) so the edge proxy passes our JSON detail through instead of
+    replacing it with a generic 'error code: 502' page."""
+    return HTTPException(503, ai_error_message(e))
+
+
 async def send_push(recipients: List[str], data: dict, idempotency_key: Optional[str] = None) -> None:
     if not recipients:
         return

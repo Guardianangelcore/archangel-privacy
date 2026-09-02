@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // HOME 2026 — Glass/Luxe command center: Guardian Lens FAB, glass pillars, breathing Jarvis
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -285,7 +285,7 @@ function HomeOrb({ lang, onPress }: { lang: Lang; onPress: () => void }) {
   const [geo, setGeo] = useState<any>(null);
   useEffect(() => {
     (async () => { try { setAgent(await api('/agent/state')); } catch {} })();
-    (async () => { try { const g: any = await api('/geo/context'); setGeo(g.geo); } catch {} })();
+    (async () => { try { const g: any = await api('/geo/context'); setGeo(g.resolved ? g.geo : null); } catch {} })();
   }, []);
   const cfg = ORB_MOOD[agent?.mood as string] || ORB_MOOD.calm;
   const breath = useSharedValue(0);
@@ -486,11 +486,36 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
     return () => { try { cleanup?.(); } catch {} stopWakeWord(); };
   }, [wakeEnabled, wakeRecorder, router, lang]);
 
-  // Acoustic Threat Detection — local-only mic metering; on threat: log + Fall-Verify flow
-  const acoustic = useAcousticGuard(async (dbLevel: number) => {
-    try { await api('/acoustic-event', { method: 'POST', body: JSON.stringify({ kind: 'loud_noise', db_level: dbLevel }) }); } catch {}
+  // Acoustic Guardian — local-only mic metering. A loud noise NEVER opens the alarm by
+  // itself: it only shows a calm "are you OK?" card and listens ~5 s for an EXPLICIT
+  // keyword ("SOS" / "help"). Intentional triggers only: keyword or hold-to-SOS.
+  const [noise, setNoise] = useState<null | { db: number; phase: 'listening' | 'idle'; heard: string }>(null);
+  const [sosHint, setSosHint] = useState(false);
+  const acousticRef = useRef<any>(null);
+  const goSos = useCallback(() => {
+    setNoise(null);
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     router.push('/fall-verify');
+  }, [router]);
+  const acoustic = useAcousticGuard(async (dbLevel: number) => {
+    api('/acoustic-event', { method: 'POST', body: JSON.stringify({ kind: 'loud_noise', db_level: dbLevel }) }).catch(() => {});
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    setNoise({ db: dbLevel, phase: 'listening', heard: '' });
+    const r = await acousticRef.current?.captureKeyword?.();
+    if (r?.sos) { goSos(); return; }
+    setNoise(n => (n ? { ...n, phase: 'idle', heard: r?.transcript || '' } : n));
   });
+  acousticRef.current = acoustic;
+  useEffect(() => {
+    if (!noise || noise.phase !== 'idle') return;
+    const t = setTimeout(() => setNoise(null), 30000);   // quietly disappears — nothing is sent
+    return () => clearTimeout(t);
+  }, [noise]);
+  useEffect(() => {
+    if (!sosHint) return;
+    const t = setTimeout(() => setSosHint(false), 2500);
+    return () => clearTimeout(t);
+  }, [sosHint]);
 
   // (phone icon removed — replaced by QR PROFIL button, see angel-qr-profile)
 
@@ -522,6 +547,27 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                 </Text>
               </Pressable>
             </View>
+            {noise && (
+              <View testID="noise-alert" style={styles.noiseCard}>
+                <Text style={styles.noiseTitle}>🔊 LOUD NOISE DETECTED — ARE YOU OK?</Text>
+                <Text testID="noise-status" style={styles.noiseSub}>
+                  {noise.phase === 'listening'
+                    ? 'Listening 5 s for "SOS" or "HELP"… Say it clearly if you need help.'
+                    : noise.heard
+                      ? `I heard: "${noise.heard}" — no SOS keyword. Nothing was sent.`
+                      : 'No SOS keyword heard. Nothing was sent.'}
+                </Text>
+                <View style={styles.noiseRow}>
+                  <Pressable testID="noise-fine" onPress={() => { tap(); setNoise(null); }} style={styles.noiseFine}>
+                    <Text style={styles.noiseFineText}>I&apos;M FINE</Text>
+                  </Pressable>
+                  <Pressable testID="noise-sos" onPress={() => setSosHint(true)} onLongPress={goSos} delayLongPress={1500} style={styles.noiseSos}>
+                    <Ionicons name="alert" size={18} color={C.onError} />
+                    <Text style={styles.noiseSosText}>HOLD FOR SOS</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
 
             <ScrollView contentContainerStyle={styles.angelScroll} showsVerticalScrollIndicator={false}>
               {/* THE COMPANION — Jarvis as a caregiver, not an alarm clock */}
@@ -564,10 +610,13 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
 
             <View style={styles.angelBottom}>
               <View style={styles.angelEmgWrap}>
-                <Pressable testID="angel-sos" onPress={() => router.push('/fall-verify')} style={[styles.angelEmg, { backgroundColor: C.error }]}>
+                {/* Hold-to-SOS: a tap only shows the hint — no accidental alarms */}
+                <Pressable testID="angel-sos" onPress={() => setSosHint(true)} onLongPress={goSos} delayLongPress={1500}
+                  accessibilityLabel="Hold for 1.5 seconds to send SOS"
+                  style={[styles.angelEmg, { backgroundColor: C.error }]}>
                   <Ionicons name="alert" size={44} color={C.onError} />
                 </Pressable>
-                <Text style={styles.angelEmgLabel}>SOS</Text>
+                <Text style={styles.angelEmgLabel}>{sosHint ? 'HOLD 1.5 S' : 'HOLD FOR SOS'}</Text>
               </View>
               {/* QR PROFIL — shareable emergency profile QR (replaced the confusing phone icon) */}
               <View style={styles.angelEmgWrap}>
@@ -658,6 +707,14 @@ const styles = StyleSheet.create({
   acousticRow: { alignItems: 'center', marginTop: S.md },
   acousticBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.brand, borderRadius: R.pill, paddingHorizontal: S.lg, minHeight: 44, backgroundColor: 'rgba(10,10,15,0.55)' },
   acousticBtnOn: { backgroundColor: C.brand },
+  noiseCard: { marginHorizontal: S.lg, marginTop: S.sm, padding: S.md, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.brand, backgroundColor: 'rgba(10,10,15,0.85)', gap: 8 },
+  noiseTitle: { color: C.fg, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
+  noiseSub: { color: C.onS3, fontSize: 12, lineHeight: 17 },
+  noiseRow: { flexDirection: 'row', gap: S.sm, marginTop: 4 },
+  noiseFine: { flex: 1, minHeight: 48, borderRadius: R.pill, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' },
+  noiseFineText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
+  noiseSos: { flex: 1, minHeight: 48, borderRadius: R.pill, backgroundColor: C.error, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
+  noiseSosText: { color: C.onError, fontWeight: '900', letterSpacing: 1.5, fontSize: 13 },
   acousticText: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
   angelCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: S.xl },
   angelScroll: { padding: S.lg, paddingBottom: S.md, gap: S.md },

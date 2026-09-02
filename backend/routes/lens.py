@@ -314,6 +314,72 @@ def _normalize(t: str) -> str:
     t = re.sub(r"[.,!?…'']", " ", t)
     return re.sub(r"\s+", " ", t)
 
+# Explicit SOS keyword — the ONLY voice phrase that may open the emergency loop.
+# Ambient noise / loud conversation never qualifies (see /voice/sos-keyword).
+SOS_PATTERNS = [
+    "help me", "help", "emergency", "call help", "call an ambulance",
+    "pomoc", "pomoz", "pomozte", "pomocte", "zavolaj pomoc", "zavolajte pomoc",
+    "zachranka", "zachranku", "sanitka", "hilfe", "notfall",
+]
+_SOS_RE = re.compile(r"\bs\s?o\s?s\b")   # "SOS", "S.O.S.", "S O S"
+
+
+def _is_sos(norm: str) -> bool:
+    return bool(_SOS_RE.search(norm)) or any(re.search(rf"\b{re.escape(p)}\b", norm) for p in SOS_PATTERNS)
+
+
+async def _transcribe_upload(file: UploadFile) -> str:
+    """Whisper STT for a short uploaded clip (shared by liveness + SOS keyword)."""
+    data = await file.read()
+    if len(data) == 0:
+        raise HTTPException(400, "Empty audio")
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(413, "Audio exceeds the 25 MB limit")
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(500, "AI key not configured")
+    fname = (file.filename or "").lower()
+    suffix = ".webm" if (fname.endswith(".webm") or "webm" in (file.content_type or "")) else ".m4a"
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(data)
+            tmp_path = tmp.name
+        stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
+        result = stt.transcribe(open(tmp_path, "rb"), model="whisper-1")
+        if inspect.isawaitable(result):
+            result = await result
+        if isinstance(result, str):
+            return result.strip()
+        if isinstance(result, dict):
+            return str(result.get("text", "")).strip()
+        return str(getattr(result, "text", result)).strip()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"voice STT error: {e}")
+        raise HTTPException(502, "Transcription provider failed")
+    finally:
+        if tmp_path:
+            try: os.unlink(tmp_path)
+            except Exception: pass
+
+
+@api.post("/voice/sos-keyword")
+async def voice_sos_keyword(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
+    """Intentional SOS gate for the Acoustic Guardian: after a loud noise the app records
+    ~5 s and ONLY an explicit spoken keyword ("SOS", "help", "pomoc"…) opens the
+    emergency loop. Random loud sounds never do."""
+    user = await get_current_user(authorization)
+    transcript = await _transcribe_upload(file)
+    norm = _normalize(transcript)
+    sos = _is_sos(norm)
+    await db.acoustic_events.insert_one({
+        "event_id": uuid.uuid4().hex, "user_id": user["user_id"], "kind": "sos_keyword_check",
+        "transcript": transcript[:300], "sos_detected": sos, "created_at": datetime.now(timezone.utc),
+    })
+    return {"sos_detected": sos, "transcript": transcript[:300]}
+
+
 @api.post("/voice/liveness")
 async def voice_liveness(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
     """Angel Mode 2.0 — the senior shouts 'Jarvis, som v poriadku!' after a

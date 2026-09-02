@@ -36,17 +36,38 @@ CITIES = [
     {"city": "Kyiv", "country": "UA", "lang": "uk", "lat": 50.4501, "lng": 30.5234, "tz": "Europe/Kyiv"},
 ]
 
-# Sovereign default — Bratislava is a neutral EU-central fallback used only when
-# NO signal at all (no GPS, no IP, no manual). Every user is expected to converge
-# on a real geo within seconds of opening the app.
+# Used ONLY when there is no signal at all (no GPS, no IP, no manual pick). Consumers
+# must treat source == "default" as "location unknown" — never show its weather/city
+# as if it were the user's real place.
 DEFAULT_GEO = {"city": "New York", "country": "US", "lang": "en", "tz": "America/New_York",
                "lat": 40.7128, "lng": -74.0060, "source": "default"}
+
+UNRESOLVED_SOURCES = ("default", "ip-fallback")
 
 
 def geo_of(user: dict) -> dict:
     """Current geo context of a user — falls back to DEFAULT_GEO only when unset."""
     g = user.get("geo") or {}
     return {**DEFAULT_GEO, **g} if g else dict(DEFAULT_GEO)
+
+
+def geo_resolved(user: dict) -> bool:
+    return geo_of(user).get("source") not in UNRESOLVED_SOURCES
+
+
+async def _reverse_geocode(lat: float, lng: float) -> Optional[dict]:
+    """Keyless reverse geocoding (BigDataCloud client API) → real city name for the
+    user's actual GPS position instead of the nearest indexed metro."""
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as cli:
+            r = await cli.get("https://api.bigdatacloud.net/data/reverse-geocode-client",
+                              params={"latitude": lat, "longitude": lng, "localityLanguage": "en"})
+        d = r.json()
+        city = (d.get("city") or d.get("locality") or "").strip()
+        cc = (d.get("countryCode") or "").strip().upper()
+        return {"city": city, "country": cc} if city and cc else None
+    except Exception:
+        return None
 
 
 def _haversine_km(lat1, lng1, lat2, lng2) -> float:
@@ -69,9 +90,12 @@ def nearest_city(lat: float, lng: float) -> dict:
 # ---------- CONTEXT & MANUAL ----------
 
 @api.get("/geo/context")
-async def geo_context(authorization: Optional[str] = Header(None)):
+async def geo_context(request: Request, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
-    return {"geo": clean(geo_of(user)), "travel_mode": bool(user.get("travel_mode")),
+    user = await ensure_geo(user, request)
+    g = geo_of(user)
+    return {"geo": clean(g), "resolved": g.get("source") not in UNRESOLVED_SOURCES,
+            "travel_mode": bool(user.get("travel_mode")),
             "supported_cities": [{"city": c["city"], "country": c["country"], "lang": c["lang"]} for c in CITIES]}
 
 
@@ -91,13 +115,21 @@ class LocateIn(BaseModel):
     lng: float
 
 
-async def _apply_geo(user: dict, near: dict, source: str) -> dict:
+async def _apply_geo(user: dict, near: dict, source: str, raw: Optional[tuple] = None) -> dict:
     """Persist geo update, optionally auto-switch language when Travel Mode ON, and
-    always surface a language suggestion when the country changed regardless."""
+    always surface a language suggestion when the country changed regardless.
+    `raw` = the user's actual (lat, lng): stored for precise weather and reverse-geocoded
+    to the real city name (nearest indexed metro is only the fallback label)."""
     prev = geo_of(user)
     geo = {"city": near["city"], "country": near["country"], "lang": near["lang"],
            "tz": near["tz"], "lat": near["lat"], "lng": near["lng"],
            "source": source, "located_at": datetime.now(timezone.utc).isoformat()}
+    if raw:
+        geo["lat"], geo["lng"] = raw
+        geo["nearest_city"] = near["city"]
+        rev = await _reverse_geocode(*raw)
+        if rev:
+            geo["city"], geo["country"] = rev["city"], rev["country"]
     update: dict = {"geo": geo}
     current_lang = (user.get("language") or "sk")
     language_switched = False
@@ -125,7 +157,7 @@ async def geo_locate(body: LocateIn, authorization: Optional[str] = Header(None)
     user = await get_current_user(authorization)
     if not (-90 <= body.lat <= 90 and -180 <= body.lng <= 180):
         raise HTTPException(400, "invalid coordinates")
-    return await _apply_geo(user, nearest_city(body.lat, body.lng), "gps")
+    return await _apply_geo(user, nearest_city(body.lat, body.lng), "gps", raw=(body.lat, body.lng))
 
 
 # ---------- IP FALLBACK ----------
@@ -170,11 +202,7 @@ async def _ip_to_coords(ip: str) -> Optional[dict]:
         return None
 
 
-@api.post("/geo/ip-locate")
-async def geo_ip_locate(request: Request, authorization: Optional[str] = Header(None)):
-    """IP-based fallback when GPS is unavailable/denied. Uses X-Forwarded-For (behind
-    ingress). Falls back to Bratislava default if IP is private or lookup fails."""
-    user = await get_current_user(authorization)
+async def _locate_by_ip(user: dict, request: Request) -> dict:
     ip = _client_ip(request)
     resolved = None
     if ip and not _is_private_ip(ip):
@@ -183,7 +211,28 @@ async def geo_ip_locate(request: Request, authorization: Optional[str] = Header(
         # Graceful default — still persist as "ip-fallback" so UI knows to prompt manual pick.
         return await _apply_geo(user, {**DEFAULT_GEO, "distance_km": 0.0}, "ip-fallback")
     near = nearest_city(resolved["lat"], resolved["lng"])
-    return {**(await _apply_geo(user, near, "ip")), "raw_ip_city": resolved["city"], "raw_ip_country": resolved["country"]}
+    res = await _apply_geo(user, near, "ip", raw=(resolved["lat"], resolved["lng"]))
+    return {**res, "raw_ip_city": resolved["city"], "raw_ip_country": resolved["country"]}
+
+
+async def ensure_geo(user: dict, request: Request) -> dict:
+    """Server-side safety net: if the user has never been located, resolve by IP now.
+    Returns the (possibly updated) user dict. Never raises."""
+    if geo_resolved(user):
+        return user
+    try:
+        res = await _locate_by_ip(user, request)
+        return {**user, "geo": res["geo"]}
+    except Exception:
+        return user
+
+
+@api.post("/geo/ip-locate")
+async def geo_ip_locate(request: Request, authorization: Optional[str] = Header(None)):
+    """IP-based fallback when GPS is unavailable/denied. Uses X-Forwarded-For (behind
+    ingress). Falls back to the unresolved default if IP is private or lookup fails."""
+    user = await get_current_user(authorization)
+    return await _locate_by_ip(user, request)
 
 
 def _is_private_ip(ip: str) -> bool:
