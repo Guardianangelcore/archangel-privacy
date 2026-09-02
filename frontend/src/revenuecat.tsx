@@ -18,6 +18,21 @@ const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_AP
 
 export const REVENUECAT_ENTITLEMENT_IDENTIFIER = 'pro'; // from /setup: entitlement_lookup_key
 
+export type IapTier = 'guardian' | 'sentinel' | 'archangel';
+/** Offering packages per tier (provisioned via the integration proxy — see memory/revenuecat.md). */
+export const IAP_PACKAGES: Record<IapTier, { monthly: string; annual: string }> = {
+  guardian: { monthly: 'guardian_monthly', annual: 'guardian_annual' },
+  sentinel: { monthly: 'sentinel_monthly', annual: 'sentinel_annual' },
+  archangel: { monthly: 'archangel_monthly', annual: 'archangel_annual' },
+};
+/** One entitlement covers all tiers — the tier is derived from the store product identifier. */
+export function iapTierOf(productIdentifier?: string | null): IapTier {
+  const pid = (productIdentifier || '').toLowerCase();
+  if (pid.includes('archangel')) return 'archangel';
+  if (pid.includes('sentinel')) return 'sentinel';
+  return 'guardian';
+}
+
 export const rcEnabled = Platform.OS !== 'web' || __DEV__; // production web has no store
 /** True when purchases are simulated against the Test Store (Expo Go / web preview). */
 export const rcSimulated = Platform.OS === 'web' || __DEV__;
@@ -122,11 +137,13 @@ function useSubscriptionContext() {
 
   const entitlement = customerInfoQuery.data?.entitlements.active?.[REVENUECAT_ENTITLEMENT_IDENTIFIER];
   const isSubscribed = entitlement !== undefined;
+  const activeTier: IapTier | null = entitlement ? iapTierOf(entitlement.productIdentifier) : null;
   const identityReady = !isAnonymous(appUserId) && (!user?.user_id || appUserId === user.user_id) && !identityError;
 
   return {
     customerInfo: customerInfoQuery.data,
     entitlement,
+    activeTier,
     offerings: offeringsQuery.data,
     offeringsError: offeringsQuery.error,
     isSubscribed,

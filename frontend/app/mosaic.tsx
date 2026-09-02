@@ -58,7 +58,7 @@ export default function Mosaic() {
             <Row lbl="PQC" val={status.pqc_suite} />
             <Row lbl="GAS" val={status.gas_policy} />
             <Row lbl="LEGACY SC" val={`${status.legacy_smart_contracts} smart kontraktov (dead-man switch)`} />
-            <Row lbl="BRIDGE" val={`active: ${status.bridge_watch?.active || 'Mosaic Chain'} · ${status.bridge_watch?.latency_ms ?? 0} ms`} />
+            <Row lbl="BRIDGE" val={`active: ${status.bridge_watch?.active || 'Archangel Chain'} · ${status.bridge_watch?.latency_ms ?? 0} ms`} />
           </View>
         )}
 

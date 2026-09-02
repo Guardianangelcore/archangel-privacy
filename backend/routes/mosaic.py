@@ -3,7 +3,7 @@
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 """The Mosaic Protocol — decentralized backbone (SIMULATED L2, Phase 3 = real RPC).
 
-1. Mosaic Chain: ZK-Rollup Layer-2 as primary ledger for GA-T + DAO governance.
+1. Archangel Chain: ZK-Rollup Layer-2 as primary ledger for GA-T + DAO governance.
 2. Hybrid data layer: on-chain = hashes only (medical records, DID credentials,
    Legacy Trigger smart contracts) · off-chain = DePIN/IPFS CIDs for heavy files.
 3. Quantum-ready handshake: hybrid X25519 + ML-KEM-1024 (Kyber) + ML-DSA
@@ -19,7 +19,7 @@ import uuid, hashlib, base64, random
 from core import api, db, clean, get_current_user
 
 CHAIN = {
-    "name": "Mosaic Chain", "layer": "ZK-Rollup L2 (validity proofs)",
+    "name": "Archangel Chain", "layer": "ZK-Rollup L2 (validity proofs)",
     "consensus": "zkSNARK batch attestation → L1 settlement",
     "pqc_suite": "Hybrid X25519 + ML-KEM-1024 (Kyber) · signatures ML-DSA-87 (Dilithium)",
     "secondary_chains": ["Base (mirror)", "Polygon PoS (mirror)"],
@@ -76,7 +76,7 @@ async def mosaic_status(authorization: Optional[str] = Header(None)):
     head = await _chain_head()
     blocks = await db.mosaic_blocks.count_documents(_LIVE)
     bridge = await db.mosaic_bridge.find_one({"key": "bridge"}, {"_id": 0}) or \
-        {"primary": "Mosaic Chain", "active": "Mosaic Chain", "latency_ms": 0, "mirrored_ops": 0}
+        {"primary": "Archangel Chain", "active": "Archangel Chain", "latency_ms": 0, "mirrored_ops": 0}
     contracts = await db.legacy_contracts.count_documents({})
     return {**CHAIN, "block_height": head.get("height", 0), "blocks_total": blocks,
             "last_block_hash": head.get("block_hash"), "legacy_smart_contracts": contracts,
@@ -145,8 +145,8 @@ async def mosaic_bridge_check(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     latency = random.randint(40, 1200)
     failover = latency > LATENCY_FAILOVER_MS
-    active = "Base (mirror)" if failover else "Mosaic Chain"
-    upd = {"primary": "Mosaic Chain", "active": active, "latency_ms": latency,
+    active = "Base (mirror)" if failover else "Archangel Chain"
+    upd = {"primary": "Archangel Chain", "active": active, "latency_ms": latency,
            "failover": failover, "checked_at": datetime.now(timezone.utc)}
     await db.mosaic_bridge.update_one({"key": "bridge"}, {"$set": upd, "$inc": {"mirrored_ops": 1 if failover else 0}}, upsert=True)
     if failover:

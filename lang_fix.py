@@ -6,7 +6,7 @@ import os
 M = {
 "/app/frontend/app/mosaic.tsx": [
 ("SIMULOVANÝ L2 · REÁLNE RPC (MOSAIC / BASE / POLYGON) VO PHASE 3", "SIMULATED L2 · REAL RPC (MOSAIC / BASE / POLYGON) IN PHASE 3"),
-("val={`aktívny: ${status.bridge_watch?.active || 'Mosaic Chain'}", "val={`active: ${status.bridge_watch?.active || 'Mosaic Chain'}"),
+("val={`aktívny: ${status.bridge_watch?.active || 'Archangel Chain'}", "val={`active: ${status.bridge_watch?.active || 'Archangel Chain'}"),
 (">POSLEDNÉ ZK-ROLLUP BLOKY<", ">LATEST ZK-ROLLUP BLOCKS<"),
 ("· gas užívateľ: 0 (treasury)", "· user gas: 0 (treasury)"),
 ("— zatiaľ žiadne bloky. Ťuknite ANCHOR BLOK alebo počkajte na Swarm.", "— no blocks yet. Tap ANCHOR BLOCK or wait for the Swarm."),

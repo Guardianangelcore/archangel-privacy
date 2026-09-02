@@ -79,7 +79,7 @@ export default function VideoLegacy() {
         <Text style={st.h1}>Family peace treaty</Text>
         <Text style={st.sub}>
           Upload a sealed video message for your family. The video is zero-knowledge encrypted, its hash anchored
-          on Mosaic Chain and released to the family only after life-status verification in the state registry — or when you release it manually.
+          on Archangel Chain and released to the family only after life-status verification in the state registry — or when you release it manually.
         </Text>
 
         {permBlocked && (

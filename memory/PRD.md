@@ -9,7 +9,7 @@ A sovereign, faceless, 22nd-century survival OS for individuals + their Guardian
 ## Immutable pillars
 - **PILLAR 1 — Healing Carousel (Health)**: Bio-Scanner, Physio-AI, Kolotoč Uzdravenia, Pain Diary, Medical News, Longevity, Vault, IPS.
 - **PILLAR 2 — Angel Shield (Family)**: Angel Mode senior OS, Voice Signatures, Voice Echoes, Family Pulse, Guardian Circle (native contacts, local-first), Native Calendar sync, Angel Pulse, Silent Witness, Safety Sentinel, Emergency QR.
-- **PILLAR 3 — Sovereign Vault (Legacy/Wealth)**: Video Legacy Vault, Wealth Vault, GA-T Token, Digital Legacy, Testament, Biometric Will, Founder Toolkit, Mosaic Chain.
+- **PILLAR 3 — Sovereign Vault (Legacy/Wealth)**: Video Legacy Vault, Wealth Vault, GA-T Token, Digital Legacy, Testament, Biometric Will, Founder Toolkit, Archangel Chain.
 
 ## Phase 47/48 (current — DONE + tested 27/27)
 1. **Guardian Eye multi-model OCR/vision** — GPT-5.4 · Claude Sonnet 5 · Gemini 3.1 Pro + Consensus mode. Send-to-Jarvis action.
@@ -201,3 +201,10 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - Morning Briefing (GET /agent/briefing): `news` = 3 real regional health headlines (sonar-pro, recency week, context low, 1 call per lang/country/day cached key brief-news:*; empty never cached), LLM mentions the first headline; fallback text includes it. UI: jv-news / jv-news-{i} tappable rows in the briefing card.
 - Cost guard: ~$0.03 per news query, ~$0.01 per briefing headlines call; all cached.
 - Post-test hardening: keyword tags ≥4 chars; swarm auto-hunt specialty = item specialty; language rule enforced in prompt; noise hunts purged.
+
+## Iter 62 — AUDIT & FIX (Sept 2026): Archangel Chain · 4-tier price list · 3-tier IAP
+- Rename: every "Mosaic Chain" → "Archangel Chain" (frontend mosaic/wealth-vault/video-legacy, backend wealth/mosaic, tests, PRD). Route names/identifiers (routes/mosaic.py, /mosaic, mosaic_block) unchanged on purpose.
+- Prices (backend TIERS, _prices(eur_year=…)): Sovereign FREE · Guardian €9/€86 · Sentinel €149/€1490 · Archangel €499/€4990 (annual no longer a generic −20 %).
+- RevenueCat (integration proxy, entitlement "pro", offering "default"): EUR-only Test Store packages guardian_monthly/annual, sentinel_monthly/annual, archangel_monthly/annual (product ids pro.<tier>_<period>). Legacy USD $rc_monthly/$rc_annual removed from the offering (mixing USD+EUR made RC hide EUR-only products in en-US locales). User-supplied key test_AKjD… is INVALID (RC: "Invalid API Key") → kept the connected project's working test key.
+- Tier from product id (one entitlement): backend iap_tier() in routes/subscription.py; frontend iapTierOf()/IAP_PACKAGES/activeTier in src/revenuecat.tsx. IapBuyButton takes `tier`; subscription.tsx renders Sovereign "FREE / Your current plan" + IAP buttons on all 3 paid tiers (testIDs sb-iap-{tier}, iap-buy-{tier}-{monthly|annual}); Paywall passes its tier. iap-sync: store-paid tier follows the store (upgrade+downgrade), lapse → sovereign; GA-T per tier (100/300/1000). Tests: tests/test_iter62_iap_tiers.py (6/6).
+- Perplexity: sonar-reasoning-pro verified for Jarvis SONAR; for the structured feed/briefing it returns EMPTY content (0 completion tokens) on JSON/list prompts (3 probes) → kept sonar-pro (+json_schema) there. Expo SDK upgrade to 57 deferred by user (stay on SDK 54).

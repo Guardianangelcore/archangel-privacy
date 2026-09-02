@@ -8,9 +8,15 @@ This file is supposed to serve as a memory to you if you have to interact with u
 - bundle_id / package_name: com.emergent.angelos.qvqss9
 - entitlement_lookup_key: pro
 - offering_lookup_key: default
-- Packages (package -> product_id, current price):
-  - $rc_monthly -> prod88faf8e237   ($9.99 / P1M, trial: none — default provisioned)
-  - $rc_annual  -> prod9a550d12a1   ($79.99 / P1Y, trial: none — default provisioned)
+- Packages (package -> product_id, current price) — ALL EUR-only Test Store products (single currency ⇒ SDK falls back to EUR in any locale; mixing USD+EUR made RC drop the EUR-only products in en-US previews):
+  - guardian_monthly  -> proda0bf31c009  (pro.guardian_monthly,  €9 / P1M)
+  - guardian_annual   -> prod1beb2d0696  (pro.guardian_annual,   €86 / P1Y)
+  - sentinel_monthly  -> prod698da21987  (pro.sentinel_monthly,  €149 / P1M)
+  - sentinel_annual   -> prod8f5bf13a41  (pro.sentinel_annual,   €1490 / P1Y)
+  - archangel_monthly -> prod0f64cd08e6  (pro.archangel_monthly, €499 / P1M)
+  - archangel_annual  -> prod8f12402bd8  (pro.archangel_annual,  €4990 / P1Y)
+  - LEGACY: $rc_monthly (pro.monthly, USD 9.99) could not be deleted (has test transactions) but is no longer in the offering; $rc_annual deleted. Never re-add USD packages.
+- Tier mapping (one entitlement "pro" for all tiers): product id containing "archangel" → archangel, "sentinel" → sentinel, else guardian (backend routes/subscription.py iap_tier(), frontend src/revenuecat.tsx iapTierOf() + IAP_PACKAGES). Sovereign = free default, no product.
 - entitlement_products.pro: prod88faf8e237, prod6547915e81, prodb7e5fb979b, prod9a550d12a1, prod54feb91c3d, prod842d5b8add (Test Store + Apple/Play mirrors)
 - Dashboard: https://app.revenuecat.com/projects/proj10bfa652
 - SDK keys live ONLY in frontend/.env (EXPO_PUBLIC_REVENUECAT_TEST_API_KEY / _IOS_API_KEY / _ANDROID_API_KEY) — never copy them here.

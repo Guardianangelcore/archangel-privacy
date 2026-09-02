@@ -155,7 +155,7 @@ class TestEnviroFusion:
 class TestMosaic:
     def test_status_and_zero_fee(self):
         d = _get("/mosaic/status").json()
-        assert d["name"] == "Mosaic Chain" and "ZK-Rollup" in d["layer"]
+        assert d["name"] == "Archangel Chain" and "ZK-Rollup" in d["layer"]
         assert "Kyber" in d["pqc_suite"] and d["simulated"] is True
         assert "ZERO-FEE" in d["gas_policy"]
 
@@ -173,8 +173,8 @@ class TestMosaic:
 
     def test_bridge_watch(self):
         d = _post("/mosaic/bridge/check").json()
-        assert d["primary"] == "Mosaic Chain"
-        assert d["active"] in ("Mosaic Chain", "Base (mirror)")
+        assert d["primary"] == "Archangel Chain"
+        assert d["active"] in ("Archangel Chain", "Base (mirror)")
         assert d["threshold_ms"] == 800
 
     def test_ipfs_manifest_hybrid_layer(self):

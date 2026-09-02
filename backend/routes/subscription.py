@@ -16,8 +16,9 @@ CZK_RATE = 25.0
 ANNUAL_DISCOUNT = 0.20
 TIER_RANK = {"sovereign": 0, "guardian": 1, "sentinel": 2, "archangel": 3}
 
-def _prices(eur_month: float, gat_month: float = 0.0) -> dict:
-    eur_year = round(eur_month * 12 * (1 - ANNUAL_DISCOUNT), 0)
+def _prices(eur_month: float, gat_month: float = 0.0, eur_year: Optional[float] = None) -> dict:
+    """Monthly + annual pricing. eur_year overrides the default −20 % annual price (store price list)."""
+    eur_year = eur_year if eur_year is not None else round(eur_month * 12 * (1 - ANNUAL_DISCOUNT), 0)
     gat_year = round(gat_month * 12 * (1 - ANNUAL_DISCOUNT), 0)
     return {"price_eur": eur_month, "price_czk": round(eur_month * CZK_RATE, 0),
             "price_gat": gat_month,
@@ -33,7 +34,7 @@ TIERS = {
                      "Basic Health Timeline", "Public Solidarity Hub"],
     },
     "guardian": {
-        "name": "Guardian", "order": 1, **_prices(9, 15),
+        "name": "Guardian", "order": 1, **_prices(9, 15, eur_year=86),
         "tagline": "Proactive protection for you and your family",
         "accent": "#B8860B",
         "features": ["Everything in Sovereign", "Jarvis AI chat + Morning Briefing",
@@ -42,7 +43,7 @@ TIERS = {
                      "Angel Mode (falls + safety)", "Complete Physio-AI encyclopedia"],
     },
     "sentinel": {
-        "name": "Sentinel", "order": 2, **_prices(149, 250),
+        "name": "Sentinel", "order": 2, **_prices(149, 250, eur_year=1490),
         "tagline": "VIP survival — a hospital in your pocket",
         "accent": "#E5E4E2",
         "features": ["Everything in Guardian", "💎 300 GA-T credited every month",
@@ -52,7 +53,7 @@ TIERS = {
                      "Insurance Claim Recovery"],
     },
     "archangel": {
-        "name": "Archangel", "order": 3, **_prices(499, 800),
+        "name": "Archangel", "order": 3, **_prices(499, 800, eur_year=4990),
         "tagline": "Elite sovereignty — Zero-latency Swarm",
         "accent": "#8A2BE2",
         "features": ["Everything in Sentinel", "💎 1 000 GA-T credited every month",
@@ -156,8 +157,20 @@ async def subscription_upgrade(body: UpgradeIn, authorization: Optional[str] = H
 # --------- IN-APP PURCHASES (RevenueCat · App Store / Google Play) ---------
 # The RevenueCat SDK on the device is the source of truth for the `pro` entitlement.
 # The app mirrors an ACTIVE entitlement here so the existing server-side features
-# (Guardian gate for Jarvis, monthly GA-T loyalty allocation) apply to IAP subscribers.
-IAP_ENTITLEMENT_TIER = {"pro": "guardian"}
+# (tier gates for Jarvis/Sentinel, monthly GA-T loyalty allocation) apply to IAP subscribers.
+# One RevenueCat entitlement ("pro") covers all three tiers — the TIER is derived from the
+# store product identifier: pro.monthly / pro.annual → guardian, pro.sentinel_* → sentinel,
+# pro.archangel_* → archangel (provisioned via the integration proxy, see memory/revenuecat.md).
+IAP_ENTITLEMENTS = {"pro"}
+
+
+def iap_tier(product_identifier: Optional[str]) -> str:
+    pid = (product_identifier or "").lower()
+    if "archangel" in pid:
+        return "archangel"
+    if "sentinel" in pid:
+        return "sentinel"
+    return "guardian"
 
 
 class IapSyncIn(BaseModel):
@@ -177,16 +190,17 @@ async def subscription_iap_sync(body: IapSyncIn, authorization: Optional[str] = 
     user = await get_current_user(authorization)
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
-    tier = IAP_ENTITLEMENT_TIER.get(body.entitlement)
-    if not tier:
+    if body.entitlement not in IAP_ENTITLEMENTS:
         raise HTTPException(400, f"unknown entitlement {body.entitlement}")
+    tier = iap_tier(body.product_identifier)
     if body.app_user_id and body.app_user_id != uid:
         raise HTTPException(409, "RevenueCat identity does not match the signed-in user")
     fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1,
-                                                       "gat_alloc_anchor": 1, "iap": 1})
+                                                       "gat_alloc_anchor": 1, "iap": 1, "tier_started_at": 1, "inner_circle": 1})
+    iap_paid = (fresh.get("tier_paid_with") or "").lower() == "iap"
     if not body.active:
         # Entitlement lapsed: only downgrade what IAP granted; never touch card/GA-T/trial/inner-circle tiers.
-        if (fresh.get("tier_paid_with") or "").lower() == "iap" and fresh.get("tier") == tier:
+        if iap_paid and fresh.get("tier") in ("guardian", "sentinel", "archangel"):
             await db.users.update_one({"user_id": uid}, {"$set": {"tier": "sovereign", "tier_until": None,
                                                                   "iap.active": False, "iap.synced_at": now}})
             return {"status": "downgraded", "tier": "sovereign"}
@@ -201,23 +215,25 @@ async def subscription_iap_sync(body: IapSyncIn, authorization: Optional[str] = 
         if until <= now:
             raise HTTPException(422, "entitlement already expired")
     prev_iap = fresh.get("iap") or {}
-    same = (fresh.get("tier") == tier and (fresh.get("tier_paid_with") or "").lower() == "iap"
-            and prev_iap.get("expires_date") == body.expires_date)
-    iap = {"entitlement": body.entitlement, "product_identifier": body.product_identifier, "store": body.store,
+    same = (fresh.get("tier") == tier and iap_paid
+            and prev_iap.get("expires_date") == body.expires_date
+            and prev_iap.get("product_identifier") == body.product_identifier)
+    iap = {"entitlement": body.entitlement, "product_identifier": body.product_identifier, "tier": tier, "store": body.store,
            "period_type": body.period_type, "expires_date": body.expires_date, "will_renew": body.will_renew,
            "app_user_id": body.app_user_id, "active": True, "synced_at": now}
     if same:
         await db.users.update_one({"user_id": uid}, {"$set": {"iap.synced_at": now}})
     else:
-        # Never let IAP downgrade a higher active tier (e.g. Sentinel via card, inner-circle Archangel).
-        if TIERS[current_tier(fresh)]["order"] > TIERS[tier]["order"]:
+        # Never let IAP downgrade a higher tier paid another way (Sentinel via card, inner-circle Archangel).
+        # A tier paid through the store always follows the store (upgrade AND downgrade between IAP products).
+        if not iap_paid and TIERS[current_tier(fresh)]["order"] > TIERS[tier]["order"]:
             await db.users.update_one({"user_id": uid}, {"$set": {"iap": iap}})
             return {"status": "kept_higher_tier", "tier": current_tier(fresh)}
         await db.users.update_one({"user_id": uid}, {"$set": {
             "tier": tier, "tier_until": until, "tier_paid_with": "iap", "iap": iap,
             "tier_started_at": fresh.get("tier_started_at") or now}})
         await _aml_ledger_append(uid, "iap_entitlement_sync", {
-            "entitlement": body.entitlement, "product": body.product_identifier, "store": body.store,
+            "entitlement": body.entitlement, "tier": tier, "product": body.product_identifier, "store": body.store,
             "expires": body.expires_date, "period_type": body.period_type})
     # LOYALTY LOOP — fiat subscription → monthly GA-T (trial periods are excluded by the allocator).
     from routes.token import start_subscription_allocation, settle_subscription_allocations

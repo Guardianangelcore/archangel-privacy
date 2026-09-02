@@ -5,9 +5,9 @@
 
 1. VIDEO LEGACY VAULT (Family Peace Treaty): encrypted video messages for the
    family, unlocked by the life-status registry (death verification) or manual
-   release. Every upload is SHA-256 hashed and anchored on the Mosaic chain.
+   release. Every upload is SHA-256 hashed and anchored on the Archangel Chain.
 2. SOVEREIGN WEALTH VAULT: crypto wallets (seed/keys sealed zero-knowledge) +
-   fiat bank accounts (IBAN). A manifest hash is anchored to the Mosaic Chain
+   fiat bank accounts (IBAN). A manifest hash is anchored to the Archangel Chain
    as Proof of Asset Stewardship.
 3. INSTANT CARD PAYOUT: push-to-card rail (SIMULATED — production hook point
    for Visa Direct / Mastercard Send)."""
@@ -71,7 +71,7 @@ async def legacy_video_upload(
         "created_at": datetime.now(timezone.utc),
     }
     await db.legacy_videos.insert_one(doc.copy())
-    # anchor to Mosaic chain (best-effort)
+    # anchor to Archangel Chain (best-effort)
     try:
         from routes.mosaic import produce_block
         await produce_block("video_legacy")
@@ -176,7 +176,7 @@ async def wealth_vault(authorization: Optional[str] = Header(None)):
     total = round(sum(a.get("est_value_eur") or 0 for a in assets), 2)
     return {"assets": assets, "total_est_value_eur": total,
             "anchor": anchor, "payouts": payouts,
-            "policy": "Seeds/keys are sealed zero-knowledge (plaintext is never stored). The manifest hash is anchored on Mosaic Chain — Proof of Asset Stewardship."}
+            "policy": "Seeds/keys are sealed zero-knowledge (plaintext is never stored). The manifest hash is anchored on Archangel Chain — Proof of Asset Stewardship."}
 
 @api.post("/wealth/assets")
 async def wealth_add(body: AssetIn, authorization: Optional[str] = Header(None)):
@@ -225,7 +225,7 @@ async def wealth_del(asset_id: str, authorization: Optional[str] = Header(None))
 
 @api.post("/wealth/anchor")
 async def wealth_anchor(authorization: Optional[str] = Header(None)):
-    """Anchors the SHA-256 manifest of all assets to the Mosaic Chain."""
+    """Anchors the SHA-256 manifest of all assets to the Archangel Chain."""
     user = await get_current_user(authorization)
     assets = await db.wealth_assets.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", 1).to_list(100)
     if not assets:

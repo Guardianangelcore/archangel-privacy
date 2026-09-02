@@ -49,7 +49,7 @@ export default function WealthVault() {
     setBusy('anchor'); setErr(''); setMsg('');
     try {
       const r: any = await api('/wealth/anchor', { method: 'POST' });
-      setMsg(`Anchored on Mosaic Chain — block #${r.mosaic_block ?? '—'} · manifest ${r.manifest_sha256?.slice(0, 12)}…`);
+      setMsg(`Anchored on Archangel Chain — block #${r.mosaic_block ?? '—'} · manifest ${r.manifest_sha256?.slice(0, 12)}…`);
       await load();
     } catch (e: any) { setErr(String(e.message || e)); }
     finally { setBusy(null); }
@@ -89,7 +89,7 @@ export default function WealthVault() {
           {vault?.anchor ? (
             <Text style={st.anchorInfo}>⛓ Proof of Asset Stewardship · Mosaic block #{vault.anchor.mosaic_block ?? '—'} · {vault.anchor.manifest_sha256?.slice(0, 14)}…</Text>
           ) : (
-            <Text style={st.anchorInfo}>Not yet anchored on Mosaic Chain</Text>
+            <Text style={st.anchorInfo}>Not yet anchored on Archangel Chain</Text>
           )}
         </View>
         <Text style={st.policy}>{vault?.policy}</Text>

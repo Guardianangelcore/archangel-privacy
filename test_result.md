@@ -901,3 +901,7 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 
 ## Iter 61 — Perplexity live news + briefing
 - iteration_61.json: backend 9/9 (tests/test_iter61_perplexity_news.py), UI green (news-live-badge LIVE, source links, jv-news rows). Post-test fixes: live-item tags now ≥4 chars (no "ai"/"rna" false Vault matches), swarm News Sentinel uses item specialty for auto-hunts, stale Czech general:en:SG cache purged (language rule enforced in prompt), 16 noise auto-hunts from live news removed. Verified founder feed: live:true, 4 personal + 5 general, English.
+
+## Iter 62 — audit & fix
+- Backend: tests/test_iter62_iap_tiers.py 6/6 + iter60 18/18 pass. Manual E2E in preview: all 6 EUR prices render from offerings, Sentinel simulated purchase → CURRENT TIER: SENTINEL + 300 GA-T.
+- iteration_62.json: backend 17/17, UI green (4 tiers, Archangel simulated purchase → +1000 GA-T, rename verified). No blockers.

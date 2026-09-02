@@ -48,11 +48,9 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
         {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>ACTIVATE A FREE 7-DAY TRIAL</Text>}
       </Pressable>
       {/* Guardian plan → native App Store / Google Play subscription (RevenueCat); unlocks immediately after tier mirror */}
-      {tier === 'guardian' && (
-        <View style={{ alignSelf: 'stretch' }}>
-          <IapBuyButton period="monthly" accent={ui.color} onSynced={(r) => { if (r && r.status !== 'noop' && r.status !== 'downgraded') onUnlocked(); }} />
-        </View>
-      )}
+      <View style={{ alignSelf: 'stretch' }}>
+        <IapBuyButton tier={tier} period="monthly" accent={ui.color} onSynced={(r) => { if (r && r.status !== 'noop' && r.status !== 'downgraded') onUnlocked(); }} />
+      </View>
       {!!gatLabel && onPayGat && (
         <Pressable testID="pw-gat" onPress={onPayGat} style={st.gatBtn}>
           <Text style={st.gatText}>💎 {gatLabel}</Text>

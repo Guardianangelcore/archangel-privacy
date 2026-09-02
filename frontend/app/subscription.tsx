@@ -153,7 +153,7 @@ export default function Subscription() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <Text style={styles.h1}>Four levels of sovereignty</Text>
-        <Text style={styles.sub}>EUR · CZK · GA-T. Monthly, or yearly at −20% (“Secure Your Future”). Pay by card (Stripe), with GA-T tokens, or subscribe to Guardian through the App Store / Google Play.</Text>
+        <Text style={styles.sub}>EUR · CZK · GA-T. Monthly, or yearly (“Secure Your Future”). Pay by card (Stripe), with GA-T tokens, or subscribe through the App Store / Google Play. Sovereign stays free forever.</Text>
         {data && (
           <View style={styles.currentBox}>
             <Ionicons name={(TIER_ICON[data.tier] || 'earth') as any} size={18} color={(data.tiers[data.tier] || {}).accent || '#5FA779'} />
@@ -195,7 +195,7 @@ export default function Subscription() {
           const eur = annual ? t2.price_eur_year : t2.price_eur;
           const czk = annual ? t2.price_czk_year : t2.price_czk;
           const gat = annual ? t2.price_gat_year : t2.price_gat;
-          const per = annual ? '/rok' : '/mes.';
+          const per = annual ? '/yr' : '/mo';
           return (
             <View key={k} style={[styles.tierCard, { borderColor: accent }, premium(k) && { backgroundColor: OBSIDIAN, borderWidth: 2.5 }, active && { borderStyle: 'solid', borderWidth: 3 }]}>
               {premium(k) && <Text style={[styles.vipRibbon, { color: accent }]}>{k === 'archangel' ? '👑 ELITE SOVEREIGNTY' : '🛰️ VIP SURVIVAL'}</Text>}
@@ -206,7 +206,7 @@ export default function Subscription() {
                   <Text style={styles.tierTagline}>{t2.tagline}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.tierPrice, premium(k) && { color: PLATINUM }]}>{eur === 0 ? 'ZADARMO' : `${eur} €${per}`}</Text>
+                  <Text style={[styles.tierPrice, premium(k) && { color: PLATINUM }]}>{eur === 0 ? 'FREE' : `${eur} €${per}`}</Text>
                   {gat > 0 && <Text style={styles.tierGat}>{czk} Kč · {gat} GA-T</Text>}
                 </View>
               </View>
@@ -231,10 +231,14 @@ export default function Subscription() {
                   </Pressable>
                 </View>
               )}
-              {/* NATIVE IN-APP SUBSCRIPTION (RevenueCat · App Store / Google Play) — Guardian only; price comes from the store offering */}
-              {k === 'guardian' && !active && (
-                <View testID="sb-iap-guardian">
-                  <IapBuyButton period={annual ? 'annual' : 'monthly'} accent={accent} onSynced={(_r, message) => { setMsg(message); setErr(''); load(); }} />
+              {/* SOVEREIGN — free default plan, no purchase path */}
+              {k === 'sovereign' && (
+                <Text testID="sb-sovereign-free" style={styles.tierTagline}>{active ? '✓ Your current plan — free forever, no payment needed.' : 'Free default plan — included for everyone.'}</Text>
+              )}
+              {/* NATIVE IN-APP SUBSCRIPTION (RevenueCat · App Store / Google Play) — Guardian / Sentinel / Archangel; price comes from the store offering */}
+              {k !== 'sovereign' && !active && (
+                <View testID={`sb-iap-${k}`}>
+                  <IapBuyButton tier={k as 'guardian' | 'sentinel' | 'archangel'} period={annual ? 'annual' : 'monthly'} accent={accent} onSynced={(_r, message) => { setMsg(message); setErr(''); load(); }} />
                 </View>
               )}
             </View>

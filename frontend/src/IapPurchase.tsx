@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Modal, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { PurchasesPackage } from 'react-native-purchases';
-import { rcEnabled, rcSimulated, useSubscription } from './revenuecat';
+import { rcEnabled, rcSimulated, useSubscription, IAP_PACKAGES, IapTier } from './revenuecat';
 import { syncIapEntitlement, creditedGat, IapSyncResult } from './iap-mirror';
 import { errMsg } from './api';
 import { C, S, R } from './theme';
@@ -15,6 +15,7 @@ const GOLD = '#B8860B';
 export const STORE_LABEL = Platform.OS === 'ios' ? 'APP STORE' : Platform.OS === 'android' ? 'GOOGLE PLAY' : 'APP STORE / GOOGLE PLAY';
 
 type BuyProps = {
+  tier?: IapTier;
   period: 'monthly' | 'annual';
   accent?: string;
   /** Called after the backend tier mirror; `message` is the human-readable confirmation (the button may unmount once the tier flips). */
@@ -24,17 +25,17 @@ type BuyProps = {
 /** RevenueCat cancel = PURCHASE_CANCELLED_ERROR ("1" native, numeric 1 in Browser Mode). */
 const isUserCancelled = (e: any) => !!e?.userCancelled || String(e?.code) === '1';
 
-export function IapBuyButton({ period, accent = GOLD, onSynced }: BuyProps) {
-  const { offerings, offeringsError, purchase, isPurchasing, identityReady, identityError, isLoading, isSubscribed, appUserId } = useSubscription();
+export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynced }: BuyProps) {
+  const { offerings, offeringsError, purchase, isPurchasing, identityReady, identityError, isLoading, activeTier, appUserId } = useSubscription();
+  const TIER = tier.toUpperCase();
   const [confirm, setConfirm] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
 
   if (!rcEnabled) return null;
   const current = offerings?.current;
-  const pkg: PurchasesPackage | undefined = period === 'annual'
-    ? (current?.annual ?? current?.availablePackages.find(p => p.identifier === '$rc_annual'))
-    : (current?.monthly ?? current?.availablePackages.find(p => p.identifier === '$rc_monthly'));
+  const wanted = IAP_PACKAGES[tier][period];
+  const pkg: PurchasesPackage | undefined = current?.availablePackages.find(p => p.identifier === wanted);
 
   if (isLoading && !pkg) return <ActivityIndicator testID="iap-loading" size="small" color={accent} style={{ marginTop: S.md }} />;
   if (!pkg) {
@@ -51,7 +52,7 @@ export function IapBuyButton({ period, accent = GOLD, onSynced }: BuyProps) {
       const info = await purchase(pkg);
       const r = await syncIapEntitlement(info, appUserId);
       const gat = creditedGat(r);
-      const message = `✓ GUARDIAN active via ${STORE_LABEL}${gat > 0 ? ` · +${gat.toFixed(0)} GA-T loyalty credited` : ''}`;
+      const message = `✓ ${TIER} active via ${STORE_LABEL}${gat > 0 ? ` · +${gat.toFixed(0)} GA-T loyalty credited` : ''}`;
       setOk(message);
       onSynced?.(r, message);
     } catch (e: any) {
@@ -65,10 +66,10 @@ export function IapBuyButton({ period, accent = GOLD, onSynced }: BuyProps) {
   const disabled = !identityReady || isPurchasing;
   return (
     <View style={st.wrap}>
-      {isSubscribed ? (
-        <Text testID="iap-active" style={[st.active, { color: accent }]}>✓ ACTIVE VIA {STORE_LABEL}</Text>
+      {activeTier === tier ? (
+        <Text testID={`iap-active-${tier}`} style={[st.active, { color: accent }]}>✓ {TIER} ACTIVE VIA {STORE_LABEL}</Text>
       ) : (
-        <Pressable testID={`iap-buy-${period}`} onPress={() => setConfirm(true)} disabled={disabled}
+        <Pressable testID={`iap-buy-${tier}-${period}`} onPress={() => setConfirm(true)} disabled={disabled}
           style={[st.buyBtn, { borderColor: accent, opacity: disabled ? 0.5 : 1 }]}>
           {isPurchasing ? <ActivityIndicator size="small" color={accent} /> : (
             <View style={st.row}>
@@ -89,7 +90,7 @@ export function IapBuyButton({ period, accent = GOLD, onSynced }: BuyProps) {
             <Ionicons name="shield-checkmark" size={30} color={accent} />
             <Text style={st.sheetTitle}>CONFIRM SUBSCRIPTION</Text>
             <Text style={st.sheetBody}>
-              {pkg.product.title || 'Guardian'} · {pkg.product.priceString} {period === 'annual' ? 'per year' : 'per month'}
+              {TIER} · {pkg.product.priceString} {period === 'annual' ? 'per year' : 'per month'}
               {'\n'}Billed through {STORE_LABEL}. Cancel anytime in your store subscriptions.
               {rcSimulated ? '\n\nSIMULATED — Test Store, nothing is charged.' : ''}
             </Text>
