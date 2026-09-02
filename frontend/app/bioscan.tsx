@@ -12,8 +12,10 @@ import Paywall from '@/src/Paywall';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function BioScan() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -87,61 +89,61 @@ export default function BioScan() {
         <Pressable testID="bs-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>VITALS BIO-SCANNER</Text>
+        <Text style={st.title}>{tt('bioscan.vitals_bio_scanner')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>rPPG PLACEHOLDER · REAL CAMERA-CV IN NATIVE BUILD (PHASE 3) · NOT A DIAGNOSIS</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>{tt('bioscan.rppg_placeholder_real_camera_cv_in_n')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.intro}>Place your finger on the camera and flash. Jarvis analyzes light micro-pulsations (photoplethysmography) and estimates pulse, SpO2, pressure and stress — no watch, no cuff.</Text>
+        <Text style={st.intro}>{tt('bioscan.place_your_finger_on_the_camera_and')}</Text>
 
         {locked ? (
           <Paywall message={locked} gatLabel="PAY 5 GA-T PER SCAN" onPayGat={() => startScan(true)} onUnlocked={() => startScan(false)} />
         ) : phase === 'scanning' ? (
           <View style={st.scanBox}>
             <Ionicons name="finger-print" size={64} color={C.brand} />
-            <Text style={st.scanText}>HOLD YOUR FINGER ON THE CAMERA…</Text>
+            <Text style={st.scanText}>{tt('bioscan.hold_your_finger_on_the_camera')}</Text>
             <View style={st.progBg}><View style={[st.prog, { width: `${progress}%` }]} /></View>
             <Text style={st.scanPct}>{progress} %</Text>
           </View>
         ) : (
           <Pressable testID="bs-start" onPress={() => startScan(false)} style={st.startBtn}>
             <Ionicons name="scan" size={22} color={C.onInverse} />
-            <Text style={st.startText}>START BIO-SCAN (10 s)</Text>
+            <Text style={st.startText}>{tt('bioscan.start_bio_scan_10_s')}</Text>
           </Pressable>
         )}
         {!!err && <Text testID="bs-err" style={st.err}>{err}</Text>}
 
         {result && (
           <View testID="bs-result" style={st.resultCard}>
-            <Text style={st.resultTitle}>RESULT · {result.access === 'tier' ? 'SENTINEL' : '5 GA-T'} · SIMULATION</Text>
+            <Text style={st.resultTitle}>{tt('bioscan.result')} {result.access === 'tier' ? tt('bioscan.sentinel') : tt('bioscan.5_ga_t')} {tt('bioscan.simulation')}</Text>
             <View style={st.grid}>
-              <Metric icon="heart" label="TEP" value={`${result.heart_rate} bpm`} />
-              <Metric icon="water" label="SpO2" value={`${result.spo2} %`} />
-              <Metric icon="speedometer" label="TLAK (ODHAD)" value={result.bp_estimate} />
-              <Metric icon="pulse" label="HRV" value={`${result.hrv_ms} ms`} />
+              <Metric icon="heart" label={tt('bioscan.tep_376r')} value={`${result.heart_rate} bpm`} />
+              <Metric icon="water" label={tt('bioscan.spo2')} value={`${result.spo2} %`} />
+              <Metric icon="speedometer" label={tt('bioscan.tlak_odhad')} value={result.bp_estimate} />
+              <Metric icon="pulse" label={tt('bioscan.hrv')} value={`${result.hrv_ms} ms`} />
             </View>
             <Text style={[st.stress, result.stress_level === 'high' && { color: C.error }, result.stress_level === 'low' && { color: C.brand }]}>
-              STRESS: {result.stress_index}/100 · {result.stress_level === 'low' ? 'LOW 🟢' : result.stress_level === 'moderate' ? 'MODERATE 🟡' : 'HIGH 🔴'}
+              {tt('bioscan.stress')} {result.stress_index}/100 · {result.stress_level === 'low' ? tt('bioscan.low') : result.stress_level === 'moderate' ? tt('bioscan.moderate') : tt('bioscan.high')}
             </Text>
           </View>
         )}
 
-        <Text style={st.section}>MANUAL CALIBRATION · WHEEL — NO TYPING</Text>
-        <Text style={st.intro}>Measured with your own cuff or glucometer? Set the values with the wheel and save them to your health history.</Text>
+        <Text style={st.section}>{tt('bioscan.manual_calibration_wheel_no_typing')}</Text>
+        <Text style={st.intro}>{tt('bioscan.measured_with_your_own_cuff_or_gluco')}</Text>
         <View style={st.calRow}>
-          <WheelField testID="bs-sys" title="SYSTOLIC PRESSURE" min={70} max={250} unit="mmHg" placeholder="SYS (upper)" value={sys} onChange={setSys} style={st.calField} />
-          <WheelField testID="bs-dia" title="DIASTOLIC PRESSURE" min={40} max={150} unit="mmHg" placeholder="DIA (lower)" value={dia} onChange={setDia} style={st.calField} />
+          <WheelField testID="bs-sys" title={tt('bioscan.systolic_pressure')} min={70} max={250} unit="mmHg" placeholder={tt('bioscan.sys_upper')} value={sys} onChange={setSys} style={st.calField} />
+          <WheelField testID="bs-dia" title={tt('bioscan.diastolic_pressure')} min={40} max={150} unit="mmHg" placeholder={tt('bioscan.dia_lower')} value={dia} onChange={setDia} style={st.calField} />
         </View>
         <View style={st.calRow}>
-          <WheelField testID="bs-glu" title="GLUCOSE" min={2} max={30} step={0.1} decimals={1} unit="mmol/l" placeholder="Glucose" value={glu} onChange={setGlu} style={st.calField} />
-          <WheelField testID="bs-hr" title="TEP" min={30} max={220} unit="bpm" placeholder="Tep" value={hrM} onChange={setHrM} style={st.calField} />
+          <WheelField testID="bs-glu" title={tt('bioscan.glucose')} min={2} max={30} step={0.1} decimals={1} unit="mmol/l" placeholder={tt('bioscan.glucose_r2ka')} value={glu} onChange={setGlu} style={st.calField} />
+          <WheelField testID="bs-hr" title={tt('bioscan.tep_376r')} min={30} max={220} unit="bpm" placeholder={tt('bioscan.tep')} value={hrM} onChange={setHrM} style={st.calField} />
         </View>
         <Pressable testID="bs-calibrate" onPress={saveCalibration} disabled={!canCalibrate || calBusy} style={[st.calBtn, (!canCalibrate || calBusy) && { opacity: 0.4 }]}>
           {calBusy ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="save-outline" size={18} color={C.onInverse} />
-              <Text style={st.startText}>SAVE READING</Text>
+              <Text style={st.startText}>{tt('bioscan.save_reading')}</Text>
             </>
           )}
         </Pressable>
@@ -149,14 +151,14 @@ export default function BioScan() {
 
         {history.length > 0 && (
           <>
-            <Text style={st.section}>READING HISTORY</Text>
+            <Text style={st.section}>{tt('bioscan.reading_history')}</Text>
             {history.slice(0, 6).map(h => (
               <View key={h.scan_id} style={st.histRow}>
                 <Text style={st.histText}>
                   {String(h.at).slice(5, 16).replace('T', ' ')}
                   {String(h.method || '').startsWith('manual')
-                    ? ` · 📏 MANUAL${h.bp_estimate ? ` · BP ${h.bp_estimate}` : ''}${h.glucose_mmol ? ` · GLU ${h.glucose_mmol} mmol/l` : ''}${h.heart_rate ? ` · ♥ ${h.heart_rate}` : ''}`
-                    : ` · ♥ ${h.heart_rate} · SpO2 ${h.spo2}% · stres ${h.stress_level}`}
+                    ? tt('bioscan.manual', [h.bp_estimate ? ` · BP ${h.bp_estimate}` : '', h.glucose_mmol ? ` · GLU ${h.glucose_mmol} mmol/l` : '', h.heart_rate ? ` · ♥ ${h.heart_rate}` : ''])
+                    : tt('bioscan.spo2_stres', [h.heart_rate, h.spo2, h.stress_level])}
                 </Text>
               </View>
             ))}

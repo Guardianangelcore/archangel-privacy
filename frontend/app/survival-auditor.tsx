@@ -10,6 +10,7 @@ import { WheelField } from '@/src/ui/fields';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Item = { item_id: string; name: string; category: string; quantity: number; unit: string; daily_need_per_person: number };
 type Runway = { family_size: number; category_runways: Record<string, number>; overall_days: number; items_count: number };
@@ -23,6 +24,7 @@ const CATS: { key: string; icon: any; label: string }[] = [
 ];
 
 export default function SurvivalAuditor() {
+  const { t: tt, tx } = useI18n();
   const { user, setUser } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -80,13 +82,13 @@ export default function SurvivalAuditor() {
             <View style={[styles.runwayCard, { borderColor: overallColor }]}>
               <Text style={styles.runwayLbl}>{t('survival_runway', lang).toUpperCase()}</Text>
               <Text testID="sa-overall" style={[styles.runwayVal, { color: overallColor }]}>{overall}</Text>
-              <Text style={styles.runwayUnit}>DAYS · {familySize} PEOPLE</Text>
+              <Text style={styles.runwayUnit}>{tt('survival_auditor.days')} {familySize} {tt('survival_auditor.people')}</Text>
               <View style={styles.catRow}>
                 {CATS.map(c => (
                   <View key={c.key} style={styles.catBox}>
                     <Ionicons name={c.icon} size={18} color={C.fg} />
                     <Text style={styles.catVal}>{runway?.category_runways?.[c.key]?.toFixed(0) ?? '—'}</Text>
-                    <Text style={styles.catLbl}>{c.label}</Text>
+                    <Text style={styles.catLbl}>{tx(c.label)}</Text>
                   </View>
                 ))}
               </View>
@@ -102,7 +104,7 @@ export default function SurvivalAuditor() {
             </View>
 
             <JarvisAdvice module="survival_auditor" lang={lang} buildContext={() => `Survival runway: overall ${overall} days for ${familySize} people. Categories: ${JSON.stringify(runway?.category_runways || {})}. Items: ${items.map(i => `${i.name} ${i.quantity}${i.unit}`).join(', ') || 'none'}`} />
-            <Text style={styles.section}>INVENTORY</Text>
+            <Text style={styles.section}>{tt('survival_auditor.inventory')}</Text>
           </View>
         }
         ListEmptyComponent={!loading ? <Text style={styles.noData}>{t('no_data', lang).toUpperCase()}</Text> : null}
@@ -111,7 +113,7 @@ export default function SurvivalAuditor() {
             <Ionicons name={(CATS.find(c => c.key === item.category)?.icon) || 'cube-outline'} size={20} color={C.fg} />
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemMeta}>{item.quantity} {item.unit} · {item.daily_need_per_person}/person/day</Text>
+              <Text style={styles.itemMeta}>{item.quantity} {item.unit} · {item.daily_need_per_person}{tt('survival_auditor.person_day')}</Text>
             </View>
             <Pressable testID={`sv-del-${item.item_id}`} onPress={() => del(item)} hitSlop={10}>
               <Ionicons name="trash-outline" size={18} color={C.error} />
@@ -129,24 +131,24 @@ export default function SurvivalAuditor() {
         <View style={styles.modalRoot}>
           <View style={styles.modalCard}>
             <View style={styles.modalHead}>
-              <Text style={styles.modalTitle}>INVENTORY +</Text>
+              <Text style={styles.modalTitle}>{tt('survival_auditor.inventory_gj0y')}</Text>
               <Pressable testID="sa-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 420 }}>
-              <TextInput testID="sv-name" placeholder="Bottled water 1.5l" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="sv-name" placeholder={tt('survival_auditor.bottled_water_1_5l')} value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {CATS.map(c => (
                   <Pressable testID={`sv-cat-${c.key}`} key={c.key} onPress={() => setF({ ...f, category: c.key })} style={[styles.chip, f.category === c.key && styles.chipActive]}>
-                    <Text style={[styles.chipText, f.category === c.key && styles.chipTextActive]}>{c.label}</Text>
+                    <Text style={[styles.chipText, f.category === c.key && styles.chipTextActive]}>{tx(c.label)}</Text>
                   </Pressable>
                 ))}
               </View>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
-                <WheelField testID="sv-qty" title="QUANTITY" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="12" style={[styles.input, { flex: 1 }]} />
-                <TextInput testID="sv-unit" placeholder="l / ks / kg" value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+                <WheelField testID="sv-qty" title={tt('survival_auditor.quantity')} min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="12" style={[styles.input, { flex: 1 }]} />
+                <TextInput testID="sv-unit" placeholder={tt('survival_auditor.l_ks_kg')} value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
               </View>
-              <Text style={styles.lbl}>CONSUMPTION / PERSON / DAY</Text>
-              <WheelField testID="sv-need" title="DAILY NEED / PERSON" min={1} max={20} value={f.daily_need_per_person} onChange={v => setF({ ...f, daily_need_per_person: v })} placeholder="3" style={styles.input} />
+              <Text style={styles.lbl}>{tt('survival_auditor.consumption_person_day')}</Text>
+              <WheelField testID="sv-need" title={tt('survival_auditor.daily_need_person')} min={1} max={20} value={f.daily_need_per_person} onChange={v => setF({ ...f, daily_need_per_person: v })} placeholder="3" style={styles.input} />
             </ScrollView>
             <Pressable testID="sa-save" onPress={add} style={styles.saveBtn}>
               <Text style={styles.saveBtnText}>{t('save', lang).toUpperCase()}</Text>

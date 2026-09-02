@@ -7,8 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Duress() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [status, setStatus] = useState<any>(null);
   const [realPin, setRealPin] = useState('');
@@ -50,63 +52,62 @@ export default function Duress() {
         <Pressable testID="du-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>DURESS PROTOKOL</Text>
+        <Text style={st.title}>{tt('duress.duress_protokol')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.heroIcon}><Ionicons name="hand-left-outline" size={28} color={C.error} /></View>
-        <Text style={st.h1}>Protection Under Duress</Text>
+        <Text style={st.h1}>{tt('duress.protection_under_duress')}</Text>
         <Text style={st.sub}>
-          Set two PIN codes. The real PIN unlocks your full vault. The emergency (duress) PIN shows an EMPTY
-          decoy vault and simultaneously sends a SILENT ALARM — the attacker notices nothing.
+          {tt('duress.set_two_pin_codes_the_real_pin_unloc')}
         </Text>
 
         <View style={[st.stateCard, { borderColor: status?.configured ? C.brand : C.borderStrong }]}>
           <Ionicons name={status?.configured ? 'shield-checkmark' : 'shield-outline'} size={20} color={status?.configured ? C.brand : C.info} />
-          <Text style={st.stateText}>{status?.configured ? 'DURESS PIN ACTIVE' : 'NOT SET UP YET'}</Text>
+          <Text style={st.stateText}>{status?.configured ? tt('duress.duress_pin_active') : tt('duress.not_set_up_yet')}</Text>
         </View>
 
-        <Text style={st.section}>SET PIN CODES</Text>
+        <Text style={st.section}>{tt('duress.set_pin_codes')}</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <TextInput testID="du-real" value={realPin} onChangeText={setRealPin} keyboardType="numeric" maxLength={8} secureTextEntry
-            placeholder="Real PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
+            placeholder={tt('duress.real_pin')} placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <TextInput testID="du-duress" value={duressPin} onChangeText={setDuressPin} keyboardType="numeric" maxLength={8} secureTextEntry
-            placeholder="Duress PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
+            placeholder={tt('duress.duress_pin')} placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
         </View>
         <Pressable testID="du-save" onPress={save} disabled={busy === 'save' || realPin.length < 4 || duressPin.length < 4} style={st.mainBtn}>
-          {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>ACTIVATE THE DURESS PROTOCOL</Text>}
+          {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.mainBtnText}>{tt('duress.activate_the_duress_protocol')}</Text>}
         </Pressable>
         {!!msg && <Text testID="du-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="du-err" style={st.err}>{err}</Text>}
 
         {status?.configured && (
           <>
-            <Text style={st.section}>TEST THE UNLOCK</Text>
+            <Text style={st.section}>{tt('duress.test_the_unlock')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               <TextInput testID="du-test-pin" value={testPin} onChangeText={setTestPin} keyboardType="numeric" maxLength={8} secureTextEntry
-                placeholder="Zadajte PIN" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
+                placeholder={tt('duress.zadajte_pin')} placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
               <Pressable testID="du-test" onPress={test} disabled={busy === 'test' || testPin.length < 4} style={st.testBtn}>
-                {busy === 'test' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.mainBtnText}>VERIFY</Text>}
+                {busy === 'test' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.mainBtnText}>{tt('duress.verify')}</Text>}
               </Pressable>
             </View>
             {testResult && (
               <View testID="du-test-result" style={[st.resultCard, {
                 borderColor: testResult.vault_mode === 'full' ? C.brand : testResult.vault_mode === 'decoy' ? C.warn : C.error,
               }]}>
-                {testResult.vault_mode === 'full' && <Text style={[st.resultText, { color: C.brand }]}>✓ FULL VAULT — real PIN recognized.</Text>}
-                {testResult.vault_mode === 'decoy' && <Text style={[st.resultText, { color: C.warn }]}>👻 DECOY MODE — an empty vault would be shown and a silent alarm was sent to your guardians.</Text>}
-                {testResult.vault_mode === 'invalid' && <Text style={[st.resultText, { color: C.error }]}>✗ INVALID PIN.</Text>}
+                {testResult.vault_mode === 'full' && <Text style={[st.resultText, { color: C.brand }]}>{tt('duress.full_vault_real_pin_recognized')}</Text>}
+                {testResult.vault_mode === 'decoy' && <Text style={[st.resultText, { color: C.warn }]}>{tt('duress.decoy_mode_an_empty_vault_would_be_s')}</Text>}
+                {testResult.vault_mode === 'invalid' && <Text style={[st.resultText, { color: C.error }]}>{tt('duress.invalid_pin')}</Text>}
               </View>
             )}
           </>
         )}
 
-        <Text style={st.section}>SILENT ALARMS ({status?.alarms?.length ?? 0})</Text>
-        {(status?.alarms ?? []).length === 0 && <Text style={st.empty}>NO SECURITY EVENTS</Text>}
+        <Text style={st.section}>{tt('duress.silent_alarms')}{status?.alarms?.length ?? 0})</Text>
+        {(status?.alarms ?? []).length === 0 && <Text style={st.empty}>{tt('duress.no_security_events')}</Text>}
         {(status?.alarms ?? []).map((a: any) => (
           <View key={a.event_id} style={st.alarmCard}>
             <Ionicons name="alert-circle" size={16} color={C.error} />
-            <Text style={st.alarmText}>Silent alarm · {new Date(a.at).toLocaleString('en-GB')}</Text>
+            <Text style={st.alarmText}>{tt('duress.silent_alarm')} {new Date(a.at).toLocaleString('en-GB')}</Text>
           </View>
         ))}
       </ScrollView>

@@ -9,10 +9,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { C } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 export function GuardianEyeFAB({ testID = 'guardian-eye', bottom = 24, right = 20 }: {
   testID?: string; bottom?: number; right?: number;
 }) {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -28,12 +30,12 @@ export function GuardianEyeFAB({ testID = 'guardian-eye', bottom = 24, right = 2
         onPress={open}
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.94 }] }]}
         hitSlop={10}
-        accessibilityLabel="Guardian Eye — camera for instant OCR"
+        accessibilityLabel={tt('c_GuardianEye.guardian_eye_camera_for_instant_ocr')}
       >
         <Ionicons name="scan-outline" size={22} color={C.onInverse} />
         <View style={styles.dot} />
       </Pressable>
-      <Text style={styles.label}>EYE</Text>
+      <Text style={styles.label}>{tt('c_GuardianEye.eye')}</Text>
     </View>
   );
 }

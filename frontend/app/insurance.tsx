@@ -8,11 +8,13 @@ import * as Haptics from 'expo-haptics';
 import { api } from '@/src/api';
 import { WheelField, DateField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const TYPES: [string, string][] = [['health', 'Health'], ['life', 'Life'], ['disability', 'Disability'], ['property', 'Property']];
 const TYPE_ICON: Record<string, string> = { health: 'medkit', life: 'heart', disability: 'accessibility', property: 'home' };
 
 export default function Insurance() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [provider, setProvider] = useState('');
@@ -64,12 +66,12 @@ export default function Insurance() {
         <Pressable testID="ins-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>INSURANCE GUARD</Text>
+        <Text style={styles.title}>{tt('insurance.insurance_guard')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Sovereign Insurance Guardian</Text>
-        <Text style={styles.sub}>Who insures you, what it covers and whether it is paid — watched by the Wealth Sentinel 24/7.</Text>
+        <Text style={styles.h1}>{tt('insurance.sovereign_insurance_guardian')}</Text>
+        <Text style={styles.sub}>{tt('insurance.who_insures_you_what_it_covers_and_w')}</Text>
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -82,44 +84,44 @@ export default function Insurance() {
         {data?.microloan_suggested && (
           <Pressable testID="ins-microloan" onPress={() => { hap(); router.push('/solidarity'); }} style={styles.loanBox}>
             <Ionicons name="people" size={18} color={C.brand} />
-            <Text style={styles.loanText}>Policy overdue? The Solidarity Hub offers a micro-loan so your coverage never lapses.</Text>
+            <Text style={styles.loanText}>{tt('insurance.policy_overdue_the_solidarity_hub_of')}</Text>
             <Ionicons name="chevron-forward" size={16} color={C.brand} />
           </Pressable>
         )}
 
-        <Text style={styles.section}>MOJE POISTKY {data ? `· ${data.policies.length}` : ''}</Text>
+        <Text style={styles.section}>{tt('insurance.moje_poistky')} {data ? `· ${data.policies.length}` : ''}</Text>
         {(data?.policies || []).map((p: any) => (
           <View key={p.policy_id} style={[styles.polRow, p.status === 'overdue' && { borderColor: C.error, borderWidth: 1.5 }]}>
             <Ionicons name={(TYPE_ICON[p.type] || 'shield') as any} size={22} color={p.status === 'paid' ? C.brand : C.error} />
             <View style={{ flex: 1 }}>
               <Text style={styles.polTitle}>{p.provider}</Text>
-              <Text style={styles.polSub}>{TYPES.find(t2 => t2[0] === p.type)?.[1] || p.type}{p.premium_monthly ? ` · ${p.premium_monthly} ${p.currency}/mo.` : ''}{p.paid_until ? ` · until ${p.paid_until}` : ' · no date'}</Text>
+              <Text style={styles.polSub}>{TYPES.find(t2 => t2[0] === p.type)?.[1] || p.type}{p.premium_monthly ? tt('insurance.mo', [p.premium_monthly, p.currency]) : ''}{p.paid_until ? tt('insurance.until', [p.paid_until]) : ' ' + tt('insurance.no_date')}</Text>
             </View>
             <View style={[styles.statusChip, { backgroundColor: p.status === 'paid' ? '#5FA779' : C.error }]}>
-              <Text style={styles.statusText}>{p.status === 'paid' ? 'PAID' : 'OVERDUE'}</Text>
+              <Text style={styles.statusText}>{p.status === 'paid' ? tt('insurance.paid') : tt('insurance.overdue')}</Text>
             </View>
             <Pressable testID={`ins-del-${p.policy_id}`} onPress={() => del(p.policy_id)} hitSlop={8}>
               <Ionicons name="trash-outline" size={16} color={C.info} />
             </Pressable>
           </View>
         ))}
-        {data && data.policies.length === 0 && <Text style={styles.empty}>No policies yet — add one manually or just tell Jarvis below.</Text>}
+        {data && data.policies.length === 0 && <Text style={styles.empty}>{tt('insurance.no_policies_yet_add_one_manually_or')}</Text>}
 
-        <Text style={styles.section}>🧠 POVEDZTE TO JARVISOVI</Text>
+        <Text style={styles.section}>{tt('insurance.povedzte_to_jarvisovi')}</Text>
         <TextInput
           testID="ins-ingest-text"
           style={[styles.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: S.md }]}
           multiline
-          placeholder='E.g.: "My health insurance is with Dovera, paid until December."'
+          placeholder={tt('insurance.e_g_my_health_insurance_is_with_dove')}
           placeholderTextColor={C.info}
           value={ingestText}
           onChangeText={setIngestText}
         />
         <Pressable testID="ins-ingest-run" onPress={ingest} disabled={busy === 'ingest'} style={styles.cta}>
-          {busy === 'ingest' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>PROCESS (AI)</Text>}
+          {busy === 'ingest' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('insurance.process_ai')}</Text>}
         </Pressable>
 
-        <Text style={styles.section}>ADD MANUALLY</Text>
+        <Text style={styles.section}>{tt('insurance.add_manually')}</Text>
         <View style={styles.row2}>
           {TYPES.map(([k, l]) => (
             <Pressable key={k} testID={`ins-type-${k}`} onPress={() => { hap(); setPtype(k); }} style={[styles.chip, ptype === k && { backgroundColor: C.brand, borderColor: C.brand }]}>
@@ -127,16 +129,16 @@ export default function Insurance() {
             </Pressable>
           ))}
         </View>
-        <TextInput testID="ins-provider" style={styles.input} placeholder="Insurer (e.g. Dovera)" placeholderTextColor={C.info} value={provider} onChangeText={setProvider} />
+        <TextInput testID="ins-provider" style={styles.input} placeholder={tt('insurance.insurer_e_g_dovera')} placeholderTextColor={C.info} value={provider} onChangeText={setProvider} />
         <View style={styles.row2}>
-          <WheelField testID="ins-premium" title="PREMIUM €/MO." min={0} max={500} unit="€" value={premium} onChange={setPremium} placeholder="Premium €/mo." style={[styles.input, { flex: 1 }]} />
-          <DateField testID="ins-paid-until" title="PAID UNTIL" value={paidUntil} onChange={setPaidUntil} placeholder="Paid until" style={[styles.input, { flex: 1 }]} />
+          <WheelField testID="ins-premium" title={tt('insurance.premium_mo')} min={0} max={500} unit="€" value={premium} onChange={setPremium} placeholder={tt('insurance.premium_mo_z6cd')} style={[styles.input, { flex: 1 }]} />
+          <DateField testID="ins-paid-until" title={tt('insurance.paid_until')} value={paidUntil} onChange={setPaidUntil} placeholder={tt('insurance.paid_until_1sds')} style={[styles.input, { flex: 1 }]} />
         </View>
         <Pressable testID="ins-add" onPress={add} disabled={busy === 'add'} style={styles.cta}>
-          {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>SAVE POLICY</Text>}
+          {busy === 'add' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('insurance.save_policy')}</Text>}
         </Pressable>
 
-        <Text style={styles.section}>GLOBAL INSURER TEMPLATES</Text>
+        <Text style={styles.section}>{tt('insurance.global_insurer_templates')}</Text>
         {(data?.templates || []).map((tpl: any) => (
           <View key={tpl.region} style={{ marginBottom: S.sm }}>
             <Text style={styles.tplRegion}>{tpl.region}</Text>
@@ -149,7 +151,7 @@ export default function Insurance() {
             </View>
           </View>
         ))}
-        <Text style={styles.disclaimer}>The Wealth Sentinel checks due dates every 2 minutes. If a policy lapses you get a Jarvis alarm and the Waitlist Hunter shows a warning during bookings.</Text>
+        <Text style={styles.disclaimer}>{tt('insurance.the_wealth_sentinel_checks_due_dates')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,45 +1,47 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React from 'react';
 import PillarHub from '@/src/PillarHub';
+import { useI18n } from '@/src/i18n-context';
 
 export default function LegacyWealth() {
+  const { t: tt, tx } = useI18n();
   return (
     <PillarHub
       testID="hub-legacy"
       icon="shield-checkmark"
-      title="Sovereign Vault"
-      subtitle="Pillar 3 · Power & survival — wealth, insurance, eternal legacy and bunker mode."
+      title={tt('tabs_legacy.sovereign_vault')}
+      subtitle={tt('tabs_legacy.pillar_3_power_survival_wealth_insur')}
       sections={[
-        { title: 'A · WEALTH & INSURANCE', items: [
-          { testID: 'lw-wealth', icon: 'wallet-outline', title: 'Wealth Vault', subtitle: 'Crypto + IBAN · instant card payout', route: '/wealth-vault' },
-          { testID: 'lw-insurance', icon: 'umbrella-outline', title: 'Insurance Guardian', subtitle: 'Insurance Auditor · due dates · Jarvis alarm', route: '/insurance' },
-          { testID: 'lw-healing', icon: 'sync-outline', title: 'Financial Shield on Injury', subtitle: 'Healing Loop — insurance pays instantly', route: '/healing' },
-          { testID: 'lw-refunds', icon: 'cash-outline', title: 'My Claims', subtitle: 'Insurance refunds · tax deduction · one tap', route: '/refunds' },
-          { testID: 'lw-token', icon: 'diamond-outline', title: 'GA-T Wallet', subtitle: 'Guardian Token · GBI income · burn rate', route: '/token' },
-          { testID: 'lw-subscription', icon: 'star-outline', title: 'Subscription', subtitle: 'Guardian · Sentinel · Archangel — GA-T accepted', route: '/subscription' },
-          { testID: 'lw-protocol', icon: 'globe-outline', title: 'Data Marketplace', subtitle: 'API gateway · sell anonymous data · Sentinel', route: '/protocol' },
-          { testID: 'lw-market', icon: 'briefcase-outline', title: 'Expert Services', subtitle: 'Cash / crypto · zero commission', route: '/marketplace' },
-          { testID: 'lw-impact', icon: 'planet-outline', title: 'My World Impact', subtitle: 'How many people you helped today · profit + heroism', route: '/impact' },
-          { testID: 'lw-barter', icon: 'swap-horizontal-outline', title: 'Service Barter', subtitle: 'Trust credits · service for service', route: '/barter' },
-          { testID: 'lw-solidarity', icon: 'heart-circle-outline', title: 'Solidarity', subtitle: 'P2P campaigns · AML protected', route: '/solidarity' },
-          { testID: 'lw-inner-circle', icon: 'diamond-outline', title: 'Inner Circle', subtitle: 'Lifetime Archangel for the founder family', route: '/inner-circle' },
+        { title: tt('tabs_legacy.a_wealth_insurance'), items: [
+          { testID: 'lw-wealth', icon: 'wallet-outline', title: tt('tabs_legacy.wealth_vault'), subtitle: tt('tabs_legacy.crypto_iban_instant_card_payout'), route: '/wealth-vault' },
+          { testID: 'lw-insurance', icon: 'umbrella-outline', title: tt('tabs_legacy.insurance_guardian'), subtitle: tt('tabs_legacy.insurance_auditor_due_dates_jarvis_a'), route: '/insurance' },
+          { testID: 'lw-healing', icon: 'sync-outline', title: tt('tabs_legacy.financial_shield_on_injury'), subtitle: tt('tabs_legacy.healing_loop_insurance_pays_instantl'), route: '/healing' },
+          { testID: 'lw-refunds', icon: 'cash-outline', title: tt('tabs_legacy.my_claims'), subtitle: tt('tabs_legacy.insurance_refunds_tax_deduction_one'), route: '/refunds' },
+          { testID: 'lw-token', icon: 'diamond-outline', title: tt('tabs_legacy.ga_t_wallet'), subtitle: tt('tabs_legacy.guardian_token_gbi_income_burn_rate'), route: '/token' },
+          { testID: 'lw-subscription', icon: 'star-outline', title: tt('tabs_legacy.subscription'), subtitle: tt('tabs_legacy.guardian_sentinel_archangel_ga_t_acc'), route: '/subscription' },
+          { testID: 'lw-protocol', icon: 'globe-outline', title: tt('tabs_legacy.data_marketplace'), subtitle: tt('tabs_legacy.api_gateway_sell_anonymous_data_sent'), route: '/protocol' },
+          { testID: 'lw-market', icon: 'briefcase-outline', title: tt('tabs_legacy.expert_services'), subtitle: tt('tabs_legacy.cash_crypto_zero_commission'), route: '/marketplace' },
+          { testID: 'lw-impact', icon: 'planet-outline', title: tt('tabs_legacy.my_world_impact'), subtitle: tt('tabs_legacy.how_many_people_you_helped_today_pro'), route: '/impact' },
+          { testID: 'lw-barter', icon: 'swap-horizontal-outline', title: tt('tabs_legacy.service_barter'), subtitle: tt('tabs_legacy.trust_credits_service_for_service'), route: '/barter' },
+          { testID: 'lw-solidarity', icon: 'heart-circle-outline', title: tt('tabs_legacy.solidarity'), subtitle: tt('tabs_legacy.p2p_campaigns_aml_protected'), route: '/solidarity' },
+          { testID: 'lw-inner-circle', icon: 'diamond-outline', title: tt('tabs_legacy.inner_circle'), subtitle: tt('tabs_legacy.lifetime_archangel_for_the_founder_f'), route: '/inner-circle' },
         ] },
-        { title: 'B · LEGACY — ETERNAL VAULT 🔒', items: [
-          { testID: 'lw-eternal', icon: 'finger-print-outline', title: 'Eternal Vault', subtitle: 'Biometric lock: video wills · funeral fund · digital executor', route: '/eternal-vault' },
+        { title: tt('tabs_legacy.b_legacy_eternal_vault'), items: [
+          { testID: 'lw-eternal', icon: 'finger-print-outline', title: tt('tabs_legacy.eternal_vault'), subtitle: tt('tabs_legacy.biometric_lock_video_wills_funeral_f'), route: '/eternal-vault' },
         ] },
-        { title: 'C · SURVIVAL — BUNKER MODE', items: [
-          { testID: 'lw-compass', icon: 'compass-outline', title: 'Survival Compass', subtitle: 'Satellite handshake · Bio-Beacon · point S3', route: '/compass' },
-          { testID: 'lw-mesh', icon: 'radio-outline', title: 'Mesh Messages', subtitle: 'P2P offline messages independent of carriers', route: '/mesh' },
-          { testID: 'lw-blackout', icon: 'flash-off-outline', title: 'Blackout Protocol', subtitle: 'Offline mode · mesh network', route: '/blackout' },
-          { testID: 'lw-survival', icon: 'cube-outline', title: 'Survival Supplies', subtitle: 'Supply arbitrage · water · food · survival days', route: '/survival-auditor' },
-          { testID: 'lw-pantry', icon: 'scan-circle-outline', title: 'Survival Pantry Scanner', subtitle: 'Jarvis guards cans · batteries · filters · expiry', route: '/pantry' },
-          { testID: 'lw-enviro', icon: 'thunderstorm-outline', title: 'Threat Map', subtitle: 'Environmental threats · mesh consensus', route: '/enviro' },
-          { testID: 'lw-humanitarian', icon: 'earth-outline', title: 'Humanitarian Shield', subtitle: 'Crisis identity · Red Cross / UN', route: '/humanitarian' },
-          { testID: 'lw-truth', icon: 'checkmark-done-outline', title: 'Fact Validator', subtitle: 'Peer consensus against disinformation', route: '/truth-validator' },
-          { testID: 'lw-ghost', icon: 'eye-off-outline', title: 'Ghost Mode & Power Saver', subtitle: 'Anonymous patient token · Power Saver', route: '/ghost-mode' },
-          { testID: 'lw-fortress', icon: 'shield-half-outline', title: 'Cyber Fortress', subtitle: 'Zero-Knowledge · DePIN nodes · self-healing', route: '/fortress' },
-          { testID: 'lw-recovery-suite', icon: 'key-outline', title: '3-Tier Recovery', subtitle: 'Social Recovery · QR Talisman · Biometrics', route: '/recovery-suite' },
-          { testID: 'lw-mosaic', icon: 'cube-outline', title: 'Mosaic Protocol', subtitle: 'ZK-Rollup L2 · PQC · zero-fee', route: '/mosaic' },
+        { title: tt('tabs_legacy.c_survival_bunker_mode'), items: [
+          { testID: 'lw-compass', icon: 'compass-outline', title: tt('tabs_legacy.survival_compass'), subtitle: tt('tabs_legacy.satellite_handshake_bio_beacon_point'), route: '/compass' },
+          { testID: 'lw-mesh', icon: 'radio-outline', title: tt('tabs_legacy.mesh_messages'), subtitle: tt('tabs_legacy.p2p_offline_messages_independent_of'), route: '/mesh' },
+          { testID: 'lw-blackout', icon: 'flash-off-outline', title: tt('tabs_legacy.blackout_protocol'), subtitle: tt('tabs_legacy.offline_mode_mesh_network'), route: '/blackout' },
+          { testID: 'lw-survival', icon: 'cube-outline', title: tt('tabs_legacy.survival_supplies'), subtitle: tt('tabs_legacy.supply_arbitrage_water_food_survival'), route: '/survival-auditor' },
+          { testID: 'lw-pantry', icon: 'scan-circle-outline', title: tt('tabs_legacy.survival_pantry_scanner'), subtitle: tt('tabs_legacy.jarvis_guards_cans_batteries_filters'), route: '/pantry' },
+          { testID: 'lw-enviro', icon: 'thunderstorm-outline', title: tt('tabs_legacy.threat_map'), subtitle: tt('tabs_legacy.environmental_threats_mesh_consensus'), route: '/enviro' },
+          { testID: 'lw-humanitarian', icon: 'earth-outline', title: tt('tabs_legacy.humanitarian_shield'), subtitle: tt('tabs_legacy.crisis_identity_red_cross_un'), route: '/humanitarian' },
+          { testID: 'lw-truth', icon: 'checkmark-done-outline', title: tt('tabs_legacy.fact_validator'), subtitle: tt('tabs_legacy.peer_consensus_against_disinformatio'), route: '/truth-validator' },
+          { testID: 'lw-ghost', icon: 'eye-off-outline', title: tt('tabs_legacy.ghost_mode_power_saver'), subtitle: tt('tabs_legacy.anonymous_patient_token_power_saver'), route: '/ghost-mode' },
+          { testID: 'lw-fortress', icon: 'shield-half-outline', title: tt('tabs_legacy.cyber_fortress'), subtitle: tt('tabs_legacy.zero_knowledge_depin_nodes_self_heal'), route: '/fortress' },
+          { testID: 'lw-recovery-suite', icon: 'key-outline', title: tt('tabs_legacy.3_tier_recovery'), subtitle: tt('tabs_legacy.social_recovery_qr_talisman_biometri'), route: '/recovery-suite' },
+          { testID: 'lw-mosaic', icon: 'cube-outline', title: tt('tabs_legacy.mosaic_protocol'), subtitle: tt('tabs_legacy.zk_rollup_l2_pqc_zero_fee'), route: '/mosaic' },
         ] },
       ]}
     />

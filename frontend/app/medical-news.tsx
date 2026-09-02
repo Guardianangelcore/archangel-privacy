@@ -7,8 +7,10 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function MedicalNews() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [feed, setFeed] = useState<any>(null);
   const [tracker, setTracker] = useState<any>(null);
@@ -45,10 +47,10 @@ export default function MedicalNews() {
       {personalized && (
         <View style={styles.matchBadge}>
           <Ionicons name="person" size={10} color={C.onInverse} />
-          <Text style={styles.matchText}>MATCHES YOUR VAULT · {n.matched_tags.slice(0, 3).join(', ')}</Text>
+          <Text style={styles.matchText}>{tt('medical_news.matches_your_vault')} {n.matched_tags.slice(0, 3).join(', ')}</Text>
         </View>
       )}
-      <Text style={styles.cardTitle}>{n.high_tech ? '⚡ ' : ''}{n.title}</Text>
+      <Text style={styles.cardTitle}>{n.high_tech ? '⚡ ' : ''}{tx(n.title)}</Text>
       <Text style={styles.cardSummary}>{n.summary}</Text>
       <Text style={styles.cardMeta}>{n.region} · {n.specialty} · {n.source}{n.date ? ` · ${n.date}` : ''}{n.hunt_city ? ` · 🏥 ${n.hunt_city}` : ''}</Text>
       {!!n.url && (
@@ -57,18 +59,18 @@ export default function MedicalNews() {
           <Text style={styles.sourceText} numberOfLines={1}>{n.url.replace(/^https?:\/\//, '')}</Text>
         </Pressable>
       )}
-      {!!n.savings_note && <Text style={styles.savings}>💰 Wealth Advisor: {n.savings_note}</Text>}
+      {!!n.savings_note && <Text style={styles.savings}>{tt('medical_news.wealth_advisor')} {n.savings_note}</Text>}
       {personalized && !!n.jarvis_alert && <Text style={styles.jarvisAlert}>🧠 „{n.jarvis_alert}“</Text>}
       <View style={styles.actions}>
         {!!n.hunt_city && (
           <Pressable testID={`news-hunt-${n.news_id}`} onPress={() => hunt(n)} disabled={busy === n.news_id} style={styles.huntBtn}>
             <Ionicons name="search" size={14} color={C.onInverse} />
-            <Text style={styles.huntText}>{busy === n.news_id ? '…' : 'HUNT AN APPOINTMENT'}</Text>
+            <Text style={styles.huntText}>{busy === n.news_id ? '…' : tt('medical_news.hunt_an_appointment')}</Text>
           </Pressable>
         )}
         <Pressable testID={`news-jarvis-${n.news_id}`} onPress={() => { hap(); router.push('/jarvis'); }} style={styles.consultBtn}>
           <Ionicons name="sparkles" size={14} color={C.brand} />
-          <Text style={styles.consultText}>CONSULT WITH JARVIS</Text>
+          <Text style={styles.consultText}>{tt('medical_news.consult_with_jarvis')}</Text>
         </Pressable>
       </View>
     </View>
@@ -80,47 +82,47 @@ export default function MedicalNews() {
         <Pressable testID="nw-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>MEDICAL NEWS SENTINEL</Text>
+        <Text style={styles.title}>{tt('medical_news.medical_news_sentinel')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView
         contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(true); setRefreshing(false); }} tintColor={C.brand} />}
       >
-        <Text style={styles.h1}>Breaking Medical Insights</Text>
-        <Text style={styles.sub}>World breakthroughs matched against your Vault. What concerns you is on top — with a Jarvis alert and an appointment-hunt button.</Text>
+        <Text style={styles.h1}>{tt('medical_news.breaking_medical_insights')}</Text>
+        <Text style={styles.sub}>{tt('medical_news.world_breakthroughs_matched_against')}</Text>
         {feed && (
           <View testID="news-live-badge" style={[styles.liveBadge, !feed.live && { borderColor: C.border }]}>
             <View style={[styles.liveDot, { backgroundColor: feed.live ? '#5FA779' : feed.pending ? '#FFC53D' : C.info }]} />
             <Text style={styles.liveText}>
               {feed.live
-                ? `LIVE · ${feed.engine}${feed.fetched_at ? ` · updated ${new Date(feed.fetched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}${feed.pending ? ' · refreshing…' : ''}`
-                : feed.pending ? 'FETCHING LIVE SOURCES · Perplexity Sonar…' : 'CURATED FEED · live retrieval offline'}
+                ? tt('medical_news.live', [feed.engine, feed.fetched_at ? ` · updated ${new Date(feed.fetched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '', feed.pending ? ' · refreshing…' : ''])
+                : feed.pending ? tt('medical_news.fetching_live_sources_perplexity_son') : tt('medical_news.curated_feed_live_retrieval_offline')}
             </Text>
           </View>
         )}
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
-        <Text style={styles.section}>🎯 FOR YOU ({feed?.personalized?.length ?? '…'})</Text>
+        <Text style={styles.section}>{tt('medical_news.for_you')}{feed?.personalized?.length ?? '…'})</Text>
         {(feed?.personalized || []).map((n: any) => <NewsCard key={n.news_id} n={n} personalized />)}
         {feed && feed.personalized.length === 0 && (
-          <Text style={styles.empty}>No personal match yet — upload medical documents to your Vault and the Sentinel starts pairing breakthroughs with your health.</Text>
+          <Text style={styles.empty}>{tt('medical_news.no_personal_match_yet_upload_medical')}</Text>
         )}
 
-        <Text style={styles.section}>⚡ TECH-TRACKER CZ/SK — ROBOTIKA & 3D</Text>
+        <Text style={styles.section}>{tt('medical_news.tech_tracker_cz_sk_robotika_3d')}</Text>
         <Text style={styles.trackerNote}>{tracker?.hunter_note || ''}</Text>
         {(tracker?.deployments || []).slice(0, 4).map((n: any) => (
           <View key={n.news_id} style={styles.techRow}>
             <Ionicons name="hardware-chip" size={16} color={C.brand} />
-            <Text style={styles.techText} numberOfLines={2}>{n.title} · {n.hunt_city}</Text>
+            <Text style={styles.techText} numberOfLines={2}>{tx(n.title)} · {n.hunt_city}</Text>
           </View>
         ))}
 
-        <Text style={styles.section}>🌍 GLOBAL FEED</Text>
+        <Text style={styles.section}>{tt('medical_news.global_feed')}</Text>
         {(feed?.general || []).map((n: any) => <NewsCard key={n.news_id} n={n} />)}
 
-        <Text style={styles.disclaimer}>{feed?.note || ''} Informational content — not medical advice.</Text>
+        <Text style={styles.disclaimer}>{feed?.note || ''} {tt('medical_news.informational_content_not_medical_ad')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

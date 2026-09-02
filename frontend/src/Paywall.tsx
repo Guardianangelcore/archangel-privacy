@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { api } from './api';
 import { C, S } from './theme';
 import { IapBuyButton } from './IapPurchase';
+import { useI18n } from '@/src/i18n-context';
 
 type Props = {
   message: string;
@@ -22,6 +23,7 @@ const TIER_UI = {
 };
 
 export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat, onUnlocked }: Props) {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const ui = TIER_UI[tier];
   const [busy, setBusy] = useState(false);
@@ -41,11 +43,11 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
   return (
     <View testID="paywall" style={[st.box, { borderColor: ui.color }]}>
       <Ionicons name={ui.icon} size={30} color={ui.color} />
-      <Text style={[st.title, { color: ui.color }]}>{ui.title}</Text>
+      <Text style={[st.title, { color: ui.color }]}>{tx(ui.title)}</Text>
       <Text style={st.msg}>{message}</Text>
       {!!err && <Text style={st.err}>{err}</Text>}
       <Pressable testID="pw-trial" onPress={trial} disabled={busy} style={st.trialBtn}>
-        {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>ACTIVATE A FREE 7-DAY TRIAL</Text>}
+        {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>{tt('c_Paywall.activate_a_free_7_day_trial')}</Text>}
       </Pressable>
       {/* Guardian plan → native App Store / Google Play subscription (RevenueCat); unlocks immediately after tier mirror */}
       <View style={{ alignSelf: 'stretch' }}>

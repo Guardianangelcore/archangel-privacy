@@ -13,6 +13,7 @@ import { useAuth } from '@/src/auth';
 import { C, S, R, GOLD } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { playPulse, PulsePattern } from '@/src/haptic-heartbeat';
+import { useI18n } from '@/src/i18n-context';
 
 const PATTERNS: { key: PulsePattern; label: string; icon: any }[] = [
   { key: 'heartbeat', label: 'Tep srdca', icon: 'heart' },
@@ -22,6 +23,7 @@ const PATTERNS: { key: PulsePattern; label: string; icon: any }[] = [
 ];
 
 export default function AngelPulse() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { user } = useAuth();  // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -104,7 +106,7 @@ export default function AngelPulse() {
         <Pressable testID="ap-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>ANGEL PULSE</Text>
+        <Text style={styles.title}>{tt('angel_pulse.angel_pulse')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -117,20 +119,19 @@ export default function AngelPulse() {
             <Animated.View style={[styles.heartBg, heartStyle]}>
               <Ionicons name="heart" size={100} color={C.brand} />
             </Animated.View>
-            <Text style={styles.liveText}>YOU FEEL A HEARTBEAT…</Text>
+            <Text style={styles.liveText}>{tt('angel_pulse.you_feel_a_heartbeat')}</Text>
           </View>
         )}
 
         {!playingId && (
           <>
             <Text style={styles.intro}>
-              No words. No message. Just a <Text style={{ color: C.brand, fontWeight: '900' }}>tangible connection</Text>.
-              Your angel heartbeat arrives as a gentle vibration right into your family’s palm.
+              {tt('angel_pulse.no_words_no_message_just_a')} <Text style={{ color: C.brand, fontWeight: '900' }}>{tt('angel_pulse.tangible_connection')}</Text>{tt('angel_pulse.your_angel_heartbeat_arrives_as_a_ge')}
             </Text>
 
             {inbox.length > 0 && (
               <>
-                <Text style={styles.section}>DELIVERED TO YOU · {inbox.length}</Text>
+                <Text style={styles.section}>{tt('angel_pulse.delivered_to_you')} {inbox.length}</Text>
                 {inbox.slice(0, 6).map((p) => (
                   <Pressable key={p.pulse_id} testID={`ap-inbox-${p.pulse_id}`} onPress={() => feel(p)} style={styles.inCard}>
                     <View style={styles.inRing}>
@@ -139,14 +140,14 @@ export default function AngelPulse() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.inName}>{p.from_name}</Text>
                       <Text style={styles.inMeta}>
-                        {p.pattern} · {p.bpm} bpm · {new Date(p.created_at).toLocaleString('sk-SK')}
+                        {p.pattern} · {p.bpm} {tt('angel_pulse.bpm')} {new Date(p.created_at).toLocaleString('sk-SK')}
                       </Text>
                     </View>
                     {p.delivered ? (
                       <Ionicons name="checkmark-circle" size={20} color={C.brand} />
                     ) : (
                       <View style={styles.newDot}>
-                        <Text style={styles.newDotText}>NEW</Text>
+                        <Text style={styles.newDotText}>{tt('angel_pulse.new')}</Text>
                       </View>
                     )}
                   </Pressable>
@@ -154,9 +155,9 @@ export default function AngelPulse() {
               </>
             )}
 
-            <Text style={styles.section}>SEND A HEARTBEAT</Text>
+            <Text style={styles.section}>{tt('angel_pulse.send_a_heartbeat')}</Text>
             {circle.length === 0 ? (
-              <Text style={styles.empty}>First add someone to your family circle.</Text>
+              <Text style={styles.empty}>{tt('angel_pulse.first_add_someone_to_your_family_cir')}</Text>
             ) : (
               <>
                 <View style={styles.targetRow}>
@@ -173,7 +174,7 @@ export default function AngelPulse() {
                   ))}
                 </View>
 
-                <Text style={styles.lbl}>VZOR</Text>
+                <Text style={styles.lbl}>{tt('angel_pulse.vzor')}</Text>
                 <View style={styles.pRow}>
                   {PATTERNS.map((p) => (
                     <Pressable
@@ -183,12 +184,12 @@ export default function AngelPulse() {
                       style={[styles.pChip, pattern === p.key && styles.pChipActive]}
                     >
                       <Ionicons name={p.icon} size={14} color={pattern === p.key ? C.onInverse : C.brand} />
-                      <Text style={[styles.pText, pattern === p.key && { color: C.onInverse }]}>{p.label}</Text>
+                      <Text style={[styles.pText, pattern === p.key && { color: C.onInverse }]}>{tx(p.label)}</Text>
                     </Pressable>
                   ))}
                 </View>
 
-                <Text style={styles.lbl}>BPM (40 – 120)</Text>
+                <Text style={styles.lbl}>{tt('angel_pulse.bpm_40_120')}</Text>
                 <TextInput
                   testID="ap-bpm"
                   value={bpm}
@@ -201,7 +202,7 @@ export default function AngelPulse() {
                 <Pressable testID="ap-send" onPress={send} disabled={busy || !target} style={styles.sendCta}>
                   <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sendBg}>
                     {busy ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="heart" size={22} color={C.onInverse} />}
-                    <Text style={styles.sendText}>SEND A HEARTBEAT</Text>
+                    <Text style={styles.sendText}>{tt('angel_pulse.send_a_heartbeat')}</Text>
                   </LinearGradient>
                 </Pressable>
 

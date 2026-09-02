@@ -8,11 +8,13 @@ import * as Haptics from 'expo-haptics';
 import { api } from '@/src/api';
 import { WheelField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const CAT_ICON: Record<string, string> = { financial: 'card', social: 'share-social', property: 'home', digital: 'cloud' };
 const SUB_ACTIONS: [string, string][] = [['cancel', 'CANCEL'], ['transfer', 'TRANSFER'], ['memorialize', 'MEMORIALIZE']];
 
 export default function DigitalLegacy() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [list, setList] = useState<any>(null);
   const [subs, setSubs] = useState<any>(null);
@@ -60,12 +62,12 @@ export default function DigitalLegacy() {
         <Pressable testID="dl-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>DIGITAL EXECUTOR</Text>
+        <Text style={styles.title}>{tt('digital_legacy.digital_executor')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Digital legacy</Text>
-        <Text style={styles.sub}>A global checklist — nothing important is left hanging. Finances, social media, assets and your digital world.</Text>
+        <Text style={styles.h1}>{tt('digital_legacy.digital_legacy')}</Text>
+        <Text style={styles.sub}>{tt('digital_legacy.a_global_checklist_nothing_important')}</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         {list && (
@@ -73,7 +75,7 @@ export default function DigitalLegacy() {
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${list.progress.pct}%` }]} />
             </View>
-            <Text testID="dl-progress" style={styles.progressText}>{list.progress.done}/{list.progress.total} ready · {list.progress.pct} %</Text>
+            <Text testID="dl-progress" style={styles.progressText}>{list.progress.done}/{list.progress.total} {tt('digital_legacy.ready')} {list.progress.pct} %</Text>
           </View>
         )}
 
@@ -86,19 +88,19 @@ export default function DigitalLegacy() {
             {list.items.filter((i: any) => i.cat === cat).map((i: any) => (
               <Pressable key={i.item_id} testID={`dl-item-${i.item_id}`} onPress={() => toggle(i)} style={styles.itemRow}>
                 <Ionicons name={i.checked ? 'checkbox' : 'square-outline'} size={24} color={i.checked ? '#5FA779' : C.borderStrong} />
-                <Text style={[styles.itemText, i.checked && { opacity: 0.55, textDecorationLine: 'line-through' }]}>{i.title}</Text>
+                <Text style={[styles.itemText, i.checked && { opacity: 0.55, textDecorationLine: 'line-through' }]}>{tx(i.title)}</Text>
               </Pressable>
             ))}
           </View>
         ))}
 
-        <Text style={[styles.section, { marginTop: S.xl }]}>SUBSCRIPTION LIQUIDATOR</Text>
-        <Text style={styles.subSmall}>What should be cancelled, transferred or memorialized when the will executes. {subs ? `Monthly saving from liquidation: ${subs.monthly_liquidation_saving} €` : ''}</Text>
+        <Text style={[styles.section, { marginTop: S.xl }]}>{tt('digital_legacy.subscription_liquidator')}</Text>
+        <Text style={styles.subSmall}>{tt('digital_legacy.what_should_be_cancelled_transferred')} {subs ? tt('digital_legacy.monthly_saving_from_liquidation', [subs.monthly_liquidation_saving]) : ''}</Text>
         {(subs?.subscriptions || []).map((s: any) => (
           <View key={s.sub_id} style={styles.subRow}>
             <Ionicons name={s.action === 'cancel' ? 'close-circle' : s.action === 'transfer' ? 'swap-horizontal' : 'flower'} size={18} color={s.action === 'cancel' ? C.error : C.brand} />
             <Text style={styles.subName}>{s.name}</Text>
-            <Text style={styles.subCost}>{s.cost_monthly ? `${s.cost_monthly} ${s.currency}/mes.` : ''}</Text>
+            <Text style={styles.subCost}>{s.cost_monthly ? tt('digital_legacy.mes', [s.cost_monthly, s.currency]) : ''}</Text>
             <Text style={styles.subAction}>{SUB_ACTIONS.find(a => a[0] === s.action)?.[1]}</Text>
             <Pressable testID={`dl-sub-del-${s.sub_id}`} onPress={() => delSub(s.sub_id)} hitSlop={8}>
               <Ionicons name="trash-outline" size={15} color={C.info} />
@@ -106,8 +108,8 @@ export default function DigitalLegacy() {
           </View>
         ))}
         <View style={styles.row2}>
-          <TextInput testID="dl-sub-name" style={[styles.input, { flex: 2 }]} placeholder="Netflix, Spotify, iCloud…" placeholderTextColor={C.info} value={name} onChangeText={setName} />
-          <WheelField testID="dl-sub-cost" title="CENA €/MESIAC" min={0} max={100} step={0.5} decimals={1} unit="€" value={cost} onChange={setCost} placeholder="€/mes." style={[styles.input, { flex: 1 }]} />
+          <TextInput testID="dl-sub-name" style={[styles.input, { flex: 2 }]} placeholder={tt('digital_legacy.netflix_spotify_icloud')} placeholderTextColor={C.info} value={name} onChangeText={setName} />
+          <WheelField testID="dl-sub-cost" title={tt('digital_legacy.cena_mesiac')} min={0} max={100} step={0.5} decimals={1} unit="€" value={cost} onChange={setCost} placeholder={tt('digital_legacy.mes_i8ji')} style={[styles.input, { flex: 1 }]} />
         </View>
         <View style={styles.row2}>
           {SUB_ACTIONS.map(([k, l]) => (

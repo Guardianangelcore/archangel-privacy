@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { api } from './api';
 import { useAuth } from './auth';
+import { useI18n } from '@/src/i18n-context';
 
 const POLL_MS = 30_000; // 30s poll while calm; disabled while HUD is open
 
@@ -26,6 +27,7 @@ async function callEmergency() {
 }
 
 export function CrisisHUD() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const [state, setState] = useState<any>(null);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -66,33 +68,33 @@ export function CrisisHUD() {
       <View style={styles.root} accessibilityViewIsModal>
         <View style={styles.headerRow}>
           <Ionicons name="warning" size={26} color="#FFD447" />
-          <Text style={styles.title}>CRISIS MODE</Text>
+          <Text style={styles.title}>{tt('c_CrisisHUD.crisis_mode')}</Text>
           <Pressable testID="hud-dismiss" onPress={dismiss} hitSlop={16} disabled={dismissing} style={styles.close}>
             {dismissing ? <ActivityIndicator color="#FFD447" /> : <Ionicons name="close" size={26} color="#FFD447" />}
           </Pressable>
         </View>
         <Text style={styles.reason}>
-          {(state.reasons || []).length ? (state.reasons || []).join(' · ') : 'Guardian Angel detected biological stress.'}
+          {(state.reasons || []).length ? (state.reasons || []).join(' · ') : tt('c_CrisisHUD.guardian_angel_detected_biological_s')}
         </Text>
-        <Text style={styles.guide}>Stay calm. Breathe slowly. Pick one.</Text>
+        <Text style={styles.guide}>{tt('c_CrisisHUD.stay_calm_breathe_slowly_pick_one')}</Text>
 
         <Pressable testID="hud-call" onPress={callEmergency} style={styles.callBtn}>
           <Ionicons name="call" size={42} color="#050510" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.callTitle}>CALL 112</Text>
-            <Text style={styles.callSub}>Emergency line · fast response</Text>
+            <Text style={styles.callTitle}>{tt('c_CrisisHUD.call_112')}</Text>
+            <Text style={styles.callSub}>{tt('c_CrisisHUD.emergency_line_fast_response')}</Text>
           </View>
         </Pressable>
 
         <Pressable testID="hud-instr" onPress={() => setShowInstructions(true)} style={styles.instrBtn}>
           <Ionicons name="list" size={38} color="#FFD447" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.instrTitle}>INSTANT INSTRUCTIONS</Text>
-            <Text style={styles.instrSub}>5-step survival guide</Text>
+            <Text style={styles.instrTitle}>{tt('c_CrisisHUD.instant_instructions')}</Text>
+            <Text style={styles.instrSub}>{tt('c_CrisisHUD.5_step_survival_guide')}</Text>
           </View>
         </Pressable>
 
-        <Text style={styles.footer}>A silent alert was sent to your Guardian Circle.  ·  AI Content · Sovereign Protocol</Text>
+        <Text style={styles.footer}>{tt('c_CrisisHUD.a_silent_alert_was_sent_to_your_guar')}</Text>
       </View>
 
       <Modal visible={showInstructions} transparent animationType="slide" onRequestClose={() => setShowInstructions(false)}>
@@ -100,7 +102,7 @@ export function CrisisHUD() {
           <View style={styles.sheet}>
             <View style={styles.sheetHead}>
               <Ionicons name="medkit" size={22} color="#FFD447" />
-              <Text style={styles.sheetTitle}>SURVIVAL INSTRUCTIONS</Text>
+              <Text style={styles.sheetTitle}>{tt('c_CrisisHUD.survival_instructions')}</Text>
               <Pressable testID="hud-instr-close" onPress={() => setShowInstructions(false)} hitSlop={16}>
                 <Ionicons name="close" size={24} color="#FFD447" />
               </Pressable>
@@ -112,7 +114,7 @@ export function CrisisHUD() {
                 </View>
               ))}
               <View style={styles.numbers}>
-                <Text style={styles.numbersTitle}>EMERGENCY NUMBERS</Text>
+                <Text style={styles.numbersTitle}>{tt('c_CrisisHUD.emergency_numbers')}</Text>
                 {Object.entries(state.emergency_numbers || {}).map(([k, v]) => (
                   <Pressable key={k} testID={`hud-num-${k}`} onPress={() => Linking.openURL(`tel:${v}`)} style={styles.numRow}>
                     <Text style={styles.numLabel}>{k}</Text>
@@ -123,7 +125,7 @@ export function CrisisHUD() {
             </ScrollView>
             <Pressable testID="hud-instr-call" onPress={callEmergency} style={styles.sheetCall}>
               <Ionicons name="call" size={22} color="#050510" />
-              <Text style={styles.sheetCallText}>CALL 112 NOW</Text>
+              <Text style={styles.sheetCallText}>{tt('c_CrisisHUD.call_112_now')}</Text>
             </Pressable>
           </View>
         </View>

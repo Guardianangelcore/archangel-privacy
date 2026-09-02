@@ -13,6 +13,7 @@ import { useI18n } from '@/src/i18n-context';
 const NOTIF_KEY = 'dailyBriefNotifOn';
 
 export default function DailyBrief() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { t } = useI18n();
   const [brief, setBrief] = useState<any>(null);
@@ -78,29 +79,29 @@ export default function DailyBrief() {
 
         <View style={styles.notifRow}>
           <Ionicons name="sunny" size={20} color="#B8860B" />
-          <Text style={styles.notifText}>Morning reminder at 8:00</Text>
+          <Text style={styles.notifText}>{tt('daily_brief.morning_reminder_at_8_00')}</Text>
           <Switch testID="db-notif" value={notifOn} onValueChange={toggleNotif} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={styles.section}>💊 {t('meds_today')} {brief ? `· ${brief.meds.pending} PENDING` : ''}</Text>
+        <Text style={styles.section}>💊 {t('meds_today')} {brief ? tt('daily_brief.pending', [brief.meds.pending]) : ''}</Text>
         {(brief?.meds?.items || []).map((m: any, i: number) => (
           <Pressable key={i} testID={`db-med-${i}`} onPress={() => !m.taken && takeMed(m)} style={[styles.bigRow, m.taken && { opacity: 0.45 }]}>
             <Ionicons name={m.taken ? 'checkmark-circle' : 'ellipse-outline'} size={30} color={m.taken ? '#5FA779' : C.brand} />
             <View style={{ flex: 1 }}>
               <Text style={styles.bigTitle}>{m.name}{m.dose ? ` · ${m.dose}` : ''}</Text>
-              <Text style={styles.bigSub}>{m.taken ? 'Taken ✓' : 'Tap when taken'}</Text>
+              <Text style={styles.bigSub}>{m.taken ? tt('daily_brief.taken') : tt('daily_brief.tap_when_taken')}</Text>
             </View>
             <Text style={styles.bigTime}>{m.time}</Text>
           </Pressable>
         ))}
-        {brief && brief.meds.items.length === 0 && <Text style={styles.empty}>No meds for today. Add reminders in the Meds section.</Text>}
+        {brief && brief.meds.items.length === 0 && <Text style={styles.empty}>{tt('daily_brief.no_meds_for_today_add_reminders_in_t')}</Text>}
 
         <Text style={styles.section}>📅 {t('appointments')}</Text>
         {(brief?.events_today || []).map((e: any) => (
           <View key={e.event_id} style={[styles.bigRow, { borderColor: C.error, borderWidth: 2 }]}>
             <Ionicons name="alarm" size={28} color={C.error} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.bigTitle}>DNES · {e.title}</Text>
+              <Text style={styles.bigTitle}>{tt('daily_brief.dnes')} {tx(e.title)}</Text>
               <Text style={styles.bigSub}>{e.notes || ''}</Text>
             </View>
           </View>
@@ -109,13 +110,13 @@ export default function DailyBrief() {
           <View key={e.event_id} style={styles.bigRow}>
             <Ionicons name="calendar" size={26} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.bigTitle}>{e.title}</Text>
+              <Text style={styles.bigTitle}>{tx(e.title)}</Text>
               <Text style={styles.bigSub}>{e.date}{e.notes ? ` · ${e.notes}` : ''}</Text>
             </View>
           </View>
         ))}
         {brief && brief.events_today.length === 0 && brief.events_upcoming.length === 0 && (
-          <Text style={styles.empty}>No appointments in the next 3 days. Rest up. 🌿</Text>
+          <Text style={styles.empty}>{tt('daily_brief.no_appointments_in_the_next_3_days_r')}</Text>
         )}
 
         <Text style={styles.section}>👪 {t('family')}</Text>
@@ -123,22 +124,22 @@ export default function DailyBrief() {
           <Pressable key={p.req_id} testID={`db-pulse-${p.req_id}`} onPress={() => answerPulse(p)} style={[styles.bigRow, { backgroundColor: C.brandTer }]}>
             <Ionicons name="heart" size={28} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.bigTitle}>{p.from_name} is asking if you are OK</Text>
-              <Text style={styles.bigSub}>Tap to reply I AM OK</Text>
+              <Text style={styles.bigTitle}>{p.from_name} {tt('daily_brief.is_asking_if_you_are_ok')}</Text>
+              <Text style={styles.bigSub}>{tt('daily_brief.tap_to_reply_i_am_ok')}</Text>
             </View>
           </Pressable>
         ))}
         {brief && brief.family.pending_pulse.length === 0 && (
-          <Text style={styles.empty}>No new family messages.{brief.family.emergency_contact ? ` Emergency contact: ${brief.family.emergency_contact}.` : ''}</Text>
+          <Text style={styles.empty}>{tt('daily_brief.no_new_family_messages')}{brief.family.emergency_contact ? tt('daily_brief.emergency_contact', [brief.family.emergency_contact]) : ''}</Text>
         )}
 
         {brief?.jarvis_last_action && (
           <>
-            <Text style={styles.section}>🧠 JARVIS HANDLED FOR YOU</Text>
+            <Text style={styles.section}>{tt('daily_brief.jarvis_handled_for_you')}</Text>
             <View style={styles.bigRow}>
               <Ionicons name="sparkles" size={26} color={C.brand} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.bigTitle}>{brief.jarvis_last_action.booked_slot ? `Appointment: ${brief.jarvis_last_action.booked_slot}` : `Document processed`}</Text>
+                <Text style={styles.bigTitle}>{brief.jarvis_last_action.booked_slot ? tt('daily_brief.appointment', [brief.jarvis_last_action.booked_slot]) : tt('daily_brief.document_processed')}</Text>
                 <Text style={styles.bigSub}>{brief.jarvis_last_action.doc_title}</Text>
               </View>
             </View>
@@ -146,9 +147,9 @@ export default function DailyBrief() {
         )}
 
         {brief?.recovery?.status === 'active' && (
-          <Text style={styles.recovery}>🤒 Active sick leave until {brief.recovery.end_date || '—'} — respect your outing windows.</Text>
+          <Text style={styles.recovery}>{tt('daily_brief.active_sick_leave_until')} {brief.recovery.end_date || '—'} {tt('daily_brief.respect_your_outing_windows')}</Text>
         )}
-        {brief && <Text style={styles.gat}>💎 GA-T zostatok: {Number(brief.gat_balance).toFixed(1)}</Text>}
+        {brief && <Text style={styles.gat}>{tt('daily_brief.ga_t_zostatok')} {Number(brief.gat_balance).toFixed(1)}</Text>}
       </ScrollView>
     </SafeAreaView>
   );

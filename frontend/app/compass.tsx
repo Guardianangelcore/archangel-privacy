@@ -13,6 +13,7 @@ import { useAuth } from '@/src/auth';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const KEY = 'gh_compass_pack';
 
@@ -30,6 +31,7 @@ async function getLoc(): Promise<{ lat: number | null; lng: number | null }> {
 }
 
 export default function Compass() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -99,13 +101,13 @@ export default function Compass() {
         <Pressable testID="cp-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>SURVIVAL COMPASS</Text>
+        <Text style={st.title}>{tt('compass.survival_compass')}</Text>
         <Pressable testID="cp-refresh" onPress={load} hitSlop={12}>
           <Ionicons name="refresh" size={22} color={C.onInverse} />
         </Pressable>
       </View>
 
-      {offline && <View style={st.offBanner}><Text style={st.offText}>OFFLINE MODE · SHOWING CACHED PACK · {pack?.generated_at?.slice(0, 16).replace('T', ' ')}</Text></View>}
+      {offline && <View style={st.offBanner}><Text style={st.offText}>{tt('compass.offline_mode_showing_cached_pack')} {pack?.generated_at?.slice(0, 16).replace('T', ' ')}</Text></View>}
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {!pack ? <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} /> : (
@@ -116,30 +118,30 @@ export default function Compass() {
               {busy === 'beacon' ? <ActivityIndicator color={C.onError} /> : <>
                 <Ionicons name={beacon ? 'radio' : 'radio-outline'} size={22} color={beacon ? C.onError : C.brand} />
                 <Text style={[st.beaconText, beacon && { color: C.onError }]}>
-                  {beacon ? 'BIO-BEACON BROADCASTING — TURN OFF' : 'ACTIVATE BIO-BEACON (EMERGENCY)'}
+                  {beacon ? tt('compass.bio_beacon_broadcasting_turn_off') : tt('compass.activate_bio_beacon_emergency')}
                 </Text>
               </>}
             </Pressable>
-            {beacon && <Text style={st.beaconMeta}>Pings: {beacon.pings} · pulse: {beacon.vitals?.heart_rate ?? '—'} · expires in 24 h · guardians watching</Text>}
+            {beacon && <Text style={st.beaconMeta}>{tt('compass.pings')} {beacon.pings} {tt('compass.pulse')} {beacon.vitals?.heart_rate ?? '—'} {tt('compass.expires_in_24_h_guardians_watching')}</Text>}
 
             {/* SOVEREIGN COMPASS BEARING */}
             {bearing && (
               <View testID="cp-bearing" style={st.bearingBox}>
                 <View style={st.bearingHead}>
                   <Ionicons name="compass" size={16} color={C.brand} />
-                  <Text style={st.bearingTitle}>SOVEREIGN COMPASS — GPS ACTIVE</Text>
+                  <Text style={st.bearingTitle}>{tt('compass.sovereign_compass_gps_active')}</Text>
                   <Pressable testID="cp-bearing-refresh" onPress={loadBearing} hitSlop={8}>
                     <Ionicons name="refresh" size={16} color={C.brand} />
                   </Pressable>
                 </View>
                 {!!bearing.nearest_safe_city && (
-                  <Text style={st.bearingLine}>NEAREST SAFE CITY · {bearing.nearest_safe_city.label} · {bearing.nearest_safe_city.direction} · {bearing.nearest_safe_city.distance_km} km</Text>
+                  <Text style={st.bearingLine}>{tt('compass.nearest_safe_city')} {tx(bearing.nearest_safe_city.label)} · {bearing.nearest_safe_city.direction} · {bearing.nearest_safe_city.distance_km} {tt('compass.km')}</Text>
                 )}
                 {(bearing.beacons || []).length > 0 && bearing.beacons.map((b: any, i: number) => (
-                  <Text key={`b${i}`} style={[st.bearingLine, { color: C.error }]}>🚨 {b.label} — {b.direction} · {b.distance_km} km</Text>
+                  <Text key={`b${i}`} style={[st.bearingLine, { color: C.error }]}>🚨 {tx(b.label)} — {b.direction} · {b.distance_km} {tt('compass.km')}</Text>
                 ))}
                 {(bearing.waitlist_proximity || []).slice(0, 3).map((w: any, i: number) => (
-                  <Text key={`w${i}`} style={st.bearingLine}>📅 {w.label} — {w.direction} · {w.distance_km} km</Text>
+                  <Text key={`w${i}`} style={st.bearingLine}>📅 {tx(w.label)} — {w.direction} · {w.distance_km} {tt('compass.km')}</Text>
                 ))}
               </View>
             )}
@@ -148,20 +150,20 @@ export default function Compass() {
             <Pressable testID="cp-sat" onPress={sendSat} disabled={busy === 'sat'} style={st.satBtn}>
               {busy === 'sat' ? <ActivityIndicator color={C.onInverse} /> : <>
                 <Ionicons name="planet-outline" size={20} color={C.onInverse} />
-                <Text style={st.satText}>SATELLITE SOS — SEND NANO-PACKET</Text>
+                <Text style={st.satText}>{tt('compass.satellite_sos_send_nano_packet')}</Text>
               </>}
             </Pressable>
-            <Text style={st.satNote}>With no signal, Jarvis compresses critical data into a ~100 B packet for Starlink/Globalstar (SIMULATION — protocol placeholder).</Text>
+            <Text style={st.satNote}>{tt('compass.with_no_signal_jarvis_compresses_cri')}</Text>
             {sat.slice(0, 3).map(p => (
               <View key={p.packet_id} style={st.satRow}>
                 <Ionicons name={p.status === 'broadcasted' ? 'checkmark-circle' : 'time-outline'} size={16} color={p.status === 'broadcasted' ? C.brand : C.warn} />
-                <Text style={st.satRowText}>{p.packet_bytes} B · {p.status === 'broadcasted' ? 'BROADCASTED' : 'QUEUED'} · {p.protocol?.split(' ')[0]}</Text>
+                <Text style={st.satRowText}>{p.packet_bytes} B · {p.status === 'broadcasted' ? tt('compass.broadcasted') : tt('compass.queued')} · {p.protocol?.split(' ')[0]}</Text>
               </View>
             ))}
             {!!msg && <Text testID="cp-msg" style={st.msg}>{msg}</Text>}
 
             {/* ICE */}
-            <Section title="IDENTITY · ICE">
+            <Section title={tt('compass.identity_ice')}>
               <Row lbl="NAME" val={pack.identity?.name || '—'} />
               <Row lbl="BLOOD TYPE" val={pack.identity?.blood_type || '—'} />
               <Row lbl="ALLERGIES" val={pack.identity?.allergies || '—'} />
@@ -170,44 +172,44 @@ export default function Compass() {
             </Section>
 
             {/* MEDS */}
-            <Section title="MEDS TODAY">
+            <Section title={tt('compass.meds_today')}>
               {(pack.meds_today || []).length ? pack.meds_today.map((m: any, i: number) => (
                 <Row key={i} lbl={m.time} val={`${m.name} — ${m.dose}`} />
-              )) : <Text style={st.emptyLine}>— no medication reminders</Text>}
+              )) : <Text style={st.emptyLine}>{tt('compass.no_medication_reminders')}</Text>}
             </Section>
 
             {/* NESCHOPENKA / ePN */}
-            <Section title="SICK LEAVE (ePN) · OUTINGS" testID="cp-sickleave">
+            <Section title={tt('compass.sick_leave_epn_outings')} testID="cp-sickleave">
               {sl?.active ? (
                 <>
                   <Row lbl="STATUS" val={`ACTIVE SICK LEAVE from ${sl.start_date}${sl.end_date ? ` to ${sl.end_date}` : ''}`} />
                   <Row lbl="CONTRACT" val={(sl.contract_type || 'fulltime').toUpperCase()} />
                   <Row lbl="PERMITTED OUTINGS" val={(sl.outings || []).map((o: any) => `${o.from_time}–${o.to_time}`).join(' · ') || 'no outings'} />
-                  <Text style={st.warnLine}>⚠ Stay home outside outing windows — social insurance inspections.</Text>
+                  <Text style={st.warnLine}>{tt('compass.stay_home_outside_outing_windows_soc')}</Text>
                 </>
-              ) : <Text style={st.emptyLine}>— no active sick leave (manage in My Recovery)</Text>}
+              ) : <Text style={st.emptyLine}>{tt('compass.no_active_sick_leave_manage_in_my_re')}</Text>}
             </Section>
 
             {/* VACCINATIONS */}
-            <Section title="VACCINATIONS · BOOSTERS" testID="cp-vaccines">
+            <Section title={tt('compass.vaccinations_boosters')} testID="cp-vaccines">
               {(vac?.booster_alerts || []).map((b: any, i: number) => (
-                <Text key={`b${i}`} style={st.warnLine}>⚠ {b.title} — booster due by {b.booster_due}</Text>
+                <Text key={`b${i}`} style={st.warnLine}>⚠ {tx(b.title)} {tt('compass.booster_due_by')} {b.booster_due}</Text>
               ))}
               {(vac?.history || []).length ? vac.history.map((v: any, i: number) => (
                 <Row key={i} lbl={v.date} val={`${v.title}${v.booster_due ? ` (booster ${v.booster_due})` : ''}`} />
-              )) : <Text style={st.emptyLine}>— no records (add in Health Timeline)</Text>}
+              )) : <Text style={st.emptyLine}>{tt('compass.no_records_add_in_health_timeline')}</Text>}
             </Section>
 
             {/* GUARDIANS + NUMBERS */}
-            <Section title="GUARDIANS">
+            <Section title={tt('compass.guardians')}>
               {(pack.guardians || []).length ? pack.guardians.map((g: any, i: number) => (
                 <Row key={i} lbl={`#${i + 1}`} val={`${g.guardian_name} · ${g.guardian_email}`} />
-              )) : <Text style={st.emptyLine}>— add guardians in Sovereign Recovery</Text>}
+              )) : <Text style={st.emptyLine}>{tt('compass.add_guardians_in_sovereign_recovery')}</Text>}
             </Section>
-            <Section title="EMERGENCY NUMBERS">
+            <Section title={tt('compass.emergency_numbers')}>
               {Object.entries(pack.emergency_numbers || {}).map(([k, v]) => <Row key={k} lbl={k.toUpperCase()} val={String(v)} />)}
             </Section>
-            <Section title="SURVIVAL HANDBOOK">
+            <Section title={tt('compass.survival_handbook')}>
               {(pack.survival_guide || []).map((s: string, i: number) => (
                 <Text key={i} style={st.tip}>{i + 1}.  {s}</Text>
               ))}

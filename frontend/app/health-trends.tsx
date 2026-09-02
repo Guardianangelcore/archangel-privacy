@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const CATS: any = {
   vaccine: { label: 'Vaccinations', color: '#5FA779' },
@@ -19,6 +20,7 @@ const CATS: any = {
 const KEYS = Object.keys(CATS);
 
 export default function HealthTrends() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { child_id, name } = useLocalSearchParams<{ child_id?: string; name?: string }>();
   const [data, setData] = useState<any>(null);
@@ -49,26 +51,26 @@ export default function HealthTrends() {
         <Pressable testID="tr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>TRENDY ZDRAVIA</Text>
+        <Text style={st.title}>{tt('health_trends.trendy_zdravia')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
-        <Text style={st.h1}>{name ? String(name) : 'Moja karta'}</Text>
-        <Text style={st.sub}>How diseases, injuries, check-ups and vaccinations evolve over time — year by year.</Text>
+        <Text style={st.h1}>{name ? String(name) : tt('health_trends.moja_karta')}</Text>
+        <Text style={st.sub}>{tt('health_trends.how_diseases_injuries_check_ups_and')}</Text>
         {!!err && <Text style={st.err}>{err}</Text>}
 
         {/* JARVIS SÚHRN */}
         <View testID="tr-summary-box" style={st.sumBox}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
             <Ionicons name="sparkles" size={16} color={C.brand} />
-            <Text style={st.sumTitle}>YEARLY SUMMARY · JARVIS</Text>
+            <Text style={st.sumTitle}>{tt('health_trends.yearly_summary_jarvis')}</Text>
             <View style={{ flex: 1 }} />
             <Pressable testID="tr-summarize" onPress={genSummary} disabled={sumBusy} style={st.sumBtn}>
-              {sumBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.sumBtnText}>{summary ? 'REFRESH' : 'EVALUATE'}</Text>}
+              {sumBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.sumBtnText}>{summary ? tt('health_trends.refresh') : tt('health_trends.evaluate')}</Text>}
             </Pressable>
           </View>
           {!!summary && <Text testID="tr-summary" style={st.sumText}>{summary}</Text>}
-          {!summary && <Text style={st.sumHint}>Jarvis evaluates the trends and gives one practical recommendation.</Text>}
+          {!summary && <Text style={st.sumHint}>{tt('health_trends.jarvis_evaluates_the_trends_and_give')}</Text>}
         </View>
 
         {/* LEGENDA */}
@@ -76,14 +78,14 @@ export default function HealthTrends() {
           {KEYS.map(k => (
             <View key={k} style={st.legendItem}>
               <View style={[st.legendDot, { backgroundColor: CATS[k].color }]} />
-              <Text style={st.legendText}>{CATS[k].label}</Text>
+              <Text style={st.legendText}>{tx(CATS[k].label)}</Text>
             </View>
           ))}
         </View>
 
         {/* ROČNÉ STĹPCE */}
         {!data && <ActivityIndicator color={C.brand} style={{ marginTop: 30 }} />}
-        {data && years.length === 0 && <Text style={st.hint}>No records yet. Add them to your Life Card and the trends will render.</Text>}
+        {data && years.length === 0 && <Text style={st.hint}>{tt('health_trends.no_records_yet_add_them_to_your_life')}</Text>}
         {[...years].reverse().map((y: any) => (
           <View key={y.year} testID={`tr-year-${y.year}`} style={st.yearRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>

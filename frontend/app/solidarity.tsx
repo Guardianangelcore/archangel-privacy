@@ -9,10 +9,12 @@ import { useAuth } from '@/src/auth';
 import { WheelField } from '@/src/ui/fields';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Camp = { campaign_id: string; title: string; story: string; goal_amount: number; raised_amount: number; supporters: number; owner_name: string; currency: string };
 
 export default function Solidarity() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -82,20 +84,20 @@ export default function Solidarity() {
         <Pressable testID="sol-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>SOLIDARITY HUB</Text>
+        <Text style={styles.title}>{tt('solidarity.solidarity_hub')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <Pressable testID="sol-aml-banner" onPress={() => router.push('/legal')} style={[styles.banner, aml?.kyc_verified && { backgroundColor: C.brandTer }]}>
         <Text style={[styles.bannerText, aml?.kyc_verified && { color: C.brand }]}>
           {aml?.kyc_verified
-            ? `KYC ✓ · AML LIMIT €${aml?.daily_limit?.toFixed(0)}/DAY · LEDGER #${aml?.ledger_entries}`
-            : `AML: NO-KYC LIMIT €${aml?.daily_limit?.toFixed(0) ?? 150}/DAY · KYC → LEGAL & COMPLIANCE`}
+            ? tt('solidarity.kyc_aml_limit_day_ledger', [aml?.daily_limit?.toFixed(0), aml?.ledger_entries])
+            : tt('solidarity.aml_no_kyc_limit_day_kyc_legal_compl', [aml?.daily_limit?.toFixed(0) ?? 150])}
         </Text>
       </Pressable>
       {err ? <Text style={styles.errText}>{err}</Text> : null}
       <Pressable testID="sol-dignity-link" onPress={() => router.push('/dignity')} style={styles.dignityLink}>
         <Ionicons name="rose-outline" size={16} color={C.brand} />
-        <Text style={styles.dignityLinkText}>FINAL DIGNITY · FUNERAL FUND (SUB-ACCOUNT)</Text>
+        <Text style={styles.dignityLinkText}>{tt('solidarity.final_dignity_funeral_fund_sub_accou')}</Text>
         <Ionicons name="chevron-forward" size={16} color={C.brand} />
       </Pressable>
       <FlatList
@@ -103,12 +105,12 @@ export default function Solidarity() {
         keyExtractor={i => i.campaign_id}
         contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
-        ListEmptyComponent={!loading ? <Text style={styles.empty}>NO CAMPAIGNS YET</Text> : null}
+        ListEmptyComponent={!loading ? <Text style={styles.empty}>{tt('solidarity.no_campaigns_yet')}</Text> : null}
         renderItem={({ item }) => {
           const pct = Math.min(100, (item.raised_amount / item.goal_amount) * 100 || 0);
           return (
             <View testID={`camp-${item.campaign_id}`} style={styles.card}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardTitle}>{tx(item.title)}</Text>
               <Text style={styles.cardBy}>{item.owner_name}</Text>
               <Text style={styles.cardStory} numberOfLines={3}>{item.story}</Text>
               <View style={styles.progressWrap}>
@@ -116,7 +118,7 @@ export default function Solidarity() {
               </View>
               <View style={styles.rowSpread}>
                 <Text style={styles.statVal}>{item.raised_amount.toFixed(0)} / {item.goal_amount.toFixed(0)} {item.currency}</Text>
-                <Text style={styles.statSup}>{item.supporters} SUPPORTERS</Text>
+                <Text style={styles.statSup}>{item.supporters} {tt('solidarity.supporters')}</Text>
               </View>
               <Pressable testID={`donate-${item.campaign_id}`} onPress={() => setDonateFor(item)} style={styles.donateBtn}>
                 <Ionicons name="heart" size={16} color={C.onInverse} />
@@ -134,19 +136,19 @@ export default function Solidarity() {
       <Modal visible={modal} animationType="slide" transparent>
         <View style={styles.modalRoot}>
           <View style={styles.modalCard}>
-            <View style={styles.modalHead}><Text style={styles.modalTitle}>NEW CAMPAIGN</Text>
+            <View style={styles.modalHead}><Text style={styles.modalTitle}>{tt('solidarity.new_campaign')}</Text>
               <Pressable onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable></View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }}>
-              <TextInput testID="sol-title" placeholder="TITLE" value={form.title} onChangeText={v => setForm({ ...form, title: v })} style={styles.input} placeholderTextColor="#999" />
-              <TextInput testID="sol-story" placeholder="STORY" value={form.story} onChangeText={v => setForm({ ...form, story: v })} style={[styles.input, { minHeight: 100 }]} multiline placeholderTextColor="#999" />
-              <WheelField testID="sol-goal" title="GOAL AMOUNT €" min={100} max={20000} step={100} unit="€" value={form.goal_amount} onChange={v => setForm({ ...form, goal_amount: v })} placeholder="GOAL AMOUNT" style={styles.input} />
+              <TextInput testID="sol-title" placeholder={tt('solidarity.title')} value={form.title} onChangeText={v => setForm({ ...form, title: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="sol-story" placeholder={tt('solidarity.story')} value={form.story} onChangeText={v => setForm({ ...form, story: v })} style={[styles.input, { minHeight: 100 }]} multiline placeholderTextColor="#999" />
+              <WheelField testID="sol-goal" title={tt('solidarity.goal_amount')} min={100} max={20000} step={100} unit="€" value={form.goal_amount} onChange={v => setForm({ ...form, goal_amount: v })} placeholder={tt('solidarity.goal_amount_7i5l')} style={styles.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {['EUR','CZK','USD'].map(c => (
                   <Pressable testID={`cur-${c}`} key={c} onPress={() => setForm({ ...form, currency: c })} style={[styles.chip, form.currency === c && styles.chipActive]}><Text style={[styles.chipText, form.currency === c && styles.chipTextActive]}>{c}</Text></Pressable>
                 ))}
               </View>
             </ScrollView>
-            <Pressable testID="sol-create" onPress={create} style={styles.saveBtn}><Text style={styles.saveBtnText}>CREATE</Text></Pressable>
+            <Pressable testID="sol-create" onPress={create} style={styles.saveBtn}><Text style={styles.saveBtnText}>{tt('solidarity.create')}</Text></Pressable>
           </View>
         </View>
       </Modal>
@@ -154,17 +156,17 @@ export default function Solidarity() {
       <Modal visible={!!donateFor} animationType="slide" transparent>
         <View style={styles.modalRoot}>
           <View style={styles.modalCard}>
-            <View style={styles.modalHead}><Text style={styles.modalTitle}>DONATE (MOCKED)</Text>
+            <View style={styles.modalHead}><Text style={styles.modalTitle}>{tt('solidarity.donate_mocked')}</Text>
               <Pressable onPress={() => setDonateFor(null)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable></View>
             <View style={{ padding: S.lg, gap: S.md }}>
               <Text style={styles.cardTitle}>{donateFor?.title}</Text>
-              <WheelField testID="donate-amount" title="SUMA DARU €" min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder="Amount" style={styles.input} />
+              <WheelField testID="donate-amount" title={tt('solidarity.suma_daru')} min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder={tt('solidarity.amount')} style={styles.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {['5','10','25','50'].map(a => <Pressable testID={`amt-${a}`} key={a} onPress={() => setAmount(a)} style={styles.chip}><Text style={styles.chipText}>{a} {donateFor?.currency}</Text></Pressable>)}
               </View>
             </View>
-            <Pressable testID="donate-confirm" onPress={donate} style={styles.saveBtn}><Text style={styles.saveBtnText}>DONATE {amount} {donateFor?.currency}</Text></Pressable>
-            <Pressable testID="donate-card" onPress={donateCard} style={[styles.saveBtn, { backgroundColor: C.surface3, marginTop: 8 }]}><Text style={[styles.saveBtnText, { color: C.brand }]}>💳 PAY BY CARD (STRIPE)</Text></Pressable>
+            <Pressable testID="donate-confirm" onPress={donate} style={styles.saveBtn}><Text style={styles.saveBtnText}>{tt('solidarity.donate')} {amount} {donateFor?.currency}</Text></Pressable>
+            <Pressable testID="donate-card" onPress={donateCard} style={[styles.saveBtn, { backgroundColor: C.surface3, marginTop: 8 }]}><Text style={[styles.saveBtnText, { color: C.brand }]}>{tt('solidarity.pay_by_card_stripe')}</Text></Pressable>
           </View>
         </View>
       </Modal>

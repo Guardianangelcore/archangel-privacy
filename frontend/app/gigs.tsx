@@ -12,6 +12,7 @@ import { EmptyState } from '@/src/ui/EmptyState';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const KIND_ICON: Record<string, any> = {
   transport: 'car-outline', grocery: 'cart-outline', pharmacy: 'medkit-outline',
@@ -19,6 +20,7 @@ const KIND_ICON: Record<string, any> = {
 };
 
 export default function Gigs() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -72,7 +74,7 @@ export default function Gigs() {
         <Pressable testID="gg-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>ANGEL GIG NETWORK</Text>
+        <Text style={st.title}>{tt('gigs.angel_gig_network')}</Text>
         <Pressable testID="gg-token" onPress={() => router.push('/token')} hitSlop={12}>
           <Ionicons name="diamond-outline" size={22} color={C.onInverse} />
         </Pressable>
@@ -81,7 +83,7 @@ export default function Gigs() {
       <View style={st.tabRow}>
         {(['open', 'mine'] as const).map(k => (
           <Pressable testID={`gg-tab-${k}`} key={k} onPress={() => setTab(k)} style={[st.tabBtn, tab === k && st.tabBtnActive]}>
-            <Text style={[st.tabText, tab === k && st.tabTextActive]}>{k === 'open' ? 'NEARBY' : 'MY GIGS'}</Text>
+            <Text style={[st.tabText, tab === k && st.tabTextActive]}>{k === 'open' ? tt('gigs.nearby') : tt('gigs.my_gigs')}</Text>
           </Pressable>
         ))}
       </View>
@@ -93,7 +95,7 @@ export default function Gigs() {
         contentContainerStyle={{ padding: S.lg, paddingBottom: 140 }}
         ListHeaderComponent={
           <View>
-            <Text style={st.intro}>Neighbours help seniors — rides, groceries, meds, company. Reward: GA-T (Proof-of-Help) or direct cash, zero commission.</Text>
+            <Text style={st.intro}>{tt('gigs.neighbours_help_seniors_rides_grocer')}</Text>
             {!!msg && <Text testID="gg-msg" style={st.msg}>{msg}</Text>}
             {!!err && <Text testID="gg-err" style={st.err}>{err}</Text>}
           </View>
@@ -114,21 +116,21 @@ export default function Gigs() {
                 </View>
                 <Text style={[st.status, item.status === 'done' && { color: C.brand }, item.status === 'taken' && { color: C.warn }]}>{item.status.toUpperCase()}</Text>
               </View>
-              <Text style={st.gigTitle}>{item.title}</Text>
+              <Text style={st.gigTitle}>{tx(item.title)}</Text>
               <Text style={st.meta}>{item.requester_name}{item.city ? ` · ${item.city}` : ''}{item.note ? ` · ${item.note}` : ''}</Text>
-              <Text style={st.reward}>ODMENA: {item.reward_gat} GA-T{item.reward_eur ? ` + ${item.reward_eur} €` : ''}</Text>
+              <Text style={st.reward}>{tt('gigs.odmena')} {item.reward_gat} GA-T{item.reward_eur ? ` + ${item.reward_eur} €` : ''}</Text>
               {item.status === 'open' && !isMineReq && (
                 <Pressable testID={`gg-accept-${item.gig_id}`} onPress={() => accept(item.gig_id)} style={st.acceptBtn}>
-                  {busy === `acc-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>I ACCEPT — GOING TO HELP 😇</Text>}
+                  {busy === `acc-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>{tt('gigs.i_accept_going_to_help')}</Text>}
                 </Pressable>
               )}
               {item.status === 'taken' && isMineReq && (
                 <Pressable testID={`gg-complete-${item.gig_id}`} onPress={() => complete(item.gig_id)} style={[st.acceptBtn, { backgroundColor: C.brand }]}>
-                  {busy === `cmp-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>CONFIRM COMPLETION + REWARD</Text>}
+                  {busy === `cmp-${item.gig_id}` ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.acceptText}>{tt('gigs.confirm_completion_reward')}</Text>}
                 </Pressable>
               )}
               {item.status === 'taken' && !isMineReq && item.taker_id === user?.user_id && (
-                <Text style={st.taken}>YOU ARE HELPING — the requester confirms the reward when done</Text>
+                <Text style={st.taken}>{tt('gigs.you_are_helping_the_requester_confir')}</Text>
               )}
             </View>
           );
@@ -138,14 +140,14 @@ export default function Gigs() {
 
       <Pressable testID="gg-add" onPress={() => setModal(true)} style={st.fab}>
         <Ionicons name="add" size={22} color={C.onInverse} />
-        <Text style={st.fabText}>ASK FOR HELP</Text>
+        <Text style={st.fabText}>{tt('gigs.ask_for_help')}</Text>
       </Pressable>
 
       <Modal visible={modal} animationType="slide" transparent>
         <View style={st.modalRoot}>
           <View style={st.modalCard}>
             <View style={st.modalHead}>
-              <Text style={st.modalTitle}>NEW REQUEST</Text>
+              <Text style={st.modalTitle}>{tt('gigs.new_request')}</Text>
               <Pressable testID="gg-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 460 }}>
@@ -156,22 +158,22 @@ export default function Gigs() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput testID="gg-title" placeholder="E.g.: A ride to cardiology on Tuesday 9:00" value={f.title} onChangeText={v => setF({ ...f, title: v })} style={st.input} placeholderTextColor="#777" />
-              <TextInput testID="gg-city" placeholder="City" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={st.input} placeholderTextColor="#777" />
-              <TextInput testID="gg-note" placeholder="Note (optional)" value={f.note} onChangeText={v => setF({ ...f, note: v })} style={st.input} placeholderTextColor="#777" />
+              <TextInput testID="gg-title" placeholder={tt('gigs.e_g_a_ride_to_cardiology_on_tuesday')} value={f.title} onChangeText={v => setF({ ...f, title: v })} style={st.input} placeholderTextColor="#777" />
+              <TextInput testID="gg-city" placeholder={tt('gigs.city')} value={f.city} onChangeText={v => setF({ ...f, city: v })} style={st.input} placeholderTextColor="#777" />
+              <TextInput testID="gg-note" placeholder={tt('gigs.note_optional')} value={f.note} onChangeText={v => setF({ ...f, note: v })} style={st.input} placeholderTextColor="#777" />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={st.lbl}>ODMENA GA-T (max 50)</Text>
-                  <WheelField testID="gg-gat" title="ODMENA GA-T" min={0} max={500} step={5} unit="GA-T" value={f.reward_gat} onChange={v => setF({ ...f, reward_gat: v })} placeholder="0" style={st.input} />
+                  <Text style={st.lbl}>{tt('gigs.odmena_ga_t_max_50')}</Text>
+                  <WheelField testID="gg-gat" title={tt('gigs.odmena_ga_t')} min={0} max={500} step={5} unit="GA-T" value={f.reward_gat} onChange={v => setF({ ...f, reward_gat: v })} placeholder="0" style={st.input} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={st.lbl}>CASH € (optional)</Text>
-                  <WheelField testID="gg-eur" title="ODMENA €" min={0} max={500} step={5} unit="€" value={f.reward_eur} onChange={v => setF({ ...f, reward_eur: v })} placeholder="0" style={st.input} />
+                  <Text style={st.lbl}>{tt('gigs.cash_optional')}</Text>
+                  <WheelField testID="gg-eur" title={tt('gigs.odmena_13pv')} min={0} max={500} step={5} unit="€" value={f.reward_eur} onChange={v => setF({ ...f, reward_eur: v })} placeholder="0" style={st.input} />
                 </View>
               </View>
             </ScrollView>
             <Pressable testID="gg-save" onPress={create} disabled={busy === 'create' || !f.title.trim()} style={st.saveBtn}>
-              {busy === 'create' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>SEND TO NEIGHBOURS</Text>}
+              {busy === 'create' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>{tt('gigs.send_to_neighbours')}</Text>}
             </Pressable>
           </View>
         </View>

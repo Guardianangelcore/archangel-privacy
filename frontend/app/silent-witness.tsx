@@ -14,12 +14,14 @@ import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { useI18n } from '@/src/i18n-context';
 
 const CHUNK_MS = 20_000; // 20 seconds per chunk — small enough to survive a broken device
 
 type Session = { session_id: string; opened_at: string; closed_at?: string | null; chunk_count: number; total_bytes: number; status: string };
 
 export default function SilentWitness() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const params = useLocalSearchParams<{ panic?: string; sid?: string }>();
   const { user } = useAuth();
@@ -157,15 +159,13 @@ export default function SilentWitness() {
         <Pressable testID="sw-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>SILENT WITNESS</Text>
+        <Text style={styles.title}>{tt('silent_witness.silent_witness')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 120 }}>
         <Text style={styles.intro}>
-          If you end up in a conflict (an official, an aggressor), start the Silent Witness. The recording
-          is <Text style={{ color: C.brand, fontWeight: '900' }}>instantly streamed to your Vault</Text> and
-          alerts your Inner Circle. If your phone is taken, the evidence is already safe.
+          {tt('silent_witness.if_you_end_up_in_a_conflict_an_offic')} <Text style={{ color: C.brand, fontWeight: '900' }}>{tt('silent_witness.instantly_streamed_to_your_vault')}</Text> {tt('silent_witness.and_alerts_your_inner_circle_if_your')}
         </Text>
 
         <View style={styles.recRing}>
@@ -185,7 +185,7 @@ export default function SilentWitness() {
           <View testID="sw-live" style={styles.live}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>
-              LIVE · {elapsed}s · {chunkIndex} chunk(s) in the Vault
+              {tt('silent_witness.live')} {elapsed}s · {chunkIndex} {tt('silent_witness.chunk_s_in_the_vault')}
               {uploading ? '  ↑' : ''}
             </Text>
           </View>
@@ -195,13 +195,13 @@ export default function SilentWitness() {
         {micBlocked && (
           <Pressable onPress={() => Linking.openSettings()} style={styles.settingsBtn}>
             <Ionicons name="settings-outline" size={14} color={C.brand} />
-            <Text style={styles.settingsText}>Microphone blocked — OPEN SETTINGS</Text>
+            <Text style={styles.settingsText}>{tt('silent_witness.microphone_blocked_open_settings')}</Text>
           </Pressable>
         )}
 
-        <Text style={styles.section}>HISTORY · {history.length}</Text>
+        <Text style={styles.section}>{tt('silent_witness.history')} {history.length}</Text>
         {history.length === 0 && (
-          <Text style={styles.empty}>No recordings. That is a good thing.</Text>
+          <Text style={styles.empty}>{tt('silent_witness.no_recordings_that_is_a_good_thing')}</Text>
         )}
         {history.map((s) => (
           <View key={s.session_id} testID={`sw-sess-${s.session_id}`} style={styles.sessCard}>
@@ -209,7 +209,7 @@ export default function SilentWitness() {
             <View style={{ flex: 1 }}>
               <Text style={styles.sessDate}>{new Date(s.opened_at).toLocaleString('sk-SK')}</Text>
               <Text style={styles.sessMeta}>
-                {s.chunk_count} chunks · {Math.round((s.total_bytes || 0) / 1024)} KB · {s.status === 'active' ? 'IN PROGRESS' : 'SEALED'}
+                {s.chunk_count} {tt('silent_witness.chunks')} {Math.round((s.total_bytes || 0) / 1024)} {tt('silent_witness.kb')} {s.status === 'active' ? tt('silent_witness.in_progress') : tt('silent_witness.sealed')}
               </Text>
             </View>
           </View>
@@ -218,7 +218,7 @@ export default function SilentWitness() {
         <View style={styles.hint}>
           <Ionicons name="information-circle-outline" size={14} color={C.info} />
           <Text style={styles.hintText}>
-            Recordings are encrypted server-side. Only you can access them through your Vault.
+            {tt('silent_witness.recordings_are_encrypted_server_side')}
           </Text>
         </View>
       </ScrollView>

@@ -8,12 +8,15 @@ import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { DateSheet, OptionSheet } from '@/src/ui/sheets';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
+import Paywall from '@/src/Paywall';
 
 type Item = { item_id: string; specialty: string; clinic: string; city: string; current_date: string; target_before: string; status: string; found_slot?: string; last_check?: string };
 
 const SPECIALTIES = ['Cardiology', 'Orthopedics', 'Oncology', 'MRI/CT', 'Neurology', 'Dermatology', 'Ophthalmology'];
 
 export default function Waitlist() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const [items, setItems] = useState<Item[]>([]);
@@ -25,9 +28,12 @@ export default function Waitlist() {
   const [f, setF] = useState({ specialty: 'Cardiology', clinic: '', city: 'Bratislava', current_date: '', target_before: '' });
   const [sheet, setSheet] = useState<'spec' | 'current' | 'target' | null>(null);
 
+  // TIER GATE — Waitlist Hunter is Guardian+; the backend answers 402 for Sovereign, we show the paywall.
+  const [locked, setLocked] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
-    try { setItems(await api<Item[]>('/waitlist')); } catch (e) { console.log(e); }
+    try { setItems(await api<Item[]>('/waitlist')); setLocked(false); }
+    catch (e: any) { if (/^402:/.test(String(e?.message))) setLocked(true); else console.log(e); }
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -57,9 +63,14 @@ export default function Waitlist() {
 
   return (
     <SafeAreaView testID="waitlist-screen" style={styles.root} edges={['top']}>
+      {locked && (
+        <View testID="waitlist-paywall" style={{ padding: S.lg }}>
+          <Paywall tier="guardian" message={tt('tabs_waitlist.waitlist_hunter') + ' — Guardian Plan'} onUnlocked={load} />
+        </View>
+      )}
       <View style={styles.header}>
-        <Text style={styles.title}>WAITLIST HUNTER</Text>
-        <Text style={styles.sub}>CZ / SK · ZK-PROOF</Text>
+        <Text style={styles.title}>{tt('tabs_waitlist.waitlist_hunter')}</Text>
+        <Text style={styles.sub}>{tt('tabs_waitlist.cz_sk_zk_proof')}</Text>
       </View>
 
       <View style={styles.chipRow}>
@@ -96,9 +107,9 @@ export default function Waitlist() {
             </View>
             <Text style={styles.cardClinic}>{item.clinic} · {item.city}</Text>
             <View style={styles.rowSpread}>
-              <View><Text style={styles.rowLabel}>CURRENT</Text><Text style={styles.rowVal}>{item.current_date}</Text></View>
+              <View><Text style={styles.rowLabel}>{tt('tabs_waitlist.current')}</Text><Text style={styles.rowVal}>{item.current_date}</Text></View>
               <Ionicons name="arrow-forward" size={16} color={C.fg} />
-              <View><Text style={styles.rowLabel}>TARGET</Text><Text style={styles.rowVal}>{item.target_before}</Text></View>
+              <View><Text style={styles.rowLabel}>{tt('tabs_waitlist.target')}</Text><Text style={styles.rowVal}>{item.target_before}</Text></View>
             </View>
             {item.status === 'slot_found' && item.found_slot && (
               <View style={styles.foundBox}>
@@ -125,7 +136,7 @@ export default function Waitlist() {
         <View style={styles.modalRoot}>
           <View style={styles.modalCard}>
             <View style={styles.modalHead}>
-              <Text style={styles.modalTitle}>ADD WAITLIST</Text>
+              <Text style={styles.modalTitle}>{tt('tabs_waitlist.add_waitlist')}</Text>
               <Pressable testID="wl-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ padding: S.lg, gap: S.md }}>
@@ -136,19 +147,19 @@ export default function Waitlist() {
                 <Ionicons name="chevron-down" size={18} color={C.info} />
               </Pressable>
               <Text style={styles.lbl}>{t('clinic', lang).toUpperCase()}</Text>
-              <TextInput testID="wl-clinic" value={f.clinic} onChangeText={v => setF({ ...f, clinic: v })} style={styles.input} placeholder="University hospital…" placeholderTextColor="#999" />
+              <TextInput testID="wl-clinic" value={f.clinic} onChangeText={v => setF({ ...f, clinic: v })} style={styles.input} placeholder={tt('tabs_waitlist.university_hospital')} placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('city', lang).toUpperCase()}</Text>
-              <TextInput testID="wl-city" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholder="Bratislava" placeholderTextColor="#999" />
+              <TextInput testID="wl-city" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholder={tt('tabs_waitlist.bratislava')} placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('current_date', lang).toUpperCase()}</Text>
               <Pressable testID="wl-current" onPress={() => setSheet('current')} style={styles.pickerField}>
                 <Ionicons name="calendar-outline" size={18} color={C.brand} />
-                <Text style={[styles.pickerValue, !f.current_date && { color: '#999' }]}>{f.current_date || 'Pick a date…'}</Text>
+                <Text style={[styles.pickerValue, !f.current_date && { color: '#999' }]}>{f.current_date || tt('tabs_waitlist.pick_a_date')}</Text>
                 <Ionicons name="chevron-down" size={18} color={C.info} />
               </Pressable>
               <Text style={styles.lbl}>{t('target_before', lang).toUpperCase()}</Text>
               <Pressable testID="wl-target" onPress={() => setSheet('target')} style={styles.pickerField}>
                 <Ionicons name="flag-outline" size={18} color={C.brand} />
-                <Text style={[styles.pickerValue, !f.target_before && { color: '#999' }]}>{f.target_before || 'Pick a date…'}</Text>
+                <Text style={[styles.pickerValue, !f.target_before && { color: '#999' }]}>{f.target_before || tt('tabs_waitlist.pick_a_date')}</Text>
                 <Ionicons name="chevron-down" size={18} color={C.info} />
               </Pressable>
             </ScrollView>
@@ -159,13 +170,13 @@ export default function Waitlist() {
         </View>
       </Modal>
 
-      <OptionSheet testID="wl-spec-sheet" visible={sheet === 'spec'} onClose={() => setSheet(null)} title="SPECIALTY"
+      <OptionSheet testID="wl-spec-sheet" visible={sheet === 'spec'} onClose={() => setSheet(null)} title={tt('tabs_waitlist.specialty')}
         options={SPECIALTIES.map(s => ({ label: s, value: s, icon: 'medkit-outline' }))}
         selected={f.specialty} onSelect={v => setF({ ...f, specialty: v })} />
       <DateSheet testID="wl-current-sheet" visible={sheet === 'current'} onClose={() => setSheet(null)}
-        title="CURRENT APPOINTMENT" initial={f.current_date} onSelect={v => setF({ ...f, current_date: v })} />
+        title={tt('tabs_waitlist.current_appointment')} initial={f.current_date} onSelect={v => setF({ ...f, current_date: v })} />
       <DateSheet testID="wl-target-sheet" visible={sheet === 'target'} onClose={() => setSheet(null)}
-        title="WANT A SLOT BEFORE" initial={f.target_before} onSelect={v => setF({ ...f, target_before: v })} />
+        title={tt('tabs_waitlist.want_a_slot_before')} initial={f.target_before} onSelect={v => setF({ ...f, target_before: v })} />
     </SafeAreaView>
   );
 }

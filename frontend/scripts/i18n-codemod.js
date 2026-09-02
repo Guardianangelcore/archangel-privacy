@@ -30,6 +30,7 @@ const OBJ_KEYS = new Set(['title', 'label', 'subtitle', 'description', 'hint', '
   'desc', 'sub', 'cta', 'tagline', 'headline', 'body', 'caption', 'question', 'answer', 'tip', 'note']);
 const HAS_LETTERS = /\p{L}.*\p{L}/su;                 // at least two letters anywhere
 const SHORT_CODE = /^[A-Z0-9€$%+\-_.:/·•]{1,5}$/;      // GA-T, SOS, OK, EUR, P1M …
+const CODES = new Set(['OK','SOS','EUR','CZK','USD','GAT','QR','PDF','AI','SMS','ID','PIN','URL','GPS','BP','EU','API','ECG','EKG','HR','BMI','CBD','THC','UV','LED','USB','WIFI','VPN','DAO','NFT','KYC','AML','TTS','STT','LLM','GPT','OTP','SSO','RTL','JSON','CSV','XML','HTML','CSS','PWA','APK','IPA','IOS','MRI','CT','RTG','EMS','ER','ICU','CEO','CTO','B2B','B2C','SEO','FAQ','TOS','GDPR','HIPAA','ISO','CE','FDA','EMA','WHO','ECDC','SK','CZ','DE','AT','HU','PL','UK','US','UA','CN','JP','AR','ES','FR','IT','RU']);
 const SKIP_RE = /https?:\/\/|@\w+\.\w+|^\s*[\d.,%€$+\-–—/·•:]*\s*$/;
 
 const enJson = fs.existsSync(LOCALE_PATH) ? JSON.parse(fs.readFileSync(LOCALE_PATH, 'utf8')) : {};
@@ -62,7 +63,7 @@ function keyFor(screen, text) {
 function translatable(text) {
   const tr = text.trim();
   if (!tr || !HAS_LETTERS.test(tr) || SKIP_RE.test(tr)) return false;
-  if (SHORT_CODE.test(tr)) return false;
+  if (SHORT_CODE.test(tr) && (/[0-9€$%+\-_.:/·•]/.test(tr) || tr.length <= 2 || CODES.has(tr))) return false; // GA-T, P1M, OK, SOS… but not FREE/SAVE/SEND
   if (/^[a-z0-9_]+$/.test(tr) && /_/.test(tr)) return false; // identifiers like some_key
   return true;
 }
@@ -104,9 +105,10 @@ function processFile(file) {
   } catch (e) { console.error(`✗ parse ${file}: ${e.message}`); return; }
 
   const edits = [];               // {start, end, text}
+  let constCount = 0, txCount = 0;
   const skipped = [];
   const hookFns = new Map();      // fn node -> path (functions needing `tt`)
-  const q = s => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+  const q = s => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')}'`;
   // tt() call for a string literal, keeping the literal's own leading/trailing spaces (e.g. '  ✓ ACTIVE')
   const lit = (key, v) => {
     const lead = v.match(/^\s*/)[0], trail = v.match(/\s*$/)[0];
@@ -161,6 +163,28 @@ function processFile(file) {
         edits.push({ start: p.node.start, end: p.node.end, text: lit(key, v) });
       }
     },
+    ObjectProperty(p) {
+      // module-level constants (MODES = [{ label: 'Chat' }]) — collect text for tx() lookup, no code edit
+      const v = p.node.value;
+      if (!v || v.type !== 'StringLiteral' || p.node.computed) return;
+      const kname = p.node.key.name || p.node.key.value;
+      if (!OBJ_KEYS.has(kname) || !translatable(v.value)) return;
+      if (outermostFunction(p)) return;                       // inside a function → handled elsewhere / skipped
+      keyFor(screen, v.value.trim()); constCount++;
+    },
+    MemberExpression(p) {
+      // {item.label} rendered from a constant → {tx(item.label)}
+      if (p.node.computed || !p.parentPath.isJSXExpressionContainer()) return;
+      const gp = p.parentPath.parentPath;
+      if (!gp || !(gp.isJSXElement() || gp.isJSXFragment())) return;
+      const prop = p.node.property.name;
+      if (!OBJ_KEYS.has(prop)) return;
+      const fn = outermostFunction(p);
+      if (!fn || !containsJSX(fn)) return;
+      hookFns.set(fn.node, fn);
+      edits.push({ start: p.node.start, end: p.node.end, text: `tx(${src.slice(p.node.start, p.node.end)})` });
+      txCount++;
+    },
     TemplateLiteral(p) {
       if (p.parentPath.isTaggedTemplateExpression()) return;
       const container = jsxChildExprAncestor(p);
@@ -192,17 +216,17 @@ function processFile(file) {
     return false;
   }
 
-  if (!edits.length) { report[screen] = { translated: 0, skipped }; console.log(`· ${file}: nothing to do (${skipped.length} skipped)`); return; }
+  if (!edits.length) { report[screen] = { ...(report[screen] || {}), consts: constCount, skipped }; console.log(`· ${file}: nothing to do (${constCount} const strings collected)`); return; }
 
   // Hook injection per component
   for (const [, fnPath] of hookFns) {
     const body = fnPath.node.body;
     const bodySrc = src.slice(fnPath.node.start, fnPath.node.end);
-    if (/const\s*\{[^}]*\bt\s*:\s*tt\b[^}]*\}\s*=\s*useI18n\(\)/.test(bodySrc)) continue; // already has tt
+    if (/const\s*\{[^}]*\bt\s*:\s*tt\b[^}]*\}\s*=\s*useI18n\(\)/.test(bodySrc)) continue; // already has tt (tx added by sed pass)
     if (body.type === 'BlockStatement') {
-      edits.push({ start: body.start + 1, end: body.start + 1, text: `\n  const { t: tt } = useI18n();` });
+      edits.push({ start: body.start + 1, end: body.start + 1, text: `\n  const { t: tt, tx } = useI18n();` });
     } else {
-      edits.push({ start: body.start, end: body.start, text: `{ const { t: tt } = useI18n(); return (` });
+      edits.push({ start: body.start, end: body.start, text: `{ const { t: tt, tx } = useI18n(); return (` });
       edits.push({ start: body.end, end: body.end, text: `); }` });
     }
   }
@@ -218,8 +242,8 @@ function processFile(file) {
   let out = src;
   for (const e of edits) out = out.slice(0, e.start) + e.text + out.slice(e.end);
   const n = edits.filter(e => e.text.includes('tt(')).length;
-  report[screen] = { translated: n, skipped };
-  console.log(`${WRITE ? '✔' : '○'} ${file}: ${n} strings → tt(), ${hookFns.size} component(s), ${skipped.length} skipped`);
+  report[screen] = { translated: (report[screen]?.translated || 0) + n, tx: txCount, consts: constCount, skipped };
+  console.log(`${WRITE ? '✔' : '○'} ${file}: ${n} strings → tt(), ${txCount} → tx(), ${constCount} const strings, ${hookFns.size} component(s)`);
   if (WRITE) fs.writeFileSync(abs, out);
 }
 

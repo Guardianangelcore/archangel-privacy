@@ -11,10 +11,12 @@ import { api } from '@/src/api';
 import { tap } from '@/src/ui/glass';
 import { sharePdf } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)} M` : n >= 1000 ? `${(n / 1000).toFixed(0)} k` : String(n);
 
 export default function FounderToolkit() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState('');
@@ -48,7 +50,7 @@ export default function FounderToolkit() {
         <Pressable testID="ft-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.headTitle}>{"FOUNDER'S TOOLKIT"}</Text>
+        <Text style={st.headTitle}>{tt('founder_toolkit.founder_s_toolkit')}</Text>
         <Ionicons name="briefcase-outline" size={20} color={C.brand} />
       </View>
 
@@ -59,38 +61,38 @@ export default function FounderToolkit() {
         {data && (
           <>
             {/* FORECAST */}
-            <Text style={st.kicker}>INVESTOR DEMO</Text>
-            <Text style={st.title}>Financial forecast{'\n'}2026 – 2030</Text>
+            <Text style={st.kicker}>{tt('founder_toolkit.investor_demo')}</Text>
+            <Text style={st.title}>{tt('founder_toolkit.financial_forecast')}{'\n'}2026 – 2030</Text>
 
             <View style={st.assumpRow}>
-              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.arpu_paid_eur_mo} €</Text><Text style={st.assumpLbl}>ARPU / MES.</Text></View>
-              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.guardian_tax_pct} %</Text><Text style={st.assumpLbl}>GUARDIAN TAX</Text></View>
-              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.ltv_cac}×</Text><Text style={st.assumpLbl}>LTV / CAC</Text></View>
-              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.gross_margin_pct} %</Text><Text style={st.assumpLbl}>GROSS MARGIN</Text></View>
+              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.arpu_paid_eur_mo} €</Text><Text style={st.assumpLbl}>{tt('founder_toolkit.arpu_mes')}</Text></View>
+              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.guardian_tax_pct} %</Text><Text style={st.assumpLbl}>{tt('founder_toolkit.guardian_tax')}</Text></View>
+              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.ltv_cac}×</Text><Text style={st.assumpLbl}>{tt('founder_toolkit.ltv_cac')}</Text></View>
+              <View style={st.assumpBox}><Text style={st.assumpVal}>{a?.gross_margin_pct} %</Text><Text style={st.assumpLbl}>{tt('founder_toolkit.gross_margin')}</Text></View>
             </View>
 
             {years.map((y: any) => (
               <View key={y.year} testID={`ft-year-${y.year}`} style={st.yearCard}>
                 <View style={st.yearHead}>
                   <Text style={st.yearNum}>{y.year}</Text>
-                  <Text style={st.yearArr}>{fmt(y.arr_eur)} € ARR</Text>
+                  <Text style={st.yearArr}>{fmt(y.arr_eur)} {tt('founder_toolkit.arr')}</Text>
                 </View>
                 <View style={st.barBg}>
                   <View style={[st.bar, { width: `${Math.max(4, (y.arr_eur / maxArr) * 100)}%` }]} />
                 </View>
                 <Text style={st.yearLine}>
-                  {fmt(y.users)} users · {fmt(y.paid_users)} paying · MRR {fmt(y.mrr_eur)} €
+                  {fmt(y.users)} {tt('founder_toolkit.users')} {fmt(y.paid_users)} {tt('founder_toolkit.paying_mrr')} {fmt(y.mrr_eur)} €
                 </Text>
                 <Text style={st.yearSub}>
-                  subscriptions {fmt(y.subscription_mrr_eur)} € + Guardian Tax {fmt(y.guardian_tax_mrr_eur)} € / mo.
+                  {tt('founder_toolkit.subscriptions')} {fmt(y.subscription_mrr_eur)} {tt('founder_toolkit.guardian_tax_14y7')} {fmt(y.guardian_tax_mrr_eur)} {tt('founder_toolkit.mo')}
                 </Text>
               </View>
             ))}
-            <Text style={st.note}>Tier mix: Guardian 9 € (80 %) · Sentinel 149 € (17 %) · Archangel 499 € (3 %) · churn {a?.churn_mo_pct} % / mes.</Text>
+            <Text style={st.note}>{tt('founder_toolkit.tier_mix_guardian_9_80_sentinel_149')} {a?.churn_mo_pct} {tt('founder_toolkit.mes')}</Text>
 
             {/* ROADMAP */}
-            <Text style={st.kicker2}>VISION</Text>
-            <Text style={st.title}>22nd-century roadmap</Text>
+            <Text style={st.kicker2}>{tt('founder_toolkit.vision')}</Text>
+            <Text style={st.title}>{tt('founder_toolkit.22nd_century_roadmap')}</Text>
             <View style={st.timeline}>
               {(data.roadmap || []).map((m: any, i: number) => (
                 <View key={i} testID={`ft-road-${i}`} style={st.roadRow}>
@@ -103,7 +105,7 @@ export default function FounderToolkit() {
                       <Text style={st.roadYear}>{m.year}</Text>
                       <View style={st.roadEra}><Text style={st.roadEraText}>{m.era}</Text></View>
                     </View>
-                    <Text style={st.roadTitle}>{m.title}</Text>
+                    <Text style={st.roadTitle}>{tx(m.title)}</Text>
                     <Text style={st.roadDetail}>{m.detail}</Text>
                   </View>
                 </View>
@@ -111,16 +113,16 @@ export default function FounderToolkit() {
             </View>
 
             {/* RELEASE PACKAGE */}
-            <Text style={st.kicker2}>COMPETITION ENTRY</Text>
-            <Text style={st.title}>GitHub Release Package</Text>
-            <Text style={st.note}>Complete documentation in /release_package — ready for jury handover. SHA-256 fingerprints guarantee integrity.</Text>
+            <Text style={st.kicker2}>{tt('founder_toolkit.competition_entry')}</Text>
+            <Text style={st.title}>{tt('founder_toolkit.github_release_package')}</Text>
+            <Text style={st.note}>{tt('founder_toolkit.complete_documentation_in_release_pa')}</Text>
             <Pressable testID="ft-jury-pdf" onPress={() => { tap('light'); sharePdf('/founder/jury-cheat-sheet', 'GUARDIAN_JURY_CHEAT_SHEET.pdf'); }} style={[st.docRow, { borderColor: C.brand }]}>
               <View style={st.docIcon}>
                 <Ionicons name="ribbon-outline" size={18} color={C.brand} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={st.docName}>JURY CHEAT SHEET (PDF)</Text>
-                <Text style={st.docDesc}>Printable 2-pager: demo script with screenshots + investor forecast & roadmap</Text>
+                <Text style={st.docName}>{tt('founder_toolkit.jury_cheat_sheet_pdf')}</Text>
+                <Text style={st.docDesc}>{tt('founder_toolkit.printable_2_pager_demo_script_with_s')}</Text>
               </View>
               <Ionicons name="download-outline" size={18} color={C.brand} />
             </Pressable>
@@ -131,14 +133,14 @@ export default function FounderToolkit() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={st.docName}>{d.name}</Text>
-                  <Text style={st.docDesc}>{d.desc}</Text>
-                  <Text style={st.docMeta}>{(d.bytes / 1024).toFixed(1)} kB · sha256 {String(d.sha256).slice(0, 12)}…</Text>
+                  <Text style={st.docDesc}>{tx(d.desc)}</Text>
+                  <Text style={st.docMeta}>{(d.bytes / 1024).toFixed(1)} {tt('founder_toolkit.kb_sha256')} {String(d.sha256).slice(0, 12)}…</Text>
                 </View>
                 {docBusy === d.name ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="chevron-forward" size={16} color={C.info} />}
               </Pressable>
             ))}
 
-            <Text style={st.footer}>GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO) · PROPRIETARY & CONFIDENTIAL</Text>
+            <Text style={st.footer}>{tt('founder_toolkit.guardian_angel_sovereign_foundation')}</Text>
           </>
         )}
       </ScrollView>
@@ -157,7 +159,7 @@ export default function FounderToolkit() {
           </View>
           <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }}>
             <Text style={st.docBody}>{doc?.content}</Text>
-            <Text style={st.docMeta}>sha256: {doc?.sha256}</Text>
+            <Text style={st.docMeta}>{tt('founder_toolkit.sha256')} {doc?.sha256}</Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>

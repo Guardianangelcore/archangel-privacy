@@ -15,6 +15,7 @@ import { useAuth } from '@/src/auth';
 import { C, S, R, GOLD } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { useI18n } from '@/src/i18n-context';
 
 type Item = {
   pantry_id: string;
@@ -49,6 +50,7 @@ const URGENCY_STYLE: Record<Item['urgency'], { color: string; label: string }> =
 };
 
 export default function Pantry() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
@@ -177,7 +179,7 @@ export default function Pantry() {
         <Pressable testID="pantry-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>SURVIVAL PANTRY</Text>
+        <Text style={styles.title}>{tt('pantry.survival_pantry')}</Text>
         <Pressable testID="pantry-add" onPress={() => setAddOpen(true)} hitSlop={12}>
           <Ionicons name="add-circle" size={26} color={C.brand} />
         </Pressable>
@@ -198,7 +200,7 @@ export default function Pantry() {
         {(['critical', 'soon', 'healthy', 'expired'] as const).map((k) => (
           <View key={k} style={[styles.chip, { borderColor: URGENCY_STYLE[k].color }]}>
             <View style={[styles.chipDot, { backgroundColor: URGENCY_STYLE[k].color }]} />
-            <Text style={styles.chipText}>{URGENCY_STYLE[k].label}</Text>
+            <Text style={styles.chipText}>{tx(URGENCY_STYLE[k].label)}</Text>
             <Text style={styles.chipCount}>{counts[k] || 0}</Text>
           </View>
         ))}
@@ -211,8 +213,8 @@ export default function Pantry() {
         {items.length === 0 && !loading && (
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={48} color={C.onS3} />
-            <Text style={styles.emptyText}>GET STARTED — SCAN YOUR FIRST SUPPLY</Text>
-            <Text style={styles.emptyHint}>Jarvis reads the expiry date from the label.</Text>
+            <Text style={styles.emptyText}>{tt('pantry.get_started_scan_your_first_supply')}</Text>
+            <Text style={styles.emptyHint}>{tt('pantry.jarvis_reads_the_expiry_date_from_th')}</Text>
           </View>
         )}
         {items.map((it) => {
@@ -226,11 +228,11 @@ export default function Pantry() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={1}>{it.name}</Text>
                 <Text style={styles.itemMeta}>
-                  {it.quantity}× · {catMeta.label}{it.location ? ` · ${it.location}` : ''}
+                  {it.quantity}× · {tx(catMeta.label)}{it.location ? ` · ${it.location}` : ''}
                 </Text>
                 <View style={styles.itemFooter}>
                   <View style={[styles.miniPill, { borderColor: u.color }]}>
-                    <Text style={[styles.miniPillText, { color: u.color }]}>{u.label}</Text>
+                    <Text style={[styles.miniPillText, { color: u.color }]}>{tx(u.label)}</Text>
                   </View>
                   <Text style={styles.itemDays}>
                     {it.days_left === null ? '—'
@@ -256,8 +258,8 @@ export default function Pantry() {
           <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scanCtaBg}>
             {scanning ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="scan-circle" size={26} color={C.onInverse} />}
             <View style={{ flex: 1 }}>
-              <Text style={styles.scanCtaTitle}>SCAN LABEL</Text>
-              <Text style={styles.scanCtaSub}>Jarvis reads the expiry and adds the supply — no typing.</Text>
+              <Text style={styles.scanCtaTitle}>{tt('pantry.scan_label')}</Text>
+              <Text style={styles.scanCtaSub}>{tt('pantry.jarvis_reads_the_expiry_and_adds_the')}</Text>
             </View>
           </LinearGradient>
         </Pressable>
@@ -270,13 +272,13 @@ export default function Pantry() {
         >
           <Ionicons name="mic-circle" size={26} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.voiceCtaTitle}>DICTATE TO JARVIS</Text>
-              <Text style={styles.voiceCtaSub}>“Three cans of beans in bunker A.” — done.</Text>
+            <Text style={styles.voiceCtaTitle}>{tt('pantry.dictate_to_jarvis')}</Text>
+              <Text style={styles.voiceCtaSub}>{tt('pantry.three_cans_of_beans_in_bunker_a_done')}</Text>
           </View>
         </Pressable>
 
         {/* Category chip picker for the next scan */}
-        <Text style={styles.section}>CATEGORY FOR NEXT SCAN</Text>
+        <Text style={styles.section}>{tt('pantry.category_for_next_scan')}</Text>
         <View style={styles.catRow}>
           {CATS.map((c) => (
             <Pressable
@@ -286,7 +288,7 @@ export default function Pantry() {
               style={[styles.catChip, scanCat === c.key && styles.catChipActive]}
             >
               <Ionicons name={c.icon as any} size={13} color={scanCat === c.key ? C.onInverse : C.brand} />
-              <Text style={[styles.catChipText, scanCat === c.key && { color: C.onInverse }]}>{c.label}</Text>
+              <Text style={[styles.catChipText, scanCat === c.key && { color: C.onInverse }]}>{tx(c.label)}</Text>
             </Pressable>
           ))}
         </View>
@@ -299,20 +301,20 @@ export default function Pantry() {
             <View style={styles.voiceRing}>
               <Ionicons name="mic" size={64} color={C.brand} />
             </View>
-            <Text style={styles.voiceTitle}>{voiceBusy ? 'RECOGNIZING…' : 'SPEAK'}</Text>
+            <Text style={styles.voiceTitle}>{voiceBusy ? tt('pantry.recognizing') : tt('pantry.speak')}</Text>
             <Text style={styles.voiceHint}>
-              {voiceBusy ? 'Jarvis understands your language.' : 'E.g.: “Three cans of beans in bunker A.”'}
+              {voiceBusy ? tt('pantry.jarvis_understands_your_language') : tt('pantry.e_g_three_cans_of_beans_in_bunker_a')}
             </Text>
             {!!voiceHeard && <Text testID="pantry-voice-heard" style={styles.voiceHeard}>✓ {voiceHeard}</Text>}
             {!voiceBusy && (
               <Pressable testID="pantry-voice-stop" onPress={stopVoice} style={styles.voiceStopBtn}>
                 <Ionicons name="stop-circle" size={22} color={C.onInverse} />
-                <Text style={styles.voiceStopText}>FINISH · SAVE</Text>
+                <Text style={styles.voiceStopText}>{tt('pantry.finish_save')}</Text>
               </Pressable>
             )}
             {voiceBusy && <ActivityIndicator color={C.brand} size="large" />}
             <Pressable onPress={() => { try { voiceRecorder.stop(); } catch {}; setVoiceOpen(false); }} hitSlop={12}>
-              <Text style={styles.voiceCancel}>Cancel</Text>
+              <Text style={styles.voiceCancel}>{tt('pantry.cancel')}</Text>
             </Pressable>
           </View>
         </View>
@@ -322,25 +324,25 @@ export default function Pantry() {
       <Modal visible={addOpen} transparent animationType="slide" onRequestClose={() => setAddOpen(false)}>
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>ADD SUPPLY MANUALLY</Text>
-            <TextInput testID="pantry-name" value={newName} onChangeText={setNewName} placeholder="Name (Can of beans)" placeholderTextColor="#999" style={styles.input} />
+            <Text style={styles.modalTitle}>{tt('pantry.add_supply_manually')}</Text>
+            <TextInput testID="pantry-name" value={newName} onChangeText={setNewName} placeholder={tt('pantry.name_can_of_beans')} placeholderTextColor="#999" style={styles.input} />
             <View style={styles.catRow}>
               {CATS.map((c) => (
                 <Pressable key={c.key} onPress={() => setNewCat(c.key)} style={[styles.catChip, newCat === c.key && styles.catChipActive]}>
                   <Ionicons name={c.icon as any} size={12} color={newCat === c.key ? C.onInverse : C.brand} />
-                  <Text style={[styles.catChipText, newCat === c.key && { color: C.onInverse }]}>{c.label}</Text>
+                  <Text style={[styles.catChipText, newCat === c.key && { color: C.onInverse }]}>{tx(c.label)}</Text>
                 </Pressable>
               ))}
             </View>
-            <TextInput testID="pantry-exp" value={newExp} onChangeText={setNewExp} placeholder="Expiry date (2028-03-15)" placeholderTextColor="#999" style={styles.input} maxLength={10} />
-            <TextInput testID="pantry-qty" value={newQty} onChangeText={setNewQty} placeholder="Quantity" placeholderTextColor="#999" keyboardType="number-pad" style={styles.input} maxLength={4} />
-            <TextInput testID="pantry-loc" value={newLoc} onChangeText={setNewLoc} placeholder="Location (Bunker A · shelf 2)" placeholderTextColor="#999" style={styles.input} maxLength={80} />
+            <TextInput testID="pantry-exp" value={newExp} onChangeText={setNewExp} placeholder={tt('pantry.expiry_date_2028_03_15')} placeholderTextColor="#999" style={styles.input} maxLength={10} />
+            <TextInput testID="pantry-qty" value={newQty} onChangeText={setNewQty} placeholder={tt('pantry.quantity')} placeholderTextColor="#999" keyboardType="number-pad" style={styles.input} maxLength={4} />
+            <TextInput testID="pantry-loc" value={newLoc} onChangeText={setNewLoc} placeholder={tt('pantry.location_bunker_a_shelf_2')} placeholderTextColor="#999" style={styles.input} maxLength={80} />
             <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
               <Pressable onPress={() => setAddOpen(false)} style={[styles.mBtn, styles.mBtnGhost]}>
-                <Text style={styles.mBtnGhostText}>Cancel</Text>
+                <Text style={styles.mBtnGhostText}>{tt('pantry.cancel')}</Text>
               </Pressable>
               <Pressable testID="pantry-save" onPress={save} style={[styles.mBtn, styles.mBtnPrimary]}>
-                <Text style={styles.mBtnPrimaryText}>ADD</Text>
+                <Text style={styles.mBtnPrimaryText}>{tt('pantry.add')}</Text>
               </Pressable>
             </View>
           </View>

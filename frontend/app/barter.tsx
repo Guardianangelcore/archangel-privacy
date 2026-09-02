@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Offer = { offer_id: string; user_id: string; offer_skill: string; want_in_return: string; category: string; city: string; credits_value: number; owner_name: string; status: string };
 type Me = { credits: number; trades: any[] };
@@ -17,6 +18,7 @@ const CATS = ['health', 'legal', 'craft', 'care', 'food', 'other'];
 const CAT_LABELS: Record<string, string> = { health: 'HEALTH', legal: 'LEGAL', craft: 'CRAFT', care: 'CARE', food: 'FOOD', other: 'OTHER' };
 
 export default function Barter() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -60,13 +62,13 @@ export default function Barter() {
         <Pressable testID="bt-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>{t('barter', lang).toUpperCase()} ENGINE</Text>
+        <Text style={styles.title}>{t('barter', lang).toUpperCase()} {tt('barter.engine')}</Text>
         <View style={styles.creditBadge}>
           <Ionicons name="ribbon-outline" size={14} color={C.onInverse} />
           <Text testID="bt-credits" style={styles.creditText}>{me?.credits ?? '—'}</Text>
         </View>
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>{t('trust_credits', lang).toUpperCase()} · SERVICE FOR SERVICE · WORKS WITHOUT MONEY</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>{t('trust_credits', lang).toUpperCase()} {tt('barter.service_for_service_works_without_mo')}</Text></View>
 
       <FlatList
         data={offers}
@@ -79,7 +81,7 @@ export default function Barter() {
             <JarvisAdvice module="barter" lang={lang} buildContext={() => `Skill barter marketplace with trust credits. User has ${me?.credits ?? 10} credits. Offers: ${offers.map(o => `${o.offer_skill} for ${o.credits_value} credits`).join('; ') || 'none'}. Trades done: ${me?.trades?.length || 0}.`} />
             {me?.trades?.length ? (
               <View style={{ marginTop: S.md }}>
-                <Text style={styles.section}>MY TRADES</Text>
+                <Text style={styles.section}>{tt('barter.my_trades')}</Text>
                 {me.trades.slice(0, 5).map((tr: any) => (
                   <View key={tr.trade_id} style={styles.tradeRow}>
                     <Ionicons name="swap-horizontal" size={16} color={C.brand} />
@@ -88,7 +90,7 @@ export default function Barter() {
                 ))}
               </View>
             ) : null}
-            <Text style={styles.section}>OPEN OFFERS</Text>
+            <Text style={styles.section}>{tt('barter.open_offers')}</Text>
           </View>
         }
         ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text> : null}
@@ -107,7 +109,7 @@ export default function Barter() {
             </View>
             {item.user_id === user?.user_id ? (
               <Pressable testID={`bo-del-${item.offer_id}`} onPress={() => del(item)} style={styles.delBtn}>
-                <Text style={styles.delText}>CANCEL</Text>
+                <Text style={styles.delText}>{tt('barter.cancel')}</Text>
               </Pressable>
             ) : (
               <Pressable testID={`bo-accept-${item.offer_id}`} onPress={() => accept(item)} style={styles.acceptBtn}>
@@ -132,8 +134,8 @@ export default function Barter() {
               <Pressable testID="bt-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 440 }}>
-              <TextInput testID="bt-skill" placeholder="Back massage 45 min" value={f.offer_skill} onChangeText={v => setF({ ...f, offer_skill: v })} style={styles.input} placeholderTextColor="#999" />
-              <TextInput testID="bt-want" placeholder="In return for? (legal help, meds…)" value={f.want_in_return} onChangeText={v => setF({ ...f, want_in_return: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="bt-skill" placeholder={tt('barter.back_massage_45_min')} value={f.offer_skill} onChangeText={v => setF({ ...f, offer_skill: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="bt-want" placeholder={tt('barter.in_return_for_legal_help_meds')} value={f.want_in_return} onChangeText={v => setF({ ...f, want_in_return: v })} style={styles.input} placeholderTextColor="#999" />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {CATS.map(c => (
                   <Pressable testID={`bt-cat-${c}`} key={c} onPress={() => setF({ ...f, category: c })} style={[styles.chip, f.category === c && styles.chipActive]}>
@@ -141,8 +143,8 @@ export default function Barter() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput testID="bt-city" placeholder="Bratislava" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholderTextColor="#999" />
-              <Text style={styles.lbl}>HODNOTA V KREDITOCH</Text>
+              <TextInput testID="bt-city" placeholder={tt('barter.bratislava')} value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholderTextColor="#999" />
+              <Text style={styles.lbl}>{tt('barter.hodnota_v_kreditoch')}</Text>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {[1, 2, 3, 5, 8, 10].map(n => (
                   <Pressable testID={`bt-cr-${n}`} key={n} onPress={() => setF({ ...f, credits_value: n })} style={[styles.crChip, f.credits_value === n && styles.chipActive]}>

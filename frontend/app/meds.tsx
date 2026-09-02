@@ -12,6 +12,7 @@ import { useAuth } from '@/src/auth';
 import { EmptyState } from '@/src/ui/EmptyState';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type TodayItem = { reminder_id: string; name: string; dose: string; time: string; taken: boolean };
 type Reminder = { reminder_id: string; name: string; dose: string; times: string[]; slots?: string[] };
@@ -48,6 +49,7 @@ async function rescheduleLocal(reminders: Reminder[]) {
 }
 
 export default function Meds() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -145,7 +147,7 @@ export default function Meds() {
           <View style={[styles.statusBanner, pending === 0 && { backgroundColor: C.brandTer, borderColor: C.brand }]}>
             <Ionicons name={pending === 0 ? 'checkmark-circle' : 'time'} size={26} color={pending === 0 ? C.brand : C.onWarn} />
             <Text style={[styles.statusText, pending === 0 && { color: C.brand }]}>
-              {pending === 0 ? t('all_taken', lang).toUpperCase() + ' ✓' : `${pending}× STILL TO TAKE TODAY`}
+              {pending === 0 ? t('all_taken', lang).toUpperCase() + ' ✓' : tt('meds.still_to_take_today', [pending])}
             </Text>
           </View>
         )}
@@ -180,7 +182,7 @@ export default function Meds() {
 
         {reminders.length > 0 && (
           <>
-            <Text style={styles.section}>MOJE LIEKY</Text>
+            <Text style={styles.section}>{tt('meds.moje_lieky')}</Text>
             {reminders.map(r => (
               <View key={r.reminder_id} style={styles.remRow}>
                 <Ionicons name="medkit-outline" size={20} color={C.fg} />
@@ -198,7 +200,7 @@ export default function Meds() {
             ))}
           </>
         )}
-        {Platform.OS !== 'web' && <Text style={styles.hint}>🔔 REMINDERS ARRIVE AS DAILY NOTIFICATIONS AT YOUR SET TIMES</Text>}
+        {Platform.OS !== 'web' && <Text style={styles.hint}>{tt('meds.reminders_arrive_as_daily_notificati')}</Text>}
       </ScrollView>
 
       <Pressable testID="md-add-btn" onPress={() => setModal(true)} style={styles.fab}>
@@ -214,9 +216,9 @@ export default function Meds() {
               <Pressable testID="md-modal-close" onPress={() => setModal(false)}><Ionicons name="close" size={24} color={C.onInverse} /></Pressable>
             </View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 460 }}>
-              <TextInput testID="md-name" placeholder="Euthyrox" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
-              <TextInput testID="md-dose" placeholder={`${t('dose', lang)} (1 tbl / 50 mg)`} value={f.dose} onChangeText={v => setF({ ...f, dose: v })} style={styles.input} placeholderTextColor="#999" />
-              <Text style={styles.lbl}>WHEN TO TAKE</Text>
+              <TextInput testID="md-name" placeholder={tt('meds.euthyrox')} value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="md-dose" placeholder={tt('meds.1_tbl_50_mg', [t('dose', lang)])} value={f.dose} onChangeText={v => setF({ ...f, dose: v })} style={styles.input} placeholderTextColor="#999" />
+              <Text style={styles.lbl}>{tt('meds.when_to_take')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {SLOTS.map(sl => {
                   const on = f.slots.includes(sl.key);
@@ -224,13 +226,13 @@ export default function Meds() {
                     <Pressable testID={`md-slot-${sl.key}`} key={sl.key} onPress={() => toggleSlot(sl.key)}
                       style={[styles.slotCard, on && styles.slotCardOn]}>
                       <Ionicons name={sl.icon} size={34} color={on ? C.onInverse : C.brand} />
-                      <Text style={[styles.slotLabel, on && { color: C.onInverse }]}>{sl.label}</Text>
+                      <Text style={[styles.slotLabel, on && { color: C.onInverse }]}>{tx(sl.label)}</Text>
                       {sl.time && <Text style={[styles.slotTime, on && { color: C.onInverse }]}>{sl.time}</Text>}
                     </Pressable>
                   );
                 })}
               </View>
-              <Text style={styles.lbl}>CUSTOM TIMES (OPTIONAL)</Text>
+              <Text style={styles.lbl}>{tt('meds.custom_times_optional')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {TIME_CHIPS.map(tm => (
                   <Pressable testID={`md-time-${tm}`} key={tm} onPress={() => toggleTime(tm)} style={[styles.chip, f.times.includes(tm) && styles.chipActive]}>

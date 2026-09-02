@@ -13,10 +13,12 @@ import Paywall from '@/src/Paywall';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const KEY = 'gh_medic_protocols';
 
 export default function TacticalMedic() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -64,17 +66,17 @@ export default function TacticalMedic() {
         <Pressable testID="md-back" onPress={() => (active ? setActive(null) : router.back())} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onError} />
         </Pressable>
-        <Text style={st.title}>AI TACTICAL MEDIC</Text>
+        <Text style={st.title}>{tt('tactical_medic.ai_tactical_medic')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      {offline && <View style={st.offBanner}><Text style={st.offText}>OFFLINE MODE · PROTOCOLS FROM LOCAL CACHE</Text></View>}
+      {offline && <View style={st.offBanner}><Text style={st.offText}>{tt('tactical_medic.offline_mode_protocols_from_local_ca')}</Text></View>}
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {locked ? (
           <Paywall message={locked} onUnlocked={load} />
         ) : !active ? (
           <>
-            <Text style={st.intro}>A field medic in your pocket — step-by-step voice guidance for life-saving procedures (ERC/AHA 2026). Works offline. In an emergency always call 112 first.</Text>
+            <Text style={st.intro}>{tt('tactical_medic.a_field_medic_in_your_pocket_step_by')}</Text>
             {protocols.map(p => (
               <Pressable testID={`md-${p.id}`} key={p.id} onPress={() => { setActive(p); setStep(0); }} style={st.protoCard}>
                 <Ionicons name={p.icon as any} size={26} color={C.error} />
@@ -90,28 +92,28 @@ export default function TacticalMedic() {
         ) : (
           <>
             <Text style={st.activeTitle}>{active.title.toUpperCase()}</Text>
-            <Text style={st.source}>{active.source} · krok {step + 1}/{active.steps.length}</Text>
+            <Text style={st.source}>{active.source} {tt('tactical_medic.krok')} {step + 1}/{active.steps.length}</Text>
             <View style={st.stepBox}>
               <Text testID="md-step-text" style={st.stepText}>{active.steps[step]}</Text>
             </View>
             <Pressable testID="md-speak" onPress={() => speak(active.steps[step])} disabled={speaking} style={st.voiceBtn}>
               <Ionicons name={speaking ? 'volume-high' : 'volume-high-outline'} size={22} color={C.onInverse} />
-              <Text style={st.voiceText}>{speaking ? 'JARVIS SPEAKING…' : 'READ ALOUD (JARVIS)'}</Text>
+              <Text style={st.voiceText}>{speaking ? tt('tactical_medic.jarvis_speaking') : tt('tactical_medic.read_aloud_jarvis')}</Text>
             </Pressable>
             <View style={st.navRow}>
               <Pressable testID="md-prev" onPress={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
                 style={[st.navBtn, step === 0 && { opacity: 0.3 }]}>
                 <Ionicons name="arrow-back" size={20} color={C.fg} />
-                <Text style={st.navText}>BACK</Text>
+                <Text style={st.navText}>{tt('tactical_medic.back')}</Text>
               </Pressable>
               <Pressable testID="md-next" onPress={() => setStep(Math.min(active.steps.length - 1, step + 1))}
                 disabled={step >= active.steps.length - 1}
                 style={[st.navBtn, { backgroundColor: C.error, borderColor: C.error }, step >= active.steps.length - 1 && { opacity: 0.3 }]}>
-                <Text style={[st.navText, { color: C.onError }]}>NEXT STEP</Text>
+                <Text style={[st.navText, { color: C.onError }]}>{tt('tactical_medic.next_step')}</Text>
                 <Ionicons name="arrow-forward" size={20} color={C.onError} />
               </Pressable>
             </View>
-            <Text style={st.call112}>☎ AT ANY TIME: CALL 112</Text>
+            <Text style={st.call112}>{tt('tactical_medic.at_any_time_call_112')}</Text>
           </>
         )}
       </ScrollView>

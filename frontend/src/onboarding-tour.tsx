@@ -10,6 +10,7 @@ import { useAuth } from './auth';
 import { api } from './api';
 import { speak, stopSpeaking } from './voice';
 import { C, S, R } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 // The founder's exact narrative — one warm, patient sentence per pillar + a JARVIS reveal.
 const TOUR_STEPS = [
@@ -44,6 +45,7 @@ const TOUR_STEPS = [
 ];
 
 export function OnboardingTour() {
+  const { t: tt, tx } = useI18n();
   const { user, setUser } = useAuth();
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
@@ -110,7 +112,7 @@ export function OnboardingTour() {
     <View testID="onboarding-tour" style={styles.overlay} pointerEvents="box-none">
       <View style={styles.card} pointerEvents="auto">
         <View style={styles.crown}>
-          <Text style={styles.crownText}>SOVEREIGN TOUR · {step + 1} / {TOUR_STEPS.length}</Text>
+          <Text style={styles.crownText}>{tt('c_onboarding_tour.sovereign_tour')} {step + 1} / {TOUR_STEPS.length}</Text>
           <Pressable testID="onboarding-skip" onPress={skip} hitSlop={12}>
             <Ionicons name="close" size={22} color={C.info} />
           </Pressable>
@@ -120,8 +122,8 @@ export function OnboardingTour() {
           <Ionicons name={current.icon} size={72} color={C.brand} />
         </Animated.View>
 
-        <Text style={styles.title}>{current.title}</Text>
-        <Text style={styles.subtitle}>{current.subtitle}</Text>
+        <Text style={styles.title}>{tx(current.title)}</Text>
+        <Text style={styles.subtitle}>{tx(current.subtitle)}</Text>
 
         {/* Progress dots */}
         <View style={styles.dots}>
@@ -133,10 +135,10 @@ export function OnboardingTour() {
         {step === TOUR_STEPS.length - 1 ? (
           <Pressable testID="onboarding-done" onPress={finish} style={styles.cta}>
             <Ionicons name="checkmark" size={18} color={C.onInverse} />
-            <Text style={styles.ctaText}>GOT IT · CONTINUE</Text>
+            <Text style={styles.ctaText}>{tt('c_onboarding_tour.got_it_continue')}</Text>
           </Pressable>
         ) : (
-          <Text style={styles.hint}>Jarvis is guiding you… (tap ✕ to skip)</Text>
+          <Text style={styles.hint}>{tt('c_onboarding_tour.jarvis_is_guiding_you_tap_to_skip')}</Text>
         )}
       </View>
     </View>

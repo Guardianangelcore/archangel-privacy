@@ -57,6 +57,7 @@ const CHAINS = [
 function Orb({ mood, progress, level, listening, onPress }: {
   mood: Mood; progress: number; level: number; listening: boolean; onPress: () => void;
 }) {
+  const { t: tt, tx } = useI18n();
   const cfg = listening ? MOOD_CFG.alert : MOOD_CFG[mood];
   const breath = useSharedValue(0);
   useEffect(() => {
@@ -86,7 +87,7 @@ function Orb({ mood, progress, level, listening, onPress }: {
           <View style={[orbSt.inner, { backgroundColor: cfg.color }]} />
           <View style={[orbSt.inner2, { backgroundColor: cfg.color }]} />
           <Ionicons name={listening ? 'mic' : 'sparkles'} size={44} color={cfg.color} />
-          <Text style={[orbSt.lvl, { color: cfg.color }]}>LVL {level}</Text>
+          <Text style={[orbSt.lvl, { color: cfg.color }]}>{tt('jarvis.lvl')} {level}</Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -115,6 +116,7 @@ function ThinkStep({ step, detail, active, done }: { step: string; detail: strin
 }
 
 export default function Jarvis() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [state, setState] = useState<any>(null);
@@ -409,8 +411,8 @@ export default function Jarvis() {
           await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
           located = true;
         } else if (!p.canAskAgain) {
-          Alert.alert('Location is blocked', 'Allow location in Settings so your briefing shows local weather. Using approximate (IP) location for now.',
-            [{ text: 'Later' }, { text: 'Open Settings', onPress: () => Linking.openSettings() }]);
+          Alert.alert(tt('jarvis.location_is_blocked'), tt('jarvis.allow_location_in_settings_so_your_b'),
+            [{ text: tt('jarvis.later') }, { text: tt('jarvis.open_settings'), onPress: () => Linking.openSettings() }]);
         }
       }
       if (!located) await api('/geo/ip-locate', { method: 'POST' });
@@ -438,7 +440,7 @@ export default function Jarvis() {
         <Pressable testID="jv-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>JARVIS 2.0 · LIVING SOUL</Text>
+        <Text style={st.title}>{tt('jarvis.jarvis_2_0_living_soul')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
           <Pressable testID="jv-settings" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={10}>
             <Ionicons name="settings-outline" size={20} color={C.onS3} />
@@ -458,16 +460,16 @@ export default function Jarvis() {
         </Animated.View>
 
         <View style={{ alignItems: 'center', paddingHorizontal: S.xl }}>
-          <Text style={[st.moodLabel, { color: cfg.color }]}>{recording ? '🎙 LISTENING…' : cfg.label}</Text>
-          <Text style={st.levelName}>LEVEL {state?.level ?? 1} · {state?.level_name ?? 'ISKRA'}</Text>
-          <Text style={st.xpText}>{state?.xp ?? 0} / {state?.xp_next ?? 100} XP · {state?.memories_count ?? 0} spomienok</Text>
-          {!!nextAbility && <Text style={st.nextAbility}>NEXT UNLOCK (LVL {nextAbility.level}): {nextAbility.name}</Text>}
+          <Text style={[st.moodLabel, { color: cfg.color }]}>{recording ? tt('jarvis.listening') : cfg.label}</Text>
+          <Text style={st.levelName}>{tt('jarvis.level')} {state?.level ?? 1} · {state?.level_name ?? tt('jarvis.iskra')}</Text>
+          <Text style={st.xpText}>{state?.xp ?? 0} / {state?.xp_next ?? 100} {tt('jarvis.xp')} {state?.memories_count ?? 0} {tt('jarvis.spomienok')}</Text>
+          {!!nextAbility && <Text style={st.nextAbility}>{tt('jarvis.next_unlock_lvl')} {nextAbility.level}): {nextAbility.name}</Text>}
           {!!status && <Text style={st.status}>{status}</Text>}
-          <Text style={st.orbHint}>Tap the orb and speak — Jarvis replies with voice</Text>
+          <Text style={st.orbHint}>{tt('jarvis.tap_the_orb_and_speak_jarvis_replies')}</Text>
           {micDenied && (
             <Pressable testID="jv-mic-settings" onPress={() => Linking.openSettings()} style={st.settingsBtn}>
               <Ionicons name="settings-outline" size={14} color={C.brand} />
-              <Text style={st.settingsText}>Microphone is blocked — open Settings</Text>
+              <Text style={st.settingsText}>{tt('jarvis.microphone_is_blocked_open_settings')}</Text>
             </Pressable>
           )}
         </View>
@@ -484,35 +486,35 @@ export default function Jarvis() {
         {briefing && !locked && (
           <View style={[st.card, { borderColor: cfg.color }]}>
             <View style={st.cardHead}>
-              <Text style={st.cardTitle}>☀️ MORNING BRIEFING</Text>
+              <Text style={st.cardTitle}>{tt('jarvis.morning_briefing')}</Text>
               <Pressable testID="jv-brief-play" onPress={() => speak(briefing.briefing, (briefing.mood as Mood) || 'energetic')} hitSlop={8} style={st.playBtn}>
                 <Ionicons name="volume-high" size={16} color={C.onInverse} />
               </Pressable>
             </View>
             {!!briefing.weather && (
-              <Text testID="jv-weather" style={st.weather}>🌤 {briefing.weather.city}: {briefing.weather.now_c} °C · {briefing.weather.desc} · min {briefing.weather.min_c} / max {briefing.weather.max_c} °C</Text>
+              <Text testID="jv-weather" style={st.weather}>🌤 {briefing.weather.city}: {briefing.weather.now_c} °C · {tx(briefing.weather.desc)} {tt('jarvis.min')} {briefing.weather.min_c} {tt('jarvis.max')} {briefing.weather.max_c} °C</Text>
             )}
             <Text testID="jv-ai-label-briefing" style={st.aiLabel}>🤖 {tr('ai_label')}</Text>
             <Pressable testID="jv-use-location" onPress={useMyLocation} disabled={locBusy} style={st.locBtn}>
               {locBusy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="location-outline" size={14} color={C.brand} />}
               <Text style={st.locBtnText}>
-                {briefing.weather?.source === 'gps' ? 'UPDATE MY LOCATION' : briefing.weather ? 'USE MY GPS LOCATION' : 'SET MY LOCATION FOR LOCAL WEATHER'}
+                {briefing.weather?.source === 'gps' ? tt('jarvis.update_my_location') : briefing.weather ? tt('jarvis.use_my_gps_location') : tt('jarvis.set_my_location_for_local_weather')}
               </Text>
             </Pressable>
             <Text style={st.briefText}>{briefing.briefing}</Text>
             {(briefing.alerts || []).map((a: any, i: number) => (
               <View key={i} style={[st.alertRow, a.severity === 'high' && { borderColor: C.error }]}>
                 <Ionicons name="warning" size={14} color={a.severity === 'high' ? C.error : '#FFC53D'} />
-                <Text style={st.alertText}>{a.text}</Text>
+                <Text style={st.alertText}>{tx(a.text)}</Text>
               </View>
             ))}
             {/* LIVE HEALTH NEWS — Perplexity Sonar (sonar-pro), one call per language/country per day */}
             {!!briefing.news?.length && (
               <View testID="jv-news" style={st.citeBox}>
-                <Text style={st.citeLbl}>🌐 HEALTH NEWS TODAY · LIVE · {briefing.news_engine || 'SONAR'}</Text>
+                <Text style={st.citeLbl}>{tt('jarvis.health_news_today_live')} {briefing.news_engine || tt('jarvis.sonar')}</Text>
                 {briefing.news.slice(0, 3).map((n: any, i: number) => (
                   <Pressable key={i} testID={`jv-news-${i}`} onPress={() => n.url && Linking.openURL(n.url)} hitSlop={4} style={st.newsRow}>
-                    <Text style={st.newsTitle}>{i + 1}. {n.title}</Text>
+                    <Text style={st.newsTitle}>{i + 1}. {tx(n.title)}</Text>
                     {!!n.summary && <Text style={st.newsSummary}>{n.summary}</Text>}
                     <Text style={st.citeLink} numberOfLines={1}>{n.source}{n.url ? ` · ${String(n.url).replace(/^https?:\/\//, '')}` : ''}</Text>
                   </Pressable>
@@ -525,7 +527,7 @@ export default function Jarvis() {
         {/* CHAT */}
         {msgs.map((m, i) => (
           <View key={i} testID={`jv-msg-${i}-${m.role}`} style={[st.bubble, m.role === 'user' ? st.bubbleUser : st.bubbleAgent]}>
-            <Text style={[st.bubbleText, m.role === 'user' && { color: C.onInverse }]}>{m.text}</Text>
+            <Text style={[st.bubbleText, m.role === 'user' && { color: C.onInverse }]}>{tx(m.text)}</Text>
             {m.role !== 'user' && !m.streaming && (
               <Text testID={`jv-ai-label-${i}`} style={st.aiLabel}>🤖 {tr('ai_label')}</Text>
             )}
@@ -535,12 +537,12 @@ export default function Jarvis() {
             {!!m.vaultDocId && (
               <Pressable testID={`jv-vault-open-${i}`} onPress={() => { tap('light'); router.push('/(tabs)/vault'); }} style={st.vaultChip}>
                 <Ionicons name="lock-closed" size={12} color={C.brand} />
-                <Text style={st.vaultChipText}>STORED IN VAULT · OPEN GALLERY</Text>
+                <Text style={st.vaultChipText}>{tt('jarvis.stored_in_vault_open_gallery')}</Text>
               </Pressable>
             )}
             {!!m.citations?.length && (
               <View style={st.citeBox}>
-                <Text style={st.citeLbl}>🌐 ZDROJE · SONAR</Text>
+                <Text style={st.citeLbl}>{tt('jarvis.zdroje_sonar')}</Text>
                 {m.citations.slice(0, 5).map((c, j) => (
                   <Pressable key={j} testID={`jv-cite-${i}-${j}`} onPress={() => Linking.openURL(c)} hitSlop={4} style={{ minHeight: 28, justifyContent: 'center' }}>
                     <Text style={st.citeLink} numberOfLines={1}>{j + 1}. {c.replace(/^https?:\/\//, '')}</Text>
@@ -564,14 +566,14 @@ export default function Jarvis() {
             <Pressable key={m.id} testID={`jv-mode-${m.id}`} onPress={() => { tap('light'); setMode(m.id); }}
               style={[st.modeChip, mode === m.id && st.modeChipActive]}>
               <Ionicons name={m.icon as any} size={14} color={mode === m.id ? C.onInverse : C.info} />
-              <Text style={[st.modeText, mode === m.id && { color: C.onInverse }]}>{m.label}</Text>
+              <Text style={[st.modeText, mode === m.id && { color: C.onInverse }]}>{tx(m.label)}</Text>
             </Pressable>
           ))}
         </View>
 
         <View style={st.askRow}>
           <TextInput testID="jv-input" style={st.input}
-            placeholder={mode === 'sonar' ? 'Ask the web — medicine · EU…' : mode === 'imagine' ? 'Describe the image to create…' : 'Write to Jarvis… (or tap the orb)'}
+            placeholder={mode === 'sonar' ? tt('jarvis.ask_the_web_medicine_eu') : mode === 'imagine' ? tt('jarvis.describe_the_image_to_create') : tt('jarvis.write_to_jarvis_or_tap_the_orb')}
             placeholderTextColor={C.info}
             value={input} onChangeText={setInput} onSubmitEditing={() => sendMessage(input)} returnKeyType="send" />
           <Pressable testID="jv-ask" onPress={() => sendMessage(input)} disabled={busy === 'chat'} style={st.askBtn}>
@@ -583,7 +585,7 @@ export default function Jarvis() {
         {mode === 'sonar' && sonarHist.length > 0 && (
           <>
             <Pressable testID="jv-hist-toggle" onPress={() => { tap('light'); setShowHist(!showHist); }} style={st.sectionRow}>
-              <Text style={st.section}>🌐 SONAR HISTORY ({sonarHist.length})</Text>
+              <Text style={st.section}>{tt('jarvis.sonar_history')}{sonarHist.length})</Text>
               <Ionicons name={showHist ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
             </Pressable>
             {showHist && sonarHist.slice(0, 15).map((h: any) => (
@@ -593,7 +595,7 @@ export default function Jarvis() {
                   <Text style={st.histMeta}>
                     {String(h.at).slice(0, 10)} · {h.citations?.length
                       ? `${h.citations.length} ${h.citations.length === 1 ? 'zdroj' : h.citations.length < 5 ? 'zdroje' : 'zdrojov'}`
-                      : 'no live sources'}
+                      : tt('jarvis.no_live_sources')}
                   </Text>
                 </Pressable>
                 <Pressable testID={`jv-hist-del-${h.conv_id}`} onPress={() => delHist(h.conv_id)} hitSlop={10}>
@@ -607,7 +609,7 @@ export default function Jarvis() {
         {/* VISUAL THINKING */}
         <Pressable testID="jv-analyze" onPress={runAnalysis} disabled={busy === 'analyze'} style={st.analyzeBtn}>
           {busy === 'analyze' ? <ActivityIndicator color="#9B6DFF" /> : <Ionicons name="scan-circle-outline" size={18} color="#9B6DFF" />}
-          <Text style={st.analyzeText}>DEEP ANALYSIS — VISUAL THINKING</Text>
+          <Text style={st.analyzeText}>{tt('jarvis.deep_analysis_visual_thinking')}</Text>
         </Pressable>
         {thinkSteps.length > 0 && (
           <View style={st.thinkBox}>
@@ -616,11 +618,11 @@ export default function Jarvis() {
             ))}
             {!!insight && (
               <View style={st.insightBox}>
-                <Text style={st.insightLbl}>💡 JARVIS SYNTHESIS</Text>
+                <Text style={st.insightLbl}>{tt('jarvis.jarvis_synthesis')}</Text>
                 <Text style={st.insightText}>{insight}</Text>
                 <Pressable testID="jv-insight-play" onPress={() => speak(insight, 'calm')} style={st.speakSmall}>
                   <Ionicons name="volume-medium-outline" size={14} color={C.brand} />
-                  <Text style={st.speakSmallText}>PLAY</Text>
+                  <Text style={st.speakSmallText}>{tt('jarvis.play')}</Text>
                 </Pressable>
               </View>
             )}
@@ -629,44 +631,44 @@ export default function Jarvis() {
 
         {/* ABILITIES */}
         <Pressable testID="jv-abil-toggle" onPress={() => { tap('light'); setShowAbil(!showAbil); }} style={st.sectionRow}>
-          <Text style={st.section}>COMPANION ABILITIES ({state?.abilities?.filter((a: any) => a.unlocked).length ?? 1}/10)</Text>
+          <Text style={st.section}>{tt('jarvis.companion_abilities')}{state?.abilities?.filter((a: any) => a.unlocked).length ?? 1}/10)</Text>
           <Ionicons name={showAbil ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
         </Pressable>
         {showAbil && (state?.abilities || []).map((a: any) => (
           <View key={a.level} testID={`jv-abil-${a.level}`} style={[st.abilRow, !a.unlocked && { opacity: 0.45 }]}>
             <Ionicons name={a.unlocked ? 'checkmark-circle' : 'lock-closed'} size={15} color={a.unlocked ? C.brand : C.info} />
-            <Text style={st.abilText}>LVL {a.level} · {a.name}</Text>
+            <Text style={st.abilText}>{tt('jarvis.lvl')} {a.level} · {a.name}</Text>
           </View>
         ))}
 
         {/* MEMORIES */}
         <Pressable testID="jv-mem-toggle" onPress={() => { tap('light'); setShowMems(!showMems); }} style={st.sectionRow}>
-          <Text style={st.section}>WHAT I REMEMBER ({memories.length})</Text>
+          <Text style={st.section}>{tt('jarvis.what_i_remember')}{memories.length})</Text>
           <Ionicons name={showMems ? 'chevron-up' : 'chevron-down'} size={14} color={C.info} />
         </Pressable>
         {showMems && memories.slice(0, 12).map((m: any) => (
           <View key={m.memory_id} testID={`jv-mem-${m.memory_id}`} style={st.memRow}>
             <Ionicons name={m.topic === 'health' ? 'heart' : m.topic === 'family' ? 'people' : 'bookmark'} size={14} color={C.brand} />
-            <Text style={st.memText}>{m.text}</Text>
+            <Text style={st.memText}>{tx(m.text)}</Text>
             <Pressable testID={`jv-mem-del-${m.memory_id}`} onPress={() => delMemory(m.memory_id)} hitSlop={10}>
               <Ionicons name="trash-outline" size={15} color={C.info} />
             </Pressable>
           </View>
         ))}
-        {showMems && memories.length === 0 && <Text style={st.memEmpty}>No memories yet — talk to me.</Text>}
+        {showMems && memories.length === 0 && <Text style={st.memEmpty}>{tt('jarvis.no_memories_yet_talk_to_me')}</Text>}
 
         {/* AUTOPILOT + CHAINS */}
-        <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.xl }]}>AUTOPILOT — MEDICAL SENTINEL</Text>
+        <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.xl }]}>{tt('jarvis.autopilot_medical_sentinel')}</Text>
         <View style={st.autoRow}>
           <Ionicons name="infinite" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={st.chainTitle}>Automatic Vault processing</Text>
-            <Text style={st.chainSub}>New document → OCR → AI translation → calendar → booking. No questions asked.</Text>
+            <Text style={st.chainTitle}>{tt('jarvis.automatic_vault_processing')}</Text>
+            <Text style={st.chainSub}>{tt('jarvis.new_document_ocr_ai_translation_cale')}</Text>
           </View>
           <Switch testID="jv-autopilot" value={auto?.autopilot !== false} onValueChange={toggleAutopilot} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.lg }]}>SENTIENT CHAINS</Text>
+        <Text style={[st.section, { paddingHorizontal: S.xl, marginTop: S.lg }]}>{tt('jarvis.sentient_chains')}</Text>
         {CHAINS.map(c => {
           const tr = traces[c.id];
           return (
@@ -674,11 +676,11 @@ export default function Jarvis() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
                 <Ionicons name={c.icon as any} size={18} color={C.brand} />
                 <View style={{ flex: 1 }}>
-                  <Text style={st.chainTitle}>{c.title}</Text>
-                  <Text style={st.chainSub}>{c.sub}</Text>
+                  <Text style={st.chainTitle}>{tx(c.title)}</Text>
+                  <Text style={st.chainSub}>{tx(c.sub)}</Text>
                 </View>
                 <Pressable testID={`jv-chain-${c.id}`} onPress={() => runChain(c)} disabled={busy === c.id} style={st.runBtn}>
-                  {busy === c.id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.runText}>RUN</Text>}
+                  {busy === c.id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.runText}>{tt('jarvis.run')}</Text>}
                 </Pressable>
               </View>
               {tr && (
@@ -700,11 +702,11 @@ export default function Jarvis() {
           {busy === 'pdf' ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="document-text-outline" size={16} color={C.onInverse} />
-              <Text style={st.ctaText}>WEEKLY GUARDIAN PULSE REPORT (PDF)</Text>
+              <Text style={st.ctaText}>{tt('jarvis.weekly_guardian_pulse_report_pdf')}</Text>
             </>
           )}
         </Pressable>
-        <Text style={st.disclaimer}>AI companion — informational content, not healthcare (EU AI Act Art. 50). You can erase its memory at any time.</Text>
+        <Text style={st.disclaimer}>{tt('jarvis.ai_companion_informational_content_n')}</Text>
       </ScrollView>
 
       {/* LEVEL-UP OVERLAY */}
@@ -736,6 +738,7 @@ function TypingDots({ color }: { color: string }) {
 }
 
 function LevelUpBurst({ level, name, onClose }: { level: number; name: string; onClose: () => void }) {
+  const { t: tt, tx } = useI18n();
   const scale = useSharedValue(0);
   useEffect(() => {
     scale.value = withSpring(1, { damping: 9 });
@@ -745,11 +748,11 @@ function LevelUpBurst({ level, name, onClose }: { level: number; name: string; o
   return (
     <Animated.View style={[st.lvlCard, style]}>
       <View style={st.lvlBurst}><Ionicons name="sparkles" size={54} color={C.onInverse} /></View>
-      <Text style={st.lvlTitle}>LEVEL {level}!</Text>
+      <Text style={st.lvlTitle}>{tt('jarvis.level')} {level}!</Text>
       {!!name && <Text style={st.lvlName}>{name}</Text>}
-      <Text style={st.lvlSub}>Your angel got wiser — you unlocked a new ability.</Text>
+      <Text style={st.lvlSub}>{tt('jarvis.your_angel_got_wiser_you_unlocked_a')}</Text>
       <Pressable testID="jv-levelup-close" onPress={onClose} style={st.lvlBtn}>
-        <Text style={st.lvlBtnText}>CONTINUE</Text>
+        <Text style={st.lvlBtnText}>{tt('jarvis.continue')}</Text>
       </Pressable>
     </Animated.View>
   );

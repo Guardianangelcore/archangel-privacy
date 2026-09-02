@@ -9,6 +9,7 @@ import { rcEnabled, rcSimulated, useSubscription, IAP_PACKAGES, IapTier } from '
 import { syncIapEntitlement, creditedGat, IapSyncResult } from './iap-mirror';
 import { errMsg } from './api';
 import { C, S, R } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 const OBSIDIAN = '#0B0B0D';
 const GOLD = '#B8860B';
@@ -26,6 +27,7 @@ type BuyProps = {
 const isUserCancelled = (e: any) => !!e?.userCancelled || String(e?.code) === '1';
 
 export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynced }: BuyProps) {
+  const { t: tt, tx } = useI18n();
   const { offerings, offeringsError, purchase, isPurchasing, identityReady, identityError, isLoading, activeTier, appUserId } = useSubscription();
   const TIER = tier.toUpperCase();
   const [confirm, setConfirm] = useState(false);
@@ -41,7 +43,7 @@ export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynce
   if (!pkg) {
     return (
       <Text testID="iap-unavailable" style={st.hint}>
-        Subscription options are unavailable right now. Please try again later.{offeringsError ? ` (${errMsg(offeringsError)})` : ''}
+        {tt('c_IapPurchase.subscription_options_are_unavailable')}{offeringsError ? ` (${errMsg(offeringsError)})` : ''}
       </Text>
     );
   }
@@ -67,38 +69,38 @@ export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynce
   return (
     <View style={st.wrap}>
       {activeTier === tier ? (
-        <Text testID={`iap-active-${tier}`} style={[st.active, { color: accent }]}>✓ {TIER} ACTIVE VIA {STORE_LABEL}</Text>
+        <Text testID={`iap-active-${tier}`} style={[st.active, { color: accent }]}>✓ {TIER} {tt('c_IapPurchase.active_via')} {STORE_LABEL}</Text>
       ) : (
         <Pressable testID={`iap-buy-${tier}-${period}`} onPress={() => setConfirm(true)} disabled={disabled}
           style={[st.buyBtn, { borderColor: accent, opacity: disabled ? 0.5 : 1 }]}>
           {isPurchasing ? <ActivityIndicator size="small" color={accent} /> : (
             <View style={st.row}>
               <Ionicons name={Platform.OS === 'ios' ? 'logo-apple' : Platform.OS === 'android' ? 'logo-google-playstore' : 'phone-portrait-outline'} size={15} color={accent} />
-              <Text style={[st.buyText, { color: accent }]}>{STORE_LABEL} · {pkg.product.priceString}{period === 'annual' ? '/yr' : '/mo'}</Text>
+              <Text style={[st.buyText, { color: accent }]}>{STORE_LABEL} · {pkg.product.priceString}{period === 'annual' ? tt('c_IapPurchase.yr') : tt('c_IapPurchase.mo')}</Text>
             </View>
           )}
         </Pressable>
       )}
-      {!!identityError && <Text testID="iap-identity-error" style={st.err}>Purchase identity error: {identityError}</Text>}
+      {!!identityError && <Text testID="iap-identity-error" style={st.err}>{tt('c_IapPurchase.purchase_identity_error')} {identityError}</Text>}
       {!!err && <Text testID="iap-error" style={st.err}>{err}</Text>}
       {!!ok && <Text testID="iap-ok" style={st.ok}>{ok}</Text>}
-      {rcSimulated && <Text testID="iap-simulated" style={st.hint}>Simulated purchase — RevenueCat Test Store (preview build, no real charge)</Text>}
+      {rcSimulated && <Text testID="iap-simulated" style={st.hint}>{tt('c_IapPurchase.simulated_purchase_revenuecat_test_s')}</Text>}
 
       <Modal visible={confirm} transparent animationType="fade" onRequestClose={() => setConfirm(false)}>
         <View style={st.backdrop}>
           <View testID="iap-confirm" style={st.sheet}>
             <Ionicons name="shield-checkmark" size={30} color={accent} />
-            <Text style={st.sheetTitle}>CONFIRM SUBSCRIPTION</Text>
+            <Text style={st.sheetTitle}>{tt('c_IapPurchase.confirm_subscription')}</Text>
             <Text style={st.sheetBody}>
-              {TIER} · {pkg.product.priceString} {period === 'annual' ? 'per year' : 'per month'}
-              {'\n'}Billed through {STORE_LABEL}. Cancel anytime in your store subscriptions.
-              {rcSimulated ? '\n\nSIMULATED — Test Store, nothing is charged.' : ''}
+              {TIER} · {pkg.product.priceString} {period === 'annual' ? tt('c_IapPurchase.per_year') : tt('c_IapPurchase.per_month')}
+              {'\n'}{tt('c_IapPurchase.billed_through')} {STORE_LABEL}{tt('c_IapPurchase.cancel_anytime_in_your_store_subscri')}
+              {rcSimulated ? '\n\n' + tt('c_IapPurchase.simulated_test_store_nothing_is_char') : ''}
             </Text>
             <Pressable testID="iap-confirm-yes" onPress={buy} style={[st.confirmBtn, { backgroundColor: accent }]}>
-              <Text style={st.confirmText}>SUBSCRIBE · {pkg.product.priceString}</Text>
+              <Text style={st.confirmText}>{tt('c_IapPurchase.subscribe')} {pkg.product.priceString}</Text>
             </Pressable>
             <Pressable testID="iap-confirm-no" onPress={() => setConfirm(false)} style={st.cancelBtn}>
-              <Text style={st.cancelText}>NOT NOW</Text>
+              <Text style={st.cancelText}>{tt('c_IapPurchase.not_now')}</Text>
             </Pressable>
           </View>
         </View>
@@ -108,6 +110,7 @@ export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynce
 }
 
 export function RestorePurchasesButton({ onSynced }: { onSynced?: (r: IapSyncResult | null) => void }) {
+  const { t: tt, tx } = useI18n();
   const { restore, isRestoring, appUserId } = useSubscription();
   const [msg, setMsg] = useState('');
   const [isErr, setIsErr] = useState(false);
@@ -130,7 +133,7 @@ export function RestorePurchasesButton({ onSynced }: { onSynced?: (r: IapSyncRes
         {isRestoring ? <ActivityIndicator size="small" color={C.info} /> : (
           <View style={st.row}>
             <Ionicons name="refresh" size={14} color={C.info} />
-            <Text style={st.restoreText}>RESTORE PURCHASES ({STORE_LABEL})</Text>
+            <Text style={st.restoreText}>{tt('c_IapPurchase.restore_purchases')}{STORE_LABEL})</Text>
           </View>
         )}
       </Pressable>

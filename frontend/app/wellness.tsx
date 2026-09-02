@@ -9,12 +9,14 @@ import { api, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Checkin = { checkin_id: string; mood?: number; feeling_text?: string; sentiment_score: number; summary: string; reply: string; created_at: string };
 
 const MOOD_ICONS: Record<number, any> = { 5: 'sunny', 4: 'partly-sunny', 3: 'cloud-outline', 2: 'rainy-outline', 1: 'thunderstorm-outline' };
 
 export default function Wellness() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -73,7 +75,7 @@ export default function Wellness() {
           <View style={styles.jarvisCard}>
             <View style={styles.jarvisRow}>
               <Ionicons name="sparkles" size={20} color={C.brand} />
-              <Text style={styles.jarvisName}>JARVIS</Text>
+              <Text style={styles.jarvisName}>{tt('wellness.jarvis')}</Text>
               <Pressable testID="wellness-speak-q" onPress={() => speak(t('how_feel_today', lang))} hitSlop={10}>
                 <Ionicons name="volume-high-outline" size={22} color={C.brand} />
               </Pressable>
@@ -115,7 +117,7 @@ export default function Wellness() {
 
           {reply ? (
             <View testID="wellness-reply" style={styles.replyCard}>
-              <Text style={styles.replyLabel}>JARVIS</Text>
+              <Text style={styles.replyLabel}>{tt('wellness.jarvis')}</Text>
               <Text style={styles.replyText}>{reply}</Text>
             </View>
           ) : null}

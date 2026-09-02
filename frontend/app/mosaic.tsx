@@ -7,10 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
 export default function Mosaic() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [status, setStatus] = useState<any>(null);
   const [blocks, setBlocks] = useState<any[]>([]);
@@ -43,10 +45,10 @@ export default function Mosaic() {
         <Pressable testID="mo-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color="#E5E4E2" />
         </Pressable>
-        <Text style={st.title}>MOSAIC PROTOCOL</Text>
+        <Text style={st.title}>{tt('mosaic.mosaic_protocol')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SIMULATED L2 · REAL RPC (MOSAIC / BASE / POLYGON) IN PHASE 3</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>{tt('mosaic.simulated_l2_real_rpc_mosaic_base_po')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         {!!err && <Text style={st.err}>{err}</Text>}
@@ -63,38 +65,38 @@ export default function Mosaic() {
         )}
 
         <View style={st.btnGrid}>
-          <ActionBtn testID="mo-anchor" icon="cube" label="ANCHOR BLOK" busy={busy === 'anchor'} onPress={anchor} />
-          <ActionBtn testID="mo-bridge" icon="git-network" label="BRIDGE-WATCH" busy={busy === 'bridge'} onPress={bridge} />
-          <ActionBtn testID="mo-pqc" icon="lock-closed" label="PQC HANDSHAKE" busy={busy === 'pqc'} onPress={handshake} />
-          <ActionBtn testID="mo-stress" icon="speedometer" label="STRESS TEST" busy={busy === 'stress'} onPress={stressTest} />
+          <ActionBtn testID="mo-anchor" icon="cube" label={tt('mosaic.anchor_blok')} busy={busy === 'anchor'} onPress={anchor} />
+          <ActionBtn testID="mo-bridge" icon="git-network" label={tt('mosaic.bridge_watch')} busy={busy === 'bridge'} onPress={bridge} />
+          <ActionBtn testID="mo-pqc" icon="lock-closed" label={tt('mosaic.pqc_handshake')} busy={busy === 'pqc'} onPress={handshake} />
+          <ActionBtn testID="mo-stress" icon="speedometer" label={tt('mosaic.stress_test')} busy={busy === 'stress'} onPress={stressTest} />
         </View>
 
         {pqc && (
           <View style={st.resultBox}>
-            <Text style={st.resultTitle}>QUANTUM-READY HANDSHAKE ✓</Text>
-            <Text style={st.mono}>{pqc.kem}{'\n'}{pqc.classical}{'\n'}{pqc.signature}{'\n'}hash: {pqc.transcript_hash?.slice(0, 32)}…</Text>
+            <Text style={st.resultTitle}>{tt('mosaic.quantum_ready_handshake')}</Text>
+            <Text style={st.mono}>{pqc.kem}{'\n'}{pqc.classical}{'\n'}{pqc.signature}{'\n'}{tt('mosaic.hash')} {pqc.transcript_hash?.slice(0, 32)}…</Text>
           </View>
         )}
         {stress && (
           <View testID="mo-stress-result" style={[st.resultBox, { borderColor: stress.verdict === 'READY FOR PUBLISH' ? C.brand : C.warn }]}>
-            <Text style={[st.resultTitle, { color: C.brand }]}>GLOBAL NODE STRESS TEST · {stress.verdict}</Text>
-            <Text style={st.mono}>TPS spolu: {stress.total_tps}{'\n'}{stress.nodes.map((n: any) => `${n.node} (${n.region}): ${n.tps} tps · p95 ${n.p95_latency_ms}ms`).join('\n')}</Text>
+            <Text style={[st.resultTitle, { color: C.brand }]}>{tt('mosaic.global_node_stress_test')} {stress.verdict}</Text>
+            <Text style={st.mono}>{tt('mosaic.tps_spolu')} {stress.total_tps}{'\n'}{stress.nodes.map((n: any) => `${n.node} (${n.region}): ${n.tps} tps · p95 ${n.p95_latency_ms}ms`).join('\n')}</Text>
           </View>
         )}
 
-        <Text style={st.section}>LATEST ZK-ROLLUP BLOCKS</Text>
+        <Text style={st.section}>{tt('mosaic.latest_zk_rollup_blocks')}</Text>
         {blocks.map(b => (
           <View key={b.height} style={st.blockRow}>
             <Text style={st.blockH}>#{b.height}</Text>
             <View style={{ flex: 1 }}>
               <Text style={st.mono} numberOfLines={1}>{b.block_hash}</Text>
-              <Text style={st.blockMeta}>tx: {b.tx_batched} · {b.zk_proof.slice(0, 18)}… · user gas: 0 (treasury)</Text>
+              <Text style={st.blockMeta}>{tt('mosaic.tx')} {b.tx_batched} · {b.zk_proof.slice(0, 18)}{tt('mosaic.user_gas_0_treasury')}</Text>
             </View>
           </View>
         ))}
-        {blocks.length === 0 && <Text style={st.emptyLine}>— no blocks yet. Tap ANCHOR BLOCK or wait for the Swarm.</Text>}
+        {blocks.length === 0 && <Text style={st.emptyLine}>{tt('mosaic.no_blocks_yet_tap_anchor_block_or_wa')}</Text>}
 
-        <Text style={st.zeroFee}>👵 ZERO-FEE ABSTRACTION: grandmas never see gas or crypto — the foundation treasury pays everything from Sentinel/Archangel revenue.</Text>
+        <Text style={st.zeroFee}>{tt('mosaic.zero_fee_abstraction_grandmas_never')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

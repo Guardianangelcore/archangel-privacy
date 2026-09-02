@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const STATUS_UI: any = {
   in_stock: { label: 'SKLADOM', color: '#5FA779' },
@@ -14,6 +15,7 @@ const STATUS_UI: any = {
 };
 
 export default function PharmacyHunter() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [med, setMed] = useState('');
   const [region, setRegion] = useState<'SK' | 'CZ'>('CZ');
@@ -73,22 +75,22 @@ export default function PharmacyHunter() {
         <Pressable testID="ph-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>PHARMACY HUNTER</Text>
+        <Text style={styles.title}>{tt('pharmacy_hunter.pharmacy_hunter')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <View style={styles.demoBadge}>
           <Ionicons name="flask-outline" size={13} color={C.onWarn} />
-          <Text style={styles.demoText}>DEMO DATA — a live pharmacy stock connection is in preparation</Text>
+          <Text style={styles.demoText}>{tt('pharmacy_hunter.demo_data_a_live_pharmacy_stock_conn')}</Text>
         </View>
-        <Text style={styles.h1}>Pharmacy Med Hunter</Text>
-        <Text style={styles.sub}>Scans the availability of critical medications across regional pharmacy networks.</Text>
+        <Text style={styles.h1}>{tt('pharmacy_hunter.pharmacy_med_hunter')}</Text>
+        <Text style={styles.sub}>{tt('pharmacy_hunter.scans_the_availability_of_critical_m')}</Text>
 
         <View style={styles.searchRow}>
           <TextInput
             testID="ph-input"
             style={styles.input}
-            placeholder="Medication name (e.g. Euthyrox)"
+            placeholder={tt('pharmacy_hunter.medication_name_e_g_euthyrox')}
             placeholderTextColor={C.info}
             value={med}
             onChangeText={setMed}
@@ -104,18 +106,18 @@ export default function PharmacyHunter() {
           ))}
           <Pressable testID="ph-search" onPress={search} disabled={busy} style={styles.searchBtn}>
             {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="search" size={16} color={C.onInverse} />}
-            <Text style={styles.searchBtnText}>SEARCH</Text>
+            <Text style={styles.searchBtnText}>{tt('pharmacy_hunter.search')}</Text>
           </Pressable>
           <Pressable testID="ph-watch" onPress={watch} style={styles.watchBtn}>
             <Ionicons name="eye-outline" size={16} color={C.brand} />
-            <Text style={styles.watchBtnText}>WATCH</Text>
+            <Text style={styles.watchBtnText}>{tt('pharmacy_hunter.watch')}</Text>
           </Pressable>
         </View>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         {results.length > 0 && (
           <>
-            <Text style={styles.section}>AVAILABILITY · {region}</Text>
+            <Text style={styles.section}>{tt('pharmacy_hunter.availability')} {region}</Text>
             {results.map((r, i) => {
               const ui = STATUS_UI[r.status] || STATUS_UI.out_of_stock;
               return (
@@ -123,11 +125,11 @@ export default function PharmacyHunter() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.resName}>{r.pharmacy} · {r.city}</Text>
                     <Text style={styles.resSub}>
-                      {r.price_eur != null ? `${r.price_eur} €` : '—'}{r.pieces ? ` · ${r.pieces} ks` : ''}
+                      {r.price_eur != null ? `${r.price_eur} €` : '—'}{r.pieces ? tt('pharmacy_hunter.ks', [r.pieces]) : ''}
                     </Text>
                   </View>
                   <View style={[styles.statusPill, { borderColor: ui.color }]}>
-                    <Text style={[styles.statusText, { color: ui.color }]}>{ui.label}</Text>
+                    <Text style={[styles.statusText, { color: ui.color }]}>{tx(ui.label)}</Text>
                   </View>
                 </View>
               );
@@ -135,18 +137,18 @@ export default function PharmacyHunter() {
           </>
         )}
 
-        <Text style={styles.section}>MOJE SLEDOVANIA ({watches.length})</Text>
-        {watches.length === 0 && <Text style={styles.hint}>You are not watching anything yet. Enter a medication and tap WATCH.</Text>}
+        <Text style={styles.section}>{tt('pharmacy_hunter.moje_sledovania')}{watches.length})</Text>
+        {watches.length === 0 && <Text style={styles.hint}>{tt('pharmacy_hunter.you_are_not_watching_anything_yet_en')}</Text>}
         {watches.map(w => (
           <View key={w.watch_id} style={styles.watchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.resName}>{w.med_name} · {w.region}</Text>
               <Text style={styles.resSub}>
-                {w.status === 'found' ? `✓ Found: ${w.found_pharmacy || ''}` : 'Watching availability…'}
+                {w.status === 'found' ? tt('pharmacy_hunter.found', [w.found_pharmacy || '']) : tt('pharmacy_hunter.watching_availability')}
               </Text>
             </View>
             <Pressable testID={`ph-scan-${w.watch_id}`} onPress={() => scan(w.watch_id)} disabled={scanBusy === w.watch_id} style={styles.scanBtn}>
-              {scanBusy === w.watch_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.scanText}>SKEN</Text>}
+              {scanBusy === w.watch_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.scanText}>{tt('pharmacy_hunter.sken')}</Text>}
             </Pressable>
             <Pressable testID={`ph-del-${w.watch_id}`} onPress={() => del(w.watch_id)} hitSlop={8}>
               <Ionicons name="trash-outline" size={18} color={C.info} />

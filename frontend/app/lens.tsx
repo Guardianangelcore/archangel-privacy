@@ -12,6 +12,7 @@ import { cachedAudioUri } from '@/src/media';
 import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, GoldButton, Pulse, tap } from '@/src/ui/glass';
+import { useI18n } from '@/src/i18n-context';
 
 const KIND_LABEL: Record<string, string> = {
   medication: '💊 MEDICATION', medical_report: '📄 MEDICAL REPORT', prescription: '📝 PRESCRIPTION',
@@ -19,6 +20,7 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default function Lens() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
@@ -139,11 +141,11 @@ export default function Lens() {
         <Pressable testID="ln-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>GUARDIAN LENS</Text>
+        <Text style={st.title}>{tt('lens.guardian_lens')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>SNAP · KNOW · ACT — with one tap</Text>
+        <Text style={st.tag}>{tt('lens.snap_know_act_with_one_tap')}</Text>
 
         <GlassCard glow pad={S.lg} style={{ marginTop: S.md }}>
           {photo ? (
@@ -151,45 +153,45 @@ export default function Lens() {
           ) : (
             <View style={st.placeholder}>
               <Pulse><Ionicons name="scan-circle-outline" size={72} color={C.brand} /></Pulse>
-              <Text style={st.placeholderText}>Photograph a medicine box, prescription or medical report.{'\n'}Jarvis instantly recognizes the content and suggests next steps.</Text>
+              <Text style={st.placeholderText}>{tt('lens.photograph_a_medicine_box_prescripti')}{'\n'}{tt('lens.jarvis_instantly_recognizes_the_cont')}</Text>
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
             {Platform.OS !== 'web' && (
               <Pressable testID="ln-camera" onPress={takePhoto} style={st.srcBtn}>
                 <Ionicons name="camera" size={20} color={C.brand} />
-                <Text style={st.srcText}>TAKE PHOTO</Text>
+                <Text style={st.srcText}>{tt('lens.take_photo')}</Text>
               </Pressable>
             )}
             <Pressable testID="ln-gallery" onPress={pickPhoto} style={st.srcBtn}>
               <Ionicons name="images-outline" size={20} color={C.brand} />
-              <Text style={st.srcText}>FROM GALLERY</Text>
+              <Text style={st.srcText}>{tt('lens.from_gallery')}</Text>
             </Pressable>
           </View>
           {camBlocked && (
             <Pressable testID="ln-settings" onPress={() => Linking.openSettings()} style={st.permBtn}>
-              <Text style={st.permText}>Camera is blocked — OPEN SETTINGS</Text>
+              <Text style={st.permText}>{tt('lens.camera_is_blocked_open_settings')}</Text>
             </Pressable>
           )}
-          <Text style={st.modelLbl}>VISION MODEL</Text>
+          <Text style={st.modelLbl}>{tt('lens.vision_model')}</Text>
           <View style={st.modelRow}>
             {MODEL_CHIPS.map(m => (
               <Pressable key={m.key} testID={`ln-model-${m.key}`}
                 onPress={() => { tap('light'); setModelKey(m.key as any); }}
                 style={[st.modelChip, modelKey === m.key && st.modelChipActive]}>
                 <Ionicons name={m.icon as any} size={13} color={modelKey === m.key ? C.onInverse : C.brand} />
-                <Text style={[st.modelChipText, modelKey === m.key && { color: C.onInverse }]}>{m.label}</Text>
+                <Text style={[st.modelChipText, modelKey === m.key && { color: C.onInverse }]}>{tx(m.label)}</Text>
               </Pressable>
             ))}
           </View>
-          <GoldButton testID="ln-analyze" title="ANALYZE WITH LENS" icon="aperture"
+          <GoldButton testID="ln-analyze" title={tt('lens.analyze_with_lens')} icon="aperture"
             onPress={analyze} disabled={!photo} loading={busy === 'analyze'} style={{ marginTop: S.md }} />
         </GlassCard>
 
         {busy === 'analyze' && (
           <View style={st.scanning}>
             <ActivityIndicator color={C.brand} />
-            <Text style={st.scanningText}>Jarvis is reading the artifact…</Text>
+            <Text style={st.scanningText}>{tt('lens.jarvis_is_reading_the_artifact')}</Text>
           </View>
         )}
         {!!err && <Text testID="ln-err" style={st.err}>{err}</Text>}
@@ -200,7 +202,7 @@ export default function Lens() {
             {!!scan.consensus && (
               <View style={st.consensusBadge}>
                 <Ionicons name="infinite" size={12} color={C.info} />
-                <Text style={st.consensusText}>KONSENZUS 3 MODELOV · ZHODA {scan.consensus.agreement_pct}%</Text>
+                <Text style={st.consensusText}>{tt('lens.konsenzus_3_modelov_zhoda')} {scan.consensus.agreement_pct}%</Text>
               </View>
             )}
             {!!scan.model && !scan.consensus && (
@@ -214,40 +216,40 @@ export default function Lens() {
                 <Text style={st.warnText}>{w}</Text>
               </View>
             ))}
-            <Text style={st.aiNote}>AI output — informational only (EU AI Act Art. 50). Verify with a pharmacist/doctor.</Text>
+            <Text style={st.aiNote}>{tt('lens.ai_output_informational_only_eu_ai_a')}</Text>
 
-            <Text style={st.actLbl}>INSTANT ACTIONS</Text>
+            <Text style={st.actLbl}>{tt('lens.instant_actions')}</Text>
             <View style={st.actGrid}>
-              <ActionBtn testID="ln-act-jarvis" icon="chatbubble-ellipses" label="SEND TO JARVIS" busy={busy === 'jarvis'} onPress={askJarvis} />
-              <ActionBtn testID="ln-act-speak" icon="volume-high" label="READ ALOUD" busy={speaking} onPress={() => speak(scan)} />
+              <ActionBtn testID="ln-act-jarvis" icon="chatbubble-ellipses" label={tt('lens.send_to_jarvis')} busy={busy === 'jarvis'} onPress={askJarvis} />
+              <ActionBtn testID="ln-act-speak" icon="volume-high" label={tt('lens.read_aloud')} busy={speaking} onPress={() => speak(scan)} />
               {(['medical_report', 'prescription', 'lab_results'].includes(scan.kind) || !!scan.specialty) && (
-                <ActionBtn testID="ln-act-healing" icon="sync" label="START HEALING LOOP"
+                <ActionBtn testID="ln-act-healing" icon="sync" label={tt('lens.start_healing_loop')}
                   onPress={() => router.push(`/healing?specialty=${encodeURIComponent(scan.specialty || '')}&auto=1` as any)} />
               )}
               {has('add_med_reminder') && (
-                <ActionBtn testID="ln-act-med" icon="alarm" label="ADD TO MED CALENDAR" busy={busy === 'med'} onPress={addMed} />
+                <ActionBtn testID="ln-act-med" icon="alarm" label={tt('lens.add_to_med_calendar')} busy={busy === 'med'} onPress={addMed} />
               )}
               {has('check_interactions') && (
-                <ActionBtn testID="ln-act-inter" icon="git-compare" label="INTERACTION GUARD" onPress={() => router.push('/medicine-cabinet')} />
+                <ActionBtn testID="ln-act-inter" icon="git-compare" label={tt('lens.interaction_guard')} onPress={() => router.push('/medicine-cabinet')} />
               )}
               {(has('book_specialist') || !!scan.specialty) && (
-                <ActionBtn testID="ln-act-book" icon="calendar" label={`APPOINTMENT${scan.specialty ? `: ${scan.specialty.toUpperCase()}` : ''}`} onPress={() => router.push('/(tabs)/waitlist')} />
+                <ActionBtn testID="ln-act-book" icon="calendar" label={tt('lens.appointment', [scan.specialty ? `: ${scan.specialty.toUpperCase()}` : ''])} onPress={() => router.push('/(tabs)/waitlist')} />
               )}
               {has('translate') && (
-                <ActionBtn testID="ln-act-translate" icon="language" label="AI TRANSLATOR" onPress={() => router.push('/translate')} />
+                <ActionBtn testID="ln-act-translate" icon="language" label={tt('lens.ai_translator')} onPress={() => router.push('/translate')} />
               )}
-              <ActionBtn testID="ln-act-vault" icon="lock-closed" label="SAVE TO VAULT" busy={busy === 'vault'} onPress={saveVault} />
+              <ActionBtn testID="ln-act-vault" icon="lock-closed" label={tt('lens.save_to_vault')} busy={busy === 'vault'} onPress={saveVault} />
             </View>
             {!!msg && <Text testID="ln-msg" style={st.msg}>{msg}</Text>}
             {!!jarvisReply && (
               <View testID="ln-jarvis-reply" style={st.jarvisBox}>
                 <View style={st.jarvisHead}>
                   <Ionicons name="sparkles" size={14} color={C.brand} />
-                  <Text style={st.jarvisTitle}>JARVIS REPLIES</Text>
+                  <Text style={st.jarvisTitle}>{tt('lens.jarvis_replies')}</Text>
                 </View>
                 <Text style={st.jarvisText}>{jarvisReply}</Text>
                 <Pressable testID="ln-jarvis-open" onPress={() => router.push('/jarvis')} style={st.jarvisMore}>
-                  <Text style={st.jarvisMoreText}>OPEN CONVERSATION →</Text>
+                  <Text style={st.jarvisMoreText}>{tt('lens.open_conversation')}</Text>
                 </Pressable>
               </View>
             )}

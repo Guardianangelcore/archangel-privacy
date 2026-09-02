@@ -1,6 +1,568 @@
 {
+  "tabs_family": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "tabs_health": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "tabs_hunter": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "tabs_index": {
+    "translated": 1,
+    "tx": 1,
+    "consts": 5,
+    "skipped": []
+  },
+  "tabs_legacy": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "tabs_profile": {
+    "translated": 3,
+    "skipped": [],
+    "consts": 0
+  },
+  "tabs_vault": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "tabs_waitlist": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "_html": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "angel_pulse": {
+    "translated": 2,
+    "tx": 1,
+    "consts": 3,
+    "skipped": []
+  },
+  "arbitrage": {
+    "translated": 2,
+    "skipped": [],
+    "consts": 0
+  },
+  "barter": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "biometric_will": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "bioscan": {
+    "translated": 3,
+    "skipped": [],
+    "consts": 0
+  },
+  "blackout": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "border_pass": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "calendar_sync": {
+    "translated": 0,
+    "tx": 3,
+    "consts": 0,
+    "skipped": []
+  },
+  "child_growth": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "clinic_sync": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "compass": {
+    "translated": 0,
+    "tx": 4,
+    "consts": 0,
+    "skipped": []
+  },
+  "daily_brief": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 0,
+    "skipped": []
+  },
+  "digital_legacy": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "dignity": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 3,
+    "skipped": []
+  },
+  "drop_dropId_": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "duress": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "emergency_qr": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "enviro": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "eternal_vault": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 12,
+    "skipped": []
+  },
+  "fall_verify": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "family_contacts": {
+    "translated": 3,
+    "tx": 1,
+    "consts": 7,
+    "skipped": []
+  },
+  "family_dashboard": {
+    "translated": 2,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "fortress": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 0,
+    "skipped": []
+  },
+  "founder_toolkit": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 0,
+    "skipped": []
+  },
+  "ghost_mode": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "gigs": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "guardian_circle_sync": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "healing": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "health_drop": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "health_timeline": {
+    "translated": 4,
+    "tx": 7,
+    "consts": 13,
+    "skipped": []
+  },
+  "health_trends": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 6,
+    "skipped": []
+  },
+  "healthcare_proxy": {
+    "translated": 2,
+    "tx": 1,
+    "consts": 3,
+    "skipped": []
+  },
+  "humanitarian": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "impact": {
+    "translated": 1,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "index": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "inner_circle": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "insurance": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "jarvis": {
+    "translated": 8,
+    "tx": 8,
+    "consts": 13,
+    "skipped": []
+  },
+  "launch": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "legal": {
+    "translated": 1,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "lens": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "login": {
+    "translated": 2,
+    "skipped": [],
+    "consts": 0
+  },
+  "longevity": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "magic_lens": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "marketplace": {
+    "translated": 0,
+    "tx": 3,
+    "consts": 0,
+    "skipped": []
+  },
+  "medical_news": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 0,
+    "skipped": []
+  },
+  "medicine_cabinet": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "meds": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 6,
+    "skipped": []
+  },
+  "mental_fortress": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 0,
+    "skipped": []
+  },
+  "mesh": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "monolith": {
+    "translated": 2,
+    "tx": 2,
+    "consts": 9,
+    "skipped": []
+  },
+  "mosaic": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "my_recovery": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "onboarding": {
+    "translated": 3,
+    "tx": 1,
+    "consts": 3,
+    "skipped": []
+  },
+  "pantry": {
+    "translated": 2,
+    "tx": 5,
+    "consts": 14,
+    "skipped": []
+  },
+  "paramedic": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "partners": {
+    "translated": 0,
+    "tx": 3,
+    "consts": 11,
+    "skipped": []
+  },
+  "pharmacy_hunter": {
+    "translated": 2,
+    "tx": 1,
+    "consts": 3,
+    "skipped": []
+  },
+  "physio": {
+    "translated": 0,
+    "tx": 4,
+    "consts": 0,
+    "skipped": []
+  },
+  "privacy_policy": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "protocol": {
+    "translated": 2,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "pulse_check": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "recovery_suite": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "refunds": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "respect_map": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "scam_shield": {
+    "translated": 1,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "silent_witness": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "solidarity": {
+    "translated": 2,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
   "subscription": {
-    "translated": 47,
+    "translated": 7,
+    "skipped": [],
+    "consts": 0
+  },
+  "survival_auditor": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 5,
+    "skipped": []
+  },
+  "tactical_medic": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "terms_of_service": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "token": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 3,
+    "skipped": []
+  },
+  "translate": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "truth_validator": {
+    "translated": 1,
+    "tx": 2,
+    "consts": 3,
+    "skipped": []
+  },
+  "video_legacy": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "voice_echoes": {
+    "translated": 1,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "voice_signature": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "wallpaper": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "wealth_vault": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 0,
+    "skipped": []
+  },
+  "wellness": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_Art50": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_CityPicker": {
+    "translated": 2,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_CrisisHUD": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_FirstLaunchDisclaimer": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_GuardianEye": {
+    "translated": 1,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_IapPurchase": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_JarvisAdvice": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_Paywall": {
+    "translated": 0,
+    "tx": 1,
+    "consts": 2,
+    "skipped": []
+  },
+  "c_PillarHub": {
+    "translated": 0,
+    "tx": 5,
+    "consts": 0,
+    "skipped": []
+  },
+  "c_biometric_gate": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_blazing_ceremony": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_guardian": {
+    "translated": 0,
+    "skipped": [],
+    "consts": 0
+  },
+  "c_onboarding_tour": {
+    "translated": 0,
+    "tx": 2,
+    "consts": 8,
     "skipped": []
   }
 }

@@ -844,6 +844,7 @@ class AgentSearchIn(BaseModel):
 @api.post("/agent/search")
 async def agent_search(body: AgentSearchIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_tier(user, JARVIS_MIN_TIER, "Sonar web search")
     uid = user["user_id"]
     q = (body.query or "").strip()
     if not q:
@@ -862,7 +863,9 @@ async def agent_search(body: AgentSearchIn, authorization: Optional[str] = Heade
             ],
             "search_mode": "web",
             "web_search_options": {"search_context_size": "high", "search_type": "auto"},
-            "max_tokens": 2200,
+            # sonar-reasoning-pro: hidden reasoning eats the token budget — with max_tokens ≲ 2500 the API
+            # returns EMPTY content (0 completion tokens, finish=stop). Keep a generous ceiling.
+            "max_tokens": 6000,
             "temperature": 0.1,
         }
         try:

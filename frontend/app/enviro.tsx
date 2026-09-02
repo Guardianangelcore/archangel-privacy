@@ -10,8 +10,10 @@ import { useAuth } from '@/src/auth';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Enviro() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -51,18 +53,18 @@ export default function Enviro() {
         <Pressable testID="en-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>THREAT FUSION</Text>
+        <Text style={st.title}>{tt('enviro.threat_fusion')}</Text>
         <Pressable testID="en-blackout" onPress={() => router.push('/blackout')} hitSlop={12}>
           <Ionicons name="flash-off-outline" size={22} color={C.onInverse} />
         </Pressable>
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>DEVICE SENSORS × P2P MESH · SIMULATED PROPAGATION · SWARM ESCALATES CONSENSUS</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>{tt('enviro.device_sensors_p2p_mesh_simulated_pr')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}>
 
-        <Text style={st.section}>ACTIVE THREATS (24 h)</Text>
-        {threats.length === 0 && <Text style={st.emptyLine}>— no reported threats nearby. The environment is stable.</Text>}
+        <Text style={st.section}>{tt('enviro.active_threats_24_h')}</Text>
+        {threats.length === 0 && <Text style={st.emptyLine}>{tt('enviro.no_reported_threats_nearby_the_envir')}</Text>}
         {threats.map((t, i) => (
           <View key={i} style={[st.threatCard, t.status === 'CONFIRMED' && { borderColor: C.error }]}>
             <View style={st.rowSpread}>
@@ -71,15 +73,15 @@ export default function Enviro() {
                 <Text style={st.threatTitle}>{t.label.toUpperCase()}{t.city ? ` · ${t.city.toUpperCase()}` : ''}</Text>
               </View>
               <Text style={[st.statusBadge, t.status === 'CONFIRMED' ? { backgroundColor: C.error, color: C.onError } : { backgroundColor: C.surface3, color: C.onS3 }]}>
-                {t.status === 'CONFIRMED' ? 'MESH-CONFIRMED' : 'UNVERIFIED'}
+                {t.status === 'CONFIRMED' ? tt('enviro.mesh_confirmed') : tt('enviro.unverified')}
               </Text>
             </View>
-            <Text style={st.threatMeta}>Reports: {t.reports} · severity {t.max_severity}/5 · sensor: {t.sensor}</Text>
+            <Text style={st.threatMeta}>{tt('enviro.reports')} {t.reports} {tt('enviro.severity')} {t.max_severity}{tt('enviro.5_sensor')} {t.sensor}</Text>
             <Text style={st.guidance}>▶ {t.guidance}</Text>
           </View>
         ))}
 
-        <Text style={st.section}>REPORT A THREAT</Text>
+        <Text style={st.section}>{tt('enviro.report_a_threat')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {Object.entries(kinds).map(([k, v]: any) => (
             <Pressable testID={`en-kind-${k}`} key={k} onPress={() => setKind(k)} style={[st.chip, kind === k && st.chipActive]}>
@@ -87,7 +89,7 @@ export default function Enviro() {
             </Pressable>
           ))}
         </View>
-        <Text style={st.lbl}>SEVERITY: {severity}/5</Text>
+        <Text style={st.lbl}>{tt('enviro.severity_1s55')} {severity}/5</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {[1, 2, 3, 4, 5].map(n => (
             <Pressable testID={`en-sev-${n}`} key={n} onPress={() => setSeverity(n)}
@@ -97,7 +99,7 @@ export default function Enviro() {
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="en-city" value={city} onChangeText={setCity} placeholder="City / area"
+          <TextInput testID="en-city" value={city} onChangeText={setCity} placeholder={tt('enviro.city_area')}
             placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <Pressable testID="en-report" onPress={report} disabled={busy} style={st.reportBtn}>
             {busy ? <ActivityIndicator color={C.onError} size="small" /> : <Ionicons name="megaphone" size={20} color={C.onError} />}

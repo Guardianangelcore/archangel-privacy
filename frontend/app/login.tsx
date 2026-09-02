@@ -16,6 +16,7 @@ const BG = 'https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg
 const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
 
 export default function Login() {
+  const { t: tt, tx } = useI18n();
   const { signIn, signInDev, signInPassword, registerPassword, authError } = useAuth();
   const router = useRouter();
   // Shared i18n context: the pick here is remembered and applied to the account on sign-in.
@@ -130,7 +131,7 @@ export default function Login() {
         </View>
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={{ flex: 1 }} />
-          <Text testID="app-title" style={styles.hero}>ARCHANGEL</Text>
+          <Text testID="app-title" style={styles.hero}>{tt('login.archangel')}</Text>
           <Text style={styles.hero2}>OS</Text>
           <View style={styles.divider} />
           <Text style={[styles.tagline, rtl && styles.rtl]}>{t('tagline')}</Text>
@@ -205,7 +206,7 @@ export default function Login() {
                 testID="reset-code"
                 value={resetCode}
                 onChangeText={setResetCode}
-                placeholder="6-digit code from e-mail"
+                placeholder={tt('login.6_digit_code_from_e_mail')}
                 placeholderTextColor="rgba(255,255,255,0.5)"
                 keyboardType="number-pad"
                 maxLength={6}
@@ -215,7 +216,7 @@ export default function Login() {
                 testID="reset-new-password"
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="New password (min. 12 characters)"
+                placeholder={tt('login.new_password_min_12_characters')}
                 placeholderTextColor="rgba(255,255,255,0.5)"
                 secureTextEntry
                 autoCapitalize="none"
@@ -266,7 +267,7 @@ export default function Login() {
           >
             {busy === 'pw'
               ? <ActivityIndicator color={C.onInverse} />
-              : <Text style={styles.signBtnText}>{codeSent ? 'RESET PASSWORD' : 'SEND RESET CODE'}</Text>}
+              : <Text style={styles.signBtnText}>{codeSent ? tt('login.reset_password') : tt('login.send_reset_code')}</Text>}
           </Pressable>
           )}
           <View style={styles.linkRow}>
@@ -279,11 +280,11 @@ export default function Login() {
               <>
                 {codeSent && (
                   <Pressable testID="resend-code" onPress={onForgot} hitSlop={8}>
-                    <Text style={styles.linkText}>RESEND CODE</Text>
+                    <Text style={styles.linkText}>{tt('login.resend_code')}</Text>
                   </Pressable>
                 )}
                 <Pressable testID="back-to-login" onPress={() => { setResetMode(false); setCodeSent(false); setErr(''); setInfo(''); }} hitSlop={8}>
-                  <Text style={styles.linkText}>BACK TO SIGN IN</Text>
+                  <Text style={styles.linkText}>{tt('login.back_to_sign_in')}</Text>
                 </Pressable>
               </>
             )}
@@ -322,7 +323,7 @@ export default function Login() {
               ? <ActivityIndicator color={C.brand} />
               : <>
                   <Ionicons name="key" size={18} color={C.brand} />
-                  <Text style={styles.founderText}>ENTER AS GUARDIAN ANGEL (FOUNDER)</Text>
+                  <Text style={styles.founderText}>{tt('login.enter_as_guardian_angel_founder')}</Text>
                 </>}
           </Pressable>
           )}
@@ -334,7 +335,7 @@ export default function Login() {
             hitSlop={8}
             style={styles.linkBtn}
           >
-            <Text style={styles.linkText}>{showBypass ? 'CLOSE' : 'OTHER EMAIL · DEVELOPER BYPASS'}</Text>
+            <Text style={styles.linkText}>{showBypass ? tt('login.close') : tt('login.other_email_developer_bypass')}</Text>
           </Pressable>
           )}
 
@@ -344,7 +345,7 @@ export default function Login() {
                 testID="bypass-email"
                 value={bypassEmail}
                 onChangeText={setBypassEmail}
-                placeholder="email@guardian"
+                placeholder={tt('login.email_guardian')}
                 placeholderTextColor="rgba(255,255,255,0.5)"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -357,7 +358,7 @@ export default function Login() {
                 disabled={busy !== null || !bypassEmail.includes('@')}
                 style={styles.bypassSubmit}
               >
-                <Text style={styles.bypassSubmitText}>{busy === 'dev' ? '…' : 'ENTER'}</Text>
+                <Text style={styles.bypassSubmitText}>{busy === 'dev' ? '…' : tt('login.enter')}</Text>
               </Pressable>
             </View>
           )}
@@ -365,8 +366,8 @@ export default function Login() {
           {(!!err || !!authError) && <Text testID="login-err" style={styles.err}>{err || authError}</Text>}
           {!!info && !err && <Text testID="login-info" style={styles.info}>{info}</Text>}
 
-          <Text style={styles.footer}>© 2026 GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO) · PROPRIETARY · ZERO-KNOWLEDGE</Text>
-          <Text style={styles.footerArt50}>EU AI ACT ART. 50 · AI OUTPUTS ARE INFORMATIONAL ONLY · YOU ACT AT YOUR OWN RISK</Text>
+          <Text style={styles.footer}>{tt('login.2026_guardian_angel_sovereign_founda')}</Text>
+          <Text style={styles.footerArt50}>{tt('login.eu_ai_act_art_50_ai_outputs_are_info')}</Text>
         </View>
       </SafeAreaView>
     </View>

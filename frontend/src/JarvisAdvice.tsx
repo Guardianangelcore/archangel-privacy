@@ -5,10 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from './api';
 import { C, S } from './theme';
 import { t, Lang } from './i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Props = { module: string; buildContext: () => string; lang: Lang };
 
 export default function JarvisAdvice({ module, buildContext, lang }: Props) {
+  const { t: tt, tx } = useI18n();
   const [advice, setAdvice] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -31,7 +33,7 @@ export default function JarvisAdvice({ module, buildContext, lang }: Props) {
       </Pressable>
       {advice ? (
         <View testID={`jarvis-advice-out-${module}`} style={styles.card}>
-          <Text style={styles.cardLabel}>JARVIS</Text>
+          <Text style={styles.cardLabel}>{tt('c_JarvisAdvice.jarvis')}</Text>
           <Text style={styles.cardText}>{advice}</Text>
           <Text style={styles.disclosure}>⚠ {t('ai_disclosure', lang)}</Text>
         </View>

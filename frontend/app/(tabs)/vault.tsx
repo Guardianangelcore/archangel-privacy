@@ -12,10 +12,12 @@ import { AGE_LABEL_SK, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Doc = { doc_id: string; title: string; file_name: string; content_type: string; size: number; uploaded_at: string; plain_language?: string; extracted_text?: string; source?: string; prompt?: string };
 
 export default function Vault() {
+  const { t: tt, tx } = useI18n();
   const { user, setUser } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -129,7 +131,7 @@ export default function Vault() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{t('vault', lang).toUpperCase()}</Text>
-          <Text style={styles.sub}>ENCRYPTED STORAGE — ONLY YOU HOLD THE KEY</Text>
+          <Text style={styles.sub}>{tt('tabs_vault.encrypted_storage_only_you_hold_the')}</Text>
         </View>
         <Pressable testID="vault-settings" onPress={() => router.push('/(tabs)/profile')} hitSlop={10}>
           <Ionicons name="settings-outline" size={22} color={C.onInverse} />
@@ -148,7 +150,7 @@ export default function Vault() {
               <View style={styles.gallery}>
                 <View style={styles.galleryHead}>
                   <Ionicons name="color-palette" size={15} color={C.brand} />
-                  <Text style={styles.galleryTitle}>IMAGE GALLERY · JARVIS ({art.length})</Text>
+                  <Text style={styles.galleryTitle}>{tt('tabs_vault.image_gallery_jarvis')}{art.length})</Text>
                 </View>
                 <View style={styles.galleryGrid}>
                   {art.map(a => (
@@ -182,8 +184,8 @@ export default function Vault() {
                   {uploading ? <ActivityIndicator color={C.onInverse} /> : <Ionicons name="scan-outline" size={38} color={C.onInverse} />}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.firstScanTitle}>SCAN YOUR ID CARD</Text>
-                  <Text style={styles.firstScanSub}>Jarvis fills in Age, Bio-Timeline and insurance fields — no typing.</Text>
+                  <Text style={styles.firstScanTitle}>{tt('tabs_vault.scan_your_id_card')}</Text>
+                  <Text style={styles.firstScanSub}>{tt('tabs_vault.jarvis_fills_in_age_bio_timeline_and')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={C.onInverse} />
               </Pressable>
@@ -202,7 +204,7 @@ export default function Vault() {
           <View testID={`doc-${item.doc_id}`} style={styles.docCard}>
             <View style={styles.docHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.docTitle} numberOfLines={2}>{item.title}</Text>
+                <Text style={styles.docTitle} numberOfLines={2}>{tx(item.title)}</Text>
                 <Text style={styles.docMeta}>{new Date(item.uploaded_at).toISOString().slice(0,10)} · {Math.round(item.size/1024)} KB</Text>
               </View>
               <Pressable testID={`doc-delete-${item.doc_id}`} onPress={() => remove(item)} hitSlop={10}>
@@ -211,11 +213,11 @@ export default function Vault() {
             </View>
             <Pressable testID={`doc-view-${item.doc_id}`} onPress={() => view(item)} style={styles.viewBtn}>
               {opening === item.doc_id ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="eye-outline" size={16} color={C.brand} />}
-              <Text style={styles.viewBtnText}>VIEW / OPEN</Text>
+              <Text style={styles.viewBtnText}>{tt('tabs_vault.view_open')}</Text>
             </Pressable>
             {item.plain_language ? (
               <View style={styles.translation}>
-                <Text style={styles.translationLabel}>🤖 JARVIS ZHRNUTIE</Text>
+                <Text style={styles.translationLabel}>{tt('tabs_vault.jarvis_zhrnutie')}</Text>
                 <Text style={styles.translationText}>{item.plain_language}</Text>
               </View>
             ) : busyDoc === item.doc_id ? (
@@ -226,7 +228,7 @@ export default function Vault() {
             ) : (
               <Pressable testID={`doc-jarvis-${item.doc_id}`} onPress={() => (isOcrable(item) ? ocrAndTranslate(item) : translate(item))} style={[styles.translateBtn, { backgroundColor: C.brand }]}>
                 <Ionicons name="sparkles" size={16} color={C.onInverse} />
-                <Text style={styles.translateBtnText}>🤖 JARVIS ZHRNUTIE</Text>
+                <Text style={styles.translateBtnText}>{tt('tabs_vault.jarvis_zhrnutie')}</Text>
               </Pressable>
             )}
           </View>

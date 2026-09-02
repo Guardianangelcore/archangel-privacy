@@ -7,8 +7,10 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { sharePdf } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function BorderPass() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [cert, setCert] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -33,15 +35,14 @@ export default function BorderPass() {
         <Pressable testID="bp-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>BORDER CROSSER</Text>
+        <Text style={styles.title}>{tt('border_pass.border_crosser')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <View style={styles.heroIcon}><Ionicons name="airplane-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>International medication certificate</Text>
+        <Text style={styles.h1}>{tt('border_pass.international_medication_certificate')}</Text>
         <Text style={styles.sub}>
-          A certificate in 14 languages, signed with your DID. It explains to customs and authorities the necessity
-          of carrying your prescription medication while traveling or in a crisis.
+          {tt('border_pass.a_certificate_in_14_languages_signed')}
         </Text>
 
         {!cert && !err && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
@@ -50,28 +51,27 @@ export default function BorderPass() {
         {cert && (
           <>
             <View style={styles.card}>
-              <Row label="Holder" value={cert.holder || '—'} />
-              <Row label="Blood type" value={cert.blood_type || '—'} />
-              <Row label="Alergie" value={cert.allergies || '—'} />
-              <Row label="DID podpis" value={`${(cert.did_signature || '').slice(0, 20)}…`} mono />
+              <Row label={tt('border_pass.holder')} value={cert.holder || '—'} />
+              <Row label={tt('border_pass.blood_type')} value={cert.blood_type || '—'} />
+              <Row label={tt('border_pass.alergie')} value={cert.allergies || '—'} />
+              <Row label={tt('border_pass.did_podpis')} value={`${(cert.did_signature || '').slice(0, 20)}…`} mono />
             </View>
 
-            <Text style={styles.section}>MEDICATIONS IN CERTIFICATE ({cert.medications?.length || 0})</Text>
+            <Text style={styles.section}>{tt('border_pass.medications_in_certificate')}{cert.medications?.length || 0})</Text>
             {(cert.medications || []).length === 0 ? (
               <Text style={styles.hint}>
-                No prescription medications in the Medicine Cabinet. Add them in Health Hub → Medicine Cabinet
-                (mark them {'"prescription"'}) — they appear here automatically.
+                {tt('border_pass.no_prescription_medications_in_the_m')} {tt('border_pass.prescription')}{tt('border_pass.they_appear_here_automatically')}
               </Text>
             ) : (
               cert.medications.map((m: any, i: number) => (
                 <View key={i} style={styles.medRow}>
                   <Ionicons name="medkit-outline" size={16} color={C.brand} />
-                  <Text style={styles.medText}>{m.name} — {m.quantity} {m.unit}{m.prescription ? '  [Rx]' : ''}</Text>
+                  <Text style={styles.medText}>{m.name} — {m.quantity} {m.unit}{m.prescription ? '  ' + tt('border_pass.rx') : ''}</Text>
                 </View>
               ))
             )}
 
-            <Text style={styles.section}>CERTIFICATE LANGUAGES</Text>
+            <Text style={styles.section}>{tt('border_pass.certificate_languages')}</Text>
             <View style={styles.langWrap}>
               {(cert.languages || []).map((l: any) => (
                 <View key={l.code} style={styles.langChip}><Text style={styles.langText}>{l.name}</Text></View>
@@ -82,12 +82,12 @@ export default function BorderPass() {
               {busy ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="document-text-outline" size={18} color={C.onInverse} />
-                  <Text style={styles.ctaText}>DOWNLOAD PDF CERTIFICATE</Text>
+                  <Text style={styles.ctaText}>{tt('border_pass.download_pdf_certificate')}</Text>
                 </>
               )}
             </Pressable>
             <Text style={styles.disclaimer}>
-              This document is an informational template signed with a DID — it does not replace a prescription or an official certificate.
+              {tt('border_pass.this_document_is_an_informational_te')}
             </Text>
           </>
         )}

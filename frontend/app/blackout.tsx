@@ -9,10 +9,12 @@ import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const KEY = 'gh_blackout_snapshot';
 
 export default function Blackout() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -43,23 +45,23 @@ export default function Blackout() {
         <Pressable testID="bo-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>BLACKOUT PROTOCOL</Text>
+        <Text style={styles.title}>{tt('blackout.blackout_protocol')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
-      <View style={styles.banner}><Text style={styles.bannerText}>MOCKED · BLE MESH DEFERRED · SNAPSHOT WORKS</Text></View>
+      <View style={styles.banner}><Text style={styles.bannerText}>{tt('blackout.mocked_ble_mesh_deferred_snapshot_wo')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg }}>
         <View style={styles.hero}>
           <Ionicons name="flash-off" size={40} color={C.onInverse} />
-          <Text style={styles.heroText}>SURVIVAL MODE READY</Text>
-          <Text style={styles.heroSub}>Sync a signed snapshot to survive internet loss. In the future the phone will exchange it over Bluetooth mesh with nearby Guardian devices.</Text>
+          <Text style={styles.heroText}>{tt('blackout.survival_mode_ready')}</Text>
+          <Text style={styles.heroSub}>{tt('blackout.sync_a_signed_snapshot_to_survive_in')}</Text>
         </View>
 
         <Pressable testID="bo-refresh" onPress={refresh} disabled={loading} style={styles.refreshBtn}>
           {loading ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="cloud-download-outline" size={18} color={C.onInverse} />
-            <Text style={styles.refreshText}>SYNC SNAPSHOT NOW</Text>
+            <Text style={styles.refreshText}>{tt('blackout.sync_snapshot_now')}</Text>
           </>}
         </Pressable>
 
@@ -67,34 +69,34 @@ export default function Blackout() {
 
         {snap && (
           <View style={{ marginTop: S.lg, gap: S.md }}>
-            <Section title="IDENTITY">
+            <Section title={tt('blackout.identity')}>
               <Row lbl="NAME" val={snap.user?.name || snap.user?.email} />
               <Row lbl="DID" val={snap.user?.did} mono />
             </Section>
-            <Section title="EMERGENCY PROFILE">
+            <Section title={tt('blackout.emergency_profile')}>
               <Row lbl="BLOOD" val={snap.emergency_profile?.blood_type || '—'} />
               <Row lbl="ALLERGIES" val={snap.emergency_profile?.allergies || '—'} />
               <Row lbl="MEDS" val={snap.emergency_profile?.medications || '—'} />
               <Row lbl="CONDITIONS" val={snap.emergency_profile?.conditions || '—'} />
             </Section>
-            <Section title="CONTACT">
+            <Section title={tt('blackout.contact')}>
               <Row lbl="NAME" val={snap.emergency_profile?.emergency_contact_name || '—'} />
               <Row lbl="PHONE" val={snap.emergency_profile?.emergency_contact_phone || '—'} />
             </Section>
-            <Section title="DOCUMENTS CACHED">
+            <Section title={tt('blackout.documents_cached')}>
               {(snap.documents_meta || []).slice(0, 10).map((d: any) => (
                 <Row key={d.doc_id} lbl={d.title.toUpperCase()} val={`${Math.round(d.size/1024)} KB`} />
               ))}
             </Section>
-            <Section title="SURVIVAL TIPS">
+            <Section title={tt('blackout.survival_tips')}>
               {(snap.survival_tips || []).map((s: string, i: number) => (
                 <Text key={i} style={styles.tip}>{'•  '}{s}</Text>
               ))}
             </Section>
-            <Section title="MESH STATUS">
+            <Section title={tt('blackout.mesh_status')}>
               <View style={styles.meshRow}>
                 <View style={styles.meshDot} />
-                <Text style={styles.meshText}>BLE MESH SIMULATOR · 0 PEERS DISCOVERED (MOCKED)</Text>
+                <Text style={styles.meshText}>{tt('blackout.ble_mesh_simulator_0_peers_discovere')}</Text>
               </View>
             </Section>
           </View>

@@ -12,8 +12,10 @@ import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { ContactSheet } from '@/src/ui/ContactSheet';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function RecoverySuite() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -85,7 +87,7 @@ export default function RecoverySuite() {
         <Pressable testID="rs-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>SOVEREIGN RECOVERY</Text>
+        <Text style={st.title}>{tt('recovery_suite.sovereign_recovery')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -93,18 +95,18 @@ export default function RecoverySuite() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.fg} />}>
 
         <View style={st.scoreCard}>
-          <Text style={st.scoreLbl}>SECURITY SCORE</Text>
+          <Text style={st.scoreLbl}>{tt('recovery_suite.security_score')}</Text>
           <Text testID="rs-score" style={st.scoreVal}>{score}/100</Text>
           <View style={st.scoreBarBg}><View style={[st.scoreBar, { width: `${score}%` }]} /></View>
-          <Text style={st.scoreHint}>Guardian +25 · Social 2FA +25 · Talisman +25 · Passkey +25</Text>
+          <Text style={st.scoreHint}>{tt('recovery_suite.guardian_25_social_2fa_25_talisman_2')}</Text>
         </View>
 
         {!!msg && <Text testID="rs-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="rs-err" style={st.err}>{err}</Text>}
 
         {/* 1 — SOCIAL RECOVERY */}
-        <Text style={st.section}>1 · SOCIAL RECOVERY — GUARDIANS</Text>
-        <Text style={st.note}>If you lose access, {status?.guardians >= 2 ? '2 guardians' : 'a guardian'} will approve recovery (2-of-N quorum).</Text>
+        <Text style={st.section}>{tt('recovery_suite.1_social_recovery_guardians')}</Text>
+        <Text style={st.note}>{tt('recovery_suite.if_you_lose_access')} {status?.guardians >= 2 ? tt('recovery_suite.2_guardians') : tt('recovery_suite.a_guardian')} {tt('recovery_suite.will_approve_recovery_2_of_n_quorum')}</Text>
         {guardians.map(g => (
           <View key={g.guardian_id} style={st.row}>
             <Ionicons name="shield-checkmark-outline" size={20} color={C.brand} />
@@ -119,7 +121,7 @@ export default function RecoverySuite() {
         ))}
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
           <TextInput testID="rs-guardian-input" value={contact} onChangeText={setContact}
-            placeholder="guardian e-mail or DID" placeholderTextColor="#777"
+            placeholder={tt('recovery_suite.guardian_e_mail_or_did')} placeholderTextColor="#777"
             autoCapitalize="none" style={[st.input, { flex: 1 }]} />
           <Pressable testID="rs-guardian-contacts" onPress={() => setPickerOpen(true)} style={st.addBtn}>
             <Ionicons name="people-circle-outline" size={22} color={C.onInverse} />
@@ -133,33 +135,33 @@ export default function RecoverySuite() {
         <View style={[st.row, { marginTop: S.lg, borderColor: C.brand }]}>
           <Ionicons name="finger-print-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={st.rowTitle}>SOCIAL 2FA — GUARDIAN HANDSHAKE</Text>
-            <Text style={st.rowSub}>On every new login a guardian gets a confirmation push</Text>
+            <Text style={st.rowTitle}>{tt('recovery_suite.social_2fa_guardian_handshake')}</Text>
+            <Text style={st.rowSub}>{tt('recovery_suite.on_every_new_login_a_guardian_gets_a')}</Text>
           </View>
           <Switch testID="rs-2fa-switch" value={!!status?.social_2fa_enabled} onValueChange={toggle2fa}
             trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
         {/* 2 — QR TALISMAN */}
-        <Text style={st.section}>2 · QR TALISMAN (PAPER RESCUE KEY)</Text>
-        <Text style={st.note}>One-time offline key — print and store in a safe. {status?.talisman_ready ? 'ACTIVE ✓' : 'Not generated yet.'}</Text>
+        <Text style={st.section}>{tt('recovery_suite.2_qr_talisman_paper_rescue_key')}</Text>
+        <Text style={st.note}>{tt('recovery_suite.one_time_offline_key_print_and_store')} {status?.talisman_ready ? tt('recovery_suite.active') : tt('recovery_suite.not_generated_yet')}</Text>
         {talisman && (
           <View testID="rs-talisman-qr" style={st.qrBox}>
             <View style={{ backgroundColor: '#FFFFFF', padding: 12 }}>
               <QRCode value={talisman} size={180} backgroundColor="#FFFFFF" color="#000000" />
             </View>
-            <Text style={st.qrWarn}>⚠ SHOWN ONLY ONCE — PRINT / COPY TO PAPER, NOT TO YOUR GALLERY</Text>
+            <Text style={st.qrWarn}>{tt('recovery_suite.shown_only_once_print_copy_to_paper')}</Text>
           </View>
         )}
         <Pressable testID="rs-talisman-gen" onPress={genTalisman} disabled={busy === 'tal'} style={st.actionBtn}>
           {busy === 'tal' ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="qr-code-outline" size={18} color={C.onInverse} />
-            <Text style={st.actionText}>{status?.talisman_ready ? 'REGENERATE TALISMAN' : 'GENERATE TALISMAN'}</Text>
+            <Text style={st.actionText}>{status?.talisman_ready ? tt('recovery_suite.regenerate_talisman') : tt('recovery_suite.generate_talisman')}</Text>
           </>}
         </Pressable>
 
         {/* 3 — PASSKEYS */}
-        <Text style={st.section}>3 · PASSKEY (BIOMETRIA ZARIADENIA)</Text>
+        <Text style={st.section}>{tt('recovery_suite.3_passkey_biometria_zariadenia')}</Text>
         {(status?.passkeys || []).map((k: any) => (
           <View key={k.cred_id} style={st.row}>
             <Ionicons name="phone-portrait-outline" size={20} color={C.brand} />
@@ -172,26 +174,26 @@ export default function RecoverySuite() {
         <Pressable testID="rs-passkey-reg" onPress={regPasskey} disabled={busy === 'pk'} style={[st.actionBtn, { backgroundColor: C.surface3 }]}>
           {busy === 'pk' ? <ActivityIndicator color={C.fg} /> : <>
             <Ionicons name="finger-print" size={18} color={C.fg} />
-            <Text style={[st.actionText, { color: C.fg }]}>REGISTER PASSKEY (PLACEHOLDER)</Text>
+            <Text style={[st.actionText, { color: C.fg }]}>{tt('recovery_suite.register_passkey_placeholder')}</Text>
           </>}
         </Pressable>
 
         {/* GUARDIAN INBOX */}
         {(pending2fa.length > 0 || recRequests.length > 0) && (
           <>
-            <Text style={st.section}>I AM A GUARDIAN — PENDING CONFIRMATIONS</Text>
+            <Text style={st.section}>{tt('recovery_suite.i_am_a_guardian_pending_confirmation')}</Text>
             {pending2fa.map(h => (
               <View key={h.handshake_id} style={[st.row, { borderColor: C.warn, flexWrap: 'wrap' }]}>
                 <View style={{ flex: 1, minWidth: 150 }}>
-                  <Text style={st.rowTitle}>🔐 2FA: {h.user_name}</Text>
-                  <Text style={st.rowSub}>New login …{h.session_tail}</Text>
+                  <Text style={st.rowTitle}>{tt('recovery_suite.2fa')} {h.user_name}</Text>
+                  <Text style={st.rowSub}>{tt('recovery_suite.new_login')}{h.session_tail}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: S.sm }}>
                   <Pressable testID={`rs-2fa-ok-${h.handshake_id}`} onPress={() => confirm2fa(h.handshake_id, true)} style={st.miniOk}>
-                    <Text style={st.miniText}>JE TO ON/ONA</Text>
+                    <Text style={st.miniText}>{tt('recovery_suite.je_to_on_ona')}</Text>
                   </Pressable>
                   <Pressable testID={`rs-2fa-flag-${h.handshake_id}`} onPress={() => confirm2fa(h.handshake_id, false)} style={st.miniBad}>
-                    <Text style={[st.miniText, { color: C.onError }]}>SUSPICIOUS</Text>
+                    <Text style={[st.miniText, { color: C.onError }]}>{tt('recovery_suite.suspicious')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -199,11 +201,11 @@ export default function RecoverySuite() {
             {recRequests.map(r => (
               <View key={r.req_id} style={[st.row, { borderColor: C.error, flexWrap: 'wrap' }]}>
                 <View style={{ flex: 1, minWidth: 150 }}>
-                  <Text style={st.rowTitle}>🆘 OBNOVA: {r.user_name}</Text>
-                  <Text style={st.rowSub}>Approved {r.approvals?.length || 0}/{r.needed}</Text>
+                  <Text style={st.rowTitle}>{tt('recovery_suite.obnova')} {r.user_name}</Text>
+                  <Text style={st.rowSub}>{tt('recovery_suite.approved')} {r.approvals?.length || 0}/{r.needed}</Text>
                 </View>
                 <Pressable testID={`rs-rec-approve-${r.req_id}`} onPress={() => approveRec(r.req_id)} style={st.miniOk}>
-                  <Text style={st.miniText}>APPROVE</Text>
+                  <Text style={st.miniText}>{tt('recovery_suite.approve')}</Text>
                 </Pressable>
               </View>
             ))}

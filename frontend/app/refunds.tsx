@@ -11,8 +11,10 @@ import { sharePdf } from '@/src/pdf';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Refunds() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -38,17 +40,17 @@ export default function Refunds() {
         <Pressable testID="rf-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>CLAIM MY BENEFITS</Text>
+        <Text style={st.title}>{tt('refunds.claim_my_benefits')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.intro}>Jarvis prefills a health-expense refund claim (dental, physio, optics, diagnostics) from the receipts in your Vault and Jarvis actions — with one tap.</Text>
+        <Text style={st.intro}>{tt('refunds.jarvis_prefills_a_health_expense_ref')}</Text>
 
         <Pressable testID="rf-build" onPress={build} disabled={busy === 'build'} style={st.buildBtn}>
           {busy === 'build' ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="cash-outline" size={20} color={C.onInverse} />
-            <Text style={st.buildText}>PREPARE THE CLAIM WITH ONE TAP</Text>
+            <Text style={st.buildText}>{tt('refunds.prepare_the_claim_with_one_tap')}</Text>
           </>}
         </Pressable>
         {!!err && <Text testID="rf-err" style={st.err}>{err}</Text>}
@@ -56,35 +58,35 @@ export default function Refunds() {
         {claim && (
           <View testID="rf-claim">
             <View style={st.totalCard}>
-              <Text style={st.totalLbl}>ESTIMATED REFUND</Text>
+              <Text style={st.totalLbl}>{tt('refunds.estimated_refund')}</Text>
               <Text testID="rf-total" style={st.totalVal}>{claim.estimated_refund_eur} €</Text>
-              <Text style={st.totalMeta}>Insurer: {claim.insurer} · policy {claim.policy_paid ? 'PAID ✓' : 'UNPAID ⚠'}</Text>
+              <Text style={st.totalMeta}>{tt('refunds.insurer')} {claim.insurer} {tt('refunds.policy')} {claim.policy_paid ? tt('refunds.paid') : tt('refunds.unpaid')}</Text>
             </View>
 
-            <Text style={st.section}>CLAIM ITEMS ({claim.items?.length || 0})</Text>
+            <Text style={st.section}>{tt('refunds.claim_items')}{claim.items?.length || 0})</Text>
             {(claim.items || []).length ? claim.items.map((it: any, i: number) => (
               <View key={i} style={st.row}>
                 <Ionicons name="document-text-outline" size={18} color={C.brand} />
                 <View style={{ flex: 1 }}>
                   <Text style={st.rowTitle}>{it.specialty}</Text>
-                  <Text style={st.rowSub}>{it.source_doc || 'doklad z Trezoru'}{it.booked_slot ? ` · ${it.booked_slot}` : ''}</Text>
+                  <Text style={st.rowSub}>{it.source_doc || tt('refunds.doklad_z_trezoru')}{it.booked_slot ? ` · ${it.booked_slot}` : ''}</Text>
                 </View>
                 <Text style={st.rowVal}>{it.estimated_refund_eur} €</Text>
               </View>
             )) : (
-              <Text style={st.emptyLine}>— no refundable procedures yet. Upload dental / physio receipts to your Vault and Jarvis will process them.</Text>
+              <Text style={st.emptyLine}>{tt('refunds.no_refundable_procedures_yet_upload')}</Text>
             )}
 
             <View style={st.taxCard}>
-              <Text style={st.taxTitle}>TAX DEDUCTION</Text>
+              <Text style={st.taxTitle}>{tt('refunds.tax_deduction')}</Text>
               <Text style={st.taxText}>{claim.tax_note}</Text>
-              <Text style={st.taxText}>Dokladov v Trezore: {claim.vault_docs}</Text>
+              <Text style={st.taxText}>{tt('refunds.dokladov_v_trezore')} {claim.vault_docs}</Text>
             </View>
 
             <Pressable testID="rf-pdf" onPress={share} disabled={busy === 'pdf'} style={st.pdfBtn}>
               {busy === 'pdf' ? <ActivityIndicator color={C.fg} /> : <>
                 <Ionicons name="share-outline" size={18} color={C.fg} />
-                <Text style={st.pdfText}>SHARE PDF CLAIM (INSURER / TAXES)</Text>
+                <Text style={st.pdfText}>{tt('refunds.share_pdf_claim_insurer_taxes')}</Text>
               </>}
             </Pressable>
           </View>

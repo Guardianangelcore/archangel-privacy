@@ -10,6 +10,7 @@ import { api, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Check = { check_id: string; text: string; risk: string; verdict: string; reasons: string[]; advice: string; created_at: string };
 
@@ -20,6 +21,7 @@ const RISK_COLORS: Record<string, { bg: string; fg: string }> = {
 };
 
 export default function ScamShield() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -74,17 +76,17 @@ export default function ScamShield() {
         <Text style={styles.title}>{t('scam_shield', lang).toUpperCase()}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>AI FRAUD PROTECTION · VOICE WARNING · FAMILY ALERT</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>{tt('scam_shield.ai_fraud_protection_voice_warning_fa')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.lbl}>SMS / E-MAIL / ODKAZ NA KONTROLU</Text>
+        <Text style={styles.lbl}>{tt('scam_shield.sms_e_mail_odkaz_na_kontrolu')}</Text>
         <TextInput
           testID="ss-input"
           value={text}
           onChangeText={setText}
           multiline
           style={styles.input}
-          placeholder="Paste a suspicious message or link…"
+          placeholder={tt('scam_shield.paste_a_suspicious_message_or_link')}
           placeholderTextColor="#999"
         />
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
@@ -106,7 +108,7 @@ export default function ScamShield() {
           <View testID="ss-result" style={[styles.resultCard, { borderColor: RISK_COLORS[result.risk]?.bg || C.borderStrong }]}>
             <View style={[styles.riskBadge, { backgroundColor: RISK_COLORS[result.risk]?.bg || C.info }]}>
               <Ionicons name={result.risk === 'high' ? 'alert' : result.risk === 'medium' ? 'warning-outline' : 'checkmark-circle-outline'} size={18} color={RISK_COLORS[result.risk]?.fg} />
-              <Text style={[styles.riskText, { color: RISK_COLORS[result.risk]?.fg }]}>{result.risk.toUpperCase()} RISK</Text>
+              <Text style={[styles.riskText, { color: RISK_COLORS[result.risk]?.fg }]}>{result.risk.toUpperCase()} {tt('scam_shield.risk')}</Text>
               <Pressable testID="ss-speak" onPress={() => speak(`${result.verdict} ${result.advice}`)} hitSlop={10}>
                 <Ionicons name="volume-high-outline" size={20} color={RISK_COLORS[result.risk]?.fg} />
               </Pressable>
@@ -119,18 +121,18 @@ export default function ScamShield() {
               </View>
             ))}
             <View style={styles.adviceBox}>
-              <Text style={styles.adviceLbl}>JARVIS</Text>
+              <Text style={styles.adviceLbl}>{tt('scam_shield.jarvis')}</Text>
               <Text style={styles.adviceText}>{result.advice}</Text>
             </View>
           </View>
         )}
 
-        <Text style={styles.section}>CHECK HISTORY</Text>
+        <Text style={styles.section}>{tt('scam_shield.check_history')}</Text>
         {history.length === 0 ? <Text style={styles.noData}>{t('no_data', lang).toUpperCase()}</Text> : history.map(h => (
           <View key={h.check_id} style={styles.histRow}>
             <View style={[styles.dot, { backgroundColor: RISK_COLORS[h.risk]?.bg || C.info }]} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.histText} numberOfLines={1}>{h.text}</Text>
+              <Text style={styles.histText} numberOfLines={1}>{tx(h.text)}</Text>
               <Text style={styles.histMeta}>{h.risk.toUpperCase()} · {String(h.created_at).slice(0, 16).replace('T', ' ')}</Text>
             </View>
           </View>

@@ -6,12 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const AGENT_ICONS: Record<string, string> = {
   waitlist_hunter: 'search', marketplace: 'analytics', safety: 'heart-circle', security_sentinel: 'shield-half',
 };
 
 export default function Fortress() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [status, setStatus] = useState<any>(null);
   const [depin, setDepin] = useState<any>(null);
@@ -66,20 +68,20 @@ export default function Fortress() {
         <Pressable testID="ft-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>CYBER-FORTRESS</Text>
+        <Text style={styles.title}>{tt('fortress.cyber_fortress')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView
         contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
-        <Text style={styles.h1}>Sovereign protection & autonomy</Text>
-        <Text style={styles.sub}>DePIN infrastructure, Security Sentinel, autonomous agent swarm and Neural Bus with ZK-commitment envelopes. (DEMO layer — real P2P DePIN in Phase 3.)</Text>
+        <Text style={styles.h1}>{tt('fortress.sovereign_protection_autonomy')}</Text>
+        <Text style={styles.sub}>{tt('fortress.depin_infrastructure_security_sentin')}</Text>
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         <Pressable testID="ft-audit" onPress={runAudit} disabled={busy === 'audit'} style={styles.cta}>
-          {busy === 'audit' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>▶ STABILITY & INTEGRITY AUDIT</Text>}
+          {busy === 'audit' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('fortress.stability_integrity_audit')}</Text>}
         </Pressable>
 
         {audit && (
@@ -97,58 +99,58 @@ export default function Fortress() {
           </View>
         )}
 
-        <Text style={styles.section}>AUTONOMOUS SWARM · {status?.loop_active ? 'ACTIVE ⦿' : 'STARTING…'}</Text>
+        <Text style={styles.section}>{tt('fortress.autonomous_swarm')} {status?.loop_active ? tt('fortress.active') : tt('fortress.starting')}</Text>
         {(status?.agents || []).map((a: any) => (
           <View key={a.agent_id} style={styles.row}>
             <Ionicons name={(AGENT_ICONS[a.agent_id] || 'hardware-chip') as any} size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{a.label}</Text>
-              <Text style={styles.rowSub}>{a.desc}</Text>
-              <Text style={styles.rowMeta}>run #{a.runs} · {a.actions} actions · {a.last_status === 'ok' ? '✓ OK' : a.last_status} · every {a.interval_s}s</Text>
+              <Text style={styles.rowTitle}>{tx(a.label)}</Text>
+              <Text style={styles.rowSub}>{tx(a.desc)}</Text>
+              <Text style={styles.rowMeta}>{tt('fortress.run')}{a.runs} · {a.actions} {tt('fortress.actions')} {a.last_status === 'ok' ? tt('fortress.ok') : a.last_status} {tt('fortress.every')} {a.interval_s}s</Text>
             </View>
             <Pressable testID={`ft-run-${a.agent_id}`} onPress={() => runAgent(a.agent_id)} disabled={busy === a.agent_id} style={styles.runBtn}>
               {busy === a.agent_id ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="play" size={16} color={C.brand} />}
             </Pressable>
           </View>
         ))}
-        {(!status?.agents || status.agents.length === 0) && <Text style={styles.rowSub}>Agents register on the first loop run (within 15 s)…</Text>}
+        {(!status?.agents || status.agents.length === 0) && <Text style={styles.rowSub}>{tt('fortress.agents_register_on_the_first_loop_ru')}</Text>}
 
-        <Text style={styles.section}>DePIN NODES · NO SINGLE POINT OF FAILURE</Text>
+        <Text style={styles.section}>{tt('fortress.depin_nodes_no_single_point_of_failu')}</Text>
         <View style={styles.nodeGrid}>
           {(depin?.nodes || []).map((n: any) => (
             <View key={n.node_id} style={[styles.node, n.health < 70 && { borderColor: C.error }]}>
               <Text style={styles.nodeId}>{n.node_id}</Text>
               <Text style={styles.nodeMeta}>{n.region} · {n.role}</Text>
-              <Text style={styles.nodeMeta}>shard: {n.shard}</Text>
+              <Text style={styles.nodeMeta}>{tt('fortress.shard')} {n.shard}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                 <View style={[styles.dot, { backgroundColor: n.health >= 70 ? '#5FA779' : C.error }]} />
-                <Text style={styles.nodeHealth}>{Math.round(n.health)}% · {n.latency_ms}ms · heals {n.self_heals}</Text>
+                <Text style={styles.nodeHealth}>{Math.round(n.health)}% · {n.latency_ms}{tt('fortress.ms_heals')} {n.self_heals}</Text>
               </View>
             </View>
           ))}
         </View>
         <Pressable testID="ft-migrate" onPress={migrate} disabled={busy === 'migrate'} style={styles.migrateBtn}>
-          {busy === 'migrate' ? <ActivityIndicator color={C.error} /> : <Text style={styles.migrateText}>⛨ SAFE-MIGRATION — MOVE CORE TO SAFE NODES</Text>}
+          {busy === 'migrate' ? <ActivityIndicator color={C.error} /> : <Text style={styles.migrateText}>{tt('fortress.safe_migration_move_core_to_safe_nod')}</Text>}
         </Pressable>
 
-        <Text style={styles.section}>SECURITY SENTINEL · UDALOSTI</Text>
+        <Text style={styles.section}>{tt('fortress.security_sentinel_udalosti')}</Text>
         {secEvents.slice(0, 8).map((e: any) => (
           <View key={e.event_id} style={styles.evRow}>
             <Ionicons name={e.kind === 'self_heal' ? 'bandage' : e.kind === 'safe_migration' ? 'swap-horizontal' : 'warning'} size={15} color={e.severity === 'warning' ? C.error : C.brand} />
             <Text style={styles.evText} numberOfLines={2}>{e.detail}</Text>
           </View>
         ))}
-        {secEvents.length === 0 && <Text style={styles.rowSub}>No security events — the system is clean.</Text>}
+        {secEvents.length === 0 && <Text style={styles.rowSub}>{tt('fortress.no_security_events_the_system_is_cle')}</Text>}
 
-        <Text style={styles.section}>NEURAL BUS · ZK-COMMITMENT ENVELOPES</Text>
+        <Text style={styles.section}>{tt('fortress.neural_bus_zk_commitment_envelopes')}</Text>
         {(status?.bus || []).slice(0, 8).map((b: any) => (
           <View key={b.event_id} style={styles.evRow}>
             <Ionicons name="git-network" size={14} color={C.info} />
-            <Text style={styles.evText} numberOfLines={1}>{b.topic} ← {b.source} · zk:{(b.zkp?.commitment || '').slice(0, 12)}…</Text>
+            <Text style={styles.evText} numberOfLines={1}>{b.topic} ← {b.source} {tt('fortress.zk')}{(b.zkp?.commitment || '').slice(0, 12)}…</Text>
           </View>
         ))}
 
-        <Text style={styles.disclaimer}>DePIN, ZKP and Security Sentinel run as a fully functional simulation layer in this deployment. Real P2P distribution and on-chain ZK proofs are planned for Phase 3.</Text>
+        <Text style={styles.disclaimer}>{tt('fortress.depin_zkp_and_security_sentinel_run')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

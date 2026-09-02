@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -31,6 +32,7 @@ const RELATIONS = [
 ];
 
 export default function FamilyContacts() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,7 @@ export default function FamilyContacts() {
         <Pressable testID="fc-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/family'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>FAMILY CONTACTS</Text>
+        <Text style={st.title}>{tt('family_contacts.family_contacts')}</Text>
         <Pressable testID="fc-settings" onPress={() => { tap(); router.push('/(tabs)/profile'); }} hitSlop={10}>
           <Ionicons name="settings-outline" size={20} color={C.onS3} />
         </Pressable>
@@ -114,18 +116,18 @@ export default function FamilyContacts() {
       )}
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.sub}>Your family emergency numbers — encrypted, only in your Vault. Call or send an SOS with one tap.</Text>
+        <Text style={st.sub}>{tt('family_contacts.your_family_emergency_numbers_encryp')}</Text>
 
         <Pressable testID="fc-add" onPress={() => { tap('medium'); setErr(''); setShow(true); }} style={st.addBtn}>
           <Ionicons name="person-add" size={20} color={C.onInverse} />
-          <Text style={st.addBtnText}>+ ADD FAMILY MEMBER</Text>
+          <Text style={st.addBtnText}>{tt('family_contacts.add_family_member')}</Text>
         </Pressable>
 
         {loading && <ActivityIndicator color={C.brand} style={{ marginTop: S.xl }} />}
         {!loading && contacts.length === 0 && (
           <View style={st.empty}>
             <Ionicons name="people-outline" size={44} color={C.info} />
-            <Text style={st.emptyText}>No contacts yet.{'\n'}Add your first family member — just in case.</Text>
+            <Text style={st.emptyText}>{tt('family_contacts.no_contacts_yet')}{'\n'}{tt('family_contacts.add_your_first_family_member_just_in')}</Text>
           </View>
         )}
 
@@ -141,25 +143,25 @@ export default function FamilyContacts() {
             </View>
             {confirmId === c.contact_id ? (
               <View style={st.confirmRow}>
-                <Text style={st.confirmText}>Really remove {c.name}?</Text>
+                <Text style={st.confirmText}>{tt('family_contacts.really_remove')} {c.name}?</Text>
                 <Pressable testID={`fc-del-yes-${c.contact_id}`} onPress={() => remove(c)} style={st.confirmYes}>
-                  {busyId === c.contact_id ? <ActivityIndicator size="small" color={C.onError} /> : <Text style={st.confirmYesText}>YES, REMOVE</Text>}
+                  {busyId === c.contact_id ? <ActivityIndicator size="small" color={C.onError} /> : <Text style={st.confirmYesText}>{tt('family_contacts.yes_remove')}</Text>}
                 </Pressable>
                 <Pressable testID={`fc-del-no-${c.contact_id}`} onPress={() => setConfirmId(null)} style={st.confirmNo}>
-                  <Text style={st.confirmNoText}>NIE</Text>
+                  <Text style={st.confirmNoText}>{tt('family_contacts.nie')}</Text>
                 </Pressable>
               </View>
             ) : (
               <View style={st.actionRow}>
                 <Pressable testID={`fc-call-${c.contact_id}`} onPress={() => call(c)} style={[st.action, st.actionCall]}>
                   <Ionicons name="call" size={16} color={C.onInverse} />
-                  <Text style={st.actionTextInv}>CALL</Text>
+                  <Text style={st.actionTextInv}>{tt('family_contacts.call')}</Text>
                 </Pressable>
                 <Pressable testID={`fc-sos-${c.contact_id}`} onPress={() => sos(c)} disabled={busyId === c.contact_id} style={[st.action, st.actionSos]}>
                   {busyId === c.contact_id ? <ActivityIndicator size="small" color={C.onError} /> : (
                     <>
                       <Ionicons name="warning" size={16} color={C.onError} />
-                      <Text style={[st.actionTextInv, { color: C.onError }]}>SEND SOS</Text>
+                      <Text style={[st.actionTextInv, { color: C.onError }]}>{tt('family_contacts.send_sos')}</Text>
                     </>
                   )}
                 </Pressable>
@@ -171,7 +173,7 @@ export default function FamilyContacts() {
           </View>
         ))}
 
-        <Text style={st.footNote}>🔒 Numbers are encrypted (Fernet AES) — they never leave your sovereign vault in readable form.</Text>
+        <Text style={st.footNote}>{tt('family_contacts.numbers_are_encrypted_fernet_aes_the')}</Text>
       </ScrollView>
 
       {/* ADD CONTACT MODAL */}
@@ -180,22 +182,22 @@ export default function FamilyContacts() {
           <Pressable style={{ flex: 1 }} onPress={() => setShow(false)} />
           <View style={st.sheet}>
             <View style={st.sheetHandle} />
-            <Text style={st.sheetTitle}>NEW FAMILY MEMBER</Text>
+            <Text style={st.sheetTitle}>{tt('family_contacts.new_family_member')}</Text>
 
-            <Text style={st.label}>MENO</Text>
-            <TextInput testID="fc-name" value={name} onChangeText={setName} placeholder="e.g. Maria"
+            <Text style={st.label}>{tt('family_contacts.meno')}</Text>
+            <TextInput testID="fc-name" value={name} onChangeText={setName} placeholder={tt('family_contacts.e_g_maria')}
               placeholderTextColor={C.info} style={st.input} autoCapitalize="words" />
 
-            <Text style={st.label}>PHONE NUMBER</Text>
+            <Text style={st.label}>{tt('family_contacts.phone_number')}</Text>
             <TextInput testID="fc-phone" value={phone} onChangeText={setPhone} placeholder="+421 900 123 456"
               placeholderTextColor={C.info} style={st.input} keyboardType="phone-pad" />
 
-            <Text style={st.label}>RELATIONSHIP</Text>
+            <Text style={st.label}>{tt('family_contacts.relationship')}</Text>
             <View style={st.relRow}>
               {RELATIONS.map(r => (
                 <Pressable key={r.id} testID={`fc-rel-${r.id}`} onPress={() => { tap('light'); setRelation(r.id); }}
                   style={[st.relChip, relation === r.id && st.relChipActive]}>
-                  <Text style={[st.relChipText, relation === r.id && { color: C.onInverse }]}>{r.label}</Text>
+                  <Text style={[st.relChipText, relation === r.id && { color: C.onInverse }]}>{tx(r.label)}</Text>
                 </Pressable>
               ))}
             </View>
@@ -206,12 +208,12 @@ export default function FamilyContacts() {
               {saving ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="shield-checkmark" size={18} color={C.onInverse} />
-                  <Text style={st.saveBtnText}>SAVE TO FAMILY SHIELD</Text>
+                  <Text style={st.saveBtnText}>{tt('family_contacts.save_to_family_shield')}</Text>
                 </>
               )}
             </Pressable>
             <Pressable testID="fc-cancel" onPress={() => setShow(false)} style={st.cancelBtn}>
-              <Text style={st.cancelText}>CANCEL</Text>
+              <Text style={st.cancelText}>{tt('family_contacts.cancel')}</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>

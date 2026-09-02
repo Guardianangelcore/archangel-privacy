@@ -7,12 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const OBSIDIAN = '#0B0B0D';
 const PLATINUM = '#E5E4E2';
 const GREEN = '#5FA779';
 
 export default function Launch() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [checks, setChecks] = useState<any[]>([]);
   const [ready, setReady] = useState(false);
@@ -60,21 +62,21 @@ export default function Launch() {
         <Pressable testID="lc-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={PLATINUM} />
         </Pressable>
-        <Text style={st.title}>LAUNCH CONTROL</Text>
+        <Text style={st.title}>{tt('launch.launch_control')}</Text>
         <Pressable testID="lc-rerun" onPress={runChecks} hitSlop={12}>
           <Ionicons name="refresh" size={22} color={PLATINUM} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.sub}>Final check before command handover. Guardian Angel takes control.</Text>
+        <Text style={st.sub}>{tt('launch.final_check_before_command_handover')}</Text>
         {busy ? <ActivityIndicator color={PLATINUM} style={{ marginTop: 40 }} /> : (
           <>
             {checks.map((c, i) => (
               <View key={i} style={[st.checkRow, { borderColor: c.ok ? GREEN : '#C25450' }]}>
                 <Ionicons name={c.ok ? 'checkmark-circle' : 'close-circle'} size={22} color={c.ok ? GREEN : '#C25450'} />
                 <View style={{ flex: 1 }}>
-                  <Text style={st.checkLabel}>{c.label}</Text>
+                  <Text style={st.checkLabel}>{tx(c.label)}</Text>
                   <Text style={st.checkDetail}>{c.detail}</Text>
                 </View>
               </View>
@@ -84,14 +86,14 @@ export default function Launch() {
             <View testID="lc-deploy" style={[st.deployCard, { borderColor: ready ? GREEN : '#C25450' }]}>
               <Ionicons name="rocket" size={40} color={ready ? GREEN : '#8A8A93'} />
               <Text style={[st.deployTitle, ready && { color: GREEN }]}>
-                {ready ? 'READY FOR PUBLISH ✓' : 'AWAITING GREEN CHECKS'}
+                {ready ? tt('launch.ready_for_publish') : tt('launch.awaiting_green_checks')}
               </Text>
               <Text style={st.deployText}>
-                DEPLOY TO PRODUCTION:{'\n'}
-                1. Press the PUBLISH button (top right in Emergent){'\n'}
-                2. Deploy your app → production URL{'\n'}
-                3. Generate iOS and Android builds → real devices{'\n\n'}
-                Archangel OS — the global sovereign standard. Command handed over. 🫡
+                {tt('launch.deploy_to_production')}{'\n'}
+                {tt('launch.1_press_the_publish_button_top_right')}{'\n'}
+                {tt('launch.2_deploy_your_app_production_url')}{'\n'}
+                {tt('launch.3_generate_ios_and_android_builds_re')}{'\n\n'}
+                {tt('launch.archangel_os_the_global_sovereign_st')}
               </Text>
             </View>
           </>

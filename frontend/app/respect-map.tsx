@@ -9,11 +9,13 @@ import { useAuth } from '@/src/auth';
 import { WheelField } from '@/src/ui/fields';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Provider = { provider_id: string; name: string; city: string; specialty: string; avg_score: number; review_count: number; tags: string[]; avg_minority_safety?: number | null; avg_waiting_weeks?: number | null; avg_financial_transparency?: number | null };
 const TAGS = ['LGBTI+', 'SENIOR-FRIENDLY', 'DISABILITY', 'ROMA', 'MULTILINGUAL', 'RESPECT'];
 
 export default function RespectMap() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -49,17 +51,17 @@ export default function RespectMap() {
         <Pressable testID="rm-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>RESPECT MAP</Text>
+        <Text style={styles.title}>{tt('respect_map.respect_map')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>CROWD-SOURCED · LGBTI+ · SENIOR · DISABILITY</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>{tt('respect_map.crowd_sourced_lgbti_senior_disabilit')}</Text></View>
 
       <FlatList
         data={items}
         keyExtractor={i => i.provider_id}
         contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
-        ListEmptyComponent={!loading ? <Text style={styles.empty}>NO PROVIDERS RATED YET</Text> : null}
+        ListEmptyComponent={!loading ? <Text style={styles.empty}>{tt('respect_map.no_providers_rated_yet')}</Text> : null}
         renderItem={({ item }) => (
           <View testID={`prov-${item.provider_id}`} style={styles.card}>
             <View style={styles.rowSpread}>
@@ -92,7 +94,7 @@ export default function RespectMap() {
                 <Text style={styles.metricLbl}>{t('fin_transparency', lang).toUpperCase()}</Text>
               </View>
             </View>
-            <Text style={styles.reviewCount}>{item.review_count} REVIEW{item.review_count > 1 ? 'S' : ''}</Text>
+            <Text style={styles.reviewCount}>{item.review_count} {tt('respect_map.review')}{item.review_count > 1 ? 'S' : ''}</Text>
           </View>
         )}
       />
@@ -105,12 +107,12 @@ export default function RespectMap() {
       <Modal visible={modal} animationType="slide" transparent>
         <View style={styles.modalRoot}>
           <View style={styles.modalCard}>
-            <View style={styles.modalHead}><Text style={styles.modalTitle}>RATE PROVIDER</Text>
+            <View style={styles.modalHead}><Text style={styles.modalTitle}>{tt('respect_map.rate_provider')}</Text>
               <Pressable onPress={() => setModal(false)}><Ionicons name="close" size={22} color={C.onInverse} /></Pressable></View>
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }}>
-              <TextInput testID="rm-name" placeholder="Provider name" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
-              <TextInput testID="rm-spec" placeholder="Specialty" value={f.specialty} onChangeText={v => setF({ ...f, specialty: v })} style={styles.input} placeholderTextColor="#999" />
-              <TextInput testID="rm-city" placeholder="City" value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="rm-name" placeholder={tt('respect_map.provider_name')} value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="rm-spec" placeholder={tt('respect_map.specialty')} value={f.specialty} onChangeText={v => setF({ ...f, specialty: v })} style={styles.input} placeholderTextColor="#999" />
+              <TextInput testID="rm-city" placeholder={tt('respect_map.city')} value={f.city} onChangeText={v => setF({ ...f, city: v })} style={styles.input} placeholderTextColor="#999" />
               <Text style={styles.lbl}>{t('respect_score', lang).toUpperCase()}</Text>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {[1,2,3,4,5].map(n => (
@@ -119,7 +121,7 @@ export default function RespectMap() {
                   </Pressable>
                 ))}
               </View>
-              <Text style={styles.lbl}>TAGS</Text>
+              <Text style={styles.lbl}>{tt('respect_map.tags')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 {TAGS.map(tg => (
                   <Pressable testID={`tag-${tg}`} key={tg} onPress={() => toggleTag(tg)} style={[styles.chip, f.tags.includes(tg) && styles.chipActive]}>
@@ -127,7 +129,7 @@ export default function RespectMap() {
                   </Pressable>
                 ))}
               </View>
-              <Text style={styles.lbl}>{t('minority_safety', lang).toUpperCase()} (LGBTI+)</Text>
+              <Text style={styles.lbl}>{t('minority_safety', lang).toUpperCase()} {tt('respect_map.lgbti')}</Text>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {[1,2,3,4,5].map(n => (
                   <Pressable testID={`ms-${n}`} key={n} onPress={() => setF({ ...f, minority_safety: f.minority_safety === n ? 0 : n })} style={[styles.starChip, f.minority_safety === n && styles.starChipActive]}>
@@ -136,7 +138,7 @@ export default function RespectMap() {
                 ))}
               </View>
               <Text style={styles.lbl}>{t('real_wait', lang).toUpperCase()}</Text>
-              <WheelField testID="rm-wait" title="WAITING (WEEKS)" min={0} max={104} unit="wks" value={f.waiting_weeks} onChange={v => setF({ ...f, waiting_weeks: v })} placeholder="8" style={styles.input} />
+              <WheelField testID="rm-wait" title={tt('respect_map.waiting_weeks')} min={0} max={104} unit="wks" value={f.waiting_weeks} onChange={v => setF({ ...f, waiting_weeks: v })} placeholder="8" style={styles.input} />
               <Text style={styles.lbl}>{t('fin_transparency', lang).toUpperCase()}</Text>
               <View style={{ flexDirection: 'row', gap: S.sm }}>
                 {[1,2,3,4,5].map(n => (
@@ -145,9 +147,9 @@ export default function RespectMap() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput testID="rm-review" placeholder="Review (optional)" value={f.review} onChangeText={v => setF({ ...f, review: v })} multiline style={[styles.input, { minHeight: 80 }]} placeholderTextColor="#999" />
+              <TextInput testID="rm-review" placeholder={tt('respect_map.review_optional')} value={f.review} onChangeText={v => setF({ ...f, review: v })} multiline style={[styles.input, { minHeight: 80 }]} placeholderTextColor="#999" />
             </ScrollView>
-            <Pressable testID="rm-submit" onPress={submit} style={styles.saveBtn}><Text style={styles.saveBtnText}>SUBMIT</Text></Pressable>
+            <Pressable testID="rm-submit" onPress={submit} style={styles.saveBtn}><Text style={styles.saveBtnText}>{tt('respect_map.submit')}</Text></Pressable>
           </View>
         </View>
       </Modal>

@@ -8,8 +8,10 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/auth';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function EmergencyQR() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const router = useRouter();
   const [prof, setProf] = useState<any>({});
@@ -54,7 +56,7 @@ export default function EmergencyQR() {
         <Pressable testID="qr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>EMERGENCY QR</Text>
+        <Text style={styles.title}>{tt('emergency_qr.emergency_qr')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -62,7 +64,7 @@ export default function EmergencyQR() {
         {prof.is_donor && (
           <View style={styles.donorBadge}>
             <Ionicons name="heart" size={16} color={C.onError} />
-            <Text style={styles.donorBadgeText}>ORGAN DONOR</Text>
+            <Text style={styles.donorBadgeText}>{tt('emergency_qr.organ_donor')}</Text>
           </View>
         )}
 
@@ -74,21 +76,21 @@ export default function EmergencyQR() {
         <Text style={styles.did}>{user?.did}</Text>
 
         <View style={styles.table}>
-          <Row label="BLOOD TYPE" value={prof.blood_type || '—'} big />
-          <Row label="ALLERGIES" value={prof.allergies || '—'} />
-          <Row label="CONDITIONS" value={prof.conditions || '—'} />
-          <Row label="MEDICATIONS" value={prof.medications || '—'} />
-          <Row label="EMERGENCY CONTACT" value={`${prof.emergency_contact_name || ''}\n${prof.emergency_contact_phone || ''}`.trim() || '—'} />
-          {prof.is_donor && <Row label="DONOR ORGANS" value={prof.donor_organs || 'All'} />}
-          {!!prof.life_testament && <Row label="LIFE TESTAMENT" value={prof.life_testament} />}
+          <Row label={tt('emergency_qr.blood_type')} value={prof.blood_type || '—'} big />
+          <Row label={tt('emergency_qr.allergies')} value={prof.allergies || '—'} />
+          <Row label={tt('emergency_qr.conditions')} value={prof.conditions || '—'} />
+          <Row label={tt('emergency_qr.medications')} value={prof.medications || '—'} />
+          <Row label={tt('emergency_qr.emergency_contact')} value={`${prof.emergency_contact_name || ''}\n${prof.emergency_contact_phone || ''}`.trim() || '—'} />
+          {prof.is_donor && <Row label={tt('emergency_qr.donor_organs')} value={prof.donor_organs || 'All'} />}
+          {!!prof.life_testament && <Row label={tt('emergency_qr.life_testament')} value={prof.life_testament} />}
         </View>
 
         <Pressable testID="qr-share" onPress={shareProfile} style={styles.shareBtn}>
           <Ionicons name="share-outline" size={18} color="#FFF" />
-          <Text style={styles.shareText}>SHARE EMERGENCY PROFILE</Text>
+          <Text style={styles.shareText}>{tt('emergency_qr.share_emergency_profile')}</Text>
         </Pressable>
 
-        <Text style={styles.footer}>OFFLINE-CAPABLE · SCANNABLE BY FIRST RESPONDERS</Text>
+        <Text style={styles.footer}>{tt('emergency_qr.offline_capable_scannable_by_first_r')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

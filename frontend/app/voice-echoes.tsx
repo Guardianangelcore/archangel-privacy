@@ -12,6 +12,7 @@ import { useAuth } from '@/src/auth';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { useI18n } from '@/src/i18n-context';
 
 const PRESETS = [
   'We love you, Grandma! Thinking of you. ❤️',
@@ -21,6 +22,7 @@ const PRESETS = [
 ];
 
 export default function VoiceEchoes() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [echoes, setEchoes] = useState<any[]>([]);
@@ -143,7 +145,7 @@ export default function VoiceEchoes() {
         <Pressable testID="ve-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={28} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>ODKAZY OD RODINY</Text>
+        <Text style={st.title}>{tt('voice_echoes.odkazy_od_rodiny')}</Text>
         <Pressable testID="ve-add" onPress={() => setAdd(true)} hitSlop={10}>
           <Ionicons name="add-circle" size={28} color={C.brand} />
         </Pressable>
@@ -151,15 +153,15 @@ export default function VoiceEchoes() {
 
       {loading ? <ActivityIndicator color={C.brand} style={{ marginTop: 60 }} /> : (
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 100, gap: S.md }}>
-          <Text style={st.hint}>Tap a card — Jarvis reads the message aloud. 🔊</Text>
+          <Text style={st.hint}>{tt('voice_echoes.tap_a_card_jarvis_reads_the_message')}</Text>
           {!!sentMsg && <View style={st.sentBox}><Text testID="ve-sent-msg" style={st.sentText}>{sentMsg}</Text></View>}
           {echoes.length === 0 && (
             <View style={st.empty}>
               <Ionicons name="heart" size={44} color={C.brand} />
-              <Text style={st.emptyTitle}>No messages yet</Text>
-              <Text style={st.emptySub}>Family can send a message via the + button above. The first one brings the most joy.</Text>
+              <Text style={st.emptyTitle}>{tt('voice_echoes.no_messages_yet')}</Text>
+              <Text style={st.emptySub}>{tt('voice_echoes.family_can_send_a_message_via_the_bu')}</Text>
               <Pressable testID="ve-empty-add" onPress={() => setAdd(true)} style={st.emptyBtn}>
-                <Text style={st.emptyBtnText}>SEND THE FIRST MESSAGE</Text>
+                <Text style={st.emptyBtnText}>{tt('voice_echoes.send_the_first_message')}</Text>
               </Pressable>
             </View>
           )}
@@ -172,9 +174,9 @@ export default function VoiceEchoes() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={st.from}>{e.from_name}</Text>
-                  {!e.heard && <View style={st.newBadge}><Text style={st.newBadgeText}>NEW</Text></View>}
+                  {!e.heard && <View style={st.newBadge}><Text style={st.newBadgeText}>{tt('voice_echoes.new')}</Text></View>}
                 </View>
-                <Text style={st.msgText} numberOfLines={3}>{e.message}</Text>
+                <Text style={st.msgText} numberOfLines={3}>{tx(e.message)}</Text>
               </View>
             </Pressable>
           ))}
@@ -185,13 +187,13 @@ export default function VoiceEchoes() {
         <Pressable style={st.overlay} onPress={() => setAdd(false)}>
           <Pressable style={st.sheet} onPress={() => {}}>
             <View style={st.sheetHandle} />
-            <Text style={st.sheetTitle}>Send a voice message</Text>
+            <Text style={st.sheetTitle}>{tt('voice_echoes.send_a_voice_message')}</Text>
             {recipients.length > 0 && (<>
-              <Text style={st.lbl}>TO WHOM?</Text>
+              <Text style={st.lbl}>{tt('voice_echoes.to_whom')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                 <Pressable testID="ve-target-self" onPress={() => { tap(); setTarget(null); }} style={[st.targetChip, !target && st.targetChipOn]}>
                   <Ionicons name="phone-portrait-outline" size={14} color={!target ? C.onInverse : C.fg} />
-                  <Text style={[st.targetText, !target && { color: C.onInverse }]}>Toto zariadenie</Text>
+                  <Text style={[st.targetText, !target && { color: C.onInverse }]}>{tt('voice_echoes.toto_zariadenie')}</Text>
                 </Pressable>
                 {recipients.map(r => (
                   <Pressable testID={`ve-target-${r.user_id}`} key={r.user_id} onPress={() => { tap(); setTarget(r); }}
@@ -201,35 +203,35 @@ export default function VoiceEchoes() {
                   </Pressable>
                 ))}
               </View>
-              {!!target && <Text style={st.remoteHint}>💌 The message goes remotely to: {target.name} ({target.email})</Text>}
+              {!!target && <Text style={st.remoteHint}>{tt('voice_echoes.the_message_goes_remotely_to')} {target.name} ({target.email})</Text>}
             </>)}
             {!target && (<>
-              <Text style={st.lbl}>KTO POSIELA?</Text>
-              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder="e.g. Granddaughter / Inner circle" placeholderTextColor="#888" />
+              <Text style={st.lbl}>{tt('voice_echoes.kto_posiela')}</Text>
+              <TextInput testID="ve-from" value={fromName} onChangeText={setFromName} style={st.input} placeholder={tt('voice_echoes.e_g_granddaughter_inner_circle')} placeholderTextColor="#888" />
             </>)}
 
             {/* 🎙 REAL VOICE RECORDING — own voice instead of Jarvis */}
-            <Text style={st.lbl}>IN YOUR OWN VOICE — 1 TAP</Text>
+            <Text style={st.lbl}>{tt('voice_echoes.in_your_own_voice_1_tap')}</Text>
             {Platform.OS === 'web' ? (
-              <Text style={st.webNote}>🎙 Own-voice recording works in the mobile app (Expo Go / native build).</Text>
+              <Text style={st.webNote}>{tt('voice_echoes.own_voice_recording_works_in_the_mob')}</Text>
             ) : (
               <Pressable testID="ve-record" onPress={toggleRecord} disabled={busy}
                 style={[st.recBtn, recording && st.recBtnOn]}>
                 {busy ? <ActivityIndicator color={recording ? C.onError : C.onInverse} /> : (<>
                   <Ionicons name={recording ? 'stop-circle' : 'mic'} size={26} color={recording ? C.onError : C.onInverse} />
                   <Text style={[st.recText, recording && { color: C.onError }]}>
-                    {recording ? 'RECORDING… TAP TO SEND' : 'RECORD IN YOUR OWN VOICE'}
+                    {recording ? tt('voice_echoes.recording_tap_to_send') : tt('voice_echoes.record_in_your_own_voice')}
                   </Text>
                 </>)}
               </Pressable>
             )}
             {micBlocked && (
               <Pressable testID="ve-mic-settings" onPress={() => Linking.openSettings()} style={st.micSettings}>
-                <Text style={st.micSettingsText}>Microphone is blocked — OPEN SETTINGS</Text>
+                <Text style={st.micSettingsText}>{tt('voice_echoes.microphone_is_blocked_open_settings')}</Text>
               </Pressable>
             )}
 
-            <Text style={st.lbl}>QUICK MESSAGES — 1 TAP</Text>
+            <Text style={st.lbl}>{tt('voice_echoes.quick_messages_1_tap')}</Text>
             <View style={{ gap: S.sm }}>
               {PRESETS.map((p, i) => (
                 <Pressable testID={`ve-preset-${i}`} key={i} onPress={() => send(p)} disabled={busy}
@@ -238,10 +240,10 @@ export default function VoiceEchoes() {
                 </Pressable>
               ))}
             </View>
-            <Text style={st.lbl}>OR YOUR OWN TEXT</Text>
-            <TextInput testID="ve-msg" value={msg} onChangeText={setMsg} style={[st.input, { minHeight: 60 }]} multiline placeholder="Write a message…" placeholderTextColor="#888" />
+            <Text style={st.lbl}>{tt('voice_echoes.or_your_own_text')}</Text>
+            <TextInput testID="ve-msg" value={msg} onChangeText={setMsg} style={[st.input, { minHeight: 60 }]} multiline placeholder={tt('voice_echoes.write_a_message')} placeholderTextColor="#888" />
             <Pressable testID="ve-send" onPress={() => send()} disabled={busy || !msg.trim()} style={[st.sendBtn, !msg.trim() && { opacity: 0.5 }]}>
-              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.sendText}>SEND MESSAGE</Text>}
+              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.sendText}>{tt('voice_echoes.send_message')}</Text>}
             </Pressable>
           </Pressable>
         </Pressable>

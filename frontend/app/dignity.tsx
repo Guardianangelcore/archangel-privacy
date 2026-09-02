@@ -11,6 +11,7 @@ import { ContactSheet } from '@/src/ui/ContactSheet';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const CURRENCIES = ['EUR', 'CZK', 'CRYPTO'];
 const BURIALS = [
@@ -20,6 +21,7 @@ const BURIALS = [
 ];
 
 export default function Dignity() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -93,10 +95,10 @@ export default function Dignity() {
         <Pressable testID="dg-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>FINAL DIGNITY</Text>
+        <Text style={styles.title}>{tt('dignity.final_dignity')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>FUNERAL FUND · DIGNITY FOR EVERYONE · RELIEVES THE BEREAVED</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>{tt('dignity.funeral_fund_dignity_for_everyone_re')}</Text></View>
 
       <ScrollView
         contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }}
@@ -110,18 +112,18 @@ export default function Dignity() {
           <View style={styles.lockRow}>
             <Ionicons name={released ? 'lock-open' : 'lock-closed'} size={18} color={released ? C.brand : C.error} />
             <Text style={[styles.lockText, { color: released ? C.brand : C.error }]}>
-              {released ? 'RELEASED' : fund?.death_verified ? 'VERIFIED · READY TO RELEASE' : 'LOCKED UNTIL DEATH VERIFICATION'}
+              {released ? tt('dignity.released') : fund?.death_verified ? tt('dignity.verified_ready_to_release') : tt('dignity.locked_until_death_verification')}
             </Text>
           </View>
           <Text testID="dg-balance" style={styles.balance}>{(fund?.balance ?? 0).toFixed(0)}</Text>
-          <Text style={styles.balanceCur}>{fund?.currency || 'EUR'} · FUNERAL FUND</Text>
+          <Text style={styles.balanceCur}>{fund?.currency || 'EUR'} {tt('dignity.funeral_fund')}</Text>
           {released && fund?.released_to ? <Text style={styles.releasedTo}>→ {fund.released_to.name} ({fund.released_amount} {fund.currency})</Text> : null}
         </View>
 
         {!released && (
           <>
             {/* Deposit */}
-            <Text style={styles.section}>DEPOSIT (MOCKED RAILS · REAL AML LEDGER)</Text>
+            <Text style={styles.section}>{tt('dignity.deposit_mocked_rails_real_aml_ledger')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               {CURRENCIES.map(c => (
                 <Pressable testID={`dg-cur-${c}`} key={c} onPress={() => setCurrency(c)} style={[styles.chip, currency === c && styles.chipActive]}>
@@ -135,25 +137,25 @@ export default function Dignity() {
               ))}
             </View>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <WheelField testID="dg-amount" title="SUMA €" min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder="Suma €" style={[styles.input, { flex: 1 }]} />
+              <WheelField testID="dg-amount" title={tt('dignity.suma')} min={1} max={500} unit="€" value={amount} onChange={setAmount} placeholder={tt('dignity.suma_1m9j')} style={[styles.input, { flex: 1 }]} />
               <Pressable testID="dg-deposit" onPress={deposit} disabled={busy} style={styles.priBtn}>
-                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>DEPOSIT</Text>}
+                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.priBtnText}>{tt('dignity.deposit')}</Text>}
               </Pressable>
             </View>
 
             {/* Recurring plan */}
-            <Text style={styles.section}>AUTOMATIC MONTHLY SAVING</Text>
+            <Text style={styles.section}>{tt('dignity.automatic_monthly_saving')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, alignItems: 'center' }}>
-              <WheelField testID="dg-plan-amount" title="MONTHLY €" min={5} max={500} step={5} unit="€" value={plan.monthly_amount} onChange={v => setPlan({ ...plan, monthly_amount: v })} placeholder="€/mo." style={[styles.input, { flex: 1 }]} />
+              <WheelField testID="dg-plan-amount" title={tt('dignity.monthly')} min={5} max={500} step={5} unit="€" value={plan.monthly_amount} onChange={v => setPlan({ ...plan, monthly_amount: v })} placeholder={tt('dignity.mo')} style={[styles.input, { flex: 1 }]} />
               <Switch testID="dg-plan-enabled" value={plan.enabled} onValueChange={v => setPlan({ ...plan, enabled: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
               <Pressable testID="dg-plan-save" onPress={savePlan} style={styles.priBtn}><Text style={styles.priBtnText}>{t('save', lang).toUpperCase()}</Text></Pressable>
             </View>
-            <Text style={styles.hint}>The configured amount is auto-credited monthly ({plan.monthly_amount || 0} {currency}/mo.).</Text>
+            <Text style={styles.hint}>{tt('dignity.the_configured_amount_is_auto_credit')}{plan.monthly_amount || 0} {currency}{tt('dignity.mo_yt3k')}</Text>
           </>
         )}
 
         {/* Beneficiary */}
-        <Text style={styles.section}>BENEFICIARY AFTER RELEASE</Text>
+        <Text style={styles.section}>{tt('dignity.beneficiary_after_release')}</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {[{ k: 'proxy', l: 'PROXY' }, { k: 'funeral_director', l: 'FUNERAL DIRECTOR' }].map(o => (
             <Pressable testID={`dg-ben-${o.k}`} key={o.k} onPress={() => setBen({ ...ben, type: o.k })} style={[styles.chip, { flex: 1, alignItems: 'center' }, ben.type === o.k && styles.chipActive]}>
@@ -161,8 +163,8 @@ export default function Dignity() {
             </Pressable>
           ))}
         </View>
-        <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? 'Proxy name (auto from proxy directive)' : 'Funeral Services Ltd.'} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
-        <TextInput testID="dg-ben-contact" placeholder="Kontakt / IBAN" value={ben.contact} onChangeText={v => setBen({ ...ben, contact: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-ben-name" placeholder={ben.type === 'proxy' ? tt('dignity.proxy_name_auto_from_proxy_directive') : tt('dignity.funeral_services_ltd')} value={ben.name} onChangeText={v => setBen({ ...ben, name: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-ben-contact" placeholder={tt('dignity.kontakt_iban')} value={ben.contact} onChangeText={v => setBen({ ...ben, contact: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
         <Pressable testID="dg-ben-pick" onPress={() => setBenPick(true)} style={[styles.secBtn, { marginTop: S.sm, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }]}>
           <Ionicons name="people-outline" size={16} color={C.brand} />
           <Text style={styles.secBtnText}>{t('pick_from_contacts', lang)}</Text>
@@ -174,17 +176,17 @@ export default function Dignity() {
         </Pressable>
 
         {/* Final wishes */}
-        <Text style={styles.section}>LAST WISHES (FUNERAL DIRECTIVES)</Text>
+        <Text style={styles.section}>{tt('dignity.last_wishes_funeral_directives')}</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {BURIALS.map(b => (
             <Pressable testID={`dg-burial-${b.key}`} key={b.key} onPress={() => setWishes({ ...wishes, burial_type: b.key })} style={[styles.chip, { flex: 1, alignItems: 'center' }, wishes.burial_type === b.key && styles.chipActive]}>
-              <Text style={[styles.chipText, wishes.burial_type === b.key && styles.chipTextActive]}>{b.label}</Text>
+              <Text style={[styles.chipText, wishes.burial_type === b.key && styles.chipTextActive]}>{tx(b.label)}</Text>
             </Pressable>
           ))}
         </View>
-        <TextInput testID="dg-music" placeholder="Ceremony music (Hallelujah…)" value={wishes.ceremony_music} onChangeText={v => setWishes({ ...wishes, ceremony_music: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
-        <TextInput testID="dg-guests" placeholder="Who to invite (names, contacts)" value={wishes.guest_list} onChangeText={v => setWishes({ ...wishes, guest_list: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
-        <TextInput testID="dg-notes" placeholder="Other wishes" value={wishes.notes} onChangeText={v => setWishes({ ...wishes, notes: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-music" placeholder={tt('dignity.ceremony_music_hallelujah')} value={wishes.ceremony_music} onChangeText={v => setWishes({ ...wishes, ceremony_music: v })} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-guests" placeholder={tt('dignity.who_to_invite_names_contacts')} value={wishes.guest_list} onChangeText={v => setWishes({ ...wishes, guest_list: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
+        <TextInput testID="dg-notes" placeholder={tt('dignity.other_wishes')} value={wishes.notes} onChangeText={v => setWishes({ ...wishes, notes: v })} multiline style={[styles.input, { marginTop: S.sm, minHeight: 60 }]} placeholderTextColor="#999" />
         <Pressable testID="dg-wishes-save" onPress={saveWishes} style={[styles.secBtn, { marginTop: S.sm }]}>
           <Text style={styles.secBtnText}>{t('save', lang).toUpperCase()}</Text>
         </Pressable>
@@ -194,23 +196,23 @@ export default function Dignity() {
         {/* Death trigger */}
         {!released && (
           <>
-            <Text style={styles.section}>CONDITIONAL RELEASE (DEATH TRIGGER)</Text>
+            <Text style={styles.section}>{tt('dignity.conditional_release_death_trigger')}</Text>
             <View style={styles.triggerBox}>
               <Text style={styles.triggerText}>
-                The fund is locked and cannot be spent until official death verification (state registry — simulated in MVP with a death certificate number). After verification it is released directly to the beneficiary.
+                {tt('dignity.the_fund_is_locked_and_cannot_be_spe')}
               </Text>
               {!fund?.death_verified ? (
                 <>
-                  <TextInput testID="dg-cert" placeholder="Death certificate number (min. 6 chars)" value={cert} onChangeText={setCert} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
+                  <TextInput testID="dg-cert" placeholder={tt('dignity.death_certificate_number_min_6_chars')} value={cert} onChangeText={setCert} style={[styles.input, { marginTop: S.sm }]} placeholderTextColor="#999" />
                   <Pressable testID="dg-verify" onPress={verify} disabled={cert.trim().length < 6} style={[styles.warnBtn, cert.trim().length < 6 && { opacity: 0.4 }]}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={C.onWarn} />
-                    <Text style={styles.warnBtnText}>VERIFY IN REGISTRY (SIMULATION)</Text>
+                    <Text style={styles.warnBtnText}>{tt('dignity.verify_in_registry_simulation')}</Text>
                   </Pressable>
                 </>
               ) : (
                 <Pressable testID="dg-release" onPress={release} style={styles.releaseBtn}>
                   <Ionicons name="lock-open-outline" size={18} color={C.onInverse} />
-                  <Text style={styles.releaseBtnText}>RELEASE FUND TO BENEFICIARY</Text>
+                  <Text style={styles.releaseBtnText}>{tt('dignity.release_fund_to_beneficiary')}</Text>
                 </Pressable>
               )}
             </View>
@@ -219,7 +221,7 @@ export default function Dignity() {
 
         {fund?.contributions?.length ? (
           <>
-            <Text style={styles.section}>DEPOSIT HISTORY</Text>
+            <Text style={styles.section}>{tt('dignity.deposit_history')}</Text>
             {fund.contributions.map((c: any) => (
               <View key={c.contribution_id} style={styles.contribRow}>
                 <Ionicons name={c.method === 'recurring' ? 'repeat' : c.method === 'crypto' ? 'logo-bitcoin' : 'card-outline'} size={16} color={C.brand} />

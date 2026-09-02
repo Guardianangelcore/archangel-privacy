@@ -10,6 +10,7 @@ import { useAuth } from '@/src/auth';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const BADGE: Record<string, { text: string; bg: string; fg: string }> = {
   verified: { text: 'COMMUNITY VERIFIED', bg: '#1B4332', fg: '#FFFFFF' },
@@ -18,6 +19,7 @@ const BADGE: Record<string, { text: string; bg: string; fg: string }> = {
 };
 
 export default function TruthValidator() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -63,7 +65,7 @@ export default function TruthValidator() {
         <Pressable testID="tv-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>TRUTH-VALIDATOR</Text>
+        <Text style={st.title}>{tt('truth_validator.truth_validator')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -74,7 +76,7 @@ export default function TruthValidator() {
         contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
         ListHeaderComponent={
           <View>
-            <Text style={st.intro}>Peer consensus against crisis disinformation: claims are verified by the community, each anchored with a SHA-256 hash on the Neural Bus.</Text>
+            <Text style={st.intro}>{tt('truth_validator.peer_consensus_against_crisis_disinf')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.md }}>
               {Object.entries(cats).map(([k, v]) => (
                 <Pressable testID={`tv-cat-${k}`} key={k} onPress={() => setCat(k)} style={[st.chip, cat === k && st.chipActive]}>
@@ -83,41 +85,41 @@ export default function TruthValidator() {
               ))}
             </View>
             <TextInput testID="tv-text" value={text} onChangeText={setText} multiline
-              placeholder="E.g.: Pharmacy at Main St 12 has Paralen in stock (verified today 14:00)…"
+              placeholder={tt('truth_validator.e_g_pharmacy_at_main_st_12_has_paral')}
               placeholderTextColor="#777" style={[st.input, { minHeight: 70, marginTop: S.sm }]} />
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <TextInput testID="tv-city" value={city} onChangeText={setCity} placeholder="City"
+              <TextInput testID="tv-city" value={city} onChangeText={setCity} placeholder={tt('truth_validator.city')}
                 placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
               <Pressable testID="tv-submit" onPress={submit} disabled={busy === 'submit' || text.trim().length < 10} style={st.submitBtn}>
-                {busy === 'submit' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.submitText}>SEND</Text>}
+                {busy === 'submit' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Text style={st.submitText}>{tt('truth_validator.send')}</Text>}
               </Pressable>
             </View>
             {!!err && <Text testID="tv-err" style={st.err}>{err}</Text>}
           </View>
         }
-        ListEmptyComponent={!loading ? <Text style={st.empty}>NO CLAIMS YET — BE THE FIRST</Text> : null}
+        ListEmptyComponent={!loading ? <Text style={st.empty}>{tt('truth_validator.no_claims_yet_be_the_first')}</Text> : null}
         renderItem={({ item }) => {
           const b = BADGE[item.status] || BADGE.pending;
           const mine = item.user_id === user?.user_id;
           return (
             <View testID={`tv-claim-${item.claim_id}`} style={st.card}>
               <View style={st.rowSpread}>
-                <View style={[st.badge, { backgroundColor: b.bg }]}><Text style={[st.badgeText, { color: b.fg }]}>{b.text}</Text></View>
+                <View style={[st.badge, { backgroundColor: b.bg }]}><Text style={[st.badgeText, { color: b.fg }]}>{tx(b.text)}</Text></View>
                 <Text style={st.meta}>{(cats[item.category] || item.category).toUpperCase()}</Text>
               </View>
-              <Text style={st.claimText}>{item.text}</Text>
+              <Text style={st.claimText}>{tx(item.text)}</Text>
               <Text style={st.meta}>{item.author_name}{item.city ? ` · ${item.city}` : ''} · ✓ {item.verify_votes} · ✗ {item.dispute_votes} · #{item.claim_sha256?.slice(0, 10)}</Text>
               {!mine && !item.my_vote && (
                 <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
                   <Pressable testID={`tv-verify-${item.claim_id}`} onPress={() => vote(item.claim_id, 'verify')} style={[st.voteBtn, { backgroundColor: C.brand }]}>
-                    <Text style={st.voteText}>I VERIFY ✓</Text>
+                    <Text style={st.voteText}>{tt('truth_validator.i_verify')}</Text>
                   </Pressable>
                   <Pressable testID={`tv-dispute-${item.claim_id}`} onPress={() => vote(item.claim_id, 'dispute')} style={[st.voteBtn, { backgroundColor: C.error }]}>
-                    <Text style={st.voteText}>I DISPUTE ✗</Text>
+                    <Text style={st.voteText}>{tt('truth_validator.i_dispute')}</Text>
                   </Pressable>
                 </View>
               )}
-              {!!item.my_vote && <Text style={st.voted}>YOUR VOTE: {item.my_vote === 'verify' ? 'VERIFIED ✓' : 'DISPUTED ✗'}</Text>}
+              {!!item.my_vote && <Text style={st.voted}>{tt('truth_validator.your_vote')} {item.my_vote === 'verify' ? tt('truth_validator.verified') : tt('truth_validator.disputed')}</Text>}
             </View>
           );
         }}

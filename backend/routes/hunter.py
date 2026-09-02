@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-from fastapi import HTTPException, Header, UploadFile, File, Form
+from fastapi import HTTPException, Header, UploadFile, File, Form, Depends
 from fastapi.responses import Response, StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -11,6 +11,7 @@ import os, uuid, hashlib, json, io, re, base64, httpx
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
+from routes.subscription import require_tier
 from core import (
     api, db, logger, clean, get_current_user, send_push, _push_client,
     AI_COMPLIANCE_NOTE, _aml_ledger_append,
@@ -39,12 +40,19 @@ class WaitlistIn(BaseModel):
 @api.get("/waitlist")
 async def list_waitlist(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_tier(user, "guardian", "Waitlist Hunter")
     items = await db.waitlist.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
     return items
 
-@api.post("/waitlist")
-async def add_waitlist(body: WaitlistIn, authorization: Optional[str] = Header(None)):
+async def _hunter_gate(authorization: Optional[str] = Header(None)) -> dict:
+    """Tier gate as a dependency: resolved BEFORE body validation, so a Sovereign gets 402 for any payload."""
     user = await get_current_user(authorization)
+    await require_tier(user, "guardian", "Waitlist Hunter")
+    return user
+
+
+@api.post("/waitlist")
+async def add_waitlist(body: WaitlistIn, user: dict = Depends(_hunter_gate)):
     item = WaitlistItem(
         item_id=uuid.uuid4().hex,
         user_id=user["user_id"],
@@ -58,6 +66,7 @@ async def scan_waitlist(item_id: str, authorization: Optional[str] = Header(None
     """Simulated scan — in production integrates with clinic booking systems via ZK-proofs."""
     import random
     user = await get_current_user(authorization)
+    await require_tier(user, "guardian", "Waitlist Hunter")
     item = await db.waitlist.find_one({"item_id": item_id, "user_id": user["user_id"]}, {"_id": 0})
     if not item:
         raise HTTPException(404, "Not found")

@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
+import { useI18n } from '@/src/i18n-context';
 
 const ITEMS = [
   { testID: 'ev-dignity', icon: 'rose-outline', title: 'Dignified farewell', sub: 'Funeral fund · last wishes', route: '/dignity' },
@@ -20,6 +21,7 @@ const ITEMS = [
 ];
 
 export default function EternalVault() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [unlocked, setUnlocked] = useState(false);
   const [err, setErr] = useState('');
@@ -46,7 +48,7 @@ export default function EternalVault() {
         <Pressable testID="ev-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>ETERNAL VAULT</Text>
+        <Text style={st.title}>{tt('eternal_vault.eternal_vault')}</Text>
         <Ionicons name="lock-closed" size={18} color={unlocked ? C.brand : C.info} />
       </View>
 
@@ -55,11 +57,11 @@ export default function EternalVault() {
           <View style={st.lockRing}>
             <Ionicons name="finger-print" size={64} color={C.brand} />
           </View>
-          <Text style={st.lockTitle}>Locked space</Text>
-          <Text style={st.lockSub}>Legacy and last-will matters are separated from daily life. Unlock them only with biometrics — they never intrude on health and healing.</Text>
+          <Text style={st.lockTitle}>{tt('eternal_vault.locked_space')}</Text>
+          <Text style={st.lockSub}>{tt('eternal_vault.legacy_and_last_will_matters_are_sep')}</Text>
           <Pressable testID="ev-unlock" onPress={unlock} style={st.unlockBtn}>
             <Ionicons name="finger-print" size={20} color={C.onInverse} />
-            <Text style={st.unlockText}>UNLOCK WITH BIOMETRICS</Text>
+            <Text style={st.unlockText}>{tt('eternal_vault.unlock_with_biometrics')}</Text>
           </Pressable>
           {!!err && <Text style={st.err}>{err}</Text>}
         </View>
@@ -67,7 +69,7 @@ export default function EternalVault() {
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 100 }}>
           <View style={st.notice}>
             <Ionicons name="eye-off-outline" size={16} color={C.brand} />
-            <Text style={st.noticeText}>This content is hidden from the main dashboard. Life belongs up top — legacy lives here.</Text>
+            <Text style={st.noticeText}>{tt('eternal_vault.this_content_is_hidden_from_the_main')}</Text>
           </View>
           <View style={{ gap: S.md, marginTop: S.md }}>
             {ITEMS.map(it => (
@@ -75,8 +77,8 @@ export default function EternalVault() {
                 style={({ pressed }) => [st.row, pressed && { backgroundColor: C.surface3 }]}>
                 <View style={st.rowIcon}><Ionicons name={it.icon as any} size={22} color={C.brand} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={st.rowTitle}>{it.title}</Text>
-                  <Text style={st.rowSub}>{it.sub}</Text>
+                  <Text style={st.rowTitle}>{tx(it.title)}</Text>
+                  <Text style={st.rowSub}>{tx(it.sub)}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.info} />
               </Pressable>

@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { tap } from '@/src/ui/glass';
 import { C, S, R, GOLD } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const VALUE_PROPS = [
   {
@@ -47,6 +48,7 @@ const STEPS = [
 ];
 
 export default function Partners() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [cap, setCap] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -85,19 +87,17 @@ export default function Partners() {
         <Pressable testID="pt-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.headTitle}>UHP PARTNERS</Text>
+        <Text style={st.headTitle}>{tt('partners.uhp_partners')}</Text>
         <Ionicons name="git-network-outline" size={20} color={C.brand} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
         {/* HERO */}
         <View style={st.hero}>
-          <Text style={st.heroKicker}>UNIVERSAL HEALTH PROTOCOL · UHP/1.0</Text>
-          <Text style={st.heroTitle}>Join the sovereign{'\n'}health infrastructure.</Text>
+          <Text style={st.heroKicker}>{tt('partners.universal_health_protocol_uhp_1_0')}</Text>
+          <Text style={st.heroTitle}>{tt('partners.join_the_sovereign')}{'\n'}{tt('partners.health_infrastructure')}</Text>
           <Text style={st.heroSub}>
-            One gateway for clinics, insurers, labs and sensor networks.
-            Cryptographically signed data owned by the patient — and a channel you
-            can trust.
+            {tt('partners.one_gateway_for_clinics_insurers_lab')}
           </Text>
         </View>
 
@@ -105,15 +105,15 @@ export default function Partners() {
         <View style={st.statsRow}>
           <View style={st.statBox}>
             <Text style={st.statVal}>{cap ? cap.stream_capacity_human : '—'}</Text>
-            <Text style={st.statLbl}>CONCURRENT STREAMS</Text>
+            <Text style={st.statLbl}>{tt('partners.concurrent_streams')}</Text>
           </View>
           <View style={st.statBox}>
             <Text style={st.statVal}>{cap ? cap.active_partners : '—'}</Text>
-            <Text style={st.statLbl}>ACTIVE PARTNERS</Text>
+            <Text style={st.statLbl}>{tt('partners.active_partners')}</Text>
           </View>
           <View style={st.statBox}>
             <Text style={st.statVal}>{cap ? cap.events_ingested_total : '—'}</Text>
-            <Text style={st.statLbl}>EVENTS INGESTED</Text>
+            <Text style={st.statLbl}>{tt('partners.events_ingested')}</Text>
           </View>
         </View>
 
@@ -122,7 +122,7 @@ export default function Partners() {
           <View key={v.title} style={st.valueCard}>
             <View style={st.valueHead}>
               <View style={st.valueIcon}><Ionicons name={v.icon as any} size={20} color={C.brand} /></View>
-              <Text style={st.valueTitle}>{v.title}</Text>
+              <Text style={st.valueTitle}>{tx(v.title)}</Text>
             </View>
             {v.lines.map((l, i) => (
               <View key={i} style={st.valueLine}>
@@ -134,14 +134,14 @@ export default function Partners() {
         ))}
 
         {/* HOW TO CONNECT */}
-        <Text style={st.section}>HOW TO CONNECT — 4 STEPS</Text>
+        <Text style={st.section}>{tt('partners.how_to_connect_4_steps')}</Text>
         {STEPS.map(s => (
           <View key={s.n} style={st.stepCard}>
             <Text style={st.stepNum}>{s.n}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={st.stepTitle}>{s.title}</Text>
+              <Text style={st.stepTitle}>{tx(s.title)}</Text>
               <Text style={st.stepCode}>{s.code}</Text>
-              <Text style={st.stepText}>{s.text}</Text>
+              <Text style={st.stepText}>{tx(s.text)}</Text>
             </View>
           </View>
         ))}
@@ -154,14 +154,14 @@ export default function Partners() {
         </View>
 
         {/* SANDBOX */}
-        <Text style={st.section}>SANDBOX — TRY IT RIGHT NOW</Text>
-        <Text style={st.sandboxNote}>One tap issues real UHP credentials for a test clinic.</Text>
+        <Text style={st.section}>{tt('partners.sandbox_try_it_right_now')}</Text>
+        <Text style={st.sandboxNote}>{tt('partners.one_tap_issues_real_uhp_credentials')}</Text>
         <Pressable testID="pt-sandbox" onPress={() => { tap('medium'); sandbox(); }} disabled={busy} style={{ marginHorizontal: S.lg, marginTop: S.md }}>
           <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cta}>
             {busy ? <ActivityIndicator color={C.onInverse} /> : (
               <>
                 <Ionicons name="key-outline" size={18} color={C.onInverse} />
-                <Text style={st.ctaText}>GENERATE SANDBOX ACCESS</Text>
+                <Text style={st.ctaText}>{tt('partners.generate_sandbox_access')}</Text>
               </>
             )}
           </LinearGradient>
@@ -169,23 +169,22 @@ export default function Partners() {
         {!!err && <Text style={st.err}>{err}</Text>}
         {creds && (
           <View testID="pt-creds" style={st.credsCard}>
-            <Text style={st.credsLbl}>PARTNER ID</Text>
+            <Text style={st.credsLbl}>{tt('partners.partner_id')}</Text>
             <Text style={st.credsVal}>{creds.partner_id}</Text>
-            <Text style={st.credsLbl}>API KEY</Text>
+            <Text style={st.credsLbl}>{tt('partners.api_key')}</Text>
             <Text style={st.credsVal}>{creds.api_key}</Text>
-            <Text style={st.credsLbl}>HMAC SECRET (shown only once)</Text>
+            <Text style={st.credsLbl}>{tt('partners.hmac_secret_shown_only_once')}</Text>
             <Text style={st.credsVal}>{String(creds.hmac_secret).slice(0, 16)}…{String(creds.hmac_secret).slice(-8)}</Text>
-            <Text style={st.credsNote}>Protocol documentation: GET /api/uhp/standard</Text>
+            <Text style={st.credsNote}>{tt('partners.protocol_documentation_get_api_uhp_s')}</Text>
           </View>
         )}
 
         {/* CONTACT CTA */}
         <View style={st.contactCard}>
           <Ionicons name="business" size={30} color={C.brand} />
-          <Text style={st.contactTitle}>Production onboarding & SLA</Text>
+          <Text style={st.contactTitle}>{tt('partners.production_onboarding_sla')}</Text>
           <Text style={st.contactText}>
-            For production onboarding, dedicated shards and contractual SLAs contact
-            Guardian Angel Sovereign Foundation (DAO).
+            {tt('partners.for_production_onboarding_dedicated')}
           </Text>
           <Pressable testID="pt-contact" onPress={() => { tap('light'); contact(); }} style={st.contactBtn}>
             <Ionicons name="mail-outline" size={16} color={C.brand} />
@@ -193,7 +192,7 @@ export default function Partners() {
           </Pressable>
         </View>
 
-        <Text style={st.footer}>UHP/1.0 · GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO) · {Platform.OS === 'web' ? 'WEB PREVIEW' : 'NATIVE'}</Text>
+        <Text style={st.footer}>{tt('partners.uhp_1_0_guardian_angel_sovereign_fou')} {Platform.OS === 'web' ? tt('partners.web_preview') : tt('partners.native')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

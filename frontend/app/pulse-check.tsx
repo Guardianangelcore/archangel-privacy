@@ -7,8 +7,10 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/auth';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function PulseCheck() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user, setUser } = useAuth();
   const optin = !!(user as any)?.pulse_check_optin;
@@ -61,23 +63,22 @@ export default function PulseCheck() {
         <Pressable testID="pc-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>GUARDIAN PULSE</Text>
+        <Text style={styles.title}>{tt('pulse_check.guardian_pulse')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         <View style={styles.heroIcon}><Ionicons name="pulse-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>A silent ping to family</Text>
+        <Text style={styles.h1}>{tt('pulse_check.a_silent_ping_to_family')}</Text>
         <Text style={styles.sub}>
-          Your inner circle can discreetly ask are-you-OK during risky periods.
-          No location, no tracking — just a one-tap reply.
+          {tt('pulse_check.your_inner_circle_can_discreetly_ask')}
         </Text>
 
         <View style={styles.privacyBox}>
           <Ionicons name="lock-closed-outline" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.privacyTitle}>PRIVACY: STRICTLY OPT-IN</Text>
+            <Text style={styles.privacyTitle}>{tt('pulse_check.privacy_strictly_opt_in')}</Text>
             <Text style={styles.privacySub}>
-              Family can send you pings ONLY if you explicitly allow it here. Disable any time.
+              {tt('pulse_check.family_can_send_you_pings_only_if_yo')}
             </Text>
           </View>
           <Switch testID="pc-optin" value={optin} onValueChange={setOptin} trackColor={{ true: C.brand, false: C.surface3 }} />
@@ -85,16 +86,16 @@ export default function PulseCheck() {
 
         {pending.length > 0 && (
           <>
-            <Text style={styles.section}>AWAITING YOUR REPLY</Text>
+            <Text style={styles.section}>{tt('pulse_check.awaiting_your_reply')}</Text>
             {pending.map(r => (
               <View key={r.req_id} style={styles.pingCard}>
-                <Text style={styles.pingFrom}>💛 {r.from_name} is asking: Are you OK?</Text>
+                <Text style={styles.pingFrom}>💛 {r.from_name} {tt('pulse_check.is_asking_are_you_ok')}</Text>
                 <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
                   <Pressable testID={`pc-ok-${r.req_id}`} onPress={() => respond(r.req_id, 'ok')} style={styles.okBtn}>
-                    <Text style={styles.okText}>SOM OK</Text>
+                    <Text style={styles.okText}>{tt('pulse_check.som_ok')}</Text>
                   </Pressable>
                   <Pressable testID={`pc-help-${r.req_id}`} onPress={() => respond(r.req_id, 'need_help')} style={styles.helpBtn}>
-                    <Text style={styles.helpText}>POTREBUJEM POMOC</Text>
+                    <Text style={styles.helpText}>{tt('pulse_check.potrebujem_pomoc')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -102,11 +103,11 @@ export default function PulseCheck() {
           </>
         )}
 
-        <Text style={styles.section}>SEND A SILENT PING</Text>
+        <Text style={styles.section}>{tt('pulse_check.send_a_silent_ping')}</Text>
         <TextInput
           testID="pc-did-input"
           style={styles.input}
-          placeholder="Family member DID (did:guardian:…)"
+          placeholder={tt('pulse_check.family_member_did_did_guardian')}
           placeholderTextColor={C.info}
           value={did}
           onChangeText={setDid}
@@ -116,7 +117,7 @@ export default function PulseCheck() {
           {busy ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="paper-plane-outline" size={16} color={C.onInverse} />
-              <Text style={styles.ctaText}>SEND PING</Text>
+              <Text style={styles.ctaText}>{tt('pulse_check.send_ping')}</Text>
             </>
           )}
         </Pressable>
@@ -125,12 +126,12 @@ export default function PulseCheck() {
 
         {sent.length > 0 && (
           <>
-            <Text style={styles.section}>SENT PINGS</Text>
+            <Text style={styles.section}>{tt('pulse_check.sent_pings')}</Text>
             {sent.map(r => (
               <View key={r.req_id} style={styles.sentRow}>
                 <Text style={styles.sentDid} numberOfLines={1}>{r.target_did}</Text>
                 <Text style={[styles.sentStatus, r.status === 'ok' && { color: '#5FA779' }, r.status === 'need_help' && { color: C.error }]}>
-                  {r.status === 'pending' ? 'WAITING…' : r.status === 'ok' ? '✓ OK' : '● NEEDS HELP'}
+                  {r.status === 'pending' ? tt('pulse_check.waiting') : r.status === 'ok' ? tt('pulse_check.ok') : tt('pulse_check.needs_help')}
                 </Text>
               </View>
             ))}

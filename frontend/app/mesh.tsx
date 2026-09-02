@@ -7,8 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Mesh() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [status, setStatus] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -45,7 +47,7 @@ export default function Mesh() {
         <Pressable testID="me-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>MESH-MESSENGER</Text>
+        <Text style={st.title}>{tt('mesh.mesh_messenger')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <FlatList
@@ -56,39 +58,38 @@ export default function Mesh() {
         ListHeaderComponent={
           <View>
             <Text style={st.intro}>
-              P2P communication independent of carriers — messages spread store-and-forward via the Guardian relay.
-              Real BLE mesh radio (phone-to-phone without internet) activates in the native build.
+              {tt('mesh.p2p_communication_independent_of_car')}
             </Text>
             {status && (
               <View style={st.statusCard}>
                 <Text style={st.statusLine}>📡 {status.protocol}</Text>
-                <Text style={st.statusLine}>Nodes in range: {status.reachable_peers} · Queued outbox: {status.queued_outbox}</Text>
+                <Text style={st.statusLine}>{tt('mesh.nodes_in_range')} {status.reachable_peers} {tt('mesh.queued_outbox')} {status.queued_outbox}</Text>
               </View>
             )}
-            <Text style={st.section}>MY DID (share with family)</Text>
+            <Text style={st.section}>{tt('mesh.my_did_share_with_family')}</Text>
             <Text testID="me-my-did" style={st.didText} selectable>{myDid}</Text>
-            <Text style={st.section}>SEND MESSAGE</Text>
+            <Text style={st.section}>{tt('mesh.send_message')}</Text>
             <TextInput testID="me-to" value={toDid} onChangeText={setToDid} autoCapitalize="none"
-              placeholder="Recipient DID (did:guardian:…)" placeholderTextColor="#777" style={st.input} />
+              placeholder={tt('mesh.recipient_did_did_guardian')} placeholderTextColor="#777" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <TextInput testID="me-text" value={text} onChangeText={setText} placeholder="Message…"
+              <TextInput testID="me-text" value={text} onChangeText={setText} placeholder={tt('mesh.message')}
                 placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
               <Pressable testID="me-send" onPress={send} disabled={busy || !toDid.trim() || !text.trim()} style={st.sendBtn}>
                 {busy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="send" size={18} color={C.onInverse} />}
               </Pressable>
             </View>
             {!!err && <Text testID="me-err" style={st.err}>{err}</Text>}
-            <Text style={st.section}>MESSAGES ({messages.length})</Text>
+            <Text style={st.section}>{tt('mesh.messages')}{messages.length})</Text>
           </View>
         }
-        ListEmptyComponent={!loading ? <Text style={st.empty}>NO MESH MESSAGES YET</Text> : null}
+        ListEmptyComponent={!loading ? <Text style={st.empty}>{tt('mesh.no_mesh_messages_yet')}</Text> : null}
         renderItem={({ item }) => {
           const mine = item.from_did === myDid;
           return (
             <View testID={`me-msg-${item.msg_id}`} style={[st.msgCard, mine ? st.msgMine : st.msgTheirs]}>
               <Text style={st.msgFrom}>{mine ? `→ ${item.to_did.slice(0, 24)}…` : `${item.from_name}`}</Text>
-              <Text style={st.msgText}>{item.text}</Text>
-              <Text style={st.msgMeta}>{item.status === 'delivered' ? '✓ delivered' : '⏳ in mesh queue'} · hop {item.hops} · #{item.sha256?.slice(0, 8)}</Text>
+              <Text style={st.msgText}>{tx(item.text)}</Text>
+              <Text style={st.msgMeta}>{item.status === 'delivered' ? tt('mesh.delivered') : tt('mesh.in_mesh_queue')} {tt('mesh.hop')} {item.hops} · #{item.sha256?.slice(0, 8)}</Text>
             </View>
           );
         }}

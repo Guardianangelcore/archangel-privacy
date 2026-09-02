@@ -20,6 +20,7 @@ import { useDemoMode, setDemoMode } from '@/src/demo-mode';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Profile() {
+  const { t: tt, tx } = useI18n();
   const { user, signOut, setUser } = useAuth();
   const router = useRouter();
   const { lang, setLang } = useI18n();   // instant, app-wide re-render on change
@@ -238,8 +239,8 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="pricetag-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>DEMO BADGE</Text>
-            <Text style={styles.guardSub}>Shows a DEMO badge in the top-right corner on every screen.</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.demo_badge')}</Text>
+            <Text style={styles.guardSub}>{tt('tabs_profile.shows_a_demo_badge_in_the_top_right')}</Text>
           </View>
           <Switch
             testID="prof-demo-badge"
@@ -265,12 +266,12 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="mic-circle" size={24} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>JARVIS VOICE · ONYX</Text>
-            <Text style={styles.guardSub}>Deep human voice (OpenAI TTS). Robotic system voice disabled.</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.jarvis_voice_onyx')}</Text>
+            <Text style={styles.guardSub}>{tt('tabs_profile.deep_human_voice_openai_tts_robotic')}</Text>
           </View>
           <Pressable testID="prof-voice-preview" onPress={previewVoice} style={styles.previewBtn}>
             <Ionicons name="volume-high" size={16} color={C.onInverse} />
-            <Text style={styles.previewText}>PREVIEW</Text>
+            <Text style={styles.previewText}>{tt('tabs_profile.preview')}</Text>
           </Pressable>
         </View>
 
@@ -278,9 +279,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="calendar-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>BIO-TIMELINE · BIRTH YEAR</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.bio_timeline_birth_year')}</Text>
             <Text style={styles.guardSub}>
-              The interface adapts to your stage of life — from infant to senior.
+              {tt('tabs_profile.the_interface_adapts_to_your_stage_o')}
             </Text>
           </View>
         </View>
@@ -290,18 +291,18 @@ export default function Profile() {
             value={birthYearTxt}
             onChangeText={setBirthYearTxt}
             style={[styles.input, { flex: 1 }]}
-            placeholder="e.g. 1958"
+            placeholder={tt('tabs_profile.e_g_1958')}
             placeholderTextColor="#999"
             keyboardType="number-pad"
             maxLength={4}
           />
           <Pressable testID="prof-birth-year-save" onPress={saveBirthYear} style={styles.saveMini}>
-            <Text style={styles.saveMiniText}>SAVE</Text>
+            <Text style={styles.saveMiniText}>{tt('tabs_profile.save')}</Text>
           </Pressable>
         </View>
         {(user as any)?.birth_year && (
           <Text testID="prof-stage-label" style={styles.stageLabel}>
-            STAGE: {AGE_LABEL_EN[currentStage].toUpperCase()}
+            {tt('tabs_profile.stage')} {AGE_LABEL_EN[currentStage].toUpperCase()}
           </Text>
         )}
 
@@ -309,9 +310,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="finger-print" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>BIOMETRIC LOCK · {bioLabel.toUpperCase()}</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.biometric_lock')} {bioLabel.toUpperCase()}</Text>
             <Text style={styles.guardSub}>
-              Unlock with your personal signal every time the app opens. Health data stays private.
+              {tt('tabs_profile.unlock_with_your_personal_signal_eve')}
             </Text>
           </View>
           <Switch
@@ -326,9 +327,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="radio-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>WAKE-WORD JARVIS</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.wake_word_jarvis')}</Text>
             <Text style={styles.guardSub}>
-              Hands-free voice activation. Fully works only in a native build (not Expo Go).
+              {tt('tabs_profile.hands_free_voice_activation_fully_wo')}
             </Text>
           </View>
           <Switch
@@ -343,9 +344,9 @@ export default function Profile() {
         <View style={styles.guardRow}>
           <Ionicons name="hand-left" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>PANIC GESTURE · SILENT WITNESS</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.panic_gesture_silent_witness')}</Text>
             <Text style={styles.guardSub}>
-              Tap the back of your phone N times within 10 seconds → hidden Silent Witness launch.
+              {tt('tabs_profile.tap_the_back_of_your_phone_n_times_w')}
             </Text>
           </View>
         </View>
@@ -361,7 +362,7 @@ export default function Profile() {
             maxLength={2}
           />
           <Pressable testID="prof-panic-taps-save" onPress={savePanicTaps} style={styles.saveMini}>
-            <Text style={styles.saveMiniText}>SAVE</Text>
+            <Text style={styles.saveMiniText}>{tt('tabs_profile.save')}</Text>
           </Pressable>
         </View>
         {!!bioMsg && <Text style={styles.geoMsg}>{bioMsg}</Text>}
@@ -372,7 +373,7 @@ export default function Profile() {
           <Ionicons name="body-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>{t('fall_guard', lang).toUpperCase()}</Text>
-            <Text style={styles.guardSub}>Accelerometer · auto Fall-Verify</Text>
+            <Text style={styles.guardSub}>{tt('tabs_profile.accelerometer_auto_fall_verify')}</Text>
           </View>
           <Switch testID="prof-fall-guard" value={!!(user as any)?.fall_guard} onValueChange={v => setPref({ fall_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -380,23 +381,23 @@ export default function Profile() {
           <Ionicons name="time-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
             <Text style={styles.guardTitle}>{t('inactivity_guard', lang).toUpperCase()}</Text>
-            <Text style={styles.guardSub}>08:00–21:00 · alerts your family</Text>
+            <Text style={styles.guardSub}>{tt('tabs_profile.08_00_21_00_alerts_your_family')}</Text>
           </View>
           <Switch testID="prof-inactivity-guard" value={!!(user as any)?.inactivity_guard} onValueChange={v => setPref({ inactivity_guard: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
         <View style={styles.guardRow}>
           <Ionicons name="heart-half-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>GUARDIAN PULSE CHECK</Text>
-            <Text style={styles.guardSub}>A silent ping from family · strictly opt-in, disable any time</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.guardian_pulse_check')}</Text>
+            <Text style={styles.guardSub}>{tt('tabs_profile.a_silent_ping_from_family_strictly_o')}</Text>
           </View>
           <Switch testID="prof-pulse-optin" value={!!(user as any)?.pulse_check_optin} onValueChange={v => setPref({ pulse_check_optin: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
         <View style={styles.guardRow}>
           <Ionicons name="airplane-outline" size={22} color={C.fg} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>TRAVEL MODE (GEO)</Text>
-            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}${geo.source ? ` · ${String(geo.source).toUpperCase()}` : ''}` : '📍 Automatic location (GPS/IP) — allow location access'} — automatic city, language and regulations by GPS</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.travel_mode_geo')}</Text>
+            <Text style={styles.guardSub}>{geo ? `📍 ${geo.city} · ${geo.country}${geo.source ? ` · ${String(geo.source).toUpperCase()}` : ''}` : tt('tabs_profile.automatic_location_gps_ip_allow_loca')} {tt('tabs_profile.automatic_city_language_and_regulati')}</Text>
           </View>
           <Switch testID="prof-travel-mode" value={!!(user as any)?.travel_mode} onValueChange={toggleTravel} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -408,11 +409,11 @@ export default function Profile() {
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           <Pressable testID="prof-geo-ip" onPress={tryIpFallback} style={[styles.pickBtn, { flex: 1 }]}>
             <Ionicons name="globe-outline" size={16} color={C.brand} />
-            <Text style={styles.pickBtnText}>IP LOCATION</Text>
+            <Text style={styles.pickBtnText}>{tt('tabs_profile.ip_location')}</Text>
           </Pressable>
           <Pressable testID="prof-geo-manual" onPress={() => setCityPick(true)} style={[styles.pickBtn, { flex: 1 }]}>
             <Ionicons name="map-outline" size={16} color={C.brand} />
-            <Text style={styles.pickBtnText}>PICK CITY</Text>
+            <Text style={styles.pickBtnText}>{tt('tabs_profile.pick_city')}</Text>
           </Pressable>
         </View>
         <CityPicker
@@ -439,8 +440,8 @@ export default function Profile() {
         )}
 
         <Text style={styles.section}>{t('donor_card', lang).toUpperCase()} + {t('emergency_profile', lang)}</Text>
-        <Text style={styles.lbl}>FULL NAME</Text>
-        <TextInput testID="prof-name" value={profile.full_name || ''} onChangeText={v => setProfile({ ...profile, full_name: v })} style={styles.input} placeholder="First Last" placeholderTextColor="#999" />
+        <Text style={styles.lbl}>{tt('tabs_profile.full_name')}</Text>
+        <TextInput testID="prof-name" value={profile.full_name || ''} onChangeText={v => setProfile({ ...profile, full_name: v })} style={styles.input} placeholder={tt('tabs_profile.first_last')} placeholderTextColor="#999" />
 
         <Text style={styles.lbl}>{t('blood_type', lang).toUpperCase()}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
@@ -452,16 +453,16 @@ export default function Profile() {
         </View>
 
         <Text style={styles.lbl}>{t('allergies', lang).toUpperCase()}</Text>
-        <TextInput testID="prof-allergies" value={profile.allergies || ''} onChangeText={v => setProfile({ ...profile, allergies: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholder="penicillin, latex…" placeholderTextColor="#999" />
+        <TextInput testID="prof-allergies" value={profile.allergies || ''} onChangeText={v => setProfile({ ...profile, allergies: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholder={tt('tabs_profile.penicillin_latex')} placeholderTextColor="#999" />
 
-        <Text style={styles.lbl}>MEDICATIONS</Text>
+        <Text style={styles.lbl}>{tt('tabs_profile.medications')}</Text>
         <TextInput testID="prof-meds" value={profile.medications || ''} onChangeText={v => setProfile({ ...profile, medications: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholderTextColor="#999" />
 
-        <Text style={styles.lbl}>CONDITIONS</Text>
+        <Text style={styles.lbl}>{tt('tabs_profile.conditions')}</Text>
         <TextInput testID="prof-conditions" value={profile.conditions || ''} onChangeText={v => setProfile({ ...profile, conditions: v })} style={[styles.input, { minHeight: 60 }]} multiline placeholderTextColor="#999" />
 
         <Text style={styles.lbl}>{t('emergency_contact', lang).toUpperCase()}</Text>
-        <TextInput testID="prof-ec-name" value={profile.emergency_contact_name || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_name: v })} style={styles.input} placeholder="Name" placeholderTextColor="#999" />
+        <TextInput testID="prof-ec-name" value={profile.emergency_contact_name || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_name: v })} style={styles.input} placeholder={tt('tabs_profile.name')} placeholderTextColor="#999" />
         <TextInput testID="prof-ec-phone" value={profile.emergency_contact_phone || ''} onChangeText={v => setProfile({ ...profile, emergency_contact_phone: v })} style={styles.input} placeholder="+421…" keyboardType="phone-pad" placeholderTextColor="#999" />
         <Pressable testID="prof-ec-pick" onPress={() => setEcPick(true)} style={styles.pickBtn}>
           <Ionicons name="people-outline" size={16} color={C.brand} />
@@ -472,16 +473,16 @@ export default function Profile() {
 
         <View style={styles.donorRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.donorTitle}>ORGAN DONOR</Text>
-            <Text style={styles.donorSub}>Blockchain-anchored consent</Text>
+            <Text style={styles.donorTitle}>{tt('tabs_profile.organ_donor')}</Text>
+            <Text style={styles.donorSub}>{tt('tabs_profile.blockchain_anchored_consent')}</Text>
           </View>
           <Switch testID="prof-donor" value={!!profile.is_donor} onValueChange={v => setProfile({ ...profile, is_donor: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
         {profile.is_donor && (
-          <TextInput testID="prof-donor-organs" value={profile.donor_organs || ''} onChangeText={v => setProfile({ ...profile, donor_organs: v })} style={styles.input} placeholder="All / Kidneys / …" placeholderTextColor="#999" />
+          <TextInput testID="prof-donor-organs" value={profile.donor_organs || ''} onChangeText={v => setProfile({ ...profile, donor_organs: v })} style={styles.input} placeholder={tt('tabs_profile.all_kidneys')} placeholderTextColor="#999" />
         )}
 
-        <Text style={styles.lbl}>LIFE TESTAMENT</Text>
+        <Text style={styles.lbl}>{tt('tabs_profile.life_testament')}</Text>
         <TextInput testID="prof-testament" value={profile.life_testament || ''} onChangeText={v => setProfile({ ...profile, life_testament: v })} style={[styles.input, { minHeight: 80 }]} multiline placeholderTextColor="#999" />
 
         <Pressable testID="prof-save" onPress={save} disabled={saving} style={styles.saveBtn}>
@@ -495,12 +496,12 @@ export default function Profile() {
 
         <Pressable testID="onboarding-btn" onPress={() => router.push('/onboarding')} style={styles.qrBtn}>
           <Ionicons name="heart-outline" size={18} color={C.fg} />
-          <Text style={styles.qrBtnText}>GUIDE FOR FAMILY & SENIORS</Text>
+          <Text style={styles.qrBtnText}>{tt('tabs_profile.guide_for_family_seniors')}</Text>
         </Pressable>
 
         <Pressable testID="recovery-suite-btn" onPress={() => router.push('/recovery-suite')} style={styles.qrBtn}>
           <Ionicons name="key-outline" size={18} color={C.fg} />
-          <Text style={styles.qrBtnText}>SOVEREIGN RECOVERY & 2FA</Text>
+          <Text style={styles.qrBtnText}>{tt('tabs_profile.sovereign_recovery_2fa')}</Text>
         </Pressable>
 
         <Pressable testID="legal-btn" onPress={() => router.push('/legal')} style={styles.qrBtn}>
@@ -510,17 +511,17 @@ export default function Profile() {
 
         <Pressable testID="eternal-vault-btn" onPress={() => router.push('/eternal-vault')} style={styles.qrBtn}>
           <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
-          <Text style={styles.qrBtnText}>ETERNAL VAULT · LEGACY & LAST WILL</Text>
+          <Text style={styles.qrBtnText}>{tt('tabs_profile.eternal_vault_legacy_last_will')}</Text>
         </Pressable>
 
         {admin?.is_founder && (
           <View style={styles.adminBox}>
-            <Text style={styles.adminTitle}>👁 FOUNDER ADMIN</Text>
+            <Text style={styles.adminTitle}>{tt('tabs_profile.founder_admin')}</Text>
             <View style={styles.guardRow}>
               <Ionicons name="film-outline" size={22} color="#B8860B" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.guardTitle}>INVESTOR DEMO MODE</Text>
-                <Text style={styles.guardSub}>Showcase data for the jury: slot hunt · €150 refund · family pulse</Text>
+                <Text style={styles.guardTitle}>{tt('tabs_profile.investor_demo_mode')}</Text>
+                <Text style={styles.guardSub}>{tt('tabs_profile.showcase_data_for_the_jury_slot_hunt')}</Text>
               </View>
               {demoBusy ? <ActivityIndicator color="#B8860B" /> : (
                 <Switch testID="demo-toggle" value={!!admin?.demo_mode} onValueChange={toggleDemo} trackColor={{ true: '#B8860B', false: C.surface3 }} />
@@ -529,7 +530,7 @@ export default function Profile() {
             {!!demoMsg && <Text testID="demo-msg" style={styles.adminMsg}>{demoMsg}</Text>}
             <Pressable testID="launch-btn" onPress={() => router.push('/launch')} style={styles.launchBtn}>
               <Ionicons name="rocket-outline" size={18} color="#0B0B0D" />
-              <Text style={styles.launchText}>LAUNCH CONTROL · DEPLOY TO PRODUCTION</Text>
+              <Text style={styles.launchText}>{tt('tabs_profile.launch_control_deploy_to_production')}</Text>
             </Pressable>
           </View>
         )}
@@ -537,28 +538,28 @@ export default function Profile() {
         {!confirmDelete ? (
           <Pressable testID="delete-account-btn" onPress={() => setConfirmDelete(true)} style={styles.delBtn}>
             <Ionicons name="trash-outline" size={18} color={C.error} />
-            <Text style={styles.delBtnText}>DELETE ACCOUNT & ALL DATA</Text>
+            <Text style={styles.delBtnText}>{tt('tabs_profile.delete_account_all_data')}</Text>
           </Pressable>
         ) : (
           <View style={styles.delConfirm}>
-            <Text style={styles.delConfirmText}>REALLY DELETE YOUR ACCOUNT? THIS ACTION IS IRREVERSIBLE — ALL YOUR DATA WILL BE REMOVED.</Text>
+            <Text style={styles.delConfirmText}>{tt('tabs_profile.really_delete_your_account_this_acti')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
               <Pressable testID="delete-account-cancel" onPress={() => setConfirmDelete(false)} style={[styles.delAction, { borderColor: C.borderStrong }]}>
-                <Text style={styles.delActionText}>CANCEL</Text>
+                <Text style={styles.delActionText}>{tt('tabs_profile.cancel')}</Text>
               </Pressable>
               <Pressable testID="delete-account-confirm" onPress={deleteAccount} style={[styles.delAction, { backgroundColor: C.error, borderColor: C.error }]}>
-                <Text style={[styles.delActionText, { color: C.onError }]}>YES, DELETE</Text>
+                <Text style={[styles.delActionText, { color: C.onError }]}>{tt('tabs_profile.yes_delete')}</Text>
               </Pressable>
             </View>
           </View>
         )}
 
         <View style={styles.credit}>
-          <Text style={styles.creditTitle}>ABOUT</Text>
-          <Text style={styles.creditText}>Archangel OS is a sovereign survival OS.{'\n'}Steward: <Text style={{ fontWeight: '900' }}>Guardian Angel Sovereign Foundation (DAO)</Text> — pseudonymous, decentralized governance.{'\n'}© 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. Proprietary · Zero-Knowledge.{'\n'}EU AI Act Art. 50: AI outputs are informational only — you act at your own risk.</Text>
-          <Text style={styles.creditText}>{'\n'}Proof of Origin (DID):{'\n'}</Text>
+          <Text style={styles.creditTitle}>{tt('tabs_profile.about')}</Text>
+          <Text style={styles.creditText}>{tt('tabs_profile.archangel_os_is_a_sovereign_survival')}{'\n'}{tt('tabs_profile.steward')} <Text style={{ fontWeight: '900' }}>{tt('tabs_profile.guardian_angel_sovereign_foundation')}</Text> {tt('tabs_profile.pseudonymous_decentralized_governanc')}{'\n'}{tt('tabs_profile.2026_guardian_angel_sovereign_founda')}{'\n'}{tt('tabs_profile.eu_ai_act_art_50_ai_outputs_are_info')}</Text>
+          <Text style={styles.creditText}>{'\n'}{tt('tabs_profile.proof_of_origin_did')}{'\n'}</Text>
           <Text testID="origin-did" style={[styles.creditText, { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 10 }]}>{WATERMARK.did}</Text>
-          <Text style={[styles.creditText, { fontSize: 10, marginTop: 4 }]}>Build {WATERMARK.build} · anchored {WATERMARK.anchored_at?.slice(0, 10)}</Text>
+          <Text style={[styles.creditText, { fontSize: 10, marginTop: 4 }]}>{tt('tabs_profile.build')} {WATERMARK.build} {tt('tabs_profile.anchored')} {WATERMARK.anchored_at?.slice(0, 10)}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

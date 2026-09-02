@@ -13,6 +13,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
+import { useI18n } from '@/src/i18n-context';
 
 const CIRCLE_KEY = 'gh_guardian_circle_v1';
 const MAX_CIRCLE = 8;
@@ -47,6 +48,7 @@ async function saveCircle(list: PickedContact[]) {
 }
 
 export default function GuardianCircleSync() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [circle, setCircle] = useState<PickedContact[]>([]);
   const [phoneContacts, setPhoneContacts] = useState<Contacts.Contact[] | null>(null);
@@ -112,27 +114,27 @@ export default function GuardianCircleSync() {
         <Pressable testID="gcs-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>GUARDIAN CIRCLE</Text>
+        <Text style={st.title}>{tt('guardian_circle_sync.guardian_circle')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>LOCAL CIRCLE · MAX {MAX_CIRCLE} PEOPLE · CONTACTS NEVER LEAVE THE DEVICE</Text>
+        <Text style={st.tag}>{tt('guardian_circle_sync.local_circle_max')} {MAX_CIRCLE} {tt('guardian_circle_sync.people_contacts_never_leave_the_devi')}</Text>
 
         {/* Current Circle */}
         <View style={st.card}>
           <View style={st.cardHead}>
-            <Text style={st.cardTitle}>MY CIRCLE</Text>
+            <Text style={st.cardTitle}>{tt('guardian_circle_sync.my_circle')}</Text>
             <Text style={st.cardMeta}>{circle.length}/{MAX_CIRCLE}</Text>
           </View>
           {circle.length === 0 ? (
-            <Text style={st.empty}>The circle is empty so far. Add trusted people from your contacts.</Text>
+            <Text style={st.empty}>{tt('guardian_circle_sync.the_circle_is_empty_so_far_add_trust')}</Text>
           ) : circle.map(p => (
             <View key={p.did_hash} style={st.row}>
               <View style={st.avatar}><Text style={st.avatarText}>{(p.name || '?').charAt(0).toUpperCase()}</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={st.rowName}>{p.name}</Text>
-                <Text style={st.rowSub}>{p.phone}  ·  DID {p.did_hash.slice(0, 10)}…</Text>
+                <Text style={st.rowSub}>{p.phone}  {tt('guardian_circle_sync.did')} {p.did_hash.slice(0, 10)}…</Text>
               </View>
               <Pressable testID={`gcs-remove-${p.did_hash.slice(0, 8)}`} onPress={() => removeFromCircle(p.did_hash)} hitSlop={8}>
                 <Ionicons name="close-circle" size={22} color={C.error} />
@@ -141,34 +143,34 @@ export default function GuardianCircleSync() {
           ))}
           {circle.length > 0 && (
             <Pressable testID="gcs-clear" onPress={clearAll} style={st.clearBtn}>
-              <Text style={st.clearText}>EMPTY THE CIRCLE</Text>
+              <Text style={st.clearText}>{tt('guardian_circle_sync.empty_the_circle')}</Text>
             </Pressable>
           )}
         </View>
 
         {/* Picker */}
         <View style={st.card}>
-          <Text style={st.cardTitle}>ADD FROM YOUR DEVICE</Text>
+          <Text style={st.cardTitle}>{tt('guardian_circle_sync.add_from_your_device')}</Text>
           {permStatus !== 'granted' && (
             <>
               <Text style={st.explain}>
-                Guardian Angel needs one-time access to your contacts so you can pick trusted people for your Circle.
-                {'\n'}Contacts stay local in your phone’s encrypted storage.
+                {tt('guardian_circle_sync.guardian_angel_needs_one_time_access')}
+                {'\n'}{tt('guardian_circle_sync.contacts_stay_local_in_your_phone_s')}
               </Text>
               <Pressable testID="gcs-perm" onPress={askPermissionAndLoad} style={st.primaryBtn} disabled={busy}>
                 {busy ? <ActivityIndicator color={C.onInverse} /> : (
                   <>
                     <Ionicons name="people" size={18} color={C.onInverse} />
-                    <Text style={st.primaryText}>ALLOW · LOAD CONTACTS</Text>
+                    <Text style={st.primaryText}>{tt('guardian_circle_sync.allow_load_contacts')}</Text>
                   </>
                 )}
               </Pressable>
               {permStatus === 'blocked' && (
                 <Pressable testID="gcs-settings" onPress={() => Linking.openSettings()} style={st.warnBtn}>
-                  <Text style={st.warnBtnText}>CONTACTS ARE BLOCKED — OPEN SETTINGS</Text>
+                  <Text style={st.warnBtnText}>{tt('guardian_circle_sync.contacts_are_blocked_open_settings')}</Text>
                 </Pressable>
               )}
-              {permStatus === 'denied' && <Text style={st.info}>Access denied — you can try again later.</Text>}
+              {permStatus === 'denied' && <Text style={st.info}>{tt('guardian_circle_sync.access_denied_you_can_try_again_late')}</Text>}
             </>
           )}
           {permStatus === 'granted' && phoneContacts && (
@@ -176,18 +178,18 @@ export default function GuardianCircleSync() {
               <View style={st.search}>
                 <Ionicons name="search" size={16} color={C.info} />
                 <TextInput testID="gcs-search" value={q} onChangeText={setQ}
-                  placeholder="Search contacts…" placeholderTextColor={C.info}
+                  placeholder={tt('guardian_circle_sync.search_contacts')} placeholderTextColor={C.info}
                   style={st.searchInput} autoCapitalize="none" />
               </View>
               {filtered.length === 0 ? (
-                <Text style={st.empty}>No contact matches.</Text>
+                <Text style={st.empty}>{tt('guardian_circle_sync.no_contact_matches')}</Text>
               ) : filtered.map(c => {
                 const phone = c.phoneNumbers?.[0]?.number || '';
                 return (
                   <Pressable key={c.id} testID={`gcs-add-${c.id?.slice(0, 8)}`} onPress={() => addToCircle(c)} style={st.pickRow}>
                     <View style={st.avatarS}><Text style={st.avatarText}>{(c.name || '?').charAt(0).toUpperCase()}</Text></View>
                     <View style={{ flex: 1 }}>
-                      <Text style={st.rowName}>{c.name || 'Bez mena'}</Text>
+                      <Text style={st.rowName}>{c.name || tt('guardian_circle_sync.bez_mena')}</Text>
                       <Text style={st.rowSub}>{phone}</Text>
                     </View>
                     <Ionicons name="add-circle" size={22} color={C.brand} />
@@ -199,7 +201,7 @@ export default function GuardianCircleSync() {
         </View>
 
         {!!err && <Text testID="gcs-err" style={st.err}>{err}</Text>}
-        <Text style={st.footer}>Storage is local and encrypted (Keychain / Android Keystore). Guardian Angel never sees the content — only anonymous DID hashes.</Text>
+        <Text style={st.footer}>{tt('guardian_circle_sync.storage_is_local_and_encrypted_keych')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

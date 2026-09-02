@@ -1,0 +1,33 @@
+{
+  "summary": "Iter 63 — Tier gates + IAP unlocks + sonar-reasoning-pro empty-content fix. Backend: 7/8 pytest passed (test_iter63_gates.py). ALL Sovereign gates return 402 (GET /waitlist, /lens/analyze, /agent/search, /agent/chat). IAP sync for all 3 products correctly unlocks tiers (guardian/sentinel/archangel, paid_with=iap). sonar-reasoning-pro live-search worked: real reply + citations>=1 + live_search=true (max_tokens=6000 fix confirmed). One backend failure: POST /api/waitlist with incomplete body {specialty,city} returns 422 (pydantic body validation) BEFORE the 402 tier gate — spec required 402. Frontend (Sovereign, 390x844): waitlist-paywall, ml-paywall and paywall (Jarvis) all present with GUARDIAN PLAN, pw-upgrade and iap-buy-guardian-monthly testIDs. pw-upgrade navigates to /subscription. No raw i18n key leaks detected on /waitlist, /magic-lens, /jarvis, /subscription (all English strings rendered fine). E2E frontend purchase flow via RevenueCat dialog was not re-driven (already validated in iter60-62 and backend proves the unlock path).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/waitlist", "issue": "Sovereign user with incomplete body ({specialty:'Cardiology', city:'Bratislava'}) receives 422 (pydantic validation) instead of 402 tier gate — spec explicitly requires 402. WaitlistIn declares clinic/current_date/target_before as required so pydantic rejects before require_tier is invoked. Fix: make those fields Optional on WaitlistIn (or pre-validate tier via a FastAPI Depends before body-model). GET /waitlist correctly returns 402."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter63_gates.py",
+    "/app/test_reports/pytest/pytest_iter63.xml"
+  ],
+  "action_items": [
+    "Fix POST /api/waitlist ordering so a Sovereign user posting a partial body gets 402 (not 422). Simplest: mark clinic/current_date/target_before as Optional on WaitlistIn (validate deeper inside the handler) or run require_tier via Depends before body validation."
+  ],
+  "critical_code_review_comments": [
+    "perplexity.py enforces max_tokens>=6000 for reasoning models and returns None on empty content — verified live: sonar-reasoning-pro produced non-empty replies with citations for a Sentinel user.",
+    "subscription.iap_tier() correctly maps pro.guardian_* / pro.sentinel_* / pro.archangel_* to guardian/sentinel/archangel; subscription.iap-sync sets tier_paid_with='iap' and credits GA-T loyalty (settle_subscription_allocations)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "87.5%", "frontend": "100%"},
+  "seed_data_creation": "Ephemeral fresh dev-bypass users only (iter63-{tag}-<ts>@example.com); no long-lived seed data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend gates verified via /app/backend/tests/test_iter63_gates.py. sonar-reasoning-pro fix verified live (used 1 PPLX call). Frontend E2E RC-dialog purchase flow was not repeated — validate manually or reuse iter60-62 scripts if needed. Only outstanding issue is the WaitlistIn validation-order bug (422 vs 402).",
+  "rca_of_issue": "WaitlistIn has required Pydantic fields (clinic, current_date, target_before). FastAPI validates request bodies before entering handler code, so require_tier() never runs and 422 surfaces first for a Sovereign user posting a stripped-down body. The task spec asked specifically that the tier gate ALWAYS return 402 for Sovereign, including on this partial payload — this is currently violated only for POST /api/waitlist. GET /api/waitlist, /lens/analyze, /agent/search, /agent/chat all correctly return 402."
+}

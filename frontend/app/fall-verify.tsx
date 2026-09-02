@@ -21,6 +21,7 @@ const RING = 150;
 const STROKE = 10;
 
 export default function FallVerify() {
+  const { t: tt, tx } = useI18n();
   const { t } = useI18n();
   const router = useRouter();
   const [sos, setSos] = useState<SosResult | null>(null);
@@ -229,7 +230,7 @@ export default function FallVerify() {
             <Ionicons name={voiceState === 'recording' ? 'mic' : 'mic-outline'} size={30} color={voiceState === 'recording' ? '#FFF' : C.brand} />
           )}
           <Text style={[st.voiceText, voiceState === 'recording' && { color: '#FFF' }]}>
-            {voiceState === 'recording' ? 'LISTENING… SPEAK NOW' : voiceState === 'checking' ? 'VERIFYING VOICE…' : t('say_im_ok')}
+            {voiceState === 'recording' ? tt('fall_verify.listening_speak_now') : voiceState === 'checking' ? tt('fall_verify.verifying_voice') : t('say_im_ok')}
           </Text>
         </Pressable>
         {!!heard && <Text testID="fall-heard" style={st.heard}>{heard}</Text>}

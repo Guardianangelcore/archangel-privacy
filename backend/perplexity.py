@@ -74,6 +74,10 @@ async def sonar(messages: list, *, model: str = SONAR_PRO, recency: Optional[str
     key = pplx_key()
     if not key:
         return None
+    if "reasoning" in model:
+        # Reasoning models spend hidden <think> tokens from max_tokens; a small ceiling (≲2500) makes the API
+        # return EMPTY content with 0 completion tokens. Enforce a safe minimum.
+        max_tokens = max(max_tokens, 6000)
     payload = {
         "model": model,
         "messages": messages,
@@ -97,7 +101,10 @@ async def sonar(messages: list, *, model: str = SONAR_PRO, recency: Optional[str
                     "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
             r.raise_for_status()
             data = r.json()
-        content = strip_think(data["choices"][0]["message"]["content"])
+        content = strip_think(data["choices"][0]["message"]["content"] or "")
+        if not content:
+            logger.error(f"perplexity {model}: empty content (completion_tokens={data.get('usage', {}).get('completion_tokens')})")
+            return None
         search_results = data.get("search_results") or []
         citations = data.get("citations") or [s["url"] for s in search_results if s.get("url")]
         return {"content": content, "citations": citations, "search_results": search_results,

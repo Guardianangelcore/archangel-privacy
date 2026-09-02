@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const EARN_META: Record<string, { icon: string; hint: string }> = {
   proof_of_help: { icon: 'people', hint: 'Answer a family pulse ping or help a senior' },
@@ -19,6 +20,7 @@ const SPEND_META: Record<string, string> = {
 };
 
 export default function TokenWallet() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [wallet, setWallet] = useState<any>(null);
   const [supply, setSupply] = useState<any>(null);
@@ -68,7 +70,7 @@ export default function TokenWallet() {
         <Pressable testID="tk-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>GA-T · GUARDIAN TOKEN</Text>
+        <Text style={styles.title}>{tt('token.ga_t_guardian_token')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView
@@ -76,13 +78,13 @@ export default function TokenWallet() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
         <View style={styles.hero}>
-          <Text style={styles.heroLbl}>YOUR BALANCE</Text>
+          <Text style={styles.heroLbl}>{tt('token.your_balance')}</Text>
           <Text testID="tk-balance" style={styles.heroVal}>{wallet ? wallet.balance.toFixed(1) : '—'} <Text style={styles.heroSym}>GA-T</Text></Text>
-          <Text style={styles.heroSub}>Earned {wallet?.earned_total?.toFixed(1) ?? 0} · Spent {wallet?.spent_total?.toFixed(1) ?? 0}</Text>
+          <Text style={styles.heroSub}>{tt('token.earned')} {wallet?.earned_total?.toFixed(1) ?? 0} {tt('token.spent')} {wallet?.spent_total?.toFixed(1) ?? 0}</Text>
           {vipActive && (
             <View style={styles.vipBadge}>
               <Ionicons name="shield-checkmark" size={14} color={C.onInverse} />
-              <Text style={styles.vipText}>VIP SENTINEL until {String(wallet.vip_until).slice(0, 10)}</Text>
+              <Text style={styles.vipText}>{tt('token.vip_sentinel_until')} {String(wallet.vip_until).slice(0, 10)}</Text>
             </View>
           )}
         </View>
@@ -94,30 +96,30 @@ export default function TokenWallet() {
           <View testID="tk-loyalty" style={[styles.loyalty, wallet.subscription_allocation.eligible && styles.loyaltyOn]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="diamond" size={18} color={C.brand} />
-              <Text style={styles.loyaltyTitle}>PREMIUM LOYALTY ALLOCATION</Text>
+              <Text style={styles.loyaltyTitle}>{tt('token.premium_loyalty_allocation')}</Text>
             </View>
             {wallet.subscription_allocation.eligible ? (
               <>
                 <Text testID="tk-loyalty-status" style={styles.loyaltyBig}>
-                  +{Number(wallet.subscription_allocation.next_amount).toFixed(0)} GA-T on {String(wallet.subscription_allocation.next_at || '').slice(0, 10) || '—'}
+                  +{Number(wallet.subscription_allocation.next_amount).toFixed(0)} {tt('token.ga_t_on')} {String(wallet.subscription_allocation.next_at || '').slice(0, 10) || '—'}
                 </Text>
                 <Text style={styles.loyaltySub}>
-                  {wallet.subscription_allocation.tier.toUpperCase()} plan · {wallet.subscription_allocation.months_collected} month{wallet.subscription_allocation.months_collected === 1 ? '' : 's'} collected · loyalty bonus +{wallet.subscription_allocation.next_bonus_pct}% (grows +{wallet.subscription_allocation.loyalty_bonus_per_month_pct}%/month, max +{wallet.subscription_allocation.loyalty_bonus_cap_pct}%) · total {Number(wallet.subscription_total || 0).toFixed(0)} GA-T
+                  {wallet.subscription_allocation.tier.toUpperCase()} {tt('token.plan')} {wallet.subscription_allocation.months_collected} {tt('token.month')}{wallet.subscription_allocation.months_collected === 1 ? '' : 's'} {tt('token.collected_loyalty_bonus')}{wallet.subscription_allocation.next_bonus_pct}{tt('token.grows')}{wallet.subscription_allocation.loyalty_bonus_per_month_pct}{tt('token.month_max')}{wallet.subscription_allocation.loyalty_bonus_cap_pct}{tt('token.total')} {Number(wallet.subscription_total || 0).toFixed(0)} GA-T
                 </Text>
                 {wallet.subscription_allocation.credited_now > 0 && (
-                  <Text testID="tk-loyalty-credited" style={styles.loyaltyCredit}>✓ {wallet.subscription_allocation.credited_now} allocation{wallet.subscription_allocation.credited_now === 1 ? '' : 's'} just credited</Text>
+                  <Text testID="tk-loyalty-credited" style={styles.loyaltyCredit}>✓ {wallet.subscription_allocation.credited_now} {tt('token.allocation')}{wallet.subscription_allocation.credited_now === 1 ? '' : 's'} {tt('token.just_credited')}</Text>
                 )}
               </>
             ) : (
               <>
                 <Text testID="tk-loyalty-status" style={styles.loyaltySub}>
                   {wallet.subscription_allocation.reason === 'paid_with_gat_or_trial'
-                    ? 'Monthly GA-T allocations are reserved for card / App Store subscriptions (trials and GA-T-paid plans do not qualify).'
-                    : `Subscribe to Guardian (9 €/month) and receive ${Number(wallet.subscription_allocation.monthly_amount).toFixed(0)} GA-T automatically every month — the longer you stay, the bigger the credit (up to +50%).`}
+                    ? tt('token.monthly_ga_t_allocations_are_reserve')
+                    : tt('token.subscribe_to_guardian_9_month_and_re', [Number(wallet.subscription_allocation.monthly_amount).toFixed(0)])}
                 </Text>
                 {wallet.subscription_allocation.reason !== 'paid_with_gat_or_trial' && (
                   <Pressable testID="tk-loyalty-upgrade" onPress={() => router.push('/subscription')} style={styles.loyaltyBtn}>
-                    <Text style={styles.loyaltyBtnText}>VIEW PLANS</Text>
+                    <Text style={styles.loyaltyBtnText}>{tt('token.view_plans')}</Text>
                   </Pressable>
                 )}
               </>
@@ -125,13 +127,13 @@ export default function TokenWallet() {
           </View>
         )}
 
-        <Text style={styles.section}>EARN GA-T (PROOF-OF-HELP · PROOF-OF-HEALTH)</Text>
+        <Text style={styles.section}>{tt('token.earn_ga_t_proof_of_help_proof_of_hea')}</Text>
         {wallet && Object.entries(wallet.earn_rules || {}).map(([k, r]: any) => (
           <View key={k} style={styles.row}>
             <Ionicons name={(EARN_META[k]?.icon || 'add') as any} size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{r.label}</Text>
-              <Text style={styles.rowSub}>{EARN_META[k]?.hint} · max {r.daily_max}×/day</Text>
+              <Text style={styles.rowTitle}>{tx(r.label)}</Text>
+              <Text style={styles.rowSub}>{EARN_META[k]?.hint} {tt('token.max')} {r.daily_max}{tt('token.day')}</Text>
             </View>
             <Pressable testID={`tk-earn-${k}`} onPress={() => earn(k)} disabled={busy === `e-${k}`} style={styles.earnBtn}>
               {busy === `e-${k}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.earnText}>+{r.amount}</Text>}
@@ -139,13 +141,13 @@ export default function TokenWallet() {
           </View>
         ))}
 
-        <Text style={styles.section}>SPEND GA-T (UTILITY)</Text>
+        <Text style={styles.section}>{tt('token.spend_ga_t_utility')}</Text>
         {wallet && Object.entries(wallet.spend_items || {}).map(([k, it]: any) => (
           <View key={k} style={styles.row}>
             <Ionicons name={(SPEND_META[k] || 'cart') as any} size={20} color={C.fg} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{it.label}</Text>
-              <Text style={styles.rowSub}>2% of the price is burned (deflationary burn)</Text>
+              <Text style={styles.rowTitle}>{tx(it.label)}</Text>
+              <Text style={styles.rowSub}>{tt('token.2_of_the_price_is_burned_deflationar')}</Text>
             </View>
             <Pressable testID={`tk-spend-${k}`} onPress={() => spend(k)} disabled={busy === `s-${k}`} style={styles.spendBtn}>
               {busy === `s-${k}` ? <ActivityIndicator size="small" color={C.brand} /> : <Text style={styles.spendText}>{it.price} GA-T</Text>}
@@ -153,29 +155,29 @@ export default function TokenWallet() {
           </View>
         ))}
 
-        <Text style={styles.section}>TOKENOMICS · SUPPLY</Text>
+        <Text style={styles.section}>{tt('token.tokenomics_supply')}</Text>
         {supply && (
           <View style={styles.supplyBox}>
-            <SupplyBar label="Treasury (rewards)" value={supply.treasury} pct={pct(supply.treasury)} color={C.brand} />
-            <SupplyBar label={`Founder's Reserve 25% (time-lock)`} value={supply.founder_reserve} pct={pct(supply.founder_reserve)} color="#B8860B" />
-            <SupplyBar label="In circulation" value={supply.circulating} pct={pct(supply.circulating)} color="#5FA779" />
-            <SupplyBar label={`Burned (burn ${supply.burn_stats?.burn_rate_pct}%)`} value={supply.burned} pct={pct(supply.burned)} color={C.error} />
-            <Text style={styles.lockNote}>🔒 Founder’s Reserve locked until {String(supply.founder_locked_until).slice(0, 10)} — governance & long-term development.</Text>
-            <Text style={styles.lockNote}>Network: {supply.chain} · Total {supply.total_supply.toLocaleString()} GA-T</Text>
+            <SupplyBar label={tt('token.treasury_rewards')} value={supply.treasury} pct={pct(supply.treasury)} color={C.brand} />
+            <SupplyBar label={tt('token.founder_s_reserve_25_time_lock')} value={supply.founder_reserve} pct={pct(supply.founder_reserve)} color="#B8860B" />
+            <SupplyBar label={tt('token.in_circulation')} value={supply.circulating} pct={pct(supply.circulating)} color="#5FA779" />
+            <SupplyBar label={tt('token.burned_burn', [supply.burn_stats?.burn_rate_pct])} value={supply.burned} pct={pct(supply.burned)} color={C.error} />
+            <Text style={styles.lockNote}>{tt('token.founder_s_reserve_locked_until')} {String(supply.founder_locked_until).slice(0, 10)} {tt('token.governance_long_term_development')}</Text>
+            <Text style={styles.lockNote}>{tt('token.network')} {supply.chain} {tt('token.total_pdje')} {supply.total_supply.toLocaleString()} GA-T</Text>
           </View>
         )}
 
-        <Text style={styles.section}>RECENT TRANSACTIONS</Text>
+        <Text style={styles.section}>{tt('token.recent_transactions')}</Text>
         {(wallet?.txs || []).slice(0, 12).map((t: any) => (
           <View key={t.tx_id} style={styles.txRow}>
             <Ionicons name={t.kind === 'earn' ? 'arrow-down-circle' : t.kind === 'subscription_allocation' ? 'diamond' : t.kind === 'burn' ? 'flame' : 'arrow-up-circle'} size={16} color={t.kind === 'earn' ? '#5FA779' : t.kind === 'subscription_allocation' ? C.brand : t.kind === 'burn' ? C.error : C.fg} />
-            <Text style={styles.txText} numberOfLines={1}>{t.kind === 'subscription_allocation' ? 'LOYALTY' : t.kind.toUpperCase()} {t.amount > 0 ? '+' : ''}{t.amount} · {t.meta?.activity || t.meta?.item || t.meta?.note || ''}</Text>
+            <Text style={styles.txText} numberOfLines={1}>{t.kind === 'subscription_allocation' ? tt('token.loyalty') : t.kind.toUpperCase()} {t.amount > 0 ? '+' : ''}{t.amount} · {t.meta?.activity || t.meta?.item || t.meta?.note || ''}</Text>
             <Text style={styles.txAt}>{String(t.at).slice(5, 16).replace('T', ' ')}</Text>
           </View>
         ))}
-        {(!wallet?.txs || wallet.txs.length === 0) && <Text style={styles.rowSub}>No transactions yet — start earning Proof-of-Help/Health.</Text>}
+        {(!wallet?.txs || wallet.txs.length === 0) && <Text style={styles.rowSub}>{tt('token.no_transactions_yet_start_earning_pr')}</Text>}
 
-        <Text style={styles.disclaimer}>GA-T runs on an internal hash-chained ledger ready for a future Layer-2 on-chain migration (Phase 3). Not a financial product or investment advice.</Text>
+        <Text style={styles.disclaimer}>{tt('token.ga_t_runs_on_an_internal_hash_chaine')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -8,10 +8,12 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/src/auth';
 import { api, API_BASE, getToken } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const LANGS = [['sk', 'SK'], ['cs', 'CZ'], ['en', 'EN'], ['de', 'DE']];
 
 export default function MentalFortress() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [lang, setLang] = useState<string>(['sk', 'cs', 'en', 'de'].includes(user?.language || '') ? (user?.language as string) : 'en');
@@ -50,15 +52,14 @@ export default function MentalFortress() {
         <Pressable testID="mf-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>MENTAL FORTRESS</Text>
+        <Text style={styles.title}>{tt('mental_fortress.mental_fortress')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <View style={styles.heroIcon}><Ionicons name="shield-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>Crisis audio guide</Text>
+        <Text style={styles.h1}>{tt('mental_fortress.crisis_audio_guide')}</Text>
         <Text style={styles.sub}>
-          Voice-guided techniques against panic and stress — breathing, grounding and acupressure points
-          from the founder expertise. Press ▶ and Jarvis guides you step by step.
+          {tt('mental_fortress.voice_guided_techniques_against_pani')}
         </Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         <View style={styles.langRow}>
@@ -78,8 +79,8 @@ export default function MentalFortress() {
                 <Pressable testID={`mf-item-${t.id}`} onPress={() => setOpen(expanded ? null : t.id)} style={styles.cardHead}>
                   <View style={styles.cardIcon}><Ionicons name={t.icon} size={20} color={C.brand} /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{t.title}</Text>
-                    <Text style={styles.cardSub}>{t.subtitle}</Text>
+                    <Text style={styles.cardTitle}>{tx(t.title)}</Text>
+                    <Text style={styles.cardSub}>{tx(t.subtitle)}</Text>
                   </View>
                   <Pressable
                     testID={`mf-play-${t.id}`}

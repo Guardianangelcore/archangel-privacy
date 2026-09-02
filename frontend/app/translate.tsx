@@ -16,8 +16,10 @@ import { useAuth } from '@/src/auth';
 import { tap } from '@/src/ui/glass';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Translate() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const router = useRouter();
   const lang: Lang = (user?.language as Lang) || 'en';
@@ -132,7 +134,7 @@ export default function Translate() {
         <Pressable testID="tr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={styles.title}>AI TRANSLATOR · JARVIS</Text>
+        <Text style={styles.title}>{tt('translate.ai_translator_jarvis')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -140,28 +142,28 @@ export default function Translate() {
         <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           {/* UPLOAD HERO — prominent document/photo entry */}
           <View style={styles.uploadCard}>
-            <Text style={styles.uploadLbl}>UPLOAD A DOCTOR REPORT</Text>
-            <Text style={styles.uploadSub}>Jarvis reads it and explains it in plain language.</Text>
+            <Text style={styles.uploadLbl}>{tt('translate.upload_a_doctor_report')}</Text>
+            <Text style={styles.uploadSub}>{tt('translate.jarvis_reads_it_and_explains_it_in_p')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               <Pressable testID="tr-camera" onPress={takePhoto} disabled={busy} style={[styles.upBtn, styles.upBtnPri]}>
                 <Ionicons name="camera" size={22} color={C.onInverse} />
-                <Text style={styles.upBtnPriText}>PHOTOGRAPH{'\n'}DOCUMENT</Text>
+                <Text style={styles.upBtnPriText}>{tt('translate.photograph')}{'\n'}{tt('translate.document')}</Text>
               </Pressable>
               <Pressable testID="tr-upload" onPress={pickFile} disabled={busy} style={[styles.upBtn, styles.upBtnSec]}>
                 <Ionicons name="cloud-upload-outline" size={22} color={C.brand} />
-                <Text style={styles.upBtnSecText}>UPLOAD FILE{'\n'}/ PHOTO</Text>
+                <Text style={styles.upBtnSecText}>{tt('translate.upload_file')}{'\n'}{tt('translate.photo')}</Text>
               </Pressable>
             </View>
             {camBlocked && (
               <Pressable testID="tr-cam-settings" onPress={() => Linking.openSettings()} style={styles.settingsRow}>
                 <Ionicons name="settings-outline" size={14} color={C.brand} />
-                <Text style={styles.settingsText}>Camera is blocked — open Settings</Text>
+                <Text style={styles.settingsText}>{tt('translate.camera_is_blocked_open_settings')}</Text>
               </Pressable>
             )}
-            <Text style={styles.uploadNote}>The document is saved to your Vault and instantly logged in your Health Timeline.</Text>
+            <Text style={styles.uploadNote}>{tt('translate.the_document_is_saved_to_your_vault')}</Text>
           </View>
 
-          <Text style={styles.divider}>— OR PASTE TEXT —</Text>
+          <Text style={styles.divider}>{tt('translate.or_paste_text')}</Text>
 
           <TextInput
             testID="tr-input"
@@ -176,7 +178,7 @@ export default function Translate() {
             {busy && !stage ? <ActivityIndicator color={C.onInverse} /> : (
               <>
                 <Ionicons name="sparkles-outline" size={16} color={C.onInverse} />
-                <Text style={styles.runText}>TRANSLATE INTO PLAIN LANGUAGE</Text>
+                <Text style={styles.runText}>{tt('translate.translate_into_plain_language')}</Text>
               </>
             )}
           </Pressable>
@@ -191,11 +193,11 @@ export default function Translate() {
 
           {!!out && (
             <View style={styles.outBox}>
-              <Text style={styles.outLbl}>HUMAN EXPLANATION</Text>
+              <Text style={styles.outLbl}>{tt('translate.human_explanation')}</Text>
               <Text style={styles.outText}>{out}</Text>
               <Pressable testID="tr-speak" onPress={speak} disabled={speaking} style={styles.speakBtn}>
                 <Ionicons name={speaking ? 'volume-high' : 'volume-medium-outline'} size={18} color={C.brand} />
-                <Text style={styles.speakBtnText}>PLAY ALOUD</Text>
+                <Text style={styles.speakBtnText}>{tt('translate.play_aloud')}</Text>
               </Pressable>
             </View>
           )}
@@ -203,24 +205,24 @@ export default function Translate() {
           {/* NEXT APPOINTMENT — flagged by AI, one tap to calendar */}
           {appt?.date && (
             <View testID="tr-appt" style={styles.apptBox}>
-              <Text style={styles.apptLbl}>📅 NEXT APPOINTMENT FOUND</Text>
+              <Text style={styles.apptLbl}>{tt('translate.next_appointment_found')}</Text>
               <Text style={styles.apptDate}>{appt.date}{appt.time ? ` · ${appt.time}` : ''}</Text>
-              <Text style={styles.apptTitle}>{appt.title}</Text>
+              <Text style={styles.apptTitle}>{tx(appt.title)}</Text>
               {apptAdded ? (
                 <>
                   <View style={styles.apptDone}>
                     <Ionicons name="checkmark-circle" size={20} color={C.brand} />
-                    <Text style={styles.apptDoneText}>SAVED IN CALENDAR</Text>
+                    <Text style={styles.apptDoneText}>{tt('translate.saved_in_calendar')}</Text>
                   </View>
                   <Pressable testID="tr-open-timeline" onPress={() => router.push('/health-timeline')} style={styles.timelineLink}>
                     <Ionicons name="time-outline" size={16} color={C.brand} />
-                    <Text style={styles.timelineLinkText}>Open Health Timeline</Text>
+                    <Text style={styles.timelineLinkText}>{tt('translate.open_health_timeline')}</Text>
                   </Pressable>
                 </>
               ) : (
                 <Pressable testID="tr-add-calendar" onPress={addToCalendar} style={styles.apptBtn}>
                   <Ionicons name="calendar" size={20} color={C.onInverse} />
-                  <Text style={styles.apptBtnText}>ADD TO CALENDAR</Text>
+                  <Text style={styles.apptBtnText}>{tt('translate.add_to_calendar')}</Text>
                 </Pressable>
               )}
             </View>

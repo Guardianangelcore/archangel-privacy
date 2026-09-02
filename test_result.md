@@ -905,3 +905,6 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 ## Iter 62 — audit & fix
 - Backend: tests/test_iter62_iap_tiers.py 6/6 + iter60 18/18 pass. Manual E2E in preview: all 6 EUR prices render from offerings, Sentinel simulated purchase → CURRENT TIER: SENTINEL + 300 GA-T.
 - iteration_62.json: backend 17/17, UI green (4 tiers, Archangel simulated purchase → +1000 GA-T, rename verified). No blockers.
+
+## Iter 63
+- iteration_63.json: 7/8 → fixed POST /waitlist 422→402 via Depends gate; now 8/8. UI: paywalls on waitlist/magic-lens/jarvis for Sovereign, pw-upgrade → /subscription, no raw i18n keys, Slovak renders.

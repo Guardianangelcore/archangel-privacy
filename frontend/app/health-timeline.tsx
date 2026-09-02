@@ -13,6 +13,7 @@ import { sharePdf } from '@/src/pdf';
 import { DateField } from '@/src/ui/fields';
 import { addToGuardianCalendar } from '@/src/native-calendar';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const CATS: any = {
   vaccine: { label: 'VACCINATION', plural: 'VACCINATIONS', icon: 'shield-checkmark-outline', color: '#5FA779', hint: 'Vaccine (e.g. Tetanus)' },
@@ -39,6 +40,7 @@ const CatIcon = ({ cat, size, color }: { cat: string; size: number; color: strin
 };
 
 export default function LifeCard() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [card, setCard] = useState<any>(null);
   const [data, setData] = useState<any>(null);
@@ -283,21 +285,21 @@ export default function LifeCard() {
         <Pressable testID="ht-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>LIFE CARD</Text>
+        <Text style={styles.title}>{tt('health_timeline.life_card')}</Text>
         <Pressable testID="ht-add" onPress={() => setAdding(!adding)} hitSlop={12}>
           <Ionicons name={adding ? 'close' : 'add'} size={26} color={C.brand} />
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Health timeline since birth</Text>
-        <Text style={styles.sub}>Vaccinations · diseases · surgeries · injuries · check-ups — all on one timeline.</Text>
+        <Text style={styles.h1}>{tt('health_timeline.health_timeline_since_birth')}</Text>
+        <Text style={styles.sub}>{tt('health_timeline.vaccinations_diseases_surgeries_inju')}</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         {/* PREPÍNAČ KARIET — moja karta + karty detí */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: S.md }} contentContainerStyle={{ gap: S.sm }}>
           <Pressable testID="lc-card-me" onPress={() => switchCard(null)} style={[styles.cardChip, !activeChild && styles.cardChipOn]}>
             <Ionicons name="shield" size={13} color={!activeChild ? C.onInverse : C.brand} />
-            <Text style={[styles.cardChipText, !activeChild && { color: C.onInverse }]}>MY CARD</Text>
+            <Text style={[styles.cardChipText, !activeChild && { color: C.onInverse }]}>{tt('health_timeline.my_card')}</Text>
           </Pressable>
           {children.map(k => (
             <Pressable key={k.child_id} testID={`lc-card-${k.child_id}`} onPress={() => switchCard(k)} style={[styles.cardChip, activeChild?.child_id === k.child_id && styles.cardChipOn]}>
@@ -307,7 +309,7 @@ export default function LifeCard() {
           ))}
           <Pressable testID="lc-add-child" onPress={openAddChild} style={styles.cardChip}>
             <Ionicons name="add" size={14} color={C.brand} />
-            <Text style={styles.cardChipText}>CHILD</Text>
+            <Text style={styles.cardChipText}>{tt('health_timeline.child')}</Text>
           </Pressable>
         </ScrollView>
 
@@ -318,8 +320,8 @@ export default function LifeCard() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={styles.idIcon}><Ionicons name={activeChild ? 'happy' : 'person'} size={22} color={C.onInverse} /></View>
               <View style={{ flex: 1, marginLeft: S.md }}>
-                <Text style={styles.idName}>{addingChild ? 'New child card' : (activeChild ? activeChild.name : (card.full_name || 'Guardian Angel'))}</Text>
-                <Text style={styles.idSrc}>{activeChild || addingChild ? 'CHILD CARD · SOURCE: BIRTH CERTIFICATE' : 'IDENTITY · SOURCE: BIRTH CERTIFICATE'}</Text>
+                <Text style={styles.idName}>{addingChild ? tt('health_timeline.new_child_card') : (activeChild ? activeChild.name : (card.full_name || tt('health_timeline.guardian_angel')))}</Text>
+                <Text style={styles.idSrc}>{activeChild || addingChild ? tt('health_timeline.child_card_source_birth_certificate') : tt('health_timeline.identity_source_birth_certificate')}</Text>
               </View>
               <Pressable testID="lc-edit" onPress={() => (editing || addingChild ? (setEditing(false), setAddingChild(false)) : openEdit())} hitSlop={10}>
                 <Ionicons name={editing || addingChild ? 'close-circle-outline' : 'create-outline'} size={22} color={C.brand} />
@@ -328,15 +330,15 @@ export default function LifeCard() {
             {!addingChild && (
               <View style={styles.idRow}>
                 <View style={styles.idCell}>
-                  <Text style={styles.idLabel}>DATE OF BIRTH</Text>
+                  <Text style={styles.idLabel}>{tt('health_timeline.date_of_birth')}</Text>
                   <Text style={styles.idValue}>{ident?.birth_date ? fmtDate(ident.birth_date) : (!activeChild && card.birth_year ? String(card.birth_year) : '—')}</Text>
                 </View>
                 <View style={styles.idCell}>
-                  <Text style={styles.idLabel}>AGE</Text>
+                  <Text style={styles.idLabel}>{tt('health_timeline.age')}</Text>
                   <Text style={styles.idValue}>{ident?.age != null ? `${ident.age} y.` : '—'}</Text>
                 </View>
                 <View style={styles.idCell}>
-                  <Text style={styles.idLabel}>BLOOD TYPE</Text>
+                  <Text style={styles.idLabel}>{tt('health_timeline.blood_type')}</Text>
                   <Text style={[styles.idValue, { color: C.error }]}>{ident?.blood_type || '—'}</Text>
                 </View>
               </View>
@@ -348,25 +350,25 @@ export default function LifeCard() {
                     {ocrBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
                       <>
                         <Ionicons name="camera-outline" size={15} color={C.brand} />
-                        <Text style={styles.ocrBtnText}>SCAN BIRTH CERTIFICATE</Text>
+                        <Text style={styles.ocrBtnText}>{tt('health_timeline.scan_birth_certificate')}</Text>
                       </>
                     )}
                   </Pressable>
                   <Pressable testID="lc-ocr-pick" onPress={() => runOcr(false)} disabled={ocrBusy} style={styles.ocrBtn}>
                     <Ionicons name="image-outline" size={15} color={C.brand} />
-                    <Text style={styles.ocrBtnText}>FROM GALLERY</Text>
+                    <Text style={styles.ocrBtnText}>{tt('health_timeline.from_gallery')}</Text>
                   </Pressable>
                 </View>
                 {camBlocked && (
                   <Pressable testID="lc-ocr-settings" onPress={() => Linking.openSettings()} style={styles.settingsBtn}>
                     <Ionicons name="settings-outline" size={14} color={C.onWarn} />
-                    <Text style={styles.settingsText}>Camera is blocked — OPEN SETTINGS</Text>
+                    <Text style={styles.settingsText}>{tt('health_timeline.camera_is_blocked_open_settings')}</Text>
                   </Pressable>
                 )}
                 {!!ocrMsg && <Text testID="lc-ocr-msg" style={styles.predMsg}>{ocrMsg}</Text>}
-                <TextInput testID="lc-name" style={styles.input} placeholder={activeChild || addingChild ? 'Child name' : 'Full name'} placeholderTextColor={C.info} value={eName} onChangeText={setEName} />
-                <DateField testID="lc-birth" title="DATE OF BIRTH" value={eBirth} onChange={setEBirth} placeholder="Date of birth" style={styles.input} />
-                <Text style={styles.idLabel}>BLOOD TYPE</Text>
+                <TextInput testID="lc-name" style={styles.input} placeholder={activeChild || addingChild ? tt('health_timeline.child_name') : tt('health_timeline.full_name')} placeholderTextColor={C.info} value={eName} onChangeText={setEName} />
+                <DateField testID="lc-birth" title={tt('health_timeline.date_of_birth')} value={eBirth} onChange={setEBirth} placeholder={tt('health_timeline.date_of_birth_5214')} style={styles.input} />
+                <Text style={styles.idLabel}>{tt('health_timeline.blood_type')}</Text>
                 <View style={styles.bloodRow}>
                   {BLOOD.map(b => (
                     <Pressable key={b} testID={`lc-blood-${b}`} onPress={() => setEBlood(eBlood === b ? '' : b)} style={[styles.bloodChip, eBlood === b && { backgroundColor: C.brand, borderColor: C.brand }]}>
@@ -376,13 +378,13 @@ export default function LifeCard() {
                 </View>
                 {(activeChild || addingChild) && (
                   <>
-                    <Text style={styles.idLabel}>SEX (for WHO growth percentiles)</Text>
+                    <Text style={styles.idLabel}>{tt('health_timeline.sex_for_who_growth_percentiles')}</Text>
                     <View style={{ flexDirection: 'row', gap: S.sm }}>
                       <Pressable testID="lc-sex-m" onPress={() => setESex(eSex === 'm' ? '' : 'm')} style={[styles.bloodChip, { flex: 1 }, eSex === 'm' && { backgroundColor: C.brand, borderColor: C.brand }]}>
-                        <Text style={[styles.bloodChipText, eSex === 'm' && { color: C.onInverse }]}>👦 BOY</Text>
+                        <Text style={[styles.bloodChipText, eSex === 'm' && { color: C.onInverse }]}>{tt('health_timeline.boy')}</Text>
                       </Pressable>
                       <Pressable testID="lc-sex-f" onPress={() => setESex(eSex === 'f' ? '' : 'f')} style={[styles.bloodChip, { flex: 1 }, eSex === 'f' && { backgroundColor: C.brand, borderColor: C.brand }]}>
-                        <Text style={[styles.bloodChipText, eSex === 'f' && { color: C.onInverse }]}>👧 GIRL</Text>
+                        <Text style={[styles.bloodChipText, eSex === 'f' && { color: C.onInverse }]}>{tt('health_timeline.girl')}</Text>
                       </Pressable>
                     </View>
                   </>
@@ -390,24 +392,24 @@ export default function LifeCard() {
                 {/* GDPR CONSENT — required before storing health data */}
                 <Pressable testID="lc-gdpr-consent" onPress={() => setGdprConsent(v => !v)} style={styles.consentRow}>
                   <Ionicons name={gdprConsent ? 'checkbox' : 'square-outline'} size={22} color={gdprConsent ? C.brand : C.info} />
-                  <Text style={styles.consentText}>I consent to storing my health data</Text>
+                  <Text style={styles.consentText}>{tt('health_timeline.i_consent_to_storing_my_health_data')}</Text>
                 </Pressable>
                 <Pressable testID="lc-save-card" onPress={saveCard} disabled={cardBusy} style={styles.cta}>
-                  {cardBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{addingChild ? 'CREATE CHILD CARD' : 'SAVE DETAILS'}</Text>}
+                  {cardBusy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{addingChild ? tt('health_timeline.create_child_card') : tt('health_timeline.save_details')}</Text>}
                 </Pressable>
                 {editing && activeChild && !delChild && (
                   <Pressable testID="lc-del-child" onPress={() => setDelChild(true)} style={styles.delBtn}>
                     <Ionicons name="trash-outline" size={14} color={C.error} />
-                    <Text style={styles.delBtnText}>DELETE CHILD CARD</Text>
+                    <Text style={styles.delBtnText}>{tt('health_timeline.delete_child_card')}</Text>
                   </Pressable>
                 )}
                 {editing && activeChild && delChild && (
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
                     <Pressable testID="lc-del-child-yes" onPress={removeChild} style={[styles.delBtn, { flex: 1, backgroundColor: C.error, borderColor: C.error }]}>
-                      <Text style={[styles.delBtnText, { color: C.onInverse }]}>YES, DELETE INCLUDING RECORDS</Text>
+                      <Text style={[styles.delBtnText, { color: C.onInverse }]}>{tt('health_timeline.yes_delete_including_records')}</Text>
                     </Pressable>
                     <Pressable testID="lc-del-child-no" onPress={() => setDelChild(false)} style={[styles.delBtn, { flex: 1 }]}>
-                      <Text style={[styles.delBtnText, { color: C.fg }]}>CANCEL</Text>
+                      <Text style={[styles.delBtnText, { color: C.fg }]}>{tt('health_timeline.cancel')}</Text>
                     </Pressable>
                   </View>
                 )}
@@ -421,13 +423,13 @@ export default function LifeCard() {
           <View style={styles.btnRow}>
             <Pressable testID="lc-magic-lens" onPress={() => router.push('/magic-lens')} style={[styles.pdfBtn, { borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.12)' }]}>
               <Ionicons name="scan" size={16} color={C.brand} />
-              <Text style={styles.pdfText}>✨ MAGIC LENS</Text>
+              <Text style={styles.pdfText}>{tt('health_timeline.magic_lens')}</Text>
             </Pressable>
             <Pressable testID="lc-pdf" onPress={exportPdf} disabled={pdfBusy} style={styles.pdfBtn}>
               {pdfBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
                 <>
                   <Ionicons name="print-outline" size={16} color={C.brand} />
-                  <Text style={styles.pdfText}>PDF FOR DOCTOR</Text>
+                  <Text style={styles.pdfText}>{tt('health_timeline.pdf_for_doctor')}</Text>
                 </>
               )}
             </Pressable>
@@ -435,18 +437,18 @@ export default function LifeCard() {
               {vaxBusy ? <ActivityIndicator size="small" color={C.brand} /> : (
                 <>
                   <Ionicons name="airplane-outline" size={16} color={C.brand} />
-                  <Text style={styles.pdfText}>EU VACCINATION PASS</Text>
+                  <Text style={styles.pdfText}>{tt('health_timeline.eu_vaccination_pass')}</Text>
                 </>
               )}
             </Pressable>
             <Pressable testID="lc-trends" onPress={() => router.push({ pathname: '/health-trends', params: activeChild ? { child_id: activeChild.child_id, name: activeChild.name } : {} } as any)} style={styles.pdfBtn}>
               <Ionicons name="bar-chart-outline" size={16} color={C.brand} />
-              <Text style={styles.pdfText}>HEALTH TRENDS</Text>
+              <Text style={styles.pdfText}>{tt('health_timeline.health_trends')}</Text>
             </Pressable>
             {activeChild && (
               <Pressable testID="lc-growth" onPress={() => router.push({ pathname: '/child-growth', params: { child_id: activeChild.child_id } } as any)} style={styles.pdfBtn}>
                 <Ionicons name="trending-up-outline" size={16} color={C.brand} />
-                <Text style={styles.pdfText}>GROWTH CURVE</Text>
+                <Text style={styles.pdfText}>{tt('health_timeline.growth_curve')}</Text>
               </Pressable>
             )}
           </View>
@@ -456,7 +458,7 @@ export default function LifeCard() {
         {!activeChild && (
           <Pressable testID="lc-voice-hint" onPress={() => router.push('/jarvis')} style={styles.voiceHint}>
             <Ionicons name="mic-outline" size={20} color={C.brand} />
-            <Text style={styles.voiceHintText}>Tell Jarvis: Today my doctor told me I have chickenpox — it will be filed here automatically.</Text>
+            <Text style={styles.voiceHintText}>{tt('health_timeline.tell_jarvis_today_my_doctor_told_me')}</Text>
             <Ionicons name="chevron-forward" size={16} color={C.info} />
           </Pressable>
         )}
@@ -465,9 +467,9 @@ export default function LifeCard() {
           <View style={styles.alertBox}>
             <Ionicons name="alarm-outline" size={18} color={C.onWarn} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>BOOSTER DUE SOON</Text>
+              <Text style={styles.alertTitle}>{tt('health_timeline.booster_due_soon')}</Text>
               {data.booster_alerts.map((b: any) => (
-                <Text key={b.event_id} style={styles.alertText}>• {b.title} — booster do {b.booster_due}</Text>
+                <Text key={b.event_id} style={styles.alertText}>• {tx(b.title)} {tt('health_timeline.booster_do')} {b.booster_due}</Text>
               ))}
             </View>
           </View>
@@ -480,21 +482,21 @@ export default function LifeCard() {
               {CAT_KEYS.map(k => (
                 <Pressable key={k} testID={`ht-cat-${k}`} onPress={() => setCat(k)} style={[styles.catChip, cat === k && { backgroundColor: CATS[k].color, borderColor: CATS[k].color }]}>
                   <CatIcon cat={k} size={13} color={cat === k ? C.onInverse : CATS[k].color} />
-                  <Text style={[styles.catChipText, cat === k && { color: C.onInverse }]}>{CATS[k].label}</Text>
+                  <Text style={[styles.catChipText, cat === k && { color: C.onInverse }]}>{tx(CATS[k].label)}</Text>
                 </Pressable>
               ))}
             </View>
             <TextInput testID="ht-title" style={styles.input} placeholder={CATS[cat].hint} placeholderTextColor={C.info} value={title} onChangeText={setTitle} />
-            <DateField testID="ht-date" title="DATE" value={date} onChange={setDate} placeholder="Date" style={styles.input} />
-            <TextInput testID="lc-notes" style={styles.input} placeholder="Notes (optional)" placeholderTextColor={C.info} value={notes} onChangeText={setNotes} />
+            <DateField testID="ht-date" title={tt('health_timeline.date_yjqb')} value={date} onChange={setDate} placeholder={tt('health_timeline.date')} style={styles.input} />
+            <TextInput testID="lc-notes" style={styles.input} placeholder={tt('health_timeline.notes_optional')} placeholderTextColor={C.info} value={notes} onChangeText={setNotes} />
             {cat === 'vaccine' && (
-              <DateField testID="ht-booster" title="BOOSTER DUE" value={booster} onChange={setBooster} placeholder="Booster due (optional)" style={styles.input} />
+              <DateField testID="ht-booster" title={tt('health_timeline.booster_due')} value={booster} onChange={setBooster} placeholder={tt('health_timeline.booster_due_optional')} style={styles.input} />
             )}
             {cat === 'dental' && (
-              <TextInput testID="lc-tooth" style={styles.input} placeholder="Tooth no. (optional, e.g. 36)" placeholderTextColor={C.info} keyboardType="number-pad" maxLength={4} value={tooth} onChangeText={setTooth} />
+              <TextInput testID="lc-tooth" style={styles.input} placeholder={tt('health_timeline.tooth_no_optional_e_g_36')} placeholderTextColor={C.info} keyboardType="number-pad" maxLength={4} value={tooth} onChangeText={setTooth} />
             )}
             <Pressable testID="ht-save" onPress={add} disabled={busy} style={styles.cta}>
-              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>SAVE RECORD</Text>}
+              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('health_timeline.save_record')}</Text>}
             </Pressable>
           </View>
         )}
@@ -503,13 +505,13 @@ export default function LifeCard() {
         <View testID="lc-predictions" style={styles.predBox}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
             <Ionicons name="sparkles" size={16} color={C.brand} />
-            <Text style={styles.predTitle}>PREDICTIONS · JARVIS</Text>
+            <Text style={styles.predTitle}>{tt('health_timeline.predictions_jarvis')}</Text>
             <View style={{ flex: 1 }} />
             <Pressable testID="lc-predict" onPress={generatePredictions} disabled={predBusy} style={styles.predBtn}>
-              {predBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.predBtnText}>{predictions.length ? 'REFRESH' : 'SUGGEST'}</Text>}
+              {predBusy ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.predBtnText}>{predictions.length ? tt('health_timeline.refresh') : tt('health_timeline.suggest')}</Text>}
             </Pressable>
           </View>
-          <Text style={styles.predSub}>{activeChild ? `Jarvis suggests the next vaccination or check-up for ${activeChild.name} based on the pediatric vaccination schedule.` : 'Based on your history, Jarvis suggests when your next vaccination or check-up is due.'}</Text>
+          <Text style={styles.predSub}>{activeChild ? tt('health_timeline.jarvis_suggests_the_next_vaccination', [activeChild.name]) : tt('health_timeline.based_on_your_history_jarvis_suggest')}</Text>
           {!!predMsg && <Text testID="lc-pred-msg" style={styles.predMsg}>{predMsg}</Text>}
           {predictions.map((p: any, i: number) => {
             const ui = CATS[p.category] || CATS.exam;
@@ -517,22 +519,22 @@ export default function LifeCard() {
               <View key={`${p.title}-${i}`} testID={`lc-pred-${i}`} style={styles.predCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
                   <CatIcon cat={p.category} size={15} color={ui.color} />
-                  <Text style={[styles.tlCat, { color: ui.color }]}>{ui.label} · {p.suggested_date}</Text>
+                  <Text style={[styles.tlCat, { color: ui.color }]}>{tx(ui.label)} · {p.suggested_date}</Text>
                 </View>
-                <Text style={styles.predCardTitle}>{p.title}</Text>
+                <Text style={styles.predCardTitle}>{tx(p.title)}</Text>
                 {!!p.reason && <Text style={styles.predReason}>{p.reason}</Text>}
                 <Pressable testID={`lc-accept-${i}`} onPress={() => acceptPrediction(p)} disabled={accepting === p.title} style={styles.acceptBtn}>
                   {accepting === p.title ? <ActivityIndicator size="small" color={C.onInverse} /> : (
                     <>
                       <Ionicons name="calendar-outline" size={14} color={C.onInverse} />
-                      <Text style={styles.acceptText}>ADD TO CALENDAR</Text>
+                      <Text style={styles.acceptText}>{tt('health_timeline.add_to_calendar')}</Text>
                     </>
                   )}
                 </Pressable>
               </View>
             );
           })}
-          {predictions.length > 0 && <Text style={styles.aiMark}>AI Content · Sovereign Protocol</Text>}
+          {predictions.length > 0 && <Text style={styles.aiMark}>{tt('health_timeline.ai_content_sovereign_protocol')}</Text>}
         </View>
 
         {/* RODINNÉ KARTY — Guardian Circle (len očkovania + prehliadky) — len pre moju kartu */}
@@ -540,13 +542,13 @@ export default function LifeCard() {
         <View testID="lc-family" style={styles.famBox}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
             <Ionicons name="people" size={16} color={C.brand} />
-            <Text style={styles.predTitle}>FAMILY CARDS · GUARDIAN CIRCLE</Text>
+            <Text style={styles.predTitle}>{tt('health_timeline.family_cards_guardian_circle')}</Text>
           </View>
           {!fam && <ActivityIndicator size="small" color={C.brand} style={{ marginTop: S.md }} />}
           {fam && (fam.members || []).length === 0 && (
             <Pressable testID="lc-fam-empty" onPress={() => router.push('/recovery-suite')} style={styles.famEmpty}>
-              <Text style={styles.hint}>No Guardian Circle members yet. Add family as guardians (Social Recovery) to see their vaccinations and check-ups.</Text>
-              <Text style={styles.famEmptyLink}>+ ADD GUARDIAN →</Text>
+              <Text style={styles.hint}>{tt('health_timeline.no_guardian_circle_members_yet_add_f')}</Text>
+              <Text style={styles.famEmptyLink}>{tt('health_timeline.add_guardian')}</Text>
             </Pressable>
           )}
           {(fam?.members || []).map((m: any) => (
@@ -555,21 +557,21 @@ export default function LifeCard() {
                 <View style={styles.famAvatar}><Text style={styles.famInitial}>{(m.name || '?').charAt(0).toUpperCase()}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.famName}>{m.name}</Text>
-                  <Text style={styles.famMeta}>💉 {m.counts.vaccine} vaccinations · 🩺 {m.counts.exam} check-ups{m.booster_soon ? ` · ⏰ booster within 30 days` : ''}</Text>
+                  <Text style={styles.famMeta}>💉 {m.counts.vaccine} {tt('health_timeline.vaccinations')} {m.counts.exam} {tt('health_timeline.check_ups')}{m.booster_soon ? tt('health_timeline.booster_within_30_days') : ''}</Text>
                 </View>
                 <Ionicons name={famSel === m.user_id ? 'chevron-up' : 'chevron-down'} size={16} color={C.info} />
               </Pressable>
               {famSel === m.user_id && (
                 <View style={styles.famDetail}>
                   {famBusy && <ActivityIndicator size="small" color={C.brand} />}
-                  {famTl && (famTl.events || []).length === 0 && <Text style={styles.hint}>No vaccinations or check-ups.</Text>}
+                  {famTl && (famTl.events || []).length === 0 && <Text style={styles.hint}>{tt('health_timeline.no_vaccinations_or_check_ups')}</Text>}
                   {(famTl?.events || []).map((e: any) => (
                     <View key={e.event_id} style={styles.famEvRow}>
                       <CatIcon cat={e.category} size={13} color={(CATS[e.category] || CATS.exam).color} />
-                      <Text style={styles.famEvText}>{fmtDate(e.date)} — {e.title}{e.booster_due ? ` (booster do ${fmtDate(e.booster_due)})` : ''}</Text>
+                      <Text style={styles.famEvText}>{fmtDate(e.date)} — {tx(e.title)}{e.booster_due ? tt('health_timeline.booster_do_1im8', [fmtDate(e.booster_due)]) : ''}</Text>
                     </View>
                   ))}
-                  {famTl && <Text style={styles.famPrivacy}>For privacy, only vaccinations and check-ups are shared within the circle.</Text>}
+                  {famTl && <Text style={styles.famPrivacy}>{tt('health_timeline.for_privacy_only_vaccinations_and_ch')}</Text>}
                 </View>
               )}
             </View>
@@ -580,7 +582,7 @@ export default function LifeCard() {
         {/* FILTRE — 5 kategórií s počtami */}
         <View style={styles.filterRow}>
           <Pressable testID="ht-filter-all" onPress={() => setF('all')} style={[styles.fChip, filter === 'all' && { backgroundColor: C.brand, borderColor: C.brand }]}>
-            <Text style={[styles.fChipText, filter === 'all' && { color: C.onInverse }]}>ALL</Text>
+            <Text style={[styles.fChipText, filter === 'all' && { color: C.onInverse }]}>{tt('health_timeline.all')}</Text>
           </Pressable>
           {CAT_KEYS.map(k => (
             <Pressable key={k} testID={`ht-filter-${k}`} onPress={() => setF(k)} style={[styles.fChip, filter === k && { backgroundColor: CATS[k].color, borderColor: CATS[k].color }]}>
@@ -590,22 +592,22 @@ export default function LifeCard() {
         </View>
 
         {!data && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
-        {data && events.length === 0 && <Text style={styles.hint}>No records yet. Add the first via + or just tell Jarvis.</Text>}
+        {data && events.length === 0 && <Text style={styles.hint}>{tt('health_timeline.no_records_yet_add_the_first_via_or')}</Text>}
 
         {/* KARTA ZUBÁRA — história podľa zubov (pri filtri ZUBÁR) */}
         {filter === 'dental' && events.length > 0 && (
           <View testID="lc-dental-card" style={styles.dentalBox}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
               <MaterialCommunityIcons name="tooth-outline" size={16} color="#64D2FF" />
-              <Text style={[styles.predTitle, { color: '#64D2FF' }]}>DENTAL CARD — BY TOOTH</Text>
+              <Text style={[styles.predTitle, { color: '#64D2FF' }]}>{tt('health_timeline.dental_card_by_tooth')}</Text>
             </View>
             {(() => {
               const byTooth: any = {};
               events.filter((e: any) => e.tooth).forEach((e: any) => { (byTooth[e.tooth] = byTooth[e.tooth] || []).push(e); });
               const teeth = Object.keys(byTooth).sort();
-              if (!teeth.length) return <Text style={styles.hint}>Tip: add a tooth number to a record to see treatment history by tooth.</Text>;
+              if (!teeth.length) return <Text style={styles.hint}>{tt('health_timeline.tip_add_a_tooth_number_to_a_record_t')}</Text>;
               return teeth.map(t => (
-                <Text key={t} style={styles.dentalRow}>🦷 Zub {t}: {byTooth[t].map((e: any) => `${e.title} (${fmtDate(e.date)})`).join(' · ')}</Text>
+                <Text key={t} style={styles.dentalRow}>{tt('health_timeline.zub')} {t}: {byTooth[t].map((e: any) => `${e.title} (${fmtDate(e.date)})`).join(' · ')}</Text>
               ));
             })()}
           </View>
@@ -625,14 +627,14 @@ export default function LifeCard() {
                 <View style={[styles.tlCard, future && { borderColor: C.brand }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
                     <CatIcon cat={e.category} size={16} color={ui.color} />
-                    <Text style={[styles.tlCat, { color: ui.color }]}>{ui.label}{future ? ' · UPCOMING' : ''}{e.source === 'voice' ? ' · 🎙 JARVIS' : e.source === 'jarvis' ? ' · ✨ PREDICTION' : ''}</Text>
+                    <Text style={[styles.tlCat, { color: ui.color }]}>{tx(ui.label)}{future ? ' ' + tt('health_timeline.upcoming') : ''}{e.source === 'voice' ? ' ' + tt('health_timeline.jarvis') : e.source === 'jarvis' ? ' ' + tt('health_timeline.prediction') : ''}</Text>
                     <View style={{ flex: 1 }} />
                     <Pressable testID={`ht-del-${e.event_id}`} onPress={() => del(e.event_id)} hitSlop={8}>
                       <Ionicons name="trash-outline" size={15} color={C.info} />
                     </Pressable>
                   </View>
-                  <Text style={styles.tlTitle}>{e.title}</Text>
-                  <Text style={styles.tlDate}>{e.date}{e.tooth ? ` · zub ${e.tooth}` : ''}{e.booster_due ? ` · booster: ${e.booster_due}` : ''}{e.notes ? ` · ${e.notes}` : ''}</Text>
+                  <Text style={styles.tlTitle}>{tx(e.title)}</Text>
+                  <Text style={styles.tlDate}>{e.date}{e.tooth ? tt('health_timeline.zub_11b8', [e.tooth]) : ''}{e.booster_due ? tt('health_timeline.booster', [e.booster_due]) : ''}{e.notes ? ` · ${e.notes}` : ''}</Text>
                 </View>
               </View>
             );

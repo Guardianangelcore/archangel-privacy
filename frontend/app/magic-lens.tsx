@@ -1,7 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. */
 // MAGIC LENS — point at ANY health document: AI reads it, explains it in plain
 // language and files it into the Life Card. Senior-first, zero typing.
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
+import Paywall from '@/src/Paywall';
 
 const DETECTED_LABEL: Record<string, string> = {
   medications: 'a medication document', allergies: 'an allergy document',
@@ -30,6 +32,7 @@ const CAT_LABEL: Record<string, string> = {
 type Scan = { found: boolean; extracted_text: string; summary: string; detected_category: string; suggested_title: string; lifecard_category: string };
 
 export default function MagicLens() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const camRef = useRef<CameraView>(null);
   const [perm, requestPerm] = useCameraPermissions();
@@ -50,6 +53,11 @@ export default function MagicLens() {
     if (r.granted) setPhase('camera');
   };
 
+  // TIER GATE — Magic Lens is Guardian+ (proactive check on mount + 402 from the analyzer)
+  const [locked, setLocked] = useState(false);
+  useEffect(() => {
+    api<any>('/subscription').then(s => setLocked(s?.tier === 'sovereign')).catch(() => {});
+  }, []);
   const analyze = async (base64: string) => {
     setPhase('analyzing'); setErr('');
     try {
@@ -62,7 +70,8 @@ export default function MagicLens() {
       setScan(r);
       setETitle(r.suggested_title); setECat(r.lifecard_category); setENotes(r.summary);
       setPhase('result');
-    } catch {
+    } catch (e: any) {
+      if (/^402:/.test(String(e?.message))) { setLocked(true); setPhase('intro'); return; }
       setErr('The AI reader is unavailable right now. Please try again in a moment.');
       setPhase('intro');
     }
@@ -100,11 +109,16 @@ export default function MagicLens() {
 
   return (
     <SafeAreaView style={st.root} edges={['top']}>
+      {locked && (
+        <View testID="ml-paywall" style={{ padding: S.lg }}>
+          <Paywall tier="guardian" message={tt('magic_lens.magic_lens') + ' — Guardian Plan'} onUnlocked={() => setLocked(false)} />
+        </View>
+      )}
       <View style={st.header}>
         <Pressable testID="ml-back" onPress={() => (phase === 'camera' || phase === 'result' || phase === 'edit' ? setPhase('intro') : router.back())} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.headerTitle}>✨ MAGIC LENS</Text>
+        <Text style={st.headerTitle}>{tt('magic_lens.magic_lens')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -113,8 +127,8 @@ export default function MagicLens() {
           <CameraView ref={camRef} style={{ flex: 1 }} facing="back">
             <View style={st.overlay}>
               <View style={st.frame} />
-              <Text style={st.overlayText}>SCAN DOCUMENT</Text>
-              <Text style={st.overlaySub}>Hold the paper inside the frame</Text>
+              <Text style={st.overlayText}>{tt('magic_lens.scan_document')}</Text>
+              <Text style={st.overlaySub}>{tt('magic_lens.hold_the_paper_inside_the_frame')}</Text>
             </View>
           </CameraView>
           <View style={st.camBar}>
@@ -132,32 +146,32 @@ export default function MagicLens() {
           {phase === 'intro' && (
             <>
               <View style={st.heroIcon}><Ionicons name="scan" size={54} color={C.brand} /></View>
-              <Text style={st.heroTitle}>Point me at any{'\n'}health document.</Text>
-              <Text style={st.heroSub}>A letter from your doctor, a vaccination card, lab results, a pill box… I will read it, explain it in simple words and file it into your Life Card. No typing.</Text>
+              <Text style={st.heroTitle}>{tt('magic_lens.point_me_at_any')}{'\n'}{tt('magic_lens.health_document')}</Text>
+              <Text style={st.heroSub}>{tt('magic_lens.a_letter_from_your_doctor_a_vaccinat')}</Text>
               {!!err && <Text testID="ml-err" style={st.err}>{err}</Text>}
               <Pressable testID="ml-open-camera" onPress={openCamera} style={st.goldBtn}>
                 <Ionicons name="camera" size={24} color={C.onInverse} />
-                <Text style={st.goldBtnText}>OPEN CAMERA</Text>
+                <Text style={st.goldBtnText}>{tt('magic_lens.open_camera')}</Text>
               </Pressable>
               {perm && !perm.granted && !perm.canAskAgain && (
                 <Pressable testID="ml-settings" onPress={() => Linking.openSettings()} style={st.settingsBtn}>
                   <Ionicons name="settings-outline" size={16} color={C.onWarn} />
-                  <Text style={st.settingsText}>Camera is blocked — OPEN SETTINGS</Text>
+                  <Text style={st.settingsText}>{tt('magic_lens.camera_is_blocked_open_settings')}</Text>
                 </Pressable>
               )}
               <Pressable testID="ml-pick" onPress={pickFromGallery} style={st.ghostBtn}>
                 <Ionicons name="image-outline" size={20} color={C.brand} />
-                <Text style={st.ghostBtnText}>CHOOSE A PHOTO FROM GALLERY</Text>
+                <Text style={st.ghostBtnText}>{tt('magic_lens.choose_a_photo_from_gallery')}</Text>
               </Pressable>
-              <Text style={st.hint}>The photo is analyzed by Guardian AI and saved only if you say YES.</Text>
+              <Text style={st.hint}>{tt('magic_lens.the_photo_is_analyzed_by_guardian_ai')}</Text>
             </>
           )}
 
           {phase === 'analyzing' && (
             <View style={st.center}>
               <ActivityIndicator size="large" color={C.brand} />
-              <Text testID="ml-analyzing" style={st.analyzing}>Reading your document…</Text>
-              <Text style={st.heroSub}>I am extracting the text and preparing a simple explanation.</Text>
+              <Text testID="ml-analyzing" style={st.analyzing}>{tt('magic_lens.reading_your_document')}</Text>
+              <Text style={st.heroSub}>{tt('magic_lens.i_am_extracting_the_text_and_prepari')}</Text>
             </View>
           )}
 
@@ -166,12 +180,12 @@ export default function MagicLens() {
               <View style={st.detectBox}>
                 <Ionicons name="sparkles" size={18} color={C.brand} />
                 <Text testID="ml-detect" style={st.detectText}>
-                  This looks like {DETECTED_LABEL[scan.detected_category] || 'a health document'} — save to {CAT_LABEL[scan.lifecard_category]}?
+                  {tt('magic_lens.this_looks_like')} {DETECTED_LABEL[scan.detected_category] || tt('magic_lens.a_health_document')} {tt('magic_lens.save_to')} {CAT_LABEL[scan.lifecard_category]}?
                 </Text>
               </View>
               <Text style={st.resTitle}>{scan.suggested_title}</Text>
               <View style={st.sumBox}>
-                <Text style={st.sumLabel}>IN SIMPLE WORDS</Text>
+                <Text style={st.sumLabel}>{tt('magic_lens.in_simple_words')}</Text>
                 <Text testID="ml-summary" style={st.sumText}>{scan.summary}</Text>
               </View>
               {!!err && <Text style={st.err}>{err}</Text>}
@@ -179,25 +193,25 @@ export default function MagicLens() {
                 {saving ? <ActivityIndicator size="small" color={C.onInverse} /> : (
                   <>
                     <Ionicons name="checkmark-circle" size={24} color={C.onInverse} />
-                    <Text style={st.goldBtnText}>YES — SAVE IT</Text>
+                    <Text style={st.goldBtnText}>{tt('magic_lens.yes_save_it')}</Text>
                   </>
                 )}
               </Pressable>
               <Pressable testID="ml-edit" onPress={() => setPhase('edit')} style={st.ghostBtn}>
                 <Ionicons name="create-outline" size={20} color={C.brand} />
-                <Text style={st.ghostBtnText}>EDIT BEFORE SAVING</Text>
+                <Text style={st.ghostBtnText}>{tt('magic_lens.edit_before_saving')}</Text>
               </Pressable>
               <Pressable testID="ml-retake" onPress={openCamera} style={st.plainBtn}>
-                <Text style={st.plainBtnText}>↻ SCAN ANOTHER DOCUMENT</Text>
+                <Text style={st.plainBtnText}>{tt('magic_lens.scan_another_document')}</Text>
               </Pressable>
             </>
           )}
 
           {phase === 'edit' && (
             <>
-              <Text style={st.lbl}>TITLE</Text>
-              <TextInput testID="ml-e-title" style={st.input} value={eTitle} onChangeText={setETitle} placeholder="Document title" placeholderTextColor={C.info} />
-              <Text style={st.lbl}>CATEGORY</Text>
+              <Text style={st.lbl}>{tt('magic_lens.title')}</Text>
+              <TextInput testID="ml-e-title" style={st.input} value={eTitle} onChangeText={setETitle} placeholder={tt('magic_lens.document_title')} placeholderTextColor={C.info} />
+              <Text style={st.lbl}>{tt('magic_lens.category')}</Text>
               <View style={st.catWrap}>
                 {CATS.map(([k, label]) => (
                   <Pressable key={k} testID={`ml-cat-${k}`} onPress={() => setECat(k)} style={[st.catChip, eCat === k && st.catChipOn]}>
@@ -205,11 +219,11 @@ export default function MagicLens() {
                   </Pressable>
                 ))}
               </View>
-              <Text style={st.lbl}>SUMMARY / NOTES</Text>
-              <TextInput testID="ml-e-notes" style={[st.input, { minHeight: 110, textAlignVertical: 'top' }]} value={eNotes} onChangeText={setENotes} multiline placeholder="Notes" placeholderTextColor={C.info} />
+              <Text style={st.lbl}>{tt('magic_lens.summary_notes')}</Text>
+              <TextInput testID="ml-e-notes" style={[st.input, { minHeight: 110, textAlignVertical: 'top' }]} value={eNotes} onChangeText={setENotes} multiline placeholder={tt('magic_lens.notes')} placeholderTextColor={C.info} />
               {!!err && <Text style={st.err}>{err}</Text>}
               <Pressable testID="ml-e-save" onPress={() => save(eTitle, eCat, eNotes)} disabled={saving} style={st.goldBtn}>
-                {saving ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.goldBtnText}>SAVE TO LIFE CARD</Text>}
+                {saving ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.goldBtnText}>{tt('magic_lens.save_to_life_card')}</Text>}
               </Pressable>
             </>
           )}
@@ -217,12 +231,12 @@ export default function MagicLens() {
           {phase === 'saved' && (
             <View style={st.center}>
               <View style={st.heroIcon}><Ionicons name="checkmark-circle" size={54} color={C.brand} /></View>
-              <Text testID="ml-saved" style={st.heroTitle}>Saved to your{'\n'}Life Card. ✓</Text>
+              <Text testID="ml-saved" style={st.heroTitle}>{tt('magic_lens.saved_to_your')}{'\n'}{tt('magic_lens.life_card')}</Text>
               <Pressable testID="ml-open-lifecard" onPress={() => router.replace('/health-timeline')} style={st.goldBtn}>
-                <Text style={st.goldBtnText}>OPEN LIFE CARD</Text>
+                <Text style={st.goldBtnText}>{tt('magic_lens.open_life_card')}</Text>
               </Pressable>
               <Pressable testID="ml-again" onPress={() => { setScan(null); setPhase('intro'); }} style={st.ghostBtn}>
-                <Text style={st.ghostBtnText}>SCAN ANOTHER DOCUMENT</Text>
+                <Text style={st.ghostBtnText}>{tt('magic_lens.scan_another_document_1izo')}</Text>
               </Pressable>
             </View>
           )}

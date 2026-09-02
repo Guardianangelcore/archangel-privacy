@@ -14,6 +14,7 @@ import { api } from '@/src/api';
 import { ensureGuardianCalendar } from '@/src/native-calendar';
 import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
+import { useI18n } from '@/src/i18n-context';
 
 const SYNCED_KEY = 'gh_native_calendar_synced_v1';
 
@@ -76,6 +77,7 @@ function buildExamsItems(events: any[]): Item[] {
 }
 
 export default function CalendarSync() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [permStatus, setPermStatus] = useState<'undetermined' | 'granted' | 'denied' | 'blocked'>('undetermined');
   const [items, setItems] = useState<Item[]>([]);
@@ -202,30 +204,28 @@ export default function CalendarSync() {
         <Pressable testID="cal-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>NATIVE CALENDAR</Text>
+        <Text style={st.title}>{tt('calendar_sync.native_calendar')}</Text>
         <Pressable testID="cal-refresh" onPress={() => { loadSourceItems(); refreshNative(); }} hitSlop={12}>
           <Ionicons name="refresh" size={22} color={C.fg} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>LOCAL BRIDGE · READS AND WRITES YOUR PHONE CALENDAR</Text>
+        <Text style={st.tag}>{tt('calendar_sync.local_bridge_reads_and_writes_your_p')}</Text>
 
         {permStatus !== 'granted' && (
           <View style={st.card}>
-            <Text style={st.cardTitle}>CALENDAR PERMISSION</Text>
+            <Text style={st.cardTitle}>{tt('calendar_sync.calendar_permission')}</Text>
             <Text style={st.explain}>
-              Guardian Angel needs one-time access to your calendar to show and add
-              medication reminders and examination appointments. Data stays on your phone in a separate
-              Guardian Angel calendar.
+              {tt('calendar_sync.guardian_angel_needs_one_time_access')}
             </Text>
             <Pressable testID="cal-perm" onPress={askPermission} style={st.primaryBtn}>
               <Ionicons name="calendar" size={18} color={C.onInverse} />
-              <Text style={st.primaryText}>ALLOW CALENDAR</Text>
+              <Text style={st.primaryText}>{tt('calendar_sync.allow_calendar')}</Text>
             </Pressable>
             {permStatus === 'blocked' && (
               <Pressable testID="cal-settings" onPress={() => Linking.openSettings()} style={st.warnBtn}>
-                <Text style={st.warnBtnText}>CALENDAR IS BLOCKED — OPEN SETTINGS</Text>
+                <Text style={st.warnBtnText}>{tt('calendar_sync.calendar_is_blocked_open_settings')}</Text>
               </Pressable>
             )}
           </View>
@@ -234,14 +234,14 @@ export default function CalendarSync() {
         {/* Native upcoming events preview (read) */}
         {permStatus === 'granted' && (
           <View style={st.card}>
-            <Text style={st.cardTitle}>UPCOMING EVENTS (30 DAYS)</Text>
+            <Text style={st.cardTitle}>{tt('calendar_sync.upcoming_events_30_days')}</Text>
             {nativeUpcoming.length === 0
-              ? <Text style={st.empty}>The Guardian Angel calendar is empty so far.</Text>
+              ? <Text style={st.empty}>{tt('calendar_sync.the_guardian_angel_calendar_is_empty')}</Text>
               : nativeUpcoming.slice(0, 10).map((e) => (
                 <View key={e.id} style={st.row}>
                   <Ionicons name="calendar-clear-outline" size={16} color={C.brand} />
                   <View style={{ flex: 1 }}>
-                    <Text style={st.rowName}>{e.title}</Text>
+                    <Text style={st.rowName}>{tx(e.title)}</Text>
                     <Text style={st.rowSub}>{new Date(e.startDate as any).toLocaleString('sk-SK')}</Text>
                   </View>
                 </View>
@@ -252,16 +252,16 @@ export default function CalendarSync() {
         {/* Items to sync */}
         <View style={st.card}>
           <View style={st.cardHead}>
-            <Text style={st.cardTitle}>TO SYNC</Text>
+            <Text style={st.cardTitle}>{tt('calendar_sync.to_sync')}</Text>
             <Text style={st.cardMeta}>{remaining}/{items.length}</Text>
           </View>
-          {items.length === 0 && <Text style={st.empty}>No items. Add meds or appointments in the app.</Text>}
+          {items.length === 0 && <Text style={st.empty}>{tt('calendar_sync.no_items_add_meds_or_appointments_in')}</Text>}
           {items.length > 0 && (
             <Pressable testID="cal-sync-all" onPress={syncAll} disabled={busy === 'all' || remaining === 0} style={[st.primaryBtn, remaining === 0 && { opacity: 0.5 }]}>
               {busy === 'all' ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="sync" size={18} color={C.onInverse} />
-                  <Text style={st.primaryText}>SYNC ALL ({remaining})</Text>
+                  <Text style={st.primaryText}>{tt('calendar_sync.sync_all')}{remaining})</Text>
                 </>
               )}
             </Pressable>
@@ -272,8 +272,8 @@ export default function CalendarSync() {
             return (
               <View key={it.key} style={st.itemRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={st.rowName}>{it.title}</Text>
-                  <Text style={st.rowSub}>{it.subtitle}</Text>
+                  <Text style={st.rowName}>{tx(it.title)}</Text>
+                  <Text style={st.rowSub}>{tx(it.subtitle)}</Text>
                 </View>
                 {rowBusy ? <ActivityIndicator color={C.brand} /> : isSynced ? (
                   <Pressable testID={`cal-del-${it.key}`} onPress={() => removeOne(it)} style={st.iconBtn}>
@@ -291,7 +291,7 @@ export default function CalendarSync() {
 
         {!!msg && <Text testID="cal-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="cal-err" style={st.err}>{err}</Text>}
-        <Text style={st.footer}>The Guardian Angel calendar is a separate calendar on your device. You can remove it there at any time.</Text>
+        <Text style={st.footer}>{tt('calendar_sync.the_guardian_angel_calendar_is_a_sep')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

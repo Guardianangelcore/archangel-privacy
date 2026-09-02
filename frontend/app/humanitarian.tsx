@@ -12,8 +12,10 @@ import { sharePdf } from '@/src/pdf';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Humanitarian() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -57,24 +59,24 @@ export default function Humanitarian() {
         <Pressable testID="hu-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>HUMANITARIAN SHIELD</Text>
+        <Text style={st.title}>{tt('humanitarian.humanitarian_shield')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SIMULATION · REAL FEEDS (GDACS/WHO) IN PHASE 3 · RECOGNITION: ICRC / UNHCR / UN OCHA</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>{tt('humanitarian.simulation_real_feeds_gdacs_who_in_p')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={[st.statusCard, { borderColor: verified ? C.error : C.borderStrong }]}>
           <Ionicons name={verified ? 'alert-circle' : 'earth-outline'} size={30} color={verified ? C.error : C.brand} />
           <Text style={[st.statusText, verified && { color: C.error }]}>
-            {verified ? `GLOBAL DISASTER VERIFIED · ${status.event?.label?.toUpperCase() || ''}` : 'NO VERIFIED DISASTER — THE WORLD IS STABLE'}
+            {verified ? tt('humanitarian.global_disaster_verified', [status.event?.label?.toUpperCase() || '']) : tt('humanitarian.no_verified_disaster_the_world_is_st')}
           </Text>
-          {verified && <Text style={st.statusMeta}>{status.event?.region || 'global'} · konsenzus: {status.event?.consensus_sources?.length} zdrojov</Text>}
+          {verified && <Text style={st.statusMeta}>{status.event?.region || tt('humanitarian.global')} {tt('humanitarian.konsenzus')} {status.event?.consensus_sources?.length} {tt('humanitarian.zdrojov')}</Text>}
         </View>
 
         {!!msg && <Text testID="hu-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="hu-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>1 · OVERENIE KATASTROFY (KONSENZUS FEEDOV)</Text>
+        <Text style={st.section}>{tt('humanitarian.1_overenie_katastrofy_konsenzus_feed')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {Object.entries(status?.kinds || {}).map(([k, v]) => (
             <Pressable testID={`hu-kind-${k}`} key={k} onPress={() => setKind(k)} style={[st.chip, kind === k && st.chipActive]}>
@@ -83,32 +85,32 @@ export default function Humanitarian() {
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="hu-region" value={region} onChangeText={setRegion} placeholder="Region (e.g. Central Europe)"
+          <TextInput testID="hu-region" value={region} onChangeText={setRegion} placeholder={tt('humanitarian.region_e_g_central_europe')}
             placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <Pressable testID="hu-verify" onPress={verify} disabled={busy === 'verify'} style={st.addBtn}>
             {busy === 'verify' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Ionicons name="checkmark-done" size={20} color={C.onInverse} />}
           </Pressable>
         </View>
 
-        <Text style={st.section}>2 · HUMANITARIAN IDENTITY + HEALTH PROFILE</Text>
-        <Text style={st.intro}>Jarvis generates an official profile recognized by international organizations: UNHCR PRIMES, ICRC Restoring Family Links, Sphere Handbook.</Text>
+        <Text style={st.section}>{tt('humanitarian.2_humanitarian_identity_health_profi')}</Text>
+        <Text style={st.intro}>{tt('humanitarian.jarvis_generates_an_official_profile')}</Text>
         <Pressable testID="hu-generate" onPress={genProfile} disabled={busy === 'profile' || !verified}
           style={[st.actionBtn, !verified && { opacity: 0.4 }]}>
           {busy === 'profile' ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="id-card-outline" size={20} color={C.onInverse} />
-            <Text style={st.actionText}>{profile ? 'REFRESH HUMANITARIAN PROFILE' : 'GENERATE HUMANITARIAN PROFILE'}</Text>
+            <Text style={st.actionText}>{profile ? tt('humanitarian.refresh_humanitarian_profile') : tt('humanitarian.generate_humanitarian_profile')}</Text>
           </>}
         </Pressable>
-        {!verified && <Text style={st.hint}>Activates only after global disaster verification (step 1).</Text>}
+        {!verified && <Text style={st.hint}>{tt('humanitarian.activates_only_after_global_disaster')}</Text>}
 
         {profile && (
           <View testID="hu-card" style={st.humCard}>
             <Text style={st.humId}>{profile.hum_id}</Text>
             <Text style={st.humName}>{profile.full_name}</Text>
-            <Text style={st.humLine}>Krv: {profile.blood_type || '—'} · Alergie: {profile.allergies || '—'}</Text>
-            <Text style={st.humLine}>Diagnoses: {profile.conditions || '—'}</Text>
-            <Text style={st.humLine}>Lieky: {profile.medications || '—'}</Text>
-            <Text style={st.humLine}>Vaccinations: {(profile.vaccinations || []).map((v: any) => v.title).join(', ') || '—'}</Text>
+            <Text style={st.humLine}>{tt('humanitarian.krv')} {profile.blood_type || '—'} {tt('humanitarian.alergie')} {profile.allergies || '—'}</Text>
+            <Text style={st.humLine}>{tt('humanitarian.diagnoses')} {profile.conditions || '—'}</Text>
+            <Text style={st.humLine}>{tt('humanitarian.lieky')} {profile.medications || '—'}</Text>
+            <Text style={st.humLine}>{tt('humanitarian.vaccinations')} {(profile.vaccinations || []).map((v: any) => v.title).join(', ') || '—'}</Text>
             <View style={st.qrWrap}>
               <View style={{ backgroundColor: '#FFFFFF', padding: 10 }}>
                 <QRCode value={profile.qr_payload || profile.hum_id} size={140} backgroundColor="#FFFFFF" color="#000000" />
@@ -118,7 +120,7 @@ export default function Humanitarian() {
             <Pressable testID="hu-pdf" onPress={share} disabled={busy === 'pdf'} style={st.pdfBtn}>
               {busy === 'pdf' ? <ActivityIndicator color={C.fg} /> : <>
                 <Ionicons name="share-outline" size={16} color={C.fg} />
-                <Text style={st.pdfText}>SHARE CARD (PDF FOR AID INTAKE)</Text>
+                <Text style={st.pdfText}>{tt('humanitarian.share_card_pdf_for_aid_intake')}</Text>
               </>}
             </Pressable>
           </View>

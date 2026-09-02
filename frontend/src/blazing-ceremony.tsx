@@ -11,10 +11,12 @@ import { api } from './api';
 import { useAuth } from './auth';
 import { speak as jarvisSpeak, stopSpeaking } from './voice';
 import { C, S, R, GOLD } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 const NARRATION = 'Thirty days. Sovereign Blazing Guardian. You are at the peak of your habit.';
 
 export function BlazingCeremony({ onClose }: { onClose: () => void }) {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const orb = useSharedValue(0);
 
@@ -52,16 +54,16 @@ export function BlazingCeremony({ onClose }: { onClose: () => void }) {
         </Animated.View>
       </View>
 
-      <Text style={styles.days}>30 DAYS</Text>
-      <Text style={styles.title}>SOVEREIGN BLAZING GUARDIAN</Text>
+      <Text style={styles.days}>{tt('c_blazing_ceremony.30_days')}</Text>
+      <Text style={styles.title}>{tt('c_blazing_ceremony.sovereign_blazing_guardian')}</Text>
       <Text style={styles.tag}>
-        The peak of a habit. Jarvis congratulates you — keep going on the journey that saves your body.
+        {tt('c_blazing_ceremony.the_peak_of_a_habit_jarvis_congratul')}
       </Text>
 
       <Pressable testID="blazing-ack" onPress={acknowledge} style={styles.ctaWrap}>
         <LinearGradient colors={GOLD as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cta}>
           <Ionicons name="checkmark" size={20} color={C.onInverse} />
-          <Text style={styles.ctaText}>I ACCEPT THE HONOUR</Text>
+          <Text style={styles.ctaText}>{tt('c_blazing_ceremony.i_accept_the_honour')}</Text>
         </LinearGradient>
       </Pressable>
     </View>

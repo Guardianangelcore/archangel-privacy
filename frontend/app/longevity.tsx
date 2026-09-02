@@ -12,8 +12,10 @@ import Paywall from '@/src/Paywall';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Longevity() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -61,7 +63,7 @@ export default function Longevity() {
         <Pressable testID="lg-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>LONGEVITY ENGINE</Text>
+        <Text style={st.title}>{tt('longevity.longevity_engine')}</Text>
         <Pressable testID="lg-refresh" onPress={load} hitSlop={12}>
           <Ionicons name="refresh" size={22} color={C.onInverse} />
         </Pressable>
@@ -72,24 +74,24 @@ export default function Longevity() {
           <Paywall message={locked} onUnlocked={load} />
         ) : needProfile ? (
           <View>
-            <Text style={st.intro}>Jarvis computes your biological age from data (steps, pulse, stress, diagnoses). Basic details first:</Text>
-            <Text style={st.lbl}>BIRTH YEAR</Text>
-            <WheelField testID="lg-birth" title="BIRTH YEAR" min={1920} max={2012} value={f.birth_year} onChange={v => setF({ ...f, birth_year: v })} placeholder="1971" style={st.input} />
+            <Text style={st.intro}>{tt('longevity.jarvis_computes_your_biological_age')}</Text>
+            <Text style={st.lbl}>{tt('longevity.birth_year')}</Text>
+            <WheelField testID="lg-birth" title={tt('longevity.birth_year')} min={1920} max={2012} value={f.birth_year} onChange={v => setF({ ...f, birth_year: v })} placeholder="1971" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               <View style={{ flex: 1 }}>
-                <Text style={st.lbl}>HEIGHT (cm)</Text>
-                <WheelField testID="lg-height" title="HEIGHT" min={120} max={220} unit="cm" value={f.height_cm} onChange={v => setF({ ...f, height_cm: v })} placeholder="178" style={st.input} />
+                <Text style={st.lbl}>{tt('longevity.height_cm')}</Text>
+                <WheelField testID="lg-height" title={tt('longevity.height')} min={120} max={220} unit="cm" value={f.height_cm} onChange={v => setF({ ...f, height_cm: v })} placeholder="178" style={st.input} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={st.lbl}>WEIGHT (kg)</Text>
-                <WheelField testID="lg-weight" title="WEIGHT" min={35} max={200} unit="kg" value={f.weight_kg} onChange={v => setF({ ...f, weight_kg: v })} placeholder="85" style={st.input} />
+                <Text style={st.lbl}>{tt('longevity.weight_kg')}</Text>
+                <WheelField testID="lg-weight" title={tt('longevity.weight')} min={35} max={200} unit="kg" value={f.weight_kg} onChange={v => setF({ ...f, weight_kg: v })} placeholder="85" style={st.input} />
               </View>
             </View>
             <View style={st.switchRow}>
-              <Text style={st.switchLbl}>SMOKER</Text>
+              <Text style={st.switchLbl}>{tt('longevity.smoker')}</Text>
               <Switch testID="lg-smoker" value={f.smoker} onValueChange={v => setF({ ...f, smoker: v })} trackColor={{ true: C.error, false: C.surface3 }} />
             </View>
-            <Text style={st.lbl}>ACTIVITY</Text>
+            <Text style={st.lbl}>{tt('longevity.activity')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm }}>
               {[['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH']].map(([k, v]) => (
                 <Pressable testID={`lg-act-${k}`} key={k} onPress={() => setF({ ...f, activity_level: k })} style={[st.chip, f.activity_level === k && st.chipActive]}>
@@ -98,7 +100,7 @@ export default function Longevity() {
               ))}
             </View>
             <Pressable testID="lg-save" onPress={saveProfile} disabled={busy || !f.birth_year} style={st.saveBtn}>
-              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>CALCULATE BIO-AGE</Text>}
+              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.saveText}>{tt('longevity.calculate_bio_age')}</Text>}
             </Pressable>
             {!!err && <Text style={st.err}>{err}</Text>}
           </View>
@@ -106,19 +108,19 @@ export default function Longevity() {
           <>
             <View style={st.ageCard}>
               <View style={st.ageCol}>
-                <Text style={st.ageLbl}>CALENDAR AGE</Text>
+                <Text style={st.ageLbl}>{tt('longevity.calendar_age')}</Text>
                 <Text style={st.ageVal}>{data.chronological_age}</Text>
               </View>
               <Ionicons name={data.delta_years > 0.5 ? 'trending-up' : data.delta_years < -0.5 ? 'trending-down' : 'remove'} size={30}
                 color={data.delta_years > 0.5 ? C.error : data.delta_years < -0.5 ? C.brand : C.info} />
               <View style={st.ageCol}>
-                <Text style={st.ageLbl}>BIOLOGICAL AGE</Text>
+                <Text style={st.ageLbl}>{tt('longevity.biological_age')}</Text>
                 <Text testID="lg-bioage" style={[st.ageVal, { color: data.delta_years > 0.5 ? C.error : C.brand }]}>{data.biological_age}</Text>
               </View>
             </View>
-            <Text style={st.verdict}>{data.verdict} · Δ {data.delta_years > 0 ? '+' : ''}{data.delta_years} yrs</Text>
+            <Text style={st.verdict}>{data.verdict} · Δ {data.delta_years > 0 ? '+' : ''}{data.delta_years} {tt('longevity.yrs')}</Text>
 
-            <Text style={st.section}>FACTORS</Text>
+            <Text style={st.section}>{tt('longevity.factors')}</Text>
             {data.factors.map((fa: any, i: number) => (
               <View key={i} style={st.factorRow}>
                 <Text style={[st.factorImpact, { color: fa.impact_years > 0 ? C.error : C.brand }]}>
@@ -126,13 +128,13 @@ export default function Longevity() {
                 </Text>
                 <View style={{ flex: 1 }}>
                   <Text style={st.factorName}>{fa.factor.toUpperCase()}</Text>
-                  <Text style={st.factorNote}>{fa.note}</Text>
+                  <Text style={st.factorNote}>{tx(fa.note)}</Text>
                 </View>
               </View>
             ))}
-            {data.factors.length === 0 && <Text style={st.emptyLine}>— not enough data yet. Log steps/pulse in Wellness and run a Bio-Scan.</Text>}
+            {data.factors.length === 0 && <Text style={st.emptyLine}>{tt('longevity.not_enough_data_yet_log_steps_pulse')}</Text>}
 
-            <Text style={st.section}>AI BIO-HACKS</Text>
+            <Text style={st.section}>{tt('longevity.ai_bio_hacks')}</Text>
             {data.bio_hacks.map((h: string, i: number) => (
               <View key={i} style={st.hackRow}>
                 <Ionicons name="flash" size={16} color="#B8860B" />
@@ -140,7 +142,7 @@ export default function Longevity() {
               </View>
             ))}
             <Pressable testID="lg-edit" onPress={() => setNeedProfile(true)} style={st.editBtn}>
-              <Text style={st.editText}>EDIT PROFILE (HEIGHT / WEIGHT / ACTIVITY)</Text>
+              <Text style={st.editText}>{tt('longevity.edit_profile_height_weight_activity')}</Text>
             </Pressable>
             <Text style={st.disc}>{data.disclaimer}</Text>
             <Art50 lang={lang} />

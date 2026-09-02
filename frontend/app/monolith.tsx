@@ -12,6 +12,7 @@ import { useAuth } from '@/src/auth';
 import { WheelField } from '@/src/ui/fields';
 import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const PROCS = [
   { code: 'dental_implant', label: 'Dental implant' },
@@ -50,6 +51,7 @@ const Row = ({ k, v, hi }: { k: string; v: any; hi?: boolean }) => (
 );
 
 export default function Monolith() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [open, setOpen] = useState('uhp');
@@ -173,7 +175,7 @@ export default function Monolith() {
         <Pressable testID="mono-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>SOVEREIGN OS · COMMAND DECK</Text>
+        <Text style={st.title}>{tt('monolith.sovereign_os_command_deck')}</Text>
         <Ionicons name="planet-outline" size={20} color={C.brand} />
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
@@ -183,88 +185,88 @@ export default function Monolith() {
         <View style={st.gateRow}>
           <Pressable testID="mono-partners" onPress={() => { tap('light'); router.push('/partners'); }} style={st.gateTile}>
             <Ionicons name="business-outline" size={22} color={C.brand} />
-            <Text style={st.gateTitle}>UHP PARTNERS</Text>
-            <Text style={st.gateSub}>Clinics · insurers · protocol onboarding</Text>
+            <Text style={st.gateTitle}>{tt('monolith.uhp_partners')}</Text>
+            <Text style={st.gateSub}>{tt('monolith.clinics_insurers_protocol_onboarding')}</Text>
           </Pressable>
           <Pressable testID="mono-founder" onPress={() => { tap('light'); router.push('/founder-toolkit'); }} style={st.gateTile}>
             <Ionicons name="briefcase-outline" size={22} color={C.brand} />
-            <Text style={st.gateTitle}>{"FOUNDER'S TOOLKIT"}</Text>
-            <Text style={st.gateSub}>Investor demo · forecast · release package</Text>
+            <Text style={st.gateTitle}>{tt('monolith.founder_s_toolkit')}</Text>
+            <Text style={st.gateSub}>{tt('monolith.investor_demo_forecast_release_packa')}</Text>
           </Pressable>
         </View>
 
-        <Section id="uhp" icon="git-network-outline" title="GLOBAL SENTINEL NETWORK" sub="Universal Health Protocol · mandatory gateway" open={open} onToggle={setOpen}>
+        <Section id="uhp" icon="git-network-outline" title={tt('monolith.global_sentinel_network')} sub="Universal Health Protocol · mandatory gateway" open={open} onToggle={setOpen}>
           {cap ? (
             <>
-              <Text style={st.big}>{cap.stream_capacity_human} <Text style={st.bigSub}>concurrent streams</Text></Text>
+              <Text style={st.big}>{cap.stream_capacity_human} <Text style={st.bigSub}>{tt('monolith.concurrent_streams')}</Text></Text>
               <Row k="Topology" v={`${cap.topology.regions} regions × ${cap.topology.shards_per_region} shards × ${cap.topology.nodes_per_shard} nodes`} />
               <Row k="Active partners (clinics/insurers)" v={cap.active_partners} hi />
               <Row k="UHP events ingested" v={cap.events_ingested_total} />
               <Row k="Open sensor streams" v={cap.open_streams} />
               <Row k="Consensus" v={cap.consensus} />
-              <Text style={st.note}>Partners register via /api/uhp/partners/register — HMAC-SHA256 signatures, replay protection, idempotency, {'240/min'} rate-limit.</Text>
+              <Text style={st.note}>{tt('monolith.partners_register_via_api_uhp_partne')} {tt('monolith.240_min')} {tt('monolith.rate_limit')}</Text>
             </>
           ) : <ActivityIndicator color={C.brand} />}
         </Section>
 
-        <Section id="arb" icon="trending-up-outline" title="ARBITRAGE BRAIN" sub="10,000+ clinics · price vs. time saved" open={open} onToggle={setOpen}>
+        <Section id="arb" icon="trending-up-outline" title={tt('monolith.arbitrage_brain')} sub="10,000+ clinics · price vs. time saved" open={open} onToggle={setOpen}>
           <View style={st.chips}>
             {PROCS.map(p => (
               <Pressable key={p.code} testID={`mono-proc-${p.code}`} onPress={() => { tap('light'); setProc(p.code); }} style={[st.chip, proc === p.code && st.chipOn]}>
-                <Text style={[st.chipText, proc === p.code && st.chipTextOn]}>{p.label}</Text>
+                <Text style={[st.chipText, proc === p.code && st.chipTextOn]}>{tx(p.label)}</Text>
               </Pressable>
             ))}
           </View>
           <View style={st.chips}>
             {URGENCIES.map(u => (
               <Pressable key={u.id} testID={`mono-urg-${u.id}`} onPress={() => { tap('light'); setUrg(u.id); }} style={[st.chip, urg === u.id && st.chipOn]}>
-                <Text style={[st.chipText, urg === u.id && st.chipTextOn]}>{u.label}</Text>
+                <Text style={[st.chipText, urg === u.id && st.chipTextOn]}>{tx(u.label)}</Text>
               </Pressable>
             ))}
           </View>
           <View style={st.inRow}>
-            <WheelField testID="mono-local-price" title="LOCAL PRICE €" min={0} max={20000} step={100} unit="€" value={localPrice} onChange={setLocalPrice} placeholder="Local price" style={st.input} />
-            <WheelField testID="mono-local-wait" title="LOCAL WAIT (WKS)" min={0} max={100} unit="wks" value={localWait} onChange={setLocalWait} placeholder="Wait" style={st.input} />
+            <WheelField testID="mono-local-price" title={tt('monolith.local_price')} min={0} max={20000} step={100} unit="€" value={localPrice} onChange={setLocalPrice} placeholder={tt('monolith.local_price_18nu')} style={st.input} />
+            <WheelField testID="mono-local-wait" title={tt('monolith.local_wait_wks')} min={0} max={100} unit="wks" value={localWait} onChange={setLocalWait} placeholder={tt('monolith.wait')} style={st.input} />
           </View>
           <Pressable testID="mono-analyze" onPress={analyze} disabled={busy === 'arb'} style={st.cta}>
-            {busy === 'arb' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ANALYZE GLOBAL MARKET</Text>}
+            {busy === 'arb' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.analyze_global_market')}</Text>}
           </Pressable>
           {arb && (
             <>
-              <Text style={st.note}>Analyzed {arb.candidates_analyzed} clinics · {arb.formula}</Text>
+              <Text style={st.note}>{tt('monolith.analyzed')} {arb.candidates_analyzed} {tt('monolith.clinics')} {arb.formula}</Text>
               {[['💎 BEST VALUE', arb.picks.best_value], ['💶 CHEAPEST', arb.picks.cheapest], ['⚡ FASTEST', arb.picks.fastest]].map(([lbl, c]: any) => (
                 <View key={lbl} style={st.card}>
                   <Text style={st.cardLbl}>{lbl}</Text>
                   <Text style={st.cardTitle}>{c.name} · {c.city} ({c.country})</Text>
-                  <Text style={st.cardLine}>Procedure {c.price_eur} € + travel {c.travel_eur} € + lodging {c.lodging_eur} € = <Text style={{ color: C.brand, fontWeight: '900' }}>{c.total_cost_eur} €</Text></Text>
-                  <Text style={st.cardLine}>Wait {c.wait_days} days · you save {c.time_saved_weeks} wks (value {c.time_value_eur} €) · quality {c.quality}★</Text>
-                  <Text style={[st.cardLine, { color: c.net_benefit_eur > 0 ? C.brand : C.error, fontWeight: '900' }]}>NET BENEFIT: {c.net_benefit_eur > 0 ? '+' : ''}{c.net_benefit_eur} €</Text>
+                  <Text style={st.cardLine}>{tt('monolith.procedure')} {c.price_eur} {tt('monolith.travel')} {c.travel_eur} {tt('monolith.lodging')} {c.lodging_eur} € = <Text style={{ color: C.brand, fontWeight: '900' }}>{c.total_cost_eur} €</Text></Text>
+                  <Text style={st.cardLine}>{tt('monolith.wait')} {c.wait_days} {tt('monolith.days_you_save')} {c.time_saved_weeks} {tt('monolith.wks_value')} {c.time_value_eur} {tt('monolith.quality')} {c.quality}★</Text>
+                  <Text style={[st.cardLine, { color: c.net_benefit_eur > 0 ? C.brand : C.error, fontWeight: '900' }]}>{tt('monolith.net_benefit')} {c.net_benefit_eur > 0 ? '+' : ''}{c.net_benefit_eur} €</Text>
                 </View>
               ))}
             </>
           )}
         </Section>
 
-        <Section id="bank" icon="card-outline" title="LIQUIDITY BANK" sub="Instant Card Payout · Data-Backed Credit" open={open} onToggle={setOpen}>
-          <Text style={st.big}>{bal ? `${bal.balance.available_eur.toFixed(2)} €` : '—'} <Text style={st.bigSub}>available balance</Text></Text>
-          {bal && <Text style={st.note}>Rails: {bal.adapter} ({bal.rails_mode}) — adapter swaps to Visa Direct / MC Send the day an institution connects.</Text>}
+        <Section id="bank" icon="card-outline" title={tt('monolith.liquidity_bank')} sub="Instant Card Payout · Data-Backed Credit" open={open} onToggle={setOpen}>
+          <Text style={st.big}>{bal ? `${bal.balance.available_eur.toFixed(2)} €` : '—'} <Text style={st.bigSub}>{tt('monolith.available_balance')}</Text></Text>
+          {bal && <Text style={st.note}>{tt('monolith.rails')} {bal.adapter} ({bal.rails_mode}{tt('monolith.adapter_swaps_to_visa_direct_mc_send')}</Text>}
           <View style={st.inRow}>
-            <WheelField testID="mono-pay-amount" title="AMOUNT €" min={10} max={2000} step={10} unit="€" value={amount} onChange={setAmount} placeholder="Amount" style={st.input} />
+            <WheelField testID="mono-pay-amount" title={tt('monolith.amount')} min={10} max={2000} step={10} unit="€" value={amount} onChange={setAmount} placeholder={tt('monolith.amount_1agj')} style={st.input} />
             <TextInput testID="mono-pay-card" value={card} onChangeText={setCard} maxLength={4} keyboardType="number-pad" placeholder="****" placeholderTextColor="#888" style={[st.input, st.inputText, { flex: 0.6 }]} />
           </View>
           <View style={st.chips}>
             {['visa', 'mc'].map(n => (
               <Pressable key={n} testID={`mono-net-${n}`} onPress={() => { tap('light'); setNetwork(n); }} style={[st.chip, network === n && st.chipOn]}>
-                <Text style={[st.chipText, network === n && st.chipTextOn]}>{n === 'visa' ? 'VISA DIRECT' : 'MASTERCARD SEND'}</Text>
+                <Text style={[st.chipText, network === n && st.chipTextOn]}>{n === 'visa' ? tt('monolith.visa_direct') : tt('monolith.mastercard_send')}</Text>
               </Pressable>
             ))}
           </View>
           <Pressable testID="mono-payout" onPress={doPayout} disabled={busy === 'pay'} style={st.cta}>
-            {busy === 'pay' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>INSTANT CARD PAYOUT</Text>}
+            {busy === 'pay' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.instant_card_payout')}</Text>}
           </Pressable>
           {payout && (
             <View style={st.card}>
-              <Text style={st.cardLbl}>SETTLEMENT ****{payout.card_last4}</Text>
+              <Text style={st.cardLbl}>{tt('monolith.settlement')}{payout.card_last4}</Text>
               <View style={st.timeline}>
                 {['initiated', 'authorized', 'settled'].map(s => {
                   const done = payout.timeline?.some((tl: any) => tl.state === s);
@@ -276,52 +278,52 @@ export default function Monolith() {
                   );
                 })}
               </View>
-              <Text style={st.cardLine}>{payout.amount_eur} € · fee {payout.fee_eur} € · trace {payout.trace_id}</Text>
+              <Text style={st.cardLine}>{payout.amount_eur} {tt('monolith.fee')} {payout.fee_eur} {tt('monolith.trace')} {payout.trace_id}</Text>
             </View>
           )}
           <Pressable testID="mono-credit-score" onPress={scoreCredit} disabled={busy === 'credit'} style={st.ghost}>
-            {busy === 'credit' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>DATA-BACKED CREDIT — CALCULATE LIMIT</Text>}
+            {busy === 'credit' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{tt('monolith.data_backed_credit_calculate_limit')}</Text>}
           </Pressable>
           {credit && (
             <View style={st.card}>
-              <Text style={st.cardTitle}>Credit limit: {credit.limit_eur} € · {credit.apr_pct}% p.a.</Text>
-              <Text style={st.cardLine}>Collateral = data wealth: {credit.collateral.documents} documents · {credit.collateral.bioscans} readings · {credit.collateral.gat_balance} GA-T</Text>
+              <Text style={st.cardTitle}>{tt('monolith.credit_limit')} {credit.limit_eur} € · {credit.apr_pct}{tt('monolith.p_a')}</Text>
+              <Text style={st.cardLine}>{tt('monolith.collateral_data_wealth')} {credit.collateral.documents} {tt('monolith.documents')} {credit.collateral.bioscans} {tt('monolith.readings')} {credit.collateral.gat_balance} GA-T</Text>
               <View style={st.inRow}>
-                <WheelField testID="mono-draw" title="DRAW €" min={10} max={5000} step={10} unit="€" value={drawAmt} onChange={setDrawAmt} placeholder="Draw" style={st.input} />
+                <WheelField testID="mono-draw" title={tt('monolith.draw')} min={10} max={5000} step={10} unit="€" value={drawAmt} onChange={setDrawAmt} placeholder={tt('monolith.draw_yjrh')} style={st.input} />
                 <Pressable testID="mono-draw-btn" onPress={drawCredit} disabled={busy === 'draw'} style={[st.cta, { flex: 1, marginTop: 0 }]}>
-                  {busy === 'draw' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>DRAW</Text>}
+                  {busy === 'draw' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.draw_yjqp')}</Text>}
                 </Pressable>
               </View>
             </View>
           )}
         </Section>
 
-        <Section id="twin" icon="body-outline" title="BIO-DIGITAL TWIN" sub="Simulate treatment BEFORE dosing · trajectories" open={open} onToggle={setOpen}>
+        <Section id="twin" icon="body-outline" title={tt('monolith.bio_digital_twin')} sub="Simulate treatment BEFORE dosing · trajectories" open={open} onToggle={setOpen}>
           <Pressable testID="mono-traj" onPress={loadTraj} disabled={busy === 'traj'} style={st.ghost}>
-            {busy === 'traj' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>PREDICTIVE TRAJECTORIES (6/12/24 MO.)</Text>}
+            {busy === 'traj' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{tt('monolith.predictive_trajectories_6_12_24_mo')}</Text>}
           </Pressable>
           {traj && (
             <View style={st.card}>
               {Object.entries(traj.trajectories).map(([m, d]: any) => (
                 <View key={m} style={{ marginBottom: S.sm }}>
-                  <Text style={st.cardLbl}>{m === 'systolic' ? 'SYSTOLIC BP' : 'GLUCOSE'} ({d.history_points} readings)</Text>
+                  <Text style={st.cardLbl}>{m === 'systolic' ? tt('monolith.systolic_bp') : tt('monolith.glucose')} ({d.history_points} {tt('monolith.readings_9s24')}</Text>
                   <Text style={st.cardLine}>
-                    now <Text style={{ color: bandColor(d.band_now), fontWeight: '900' }}>{d.current ?? '—'}</Text>
+                    {tt('monolith.now')} <Text style={{ color: bandColor(d.band_now), fontWeight: '900' }}>{d.current ?? '—'}</Text>
                     {'  →  6m '}{d.m6 ?? '—'}{'  →  12m '}<Text style={{ color: bandColor(d.band_m12), fontWeight: '900' }}>{d.m12 ?? '—'}</Text>{'  →  24m '}{d.m24 ?? '—'}
                   </Text>
                 </View>
               ))}
-              <Text style={st.cardLine}>Composite 12-mo risk: <Text style={{ color: traj.composite_risk_12m >= 40 ? C.error : C.brand, fontWeight: '900' }}>{traj.composite_risk_12m}/100</Text></Text>
+              <Text style={st.cardLine}>{tt('monolith.composite_12_mo_risk')} <Text style={{ color: traj.composite_risk_12m >= 40 ? C.error : C.brand, fontWeight: '900' }}>{traj.composite_risk_12m}/100</Text></Text>
               <Text style={st.note}>{traj.disclaimer}</Text>
             </View>
           )}
-          <TextInput testID="mono-treatment" value={treatment} onChangeText={setTreatment} placeholder="Drug / procedure to simulate (e.g. Ibuprofen 400 mg)" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-treatment" value={treatment} onChangeText={setTreatment} placeholder={tt('monolith.drug_procedure_to_simulate_e_g_ibupr')} placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-simulate" onPress={simulate} disabled={busy === 'sim'} style={st.cta}>
-            {busy === 'sim' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>SIMULATE ON TWIN (gpt-5.4)</Text>}
+            {busy === 'sim' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.simulate_on_twin_gpt_5_4')}</Text>}
           </Pressable>
           {sim && (
             <View style={[st.card, { borderColor: sim.result.verdict === 'simulate_pass' ? C.brand : sim.result.verdict === 'caution' ? '#FFC53D' : C.error }]}>
-              <Text style={st.cardTitle}>{sim.treatment} — compatibility {sim.result.compatibility_pct}% · {String(sim.result.verdict).toUpperCase()}</Text>
+              <Text style={st.cardTitle}>{sim.treatment} {tt('monolith.compatibility')} {sim.result.compatibility_pct}% · {String(sim.result.verdict).toUpperCase()}</Text>
               <Text style={st.cardLine}>{sim.result.expected_benefit}</Text>
               {(sim.result.interactions || []).map((x: string, i: number) => <Text key={i} style={[st.cardLine, { color: '#FFC53D' }]}>⚠ {x}</Text>)}
               {(sim.result.risks || []).map((x: string, i: number) => <Text key={i} style={st.cardLine}>• {x}</Text>)}
@@ -329,17 +331,17 @@ export default function Monolith() {
           )}
         </Section>
 
-        <Section id="sentinel" icon="pulse-outline" title="PREDICTIVE SENTINEL" sub="Warns the Inner Circle BEFORE the event" open={open} onToggle={setOpen}>
+        <Section id="sentinel" icon="pulse-outline" title={tt('monolith.predictive_sentinel')} sub="Warns the Inner Circle BEFORE the event" open={open} onToggle={setOpen}>
           {risk ? (
             <>
-              <Text style={st.big}><Text style={{ color: risk.level === 'high' ? C.error : risk.level === 'medium' ? '#FFC53D' : C.brand }}>{risk.risk_score}</Text><Text style={st.bigSub}> /100 risk · {risk.level.toUpperCase()}</Text></Text>
+              <Text style={st.big}><Text style={{ color: risk.level === 'high' ? C.error : risk.level === 'medium' ? '#FFC53D' : C.brand }}>{risk.risk_score}</Text><Text style={st.bigSub}> {tt('monolith.100_risk')} {risk.level.toUpperCase()}</Text></Text>
               {(risk.factors || []).map((f: string, i: number) => <Text key={i} style={st.cardLine}>• {f}</Text>)}
-              <Text style={st.note}>Micro-vibrations and gait regularity are collected automatically by sensors ({risk.samples_24h} samples/24 h). At risk ≥70 the Inner Circle receives a push BEFORE the event.</Text>
+              <Text style={st.note}>{tt('monolith.micro_vibrations_and_gait_regularity')}{risk.samples_24h} {tt('monolith.samples_24_h_at_risk_70_the_inner_ci')}</Text>
             </>
           ) : <ActivityIndicator color={C.brand} />}
         </Section>
 
-        <Section id="edge" icon="hardware-chip-outline" title="LIVING CURRENCY · GUARDIAN BASIC INCOME" sub="GA-T for compute powering medical research" open={open} onToggle={setOpen}>
+        <Section id="edge" icon="hardware-chip-outline" title={tt('monolith.living_currency_guardian_basic_incom')} sub="GA-T for compute powering medical research" open={open} onToggle={setOpen}>
           {edge && (
             <>
               <Row k="Network nodes" v={edge.network.nodes} hi />
@@ -350,17 +352,17 @@ export default function Monolith() {
             </>
           )}
           <Pressable testID="mono-edge-run" onPress={runEdge} disabled={busy === 'edge'} style={st.cta}>
-            {busy === 'edge' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>DONATE COMPUTE POWER (≈3 s)</Text>}
+            {busy === 'edge' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.donate_compute_power_3_s')}</Text>}
           </Pressable>
           {edgeResult && (
             <View style={st.card}>
               <Text style={st.cardTitle}>+{edgeResult.gat_earned} GA-T</Text>
-              <Text style={st.cardLine}>{edgeResult.tasks.toLocaleString()} real tasks in {edgeResult.ms} ms — your device computed for the decentralized research swarm.</Text>
+              <Text style={st.cardLine}>{edgeResult.tasks.toLocaleString()} {tt('monolith.real_tasks_in')} {edgeResult.ms} {tt('monolith.ms_your_device_computed_for_the_dece')}</Text>
             </View>
           )}
         </Section>
 
-        <Section id="truth" icon="library-outline" title="COLLECTIVE HUMAN TRUTH" sub="SHA3-512 chain · post-quantum hash" open={open} onToggle={setOpen}>
+        <Section id="truth" icon="library-outline" title={tt('monolith.collective_human_truth')} sub="SHA3-512 chain · post-quantum hash" open={open} onToggle={setOpen}>
           {truth && (
             <>
               <Row k="Chain integrity" v={truth.valid ? '✓ INTACT' : '✗ BROKEN'} hi />
@@ -368,35 +370,35 @@ export default function Monolith() {
               <Row k="Chain head" v={String(truth.head || '').slice(0, 18) + '…'} />
             </>
           )}
-          <TextInput testID="mono-testimony" value={testimony} onChangeText={setTestimony} placeholder="Write a testimony into the eternal record…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-testimony" value={testimony} onChangeText={setTestimony} placeholder={tt('monolith.write_a_testimony_into_the_eternal_r')} placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-truth-add" onPress={appendTruth} disabled={busy === 'truth'} style={st.cta}>
-            {busy === 'truth' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>SEAL INTO THE CHAIN</Text>}
+            {busy === 'truth' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.seal_into_the_chain')}</Text>}
           </Pressable>
         </Section>
 
-        <Section id="bp" icon="finger-print-outline" title="PERSONALITY BLUEPRINT" sub="Cognitive handover — Jarvis for the bereaved" open={open} onToggle={setOpen}>
+        <Section id="bp" icon="finger-print-outline" title={tt('monolith.personality_blueprint')} sub="Cognitive handover — Jarvis for the bereaved" open={open} onToggle={setOpen}>
           <Pressable testID="mono-bp-train" onPress={trainBp} disabled={busy === 'bp'} style={st.ghost}>
-            {busy === 'bp' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{bp ? `RETRAIN (v${bp.version ?? 1})` : 'TRAIN MY PERSONALITY (gpt-5.4)'}</Text>}
+            {busy === 'bp' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{bp ? tt('monolith.retrain_v', [bp.version ?? 1]) : tt('monolith.train_my_personality_gpt_5_4')}</Text>}
           </Pressable>
           {bp?.blueprint && (
             <View style={st.card}>
-              <Text style={st.cardLbl}>TONE</Text>
+              <Text style={st.cardLbl}>{tt('monolith.tone')}</Text>
               <Text style={st.cardLine}>{bp.blueprint.tone}</Text>
-              <Text style={st.cardLbl}>VALUES</Text>
+              <Text style={st.cardLbl}>{tt('monolith.values')}</Text>
               <Text style={st.cardLine}>{(bp.blueprint.values || []).join(' · ')}</Text>
-              <Text style={st.cardLbl}>DECISION RULES</Text>
+              <Text style={st.cardLbl}>{tt('monolith.decision_rules')}</Text>
               {(bp.blueprint.decision_rules || []).map((r: string, i: number) => <Text key={i} style={st.cardLine}>• {r}</Text>)}
             </View>
           )}
-          <TextInput testID="mono-bp-q" value={bpQ} onChangeText={setBpQ} placeholder="Question for the digital echo…" placeholderTextColor="#888" style={[st.input, st.inputText]} />
+          <TextInput testID="mono-bp-q" value={bpQ} onChangeText={setBpQ} placeholder={tt('monolith.question_for_the_digital_echo')} placeholderTextColor="#888" style={[st.input, st.inputText]} />
           <Pressable testID="mono-bp-ask" onPress={askBp} disabled={busy === 'bpask'} style={st.cta}>
-            {busy === 'bpask' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>ASK THE DIGITAL ECHO</Text>}
+            {busy === 'bpask' ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('monolith.ask_the_digital_echo')}</Text>}
           </Pressable>
           {!!bpA && <View style={st.card}><Text style={st.cardLine}>{bpA}</Text></View>}
-          <Text style={st.note}>A faithful voice clone requires an ElevenLabs key — for now the echo speaks with the closest OpenAI voice.</Text>
+          <Text style={st.note}>{tt('monolith.a_faithful_voice_clone_requires_an_e')}</Text>
         </Section>
 
-        <Text style={st.footer}>SOVEREIGN SURVIVAL OS · 22ND CENTURY · GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO)</Text>
+        <Text style={st.footer}>{tt('monolith.sovereign_survival_os_22nd_century_g')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

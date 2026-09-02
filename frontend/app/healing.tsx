@@ -9,6 +9,7 @@ import { api } from '@/src/api';
 import { sharePdf } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
+import { useI18n } from '@/src/i18n-context';
 
 const SPECIALTIES = ['Orthopedist', 'Surgeon', 'Dentist', 'Neurologist', 'Cardiologist', 'Physiotherapy', 'General practitioner'];
 const BODY_PARTS = ['Knee', 'Shoulder', 'Back', 'Arm', 'Leg', 'Head', 'Tooth', 'Other'];
@@ -24,6 +25,7 @@ const STEP_CTA: Record<string, string> = {
 
 /** PAIN CURVE — proof of progress toward 100% fit, fed by the pain diary (incl. voice logs). */
 function PainCurve() {
+  const { t: tt, tx } = useI18n();
   const [t, setT] = useState<any>(null);
   useEffect(() => { (async () => { try { setT(await api('/physio/pain/trends')); } catch (e) { console.log(e); } })(); }, []);
   if (!t?.entries?.length) return null;
@@ -34,7 +36,7 @@ function PainCurve() {
   return (
     <View testID="healing-pain-curve" style={pc.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={pc.title}>📉 PAIN CURVE — PROOF OF PROGRESS</Text>
+        <Text style={pc.title}>{tt('healing.pain_curve_proof_of_progress')}</Text>
         <Text style={[pc.trend, t.trend === 'worsening' && { color: C.warn }]}>{label}</Text>
       </View>
       <View style={pc.bars}>
@@ -45,8 +47,8 @@ function PainCurve() {
           </View>
         ))}
       </View>
-      <Text style={pc.sub}>14-day average: {t.avg_14d}/10 · {t.count} records · your doctor sees the curve in the report</Text>
-      <Text style={pc.hint}>🎙 Just tell Jarvis: My pain is a seven — it logs itself.</Text>
+      <Text style={pc.sub}>{tt('healing.14_day_average')} {t.avg_14d}/10 · {t.count} {tt('healing.records_your_doctor_sees_the_curve_i')}</Text>
+      <Text style={pc.hint}>{tt('healing.just_tell_jarvis_my_pain_is_a_seven')}</Text>
     </View>
   );
 }
@@ -64,6 +66,7 @@ const pc = StyleSheet.create({
 });
 
 export default function Healing() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const params = useLocalSearchParams<{ specialty?: string; auto?: string }>();
   const [state, setState] = useState<any>(null);
@@ -139,7 +142,7 @@ export default function Healing() {
         <Pressable testID="healing-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>HEALING LOOP</Text>
+        <Text style={st.title}>{tt('healing.healing_loop')}</Text>
         <Pressable testID="healing-jarvis" onPress={() => router.push('/jarvis')} hitSlop={10}>
           <Ionicons name="sparkles" size={20} color={C.brand} />
         </Pressable>
@@ -152,8 +155,8 @@ export default function Healing() {
           {!state?.active ? (
             <View>
               <View style={st.heroIcon}><Ionicons name="sync" size={34} color={C.brand} /></View>
-              <Text style={st.heroTitle}>From injury to 100% fit.{'\n'}Jarvis handles everything.</Text>
-              <Text style={st.heroSub}>One entry starts the whole loop: instant insurance money, the earliest doctor, guarded sick leave and tailored physio.</Text>
+              <Text style={st.heroTitle}>{tt('healing.from_injury_to_100_fit')}{'\n'}{tt('healing.jarvis_handles_everything')}</Text>
+              <Text style={st.heroSub}>{tt('healing.one_entry_starts_the_whole_loop_inst')}</Text>
               <View style={{ marginTop: S.xl, gap: S.sm }}>
                 {keys.map((k, i) => (
                   <View key={k} style={st.previewRow}>
@@ -168,10 +171,10 @@ export default function Healing() {
               </View>
               <Pressable testID="healing-start" onPress={() => { tap('medium'); setWizard(true); }} style={st.startBtn}>
                 <Ionicons name="flash" size={20} color={C.onInverse} />
-                <Text style={st.startText}>START THE LOOP</Text>
+                <Text style={st.startText}>{tt('healing.start_the_loop')}</Text>
               </Pressable>
               {!!state?.last_recovered && (
-                <Text style={st.lastNote}>✅ Last loop completed — {state.last_recovered.specialty} ({state.last_recovered.kind_label})</Text>
+                <Text style={st.lastNote}>{tt('healing.last_loop_completed')} {state.last_recovered.specialty} ({state.last_recovered.kind_label})</Text>
               )}
             </View>
           ) : (
@@ -183,7 +186,7 @@ export default function Healing() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={st.jTitle}>{j.kind_label}{j.body_part ? ` · ${j.body_part}` : ''}</Text>
-                    <Text style={st.jSub}>{j.specialty} · cesta k 100 % fit</Text>
+                    <Text style={st.jSub}>{j.specialty} {tt('healing.cesta_k_100_fit')}</Text>
                   </View>
                 </View>
               </GlassCard>
@@ -208,21 +211,21 @@ export default function Healing() {
                           <Text style={st.stepSub}>{meta[k]?.sub}</Text>
                         </View>
                         <Text style={[st.stepStatus, done && { color: C.brand }, action && { color: C.warn }]}>
-                          {done ? 'DONE' : action ? 'COMPLETE' : 'WAITING'}
+                          {done ? tt('healing.done') : action ? tt('healing.complete') : tt('healing.waiting')}
                         </Text>
                       </View>
 
                       {k === 'financial_shield' && !!state.claim && (
                         <View style={st.claimBox}>
-                          <Text style={st.claimTitle}>💶 INSURANCE CLAIM — INSTANT MONEY</Text>
-                          <Text style={st.claimLine}>Insurer: <Text style={st.claimVal}>{state.claim.provider}</Text></Text>
-                          <Text style={st.claimLine}>Daily benefit: <Text style={st.claimVal}>€{state.claim.daily_benefit_eur} / day</Text></Text>
-                          <Text style={st.claimLine}>Estimated total (21 days): <Text style={st.claimVal}>€{state.claim.estimated_total_eur}</Text></Text>
-                          <Text style={st.claimLine}>Stav: <Text style={[st.claimVal, { color: state.claim.status === 'submitted' ? C.brand : C.warn }]}>
-                            {state.claim.status === 'prefilled' ? 'PREFILLED — awaiting submission' : state.claim.status === 'submitted' ? 'SENT TO INSURER ✓' : state.claim.status.toUpperCase()}</Text></Text>
+                          <Text style={st.claimTitle}>{tt('healing.insurance_claim_instant_money')}</Text>
+                          <Text style={st.claimLine}>{tt('healing.insurer')} <Text style={st.claimVal}>{state.claim.provider}</Text></Text>
+                          <Text style={st.claimLine}>{tt('healing.daily_benefit')} <Text style={st.claimVal}>€{state.claim.daily_benefit_eur} {tt('healing.day')}</Text></Text>
+                          <Text style={st.claimLine}>{tt('healing.estimated_total_21_days')} <Text style={st.claimVal}>€{state.claim.estimated_total_eur}</Text></Text>
+                          <Text style={st.claimLine}>{tt('healing.stav')} <Text style={[st.claimVal, { color: state.claim.status === 'submitted' ? C.brand : C.warn }]}>
+                            {state.claim.status === 'prefilled' ? tt('healing.prefilled_awaiting_submission') : state.claim.status === 'submitted' ? tt('healing.sent_to_insurer') : state.claim.status.toUpperCase()}</Text></Text>
                           {state.claim.status === 'prefilled' && (
                             <Pressable testID="claim-submit" onPress={submitClaim} disabled={busy} style={st.claimBtn}>
-                              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.claimBtnText}>SUBMIT COMPENSATION CLAIM</Text>}
+                              {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.claimBtnText}>{tt('healing.submit_compensation_claim')}</Text>}
                             </Pressable>
                           )}
                         </View>
@@ -246,7 +249,7 @@ export default function Healing() {
 
               <Pressable testID="healing-close" onPress={closeLoop} disabled={busy} style={st.fitBtn}>
                 <Ionicons name="trophy" size={18} color={C.onInverse} />
-                <Text style={st.fitText}>I AM 100% FIT — FINISH THE LOOP</Text>
+                <Text style={st.fitText}>{tt('healing.i_am_100_fit_finish_the_loop')}</Text>
               </Pressable>
             </View>
           )}
@@ -255,8 +258,8 @@ export default function Healing() {
           <Pressable testID="healing-report" onPress={() => { tap(); sharePdf('/healing/report.pdf', 'guardian_healing_report.pdf').catch(() => {}); }} style={st.reportBtn}>
             <Ionicons name="document-attach-outline" size={18} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={st.reportTitle}>WEEKLY HEALING REPORT (PDF)</Text>
-              <Text style={st.reportSub}>Mood chart + loop progress — for your doctor and family</Text>
+              <Text style={st.reportTitle}>{tt('healing.weekly_healing_report_pdf')}</Text>
+              <Text style={st.reportSub}>{tt('healing.mood_chart_loop_progress_for_your_do')}</Text>
             </View>
             <Ionicons name="share-outline" size={18} color={C.info} />
           </Pressable>
@@ -270,8 +273,8 @@ export default function Healing() {
           }} style={st.reportBtn}>
             <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={st.reportTitle}>SAVE REPORT TO HEALTH VAULT</Text>
-              <Text style={st.reportSub}>AUTO: Jarvis saves it every Sunday by itself</Text>
+              <Text style={st.reportTitle}>{tt('healing.save_report_to_health_vault')}</Text>
+              <Text style={st.reportSub}>{tt('healing.auto_jarvis_saves_it_every_sunday_by')}</Text>
             </View>
             {busy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="chevron-forward" size={18} color={C.info} />}
           </Pressable>
@@ -283,7 +286,7 @@ export default function Healing() {
         <Pressable style={st.overlay} onPress={() => setWizard(false)}>
           <Pressable style={st.sheet} onPress={() => {}}>
             <View style={st.sheetHandle} />
-            <Text style={st.sheetTitle}>What happened?</Text>
+            <Text style={st.sheetTitle}>{tt('healing.what_happened')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               {([['injury', '🩹 Injury'], ['illness', '🤒 Illness']] as const).map(([v, l]) => (
                 <Pressable testID={`healing-kind-${v}`} key={v} onPress={() => { tap(); setKind(v); }} style={[st.bigChip, kind === v && st.bigChipOn]}>
@@ -292,7 +295,7 @@ export default function Healing() {
               ))}
             </View>
             {kind === 'injury' && (<>
-              <Text style={st.sheetLbl}>WHAT HURTS?</Text>
+              <Text style={st.sheetLbl}>{tt('healing.what_hurts')}</Text>
               <View style={st.chipWrap}>
                 {BODY_PARTS.map(b => (
                   <Pressable testID={`healing-part-${b}`} key={b} onPress={() => { tap(); setPart(b); }} style={[st.chip, part === b && st.chipOn]}>
@@ -301,7 +304,7 @@ export default function Healing() {
                 ))}
               </View>
             </>)}
-            <Text style={st.sheetLbl}>WHICH SPECIALIST?</Text>
+            <Text style={st.sheetLbl}>{tt('healing.which_specialist')}</Text>
             <View style={st.chipWrap}>
               {(SPECIALTIES.includes(spec) ? SPECIALTIES : [spec, ...SPECIALTIES]).map(s => (
                 <Pressable testID={`healing-spec-${s}`} key={s} onPress={() => { tap(); setSpec(s); }} style={[st.chip, spec === s && st.chipOn]}>
@@ -312,7 +315,7 @@ export default function Healing() {
             <Pressable testID="healing-wizard-go" onPress={start} disabled={busy} style={st.goBtn}>
               {busy ? <ActivityIndicator color={C.onInverse} /> : (<>
                 <Ionicons name="flash" size={18} color={C.onInverse} />
-                <Text style={st.goText}>START — INSURANCE + DOCTOR AT ONCE</Text>
+                <Text style={st.goText}>{tt('healing.start_insurance_doctor_at_once')}</Text>
               </>)}
             </Pressable>
           </Pressable>

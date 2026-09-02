@@ -9,10 +9,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { API_BASE } from '@/src/api';
 import { encryptForRecipient, b64decode } from '@/src/dropcrypto';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 /** PUBLIC provider portal — no login. File is encrypted IN THIS BROWSER with the
  *  patient's public key before upload. The server never sees the plaintext. */
 export default function DropPortal() {
+  const { t: tt, tx } = useI18n();
   const { dropId } = useLocalSearchParams<{ dropId: string }>();
   const [info, setInfo] = useState<any>(null);
   const [err, setErr] = useState('');
@@ -87,12 +89,11 @@ export default function DropPortal() {
   return (
     <SafeAreaView testID="drop-portal" style={styles.root} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.brand}>GUARDIAN · HEALTH DROP</Text>
-        <Text style={styles.h1}>Provider Portal</Text>
+        <Text style={styles.brand}>{tt('drop_dropId_.guardian_health_drop')}</Text>
+        <Text style={styles.h1}>{tt('drop_dropId_.provider_portal')}</Text>
         <Text style={styles.sub}>
-          Securely send a report / referral straight into the patient health vault
-          {info?.patient_hint ? ` (${info.patient_hint})` : ''}. The file is encrypted in your browser
-          with the patient public key — nobody else can read it.
+          {tt('drop_dropId_.securely_send_a_report_referral_stra')}
+          {info?.patient_hint ? ` (${info.patient_hint})` : ''}{tt('drop_dropId_.the_file_is_encrypted_in_your_browse')}
         </Text>
 
         {!!err && <Text style={styles.err}>{err}</Text>}
@@ -100,41 +101,41 @@ export default function DropPortal() {
         {done ? (
           <View style={styles.doneBox}>
             <Ionicons name="checkmark-circle" size={44} color="#5FA779" />
-            <Text style={styles.doneTitle}>SENT & ENCRYPTED</Text>
-            <Text style={styles.doneSub}>The patient was notified. Only they can decrypt the document.</Text>
+            <Text style={styles.doneTitle}>{tt('drop_dropId_.sent_encrypted')}</Text>
+            <Text style={styles.doneSub}>{tt('drop_dropId_.the_patient_was_notified_only_they_c')}</Text>
             <Pressable testID="dp-again" onPress={() => { setDone(false); setFile(null); setDocTitle(''); }} style={styles.ctaOutline}>
-              <Text style={styles.ctaOutlineText}>SEND ANOTHER DOCUMENT</Text>
+              <Text style={styles.ctaOutlineText}>{tt('drop_dropId_.send_another_document')}</Text>
             </Pressable>
           </View>
         ) : info && (
           <>
             {!info.has_key && (
               <View style={styles.warnBox}>
-                <Text style={styles.warnText}>The patient has not generated encryption keys yet — ask them to open Health Drop in the app.</Text>
+                <Text style={styles.warnText}>{tt('drop_dropId_.the_patient_has_not_generated_encryp')}</Text>
               </View>
             )}
             <Pressable testID="dp-pick" onPress={pick} style={styles.dropZone}>
               <Ionicons name={file ? 'document-attach' : 'cloud-upload-outline'} size={34} color={C.brand} />
-              <Text style={styles.dropText}>{file ? file.name : 'Choose a PDF or a photo of the report'}</Text>
-              {!!file && <Text style={styles.dropSub}>{Math.round((file.size || 0) / 1024)} kB · ready for encryption</Text>}
+              <Text style={styles.dropText}>{file ? file.name : tt('drop_dropId_.choose_a_pdf_or_a_photo_of_the_repor')}</Text>
+              {!!file && <Text style={styles.dropSub}>{Math.round((file.size || 0) / 1024)} {tt('drop_dropId_.kb_ready_for_encryption')}</Text>}
             </Pressable>
 
-            <Text style={styles.lbl}>GUARDIAN-ID PACIENTA (overenie)</Text>
-            <TextInput testID="dp-guardian-id" style={styles.input} placeholder="did:guardian:… or the last 6 characters" placeholderTextColor={C.info} value={guardianId} onChangeText={setGuardianId} autoCapitalize="none" />
-            <Text style={styles.lbl}>YOUR NAME / PRACTICE</Text>
-            <TextInput testID="dp-sender" style={styles.input} placeholder="Dr. Smith — Orthopedics" placeholderTextColor={C.info} value={senderName} onChangeText={setSenderName} />
-            <Text style={styles.lbl}>DOCUMENT TITLE</Text>
-            <TextInput testID="dp-title" style={styles.input} placeholder="Referral — orthopedics / Transfer slip" placeholderTextColor={C.info} value={docTitle} onChangeText={setDocTitle} />
+            <Text style={styles.lbl}>{tt('drop_dropId_.guardian_id_pacienta_overenie')}</Text>
+            <TextInput testID="dp-guardian-id" style={styles.input} placeholder={tt('drop_dropId_.did_guardian_or_the_last_6_character')} placeholderTextColor={C.info} value={guardianId} onChangeText={setGuardianId} autoCapitalize="none" />
+            <Text style={styles.lbl}>{tt('drop_dropId_.your_name_practice')}</Text>
+            <TextInput testID="dp-sender" style={styles.input} placeholder={tt('drop_dropId_.dr_smith_orthopedics')} placeholderTextColor={C.info} value={senderName} onChangeText={setSenderName} />
+            <Text style={styles.lbl}>{tt('drop_dropId_.document_title')}</Text>
+            <TextInput testID="dp-title" style={styles.input} placeholder={tt('drop_dropId_.referral_orthopedics_transfer_slip')} placeholderTextColor={C.info} value={docTitle} onChangeText={setDocTitle} />
 
             <Pressable testID="dp-send" onPress={send} disabled={busy || !file || !guardianId.trim() || !info.has_key} style={[styles.cta, (busy || !file || !guardianId.trim() || !info.has_key) && { opacity: 0.5 }]}>
               {busy ? <ActivityIndicator color={C.onInverse} /> : (
                 <>
                   <Ionicons name="lock-closed" size={16} color={C.onInverse} />
-                  <Text style={styles.ctaText}>ENCRYPT & SEND</Text>
+                  <Text style={styles.ctaText}>{tt('drop_dropId_.encrypt_send')}</Text>
                 </>
               )}
             </Pressable>
-            <Text style={styles.foot}>Zero-knowledge: the server stores only encrypted content (X25519 + XSalsa20-Poly1305).</Text>
+            <Text style={styles.foot}>{tt('drop_dropId_.zero_knowledge_the_server_stores_onl')}</Text>
           </>
         )}
         {!info && !err && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}

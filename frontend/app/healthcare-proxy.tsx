@@ -11,6 +11,7 @@ import { ContactSheet } from '@/src/ui/ContactSheet';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const RELATIONSHIPS = ['partner', 'spouse', 'family', 'friend'];
 const SCOPES = [
@@ -20,6 +21,7 @@ const SCOPES = [
 ];
 
 export default function HealthcareProxy() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -63,11 +65,11 @@ export default function HealthcareProxy() {
         <Text style={styles.title}>{t('healthcare_proxy', lang).toUpperCase()}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={styles.sub}><Text style={styles.subText}>POWER OF ATTORNEY · LEGAL RECOGNITION OF YOUR PARTNER · DID-ANCHORED</Text></View>
+      <View style={styles.sub}><Text style={styles.subText}>{tt('healthcare_proxy.power_of_attorney_legal_recognition')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.lbl}>MENO SPLNOMOCNENCA</Text>
-        <TextInput testID="hp-name" value={f.proxy_full_name} onChangeText={(v: string) => setF({ ...f, proxy_full_name: v })} style={styles.input} placeholder="Meno a priezvisko" placeholderTextColor="#999" />
+        <Text style={styles.lbl}>{tt('healthcare_proxy.meno_splnomocnenca')}</Text>
+        <TextInput testID="hp-name" value={f.proxy_full_name} onChangeText={(v: string) => setF({ ...f, proxy_full_name: v })} style={styles.input} placeholder={tt('healthcare_proxy.meno_a_priezvisko')} placeholderTextColor="#999" />
         <Pressable testID="hp-pick-contact" onPress={() => setPickOpen(true)} style={styles.pickBtn}>
           <Ionicons name="people-outline" size={16} color={C.brand} />
           <Text style={styles.pickBtnText}>{t('pick_from_contacts', lang)}</Text>
@@ -75,7 +77,7 @@ export default function HealthcareProxy() {
         <ContactSheet visible={pickOpen} onClose={() => setPickOpen(false)}
           onPick={c => setF((prev: any) => ({ ...prev, proxy_full_name: c.name || prev.proxy_full_name, proxy_phone: c.phone || prev.proxy_phone, proxy_email: c.email || prev.proxy_email }))} />
 
-        <Text style={styles.lbl}>RELATIONSHIP</Text>
+        <Text style={styles.lbl}>{tt('healthcare_proxy.relationship')}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {RELATIONSHIPS.map(r => (
             <Pressable testID={`hp-rel-${r}`} key={r} onPress={() => setF({ ...f, proxy_relationship: r })} style={[styles.chip, f.proxy_relationship === r && styles.chipActive]}>
@@ -84,28 +86,28 @@ export default function HealthcareProxy() {
           ))}
         </View>
 
-        <Text style={styles.lbl}>PHONE</Text>
+        <Text style={styles.lbl}>{tt('healthcare_proxy.phone')}</Text>
         <TextInput testID="hp-phone" value={f.proxy_phone} onChangeText={(v: string) => setF({ ...f, proxy_phone: v })} keyboardType="phone-pad" style={styles.input} placeholder="+421…" placeholderTextColor="#999" />
-        <Text style={styles.lbl}>E-MAIL</Text>
-        <TextInput testID="hp-email" value={f.proxy_email} onChangeText={(v: string) => setF({ ...f, proxy_email: v })} keyboardType="email-address" style={styles.input} placeholder="email@…" placeholderTextColor="#999" />
+        <Text style={styles.lbl}>{tt('healthcare_proxy.e_mail')}</Text>
+        <TextInput testID="hp-email" value={f.proxy_email} onChangeText={(v: string) => setF({ ...f, proxy_email: v })} keyboardType="email-address" style={styles.input} placeholder={tt('healthcare_proxy.email')} placeholderTextColor="#999" />
 
-        <Text style={styles.lbl}>SCOPE OF AUTHORITY</Text>
+        <Text style={styles.lbl}>{tt('healthcare_proxy.scope_of_authority')}</Text>
         <View style={{ flexDirection: 'row', gap: S.sm }}>
           {SCOPES.map(s => (
             <Pressable testID={`hp-scope-${s.key}`} key={s.key} onPress={() => setF({ ...f, scope: s.key })} style={[styles.chip, { flex: 1, alignItems: 'center' }, f.scope === s.key && styles.chipActive]}>
-              <Text style={[styles.chipText, f.scope === s.key && styles.chipTextActive]}>{s.label}</Text>
+              <Text style={[styles.chipText, f.scope === s.key && styles.chipTextActive]}>{tx(s.label)}</Text>
             </Pressable>
           ))}
         </View>
 
         <View style={styles.switchRow}>
-          <Text style={styles.switchLbl}>EFFECTIVE IMMEDIATELY</Text>
+          <Text style={styles.switchLbl}>{tt('healthcare_proxy.effective_immediately')}</Text>
           <Switch testID="hp-effective" value={!!f.effective_immediately} onValueChange={v => setF({ ...f, effective_immediately: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={styles.lbl}>ALTERNATE AGENT (optional)</Text>
+        <Text style={styles.lbl}>{tt('healthcare_proxy.alternate_agent_optional')}</Text>
         <TextInput testID="hp-alt" value={f.alternate_name} onChangeText={(v: string) => setF({ ...f, alternate_name: v })} style={styles.input} placeholderTextColor="#999" />
-        <Text style={styles.lbl}>NOTES</Text>
+        <Text style={styles.lbl}>{tt('healthcare_proxy.notes')}</Text>
         <TextInput testID="hp-notes" value={f.notes} onChangeText={(v: string) => setF({ ...f, notes: v })} multiline style={[styles.input, { minHeight: 60 }]} placeholderTextColor="#999" />
 
         <Pressable testID="hp-generate" onPress={generate} disabled={busy || !f.proxy_full_name} style={[styles.genBtn, !f.proxy_full_name && { opacity: 0.4 }]}>
@@ -121,12 +123,12 @@ export default function HealthcareProxy() {
           <View testID="hp-document" style={styles.docBox}>
             <View style={styles.docHead}>
               <Ionicons name="shield-checkmark" size={16} color={C.brand} />
-              <Text style={styles.docHeadText}>DOCUMENT · SHA-256 ANCHORED</Text>
+              <Text style={styles.docHeadText}>{tt('healthcare_proxy.document_sha_256_anchored')}</Text>
             </View>
             <Text style={styles.docText}>{doc.document_text}</Text>
             <Pressable testID="hp-pdf" onPress={() => sharePdf('/legal/proxy.pdf', 'guardian_healthcare_proxy.pdf')} style={styles.pdfBtn}>
               <Ionicons name="share-outline" size={18} color={C.onInverse} />
-              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} — NOTARY / HOSPITAL</Text>
+              <Text style={styles.pdfBtnText}>{t('share_pdf', lang).toUpperCase()} {tt('healthcare_proxy.notary_hospital')}</Text>
             </Pressable>
           </View>
         )}

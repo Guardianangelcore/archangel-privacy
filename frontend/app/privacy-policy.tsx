@@ -21,6 +21,7 @@ const P = ({ children }: { children: React.ReactNode }) => <Text style={st.p}>{c
 const B = ({ children }: { children: React.ReactNode }) => <Text style={st.bullet}>•  {children}</Text>;
 
 export default function PrivacyPolicy() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { t, rtl } = useI18n();
   return (
@@ -29,95 +30,81 @@ export default function PrivacyPolicy() {
         <Pressable testID="privacy-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>PRIVACY POLICY</Text>
+        <Text style={st.title}>{tt('privacy_policy.privacy_policy')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 80 }}>
-        <Text style={st.meta}>Version {VERSION} · Effective {EFFECTIVE} · GDPR (EU 2016/679)</Text>
+        <Text style={st.meta}>{tt('privacy_policy.version')} {VERSION} {tt('privacy_policy.effective')} {EFFECTIVE} {tt('privacy_policy.gdpr_eu_2016_679')}</Text>
         <Text style={st.meta}>Data Controller: Guardian Angel Sovereign Foundation (DAO) · guardian.angel.core@proton.me</Text>
 
         {/* LOCAL-FIRST PROMISE */}
         <View testID="privacy-local-first" style={st.promiseBox}>
           <View style={st.promiseHead}>
             <Ionicons name="phone-portrait-outline" size={18} color={C.brand} />
-            <Text style={st.promiseTitle}>YOUR DATA STAYS ON YOUR DEVICE</Text>
+            <Text style={st.promiseTitle}>{tt('privacy_policy.your_data_stays_on_your_device')}</Text>
           </View>
           <Text style={st.promiseText}>
-            Archangel OS is local-first and zero-surveillance. Contacts, calendar,
-            and sensitive identifiers are stored on your device (SecureStore / encrypted
-            storage). Nothing is shared with anyone unless you explicitly opt in. We never
-            sell data and we show no advertising.
+            {tt('privacy_policy.archangel_os_is_local_first_and_zero')}
           </Text>
         </View>
 
-        <Section n="1" title="WHAT WE PROCESS">
-          <B>Account data: e-mail, display name, hashed password (bcrypt) or Google sign-in identifier.</B>
-          <B>Health records you enter: Life Card entries (vaccinations, diseases, surgeries, exams, injuries, dental), medications, documents you scan into the Vault.</B>
-          <B>Family data you add: Guardian Circle contacts — stored locally on your device; only pseudonymous DID hashes are used in metadata.</B>
-          <B>Technical data: session tokens, timestamps needed to run the Service.</B>
+        <Section n="1" title={tt('privacy_policy.what_we_process')}>
+          <B>{tt('privacy_policy.account_data_e_mail_display_name_has')}</B>
+          <B>{tt('privacy_policy.health_records_you_enter_life_card_e')}</B>
+          <B>{tt('privacy_policy.family_data_you_add_guardian_circle')}</B>
+          <B>{tt('privacy_policy.technical_data_session_tokens_timest')}</B>
         </Section>
 
-        <Section n="2" title="LOCAL-FIRST STORAGE">
-          <P>Device contacts and native calendar entries never leave your phone. Server-side
-            records are linked to a pseudonymous decentralized identifier (DID), phone
-            numbers are encrypted at rest, and vault secrets are sealed zero-knowledge.</P>
+        <Section n="2" title={tt('privacy_policy.local_first_storage')}>
+          <P>{tt('privacy_policy.device_contacts_and_native_calendar')}</P>
         </Section>
 
-        <Section n="3" title="SHARING IS OPT-IN">
-          <P>No data is shared by default. Sharing happens only when you actively enable it:</P>
-          <B>Guardian Circle / Family Pulse — alerts you explicitly send or enable.</B>
-          <B>Family Life Cards — only vaccinations and check-ups, only within your circle.</B>
-          <B>Emergency QR — only the fields you choose to publish.</B>
-          <P>You can withdraw any of these consents at any time in the app.</P>
+        <Section n="3" title={tt('privacy_policy.sharing_is_opt_in')}>
+          <P>{tt('privacy_policy.no_data_is_shared_by_default_sharing')}</P>
+          <B>{tt('privacy_policy.guardian_circle_family_pulse_alerts')}</B>
+          <B>{tt('privacy_policy.family_life_cards_only_vaccinations')}</B>
+          <B>{tt('privacy_policy.emergency_qr_only_the_fields_you_cho')}</B>
+          <P>{tt('privacy_policy.you_can_withdraw_any_of_these_consen')}</P>
         </Section>
 
-        <Section n="4" title="LEGAL BASES (GDPR)">
-          <B>Art. 6(1)(b) — performance of contract (running your account).</B>
-          <B>Art. 6(1)(a) & Art. 9(2)(a) — your explicit consent for health data and any sharing.</B>
-          <B>Art. 6(1)(f) — legitimate interest in securing the Service (fraud & abuse prevention).</B>
+        <Section n="4" title={tt('privacy_policy.legal_bases_gdpr')}>
+          <B>{tt('privacy_policy.art_6_1_b_performance_of_contract_ru')}</B>
+          <B>{tt('privacy_policy.art_6_1_a_art_9_2_a_your_explicit_co')}</B>
+          <B>{tt('privacy_policy.art_6_1_f_legitimate_interest_in_sec')}</B>
         </Section>
 
-        <Section n="5" title="AI PROCESSING">
-          <P>When you use AI features (Jarvis, Magic Lens, predictions), the content you
-            submit is processed by AI providers solely to generate your answer. It is not
-            used to train models. Every AI response carries the EU AI Act Article 50
-            watermark.</P>
+        <Section n="5" title={tt('privacy_policy.ai_processing')}>
+          <P>{tt('privacy_policy.when_you_use_ai_features_jarvis_magi')}</P>
         </Section>
 
-        <Section n="6" title="RETENTION & DELETION">
-          <P>Your data is kept only while your account exists. Deleting your account removes
-            your records; reset codes expire in 15 minutes; sessions expire automatically.
-            Local data can be wiped by uninstalling the app or via in-app deletion.</P>
+        <Section n="6" title={tt('privacy_policy.retention_deletion')}>
+          <P>{tt('privacy_policy.your_data_is_kept_only_while_your_ac')}</P>
         </Section>
 
-        <Section n="7" title="YOUR GDPR RIGHTS">
-          <B>Access, rectification, and erasure of your data.</B>
-          <B>Data portability (export your Life Card as PDF / vaccine pass).</B>
-          <B>Withdraw consent at any time without affecting prior processing.</B>
-          <B>Object to processing and lodge a complaint with your supervisory authority.</B>
+        <Section n="7" title={tt('privacy_policy.your_gdpr_rights')}>
+          <B>{tt('privacy_policy.access_rectification_and_erasure_of')}</B>
+          <B>{tt('privacy_policy.data_portability_export_your_life_ca')}</B>
+          <B>{tt('privacy_policy.withdraw_consent_at_any_time_without')}</B>
+          <B>{tt('privacy_policy.object_to_processing_and_lodge_a_com')}</B>
           <P>Exercise these rights in-app or by writing to guardian.angel.core@proton.me.
             We respond within 30 days.</P>
         </Section>
 
-        <Section n="8" title="SECURITY">
-          <P>Encryption in transit (TLS) and at rest (Fernet for phone numbers, bcrypt for
-            passwords, hashed reset codes), pseudonymous DIDs, session revocation on
-            password reset, and zero-knowledge sealing of vault secrets.</P>
+        <Section n="8" title={tt('privacy_policy.security')}>
+          <P>{tt('privacy_policy.encryption_in_transit_tls_and_at_res')}</P>
         </Section>
 
-        <Section n="9" title="CHILDREN">
-          <P>Child Life Cards are managed exclusively by the parent's account. We do not
-            knowingly collect data directly from children.</P>
+        <Section n="9" title={tt('privacy_policy.children')}>
+          <P>{tt('privacy_policy.child_life_cards_are_managed_exclusi')}</P>
         </Section>
 
-        <Section n="10" title="CHANGES">
-          <P>Material changes will be announced in the app and, where required, will ask for
-            renewed consent.</P>
+        <Section n="10" title={tt('privacy_policy.changes')}>
+          <P>{tt('privacy_policy.material_changes_will_be_announced_i')}</P>
         </Section>
 
         <Pressable testID="privacy-tos-link" onPress={() => router.push('/terms-of-service')} style={st.linkBtn}>
           <Ionicons name="document-text-outline" size={16} color={C.brand} />
-          <Text style={st.linkBtnText}>READ THE TERMS OF SERVICE</Text>
+          <Text style={st.linkBtnText}>{tt('privacy_policy.read_the_terms_of_service')}</Text>
         </Pressable>
 
         {/* CONSOLIDATED LEGAL DISCLAIMER — footer (localized, key disclaimer.general) */}
@@ -125,7 +112,7 @@ export default function PrivacyPolicy() {
           <Text style={st.discTitle}>{t('disclaimer.title')}</Text>
           <Text testID="privacy-disclaimer-text" style={[st.discText, rtl && st.rtl]}>{t('disclaimer.general')}</Text>
         </View>
-        <Text style={st.footer}>ZERO SURVEILLANCE · LOCAL-FIRST · © 2026 GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO)</Text>
+        <Text style={st.footer}>{tt('privacy_policy.zero_surveillance_local_first_2026_g')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -17,10 +17,12 @@ import { C, S, R } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
 import { inviteFamilyToRecord } from '@/src/invite';
+import { useI18n } from '@/src/i18n-context';
 
 const RECORD_LEN_MS = 5000;
 
 export default function VoiceSignature() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [sig, setSig] = useState<any>(null);
@@ -118,23 +120,23 @@ export default function VoiceSignature() {
         <Pressable testID="vs-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>VOICE SIGNATURE</Text>
+        <Text style={styles.title}>{tt('voice_signature.voice_signature')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Record your voice for 5 seconds. When you then send grandma a message, Jarvis announces:
-          <Text style={{ color: C.brand, fontWeight: '900' }}> You have a new message from {label.trim() || 'you'}.</Text>
+          {tt('voice_signature.record_your_voice_for_5_seconds_when')}
+          <Text style={{ color: C.brand, fontWeight: '900' }}> {tt('voice_signature.you_have_a_new_message_from')} {label.trim() || tt('voice_signature.you')}.</Text>
         </Text>
 
-        <Text style={styles.lbl}>THE NAME JARVIS WILL USE</Text>
+        <Text style={styles.lbl}>{tt('voice_signature.the_name_jarvis_will_use')}</Text>
         <TextInput
           testID="vs-label"
           value={label}
           onChangeText={setLabel}
           style={styles.input}
-          placeholder="e.g. Guardian"
+          placeholder={tt('voice_signature.e_g_guardian')}
           placeholderTextColor="#999"
           maxLength={40}
         />
@@ -154,15 +156,15 @@ export default function VoiceSignature() {
         </View>
 
         {recording && (
-          <Text testID="vs-countdown" style={styles.countdown}>{countdown} s · hovorte prirodzene…</Text>
+          <Text testID="vs-countdown" style={styles.countdown}>{countdown} {tt('voice_signature.s_hovorte_prirodzene')}</Text>
         )}
 
         {!!sig && !recording && (
           <View testID="vs-existing" style={styles.existing}>
             <Ionicons name="checkmark-circle" size={22} color={C.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.existingLbl}>YOU HAVE A SAVED VOICE SIGNATURE</Text>
-              <Text style={styles.existingText}>„{sig.label}“ · {Math.round((sig.size || 0) / 1024)} KB</Text>
+              <Text style={styles.existingLbl}>{tt('voice_signature.you_have_a_saved_voice_signature')}</Text>
+              <Text style={styles.existingText}>„{tx(sig.label)}“ · {Math.round((sig.size || 0) / 1024)} KB</Text>
             </View>
             <Pressable testID="vs-delete" onPress={remove} disabled={busy} hitSlop={10}>
               <Ionicons name="trash-outline" size={20} color={C.error} />
@@ -176,7 +178,7 @@ export default function VoiceSignature() {
         {micBlocked && (
           <Pressable onPress={() => Linking.openSettings()} style={styles.settingsBtn}>
             <Ionicons name="settings-outline" size={14} color={C.brand} />
-            <Text style={styles.settingsText}>Microphone is blocked — OPEN SETTINGS</Text>
+            <Text style={styles.settingsText}>{tt('voice_signature.microphone_is_blocked_open_settings')}</Text>
           </Pressable>
         )}
 
@@ -185,13 +187,13 @@ export default function VoiceSignature() {
           <View testID="vs-circle" style={styles.circleWrap}>
             <View style={styles.circleHdr}>
               <Ionicons name="people-circle" size={22} color={C.brand} />
-              <Text style={styles.circleTitle}>FAMILY VOICE CIRCLE</Text>
+              <Text style={styles.circleTitle}>{tt('voice_signature.family_voice_circle')}</Text>
               <View style={styles.circleCount}>
                 <Text style={styles.circleCountText}>{circle.recorded} / {circle.total}</Text>
               </View>
             </View>
             <Text style={styles.circleSub}>
-              Every family member records their own voice — Jarvis tells grandma who each message is from.
+              {tt('voice_signature.every_family_member_records_their_ow')}
             </Text>
             {circle.members.map((m) => (
               <View key={m.user_id} testID={`vs-circle-${m.user_id}`} style={styles.memberRow}>
@@ -199,11 +201,11 @@ export default function VoiceSignature() {
                   <Ionicons name={m.has_signature ? 'mic-circle' : 'mic-off'} size={20} color={m.has_signature ? C.onInverse : C.info} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.memberName}>{m.name} {m.is_self && <Text style={styles.memberYou}>· TO STE VY</Text>}</Text>
+                  <Text style={styles.memberName}>{m.name} {m.is_self && <Text style={styles.memberYou}>{tt('voice_signature.to_ste_vy')}</Text>}</Text>
                   <Text style={styles.memberStatus}>
                     {m.has_signature
-                      ? `"${m.label}" · recorded`
-                      : m.is_self ? 'Record above ↑' : 'has not recorded a voice yet'}
+                      ? tt('voice_signature.recorded', [m.label])
+                      : m.is_self ? tt('voice_signature.record_above') : tt('voice_signature.has_not_recorded_a_voice_yet')}
                   </Text>
                 </View>
                 {m.has_signature ? (
@@ -218,7 +220,7 @@ export default function VoiceSignature() {
                     hitSlop={8}
                   >
                     <Ionicons name="paper-plane-outline" size={14} color={C.brand} />
-                    <Text style={styles.inviteBtnText}>INVITE</Text>
+                    <Text style={styles.inviteBtnText}>{tt('voice_signature.invite')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -230,13 +232,13 @@ export default function VoiceSignature() {
               style={styles.inviteBulk}
             >
               <Ionicons name="share-social-outline" size={16} color={C.onInverse} />
-              <Text style={styles.inviteBulkText}>INVITE ANOTHER FAMILY MEMBER</Text>
+              <Text style={styles.inviteBulkText}>{tt('voice_signature.invite_another_family_member')}</Text>
             </Pressable>
           </View>
         )}
 
         <Text style={styles.hint}>
-          The recording is not sent to anyone — it only helps your family recognize you in messages.
+          {tt('voice_signature.the_recording_is_not_sent_to_anyone')}
         </Text>
       </ScrollView>
     </SafeAreaView>

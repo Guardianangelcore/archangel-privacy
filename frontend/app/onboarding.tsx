@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const STEPS = [
   { icon: 'people', title: 'Link with your guardian', color: '#5FA779' },
@@ -16,6 +17,7 @@ const STEPS = [
 ];
 
 export default function Onboarding() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [contact, setContact] = useState('');
@@ -52,20 +54,20 @@ export default function Onboarding() {
         <View style={[st.iconWrap, { borderColor: s.color }]}>
           <Ionicons name={s.icon as any} size={56} color={s.color} />
         </View>
-        <Text style={st.stepNo}>STEP {step + 1} OF 3</Text>
-        <Text style={st.title}>{s.title}</Text>
+        <Text style={st.stepNo}>{tt('onboarding.step')} {step + 1} {tt('onboarding.of_3')}</Text>
+        <Text style={st.title}>{tx(s.title)}</Text>
 
         {step === 0 && (
           <View>
-            <Text style={st.body}>A guardian is a family member you trust — <Text style={st.bold}>your Guardian Angel</Text>. Whenever anything happens, they get an instant message. And if you ever forget your password, they help you safely recover your account.</Text>
+            <Text style={st.body}>{tt('onboarding.a_guardian_is_a_family_member_you_tr')} <Text style={st.bold}>{tt('onboarding.your_guardian_angel')}</Text>{tt('onboarding.whenever_anything_happens_they_get_a')}</Text>
             {linked ? (
               <View style={st.okBox}>
                 <Ionicons name="checkmark-circle" size={22} color="#5FA779" />
-                <Text style={st.okText}>LINKED WITH GUARDIAN: {linked.toUpperCase()} ✓</Text>
+                <Text style={st.okText}>{tt('onboarding.linked_with_guardian')} {linked.toUpperCase()} ✓</Text>
               </View>
             ) : (
               <>
-                <Text style={st.lbl}>GUARDIAN E-MAIL</Text>
+                <Text style={st.lbl}>{tt('onboarding.guardian_e_mail')}</Text>
                 <View style={{ flexDirection: 'row', gap: S.sm }}>
                   <TextInput testID="ob-contact" value={contact} onChangeText={setContact} placeholder="guardian@family.com"
                     autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#999" style={[st.input, { flex: 1 }]} />
@@ -74,7 +76,7 @@ export default function Onboarding() {
                   </Pressable>
                 </View>
                 {!!err && <Text style={st.err}>{err}</Text>}
-                <Text style={st.hint}>The guardian also needs the Guardian app. You can do this later.</Text>
+                <Text style={st.hint}>{tt('onboarding.the_guardian_also_needs_the_guardian')}</Text>
               </>
             )}
           </View>
@@ -82,7 +84,7 @@ export default function Onboarding() {
 
         {step === 1 && (
           <View>
-            <Text style={st.body}>Jarvis is your personal helper. Write (or speak) to him <Text style={st.bold}>completely naturally, like to a grandchild</Text>:</Text>
+            <Text style={st.body}>{tt('onboarding.jarvis_is_your_personal_helper_write')} <Text style={st.bold}>{tt('onboarding.completely_naturally_like_to_a_grand')}</Text>:</Text>
             {['"Jarvis, my knee hurts, what should I do?"',
               '"Translate this doctor report into plain language."',
               '"Remind me of my blood pressure pill every morning at eight."'].map((ex, i) => (
@@ -92,20 +94,20 @@ export default function Onboarding() {
               </View>
             ))}
             <Pressable testID="ob-jarvis" onPress={() => router.push('/jarvis')} style={[st.tryBtn, { backgroundColor: '#B8860B' }]}>
-              <Text style={st.tryText}>TRY JARVIS NOW</Text>
+              <Text style={st.tryText}>{tt('onboarding.try_jarvis_now')}</Text>
             </Pressable>
-            <Text style={st.hint}>Jarvis is an AI — it informs but does not replace a doctor. In an emergency always call 112.</Text>
+            <Text style={st.hint}>{tt('onboarding.jarvis_is_an_ai_it_informs_but_does')}</Text>
           </View>
         )}
 
         {step === 2 && (
           <View>
-            <Text style={st.body}>Your <Text style={st.bold}>Emergency QR</Text> lives in your Profile — a paramedic scans it and instantly sees blood type, allergies and a family contact.{'\n\n'}<Text style={st.bold}>QR Talisman</Text> is a paper recovery key for your account — print it in Sovereign Recovery and keep it in your wallet.</Text>
+            <Text style={st.body}>{tt('onboarding.your')} <Text style={st.bold}>{tt('onboarding.emergency_qr')}</Text> {tt('onboarding.lives_in_your_profile_a_paramedic_sc')}{'\n\n'}<Text style={st.bold}>{tt('onboarding.qr_talisman')}</Text> {tt('onboarding.is_a_paper_recovery_key_for_your_acc')}</Text>
             <Pressable testID="ob-qr" onPress={() => router.push('/emergency-qr')} style={[st.tryBtn, { backgroundColor: '#C25450' }]}>
-              <Text style={st.tryText}>SHOW MY EMERGENCY QR</Text>
+              <Text style={st.tryText}>{tt('onboarding.show_my_emergency_qr')}</Text>
             </Pressable>
             <Pressable testID="ob-talisman" onPress={() => router.push('/recovery-suite')} style={st.outlineBtn}>
-              <Text style={st.outlineText}>PRINT QR TALISMAN (RECOVERY)</Text>
+              <Text style={st.outlineText}>{tt('onboarding.print_qr_talisman_recovery')}</Text>
             </Pressable>
           </View>
         )}
@@ -114,16 +116,16 @@ export default function Onboarding() {
         <View style={st.navRow}>
           {step > 0 ? (
             <Pressable testID="ob-prev" onPress={() => setStep(step - 1)} style={st.navBack}>
-              <Text style={st.navBackText}>BACK</Text>
+              <Text style={st.navBackText}>{tt('onboarding.back')}</Text>
             </Pressable>
           ) : (
             <Pressable testID="ob-skip" onPress={finish} style={st.navBack}>
-              <Text style={st.navBackText}>SKIP</Text>
+              <Text style={st.navBackText}>{tt('onboarding.skip')}</Text>
             </Pressable>
           )}
           <Pressable testID="ob-next" onPress={() => (step < 2 ? setStep(step + 1) : finish())}
             style={[st.navNext, { backgroundColor: s.color }]}>
-            <Text style={st.navNextText}>{step < 2 ? 'CONTINUE' : 'DONE — I AM READY 💛'}</Text>
+            <Text style={st.navNextText}>{step < 2 ? tt('onboarding.continue') : tt('onboarding.done_i_am_ready')}</Text>
           </Pressable>
         </View>
       </ScrollView>

@@ -9,15 +9,17 @@ import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { api } from '@/src/api';
 import { DateField } from '@/src/ui/fields';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const W = Math.min(Dimensions.get('window').width, 500) - 48;
 const H = 230;
 const PAD = { l: 34, r: 10, t: 10, b: 22 };
 
 function GrowthChart({ curves, logs, measure }: { curves: any[]; logs: any[]; measure: 'height' | 'weight' }) {
+  const { t: tt, tx } = useI18n();
   const key = measure === 'height' ? 'height_cm' : 'weight_kg';
   const pts = logs.filter((l: any) => l[key] != null && l.age_months != null);
-  if (!curves.length && !pts.length) return <Text style={st.hint}>No data for the chart yet.</Text>;
+  if (!curves.length && !pts.length) return <Text style={st.hint}>{tt('child_growth.no_data_for_the_chart_yet')}</Text>;
   const allM = [...curves.map(c => c.m), ...pts.map(p => p.age_months)];
   const allV = [...curves.flatMap(c => [c.p3, c.p97]), ...pts.map(p => p[key])];
   const mMax = Math.max(...allM, 24);
@@ -64,6 +66,7 @@ function GrowthChart({ curves, logs, measure }: { curves: any[]; logs: any[]; me
 }
 
 export default function ChildGrowth() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { child_id } = useLocalSearchParams<{ child_id: string }>();
   const [data, setData] = useState<any>(null);
@@ -114,7 +117,7 @@ export default function ChildGrowth() {
         <Pressable testID="gr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>GROWTH CURVE</Text>
+        <Text style={st.title}>{tt('child_growth.growth_curve')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
@@ -122,18 +125,18 @@ export default function ChildGrowth() {
         {data && (
           <>
             <Text style={st.h1}>{data.child.name}</Text>
-            <Text style={st.sub}>Height and weight with indicative percentiles based on WHO standards.</Text>
+            <Text style={st.sub}>{tt('child_growth.height_and_weight_with_indicative_pe')}</Text>
             {!!err && <Text style={st.err}>{err}</Text>}
 
             {data.sex_required && (
               <View style={st.sexBox}>
-                <Text style={st.sexTitle}>Select the sex for WHO percentiles:</Text>
+                <Text style={st.sexTitle}>{tt('child_growth.select_the_sex_for_who_percentiles')}</Text>
                 <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
                   <Pressable testID="gr-sex-m" onPress={() => setSex('m')} disabled={sexBusy} style={st.sexChip}>
-                    <Text style={st.sexChipText}>👦 CHLAPEC</Text>
+                    <Text style={st.sexChipText}>{tt('child_growth.chlapec')}</Text>
                   </Pressable>
                   <Pressable testID="gr-sex-f" onPress={() => setSex('f')} disabled={sexBusy} style={st.sexChip}>
-                    <Text style={st.sexChipText}>👧 GIRL</Text>
+                    <Text style={st.sexChipText}>{tt('child_growth.girl')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -141,13 +144,13 @@ export default function ChildGrowth() {
 
             {/* ZÁPIS MERANIA */}
             <View style={st.addBox}>
-              <DateField testID="gr-date" title="MEASUREMENT DATE" value={date} onChange={setDate} placeholder="Measurement date" style={st.input} />
+              <DateField testID="gr-date" title={tt('child_growth.measurement_date')} value={date} onChange={setDate} placeholder={tt('child_growth.measurement_date_h9ho')} style={st.input} />
               <View style={{ flexDirection: 'row', gap: S.sm }}>
-                <TextInput testID="gr-height" style={[st.input, { flex: 1 }]} placeholder="Height (cm)" placeholderTextColor={C.info} keyboardType="decimal-pad" value={height} onChangeText={setHeight} />
-                <TextInput testID="gr-weight" style={[st.input, { flex: 1 }]} placeholder="Weight (kg)" placeholderTextColor={C.info} keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
+                <TextInput testID="gr-height" style={[st.input, { flex: 1 }]} placeholder={tt('child_growth.height_cm')} placeholderTextColor={C.info} keyboardType="decimal-pad" value={height} onChangeText={setHeight} />
+                <TextInput testID="gr-weight" style={[st.input, { flex: 1 }]} placeholder={tt('child_growth.weight_kg')} placeholderTextColor={C.info} keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
               </View>
               <Pressable testID="gr-save" onPress={add} disabled={busy} style={st.cta}>
-                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>LOG MEASUREMENT</Text>}
+                {busy ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.ctaText}>{tt('child_growth.log_measurement')}</Text>}
               </Pressable>
             </View>
 
@@ -155,27 +158,27 @@ export default function ChildGrowth() {
             <View style={st.chartBox}>
               <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md }}>
                 <Pressable testID="gr-m-height" onPress={() => setMeasure('height')} style={[st.mChip, measure === 'height' && st.mChipOn]}>
-                  <Text style={[st.mChipText, measure === 'height' && { color: C.onInverse }]}>HEIGHT</Text>
+                  <Text style={[st.mChipText, measure === 'height' && { color: C.onInverse }]}>{tt('child_growth.height')}</Text>
                 </Pressable>
                 <Pressable testID="gr-m-weight" onPress={() => setMeasure('weight')} style={[st.mChip, measure === 'weight' && st.mChipOn]}>
-                  <Text style={[st.mChipText, measure === 'weight' && { color: C.onInverse }]}>WEIGHT</Text>
+                  <Text style={[st.mChipText, measure === 'weight' && { color: C.onInverse }]}>{tt('child_growth.weight')}</Text>
                 </Pressable>
               </View>
               <GrowthChart curves={curves} logs={logs} measure={measure} />
-              <Text style={st.note}>{data.note}</Text>
+              <Text style={st.note}>{tx(data.note)}</Text>
             </View>
 
             {/* MERANIA */}
-            <Text style={st.section}>MERANIA ({logs.length})</Text>
-            {logs.length === 0 && <Text style={st.hint}>No measurements yet. Log the first one above.</Text>}
+            <Text style={st.section}>{tt('child_growth.merania')}{logs.length})</Text>
+            {logs.length === 0 && <Text style={st.hint}>{tt('child_growth.no_measurements_yet_log_the_first_on')}</Text>}
             {[...logs].reverse().map((l: any) => (
               <View key={l.log_id} testID={`gr-log-${l.log_id}`} style={st.logRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={st.logDate}>{l.date}{l.age_months != null ? ` · ${l.age_months < 24 ? `${Math.round(l.age_months)} mes.` : `${(l.age_months / 12).toFixed(1)} r.`}` : ''}</Text>
                   <Text style={st.logVals}>
-                    {l.height_cm != null ? `📏 ${l.height_cm} cm${l.height_percentile != null ? ` (P${Math.round(l.height_percentile)})` : ''}` : ''}
+                    {l.height_cm != null ? tt('child_growth.cm', [l.height_cm, l.height_percentile != null ? ` (P${Math.round(l.height_percentile)})` : '']) : ''}
                     {l.height_cm != null && l.weight_kg != null ? '   ' : ''}
-                    {l.weight_kg != null ? `⚖️ ${l.weight_kg} kg${l.weight_percentile != null ? ` (P${Math.round(l.weight_percentile)})` : ''}` : ''}
+                    {l.weight_kg != null ? tt('child_growth.kg', [l.weight_kg, l.weight_percentile != null ? ` (P${Math.round(l.weight_percentile)})` : '']) : ''}
                   </Text>
                 </View>
                 <Pressable testID={`gr-del-${l.log_id}`} onPress={() => del(l.log_id)} hitSlop={8}>

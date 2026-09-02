@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { C, S, R } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 export type HubChoice = { icon: any; label: string; sub?: string; route?: string; onPress?: () => void };
 export type HubItem = { testID: string; icon: any; title: string; subtitle: string; route?: string; onPress?: () => void; choices?: HubChoice[] };
@@ -13,6 +14,7 @@ export type HubSection = { title: string; items: HubItem[] };
 export default function PillarHub({ title, subtitle, icon, items, sections, hero, testID }: {
   title: string; subtitle: string; icon: any; items?: HubItem[]; sections?: HubSection[]; hero?: React.ReactNode; testID: string;
 }) {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [sheet, setSheet] = useState<HubItem | null>(null);
 
@@ -39,8 +41,8 @@ export default function PillarHub({ title, subtitle, icon, items, sections, hero
         <Ionicons name={it.icon} size={22} color={C.brand} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.rowTitle}>{it.title}</Text>
-        <Text style={styles.rowSub}>{it.subtitle}</Text>
+        <Text style={styles.rowTitle}>{tx(it.title)}</Text>
+        <Text style={styles.rowSub}>{tx(it.subtitle)}</Text>
       </View>
       <Ionicons name={it.choices?.length ? 'apps-outline' : 'chevron-forward'} size={18} color={C.info} />
     </Pressable>
@@ -50,7 +52,7 @@ export default function PillarHub({ title, subtitle, icon, items, sections, hero
     <SafeAreaView testID={testID} style={styles.root} edges={['top']}>
       <View style={styles.header}>
         <Pressable testID={`${testID}-home`} onPress={() => router.navigate('/(tabs)')} hitSlop={10}>
-          <Text style={styles.wordmark}>GUARDIAN</Text>
+          <Text style={styles.wordmark}>{tt('c_PillarHub.guardian')}</Text>
         </Pressable>
         <Pressable testID={`${testID}-profile`} onPress={() => router.push('/(tabs)/profile')} hitSlop={10}>
           <Ionicons name="settings-outline" size={22} color={C.onS3} />
@@ -70,7 +72,7 @@ export default function PillarHub({ title, subtitle, icon, items, sections, hero
         )}
         {(sections || []).map((sec, i) => (
           <View key={i}>
-            <Text style={styles.sectionTitle}>{sec.title}</Text>
+            <Text style={styles.sectionTitle}>{tx(sec.title)}</Text>
             <View style={{ gap: S.md }}>
               {sec.items.map(renderItem)}
             </View>
@@ -84,20 +86,20 @@ export default function PillarHub({ title, subtitle, icon, items, sections, hero
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>{sheet?.title}</Text>
-            <Text style={styles.sheetSub}>What would you like to do?</Text>
+            <Text style={styles.sheetSub}>{tt('c_PillarHub.what_would_you_like_to_do')}</Text>
             {(sheet?.choices || []).map((c, i) => (
               <Pressable key={i} testID={`${sheet?.testID}-choice-${i}`} onPress={() => pick(c)}
                 style={({ pressed }) => [styles.choiceRow, pressed && { backgroundColor: C.surface3 }]}>
                 <View style={styles.choiceIcon}><Ionicons name={c.icon} size={20} color={C.brand} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.choiceLabel}>{c.label}</Text>
-                  {!!c.sub && <Text style={styles.choiceSub}>{c.sub}</Text>}
+                  <Text style={styles.choiceLabel}>{tx(c.label)}</Text>
+                  {!!c.sub && <Text style={styles.choiceSub}>{tx(c.sub)}</Text>}
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={C.info} />
               </Pressable>
             ))}
             <Pressable testID={`${sheet?.testID}-choice-cancel`} onPress={() => setSheet(null)} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>CANCEL</Text>
+              <Text style={styles.cancelText}>{tt('c_PillarHub.cancel')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

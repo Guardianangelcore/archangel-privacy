@@ -10,12 +10,14 @@ import * as Linking from 'expo-linking';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { IapBuyButton, RestorePurchasesButton } from '@/src/IapPurchase';
+import { useI18n } from '@/src/i18n-context';
 
 const TIER_ICON: Record<string, string> = { sovereign: 'earth', guardian: 'shield-checkmark', sentinel: 'diamond', archangel: 'flame' };
 const OBSIDIAN = '#0B0B0D';
 const PLATINUM = '#E5E4E2';
 
 export default function Subscription() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const params = useLocalSearchParams<{ session_id?: string; payment?: string }>();
   const [data, setData] = useState<any>(null);
@@ -148,16 +150,16 @@ export default function Subscription() {
         <Pressable testID="sb-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>SUBSCRIPTION & WEALTH</Text>
+        <Text style={styles.title}>{tt('subscription.subscription_wealth')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
-        <Text style={styles.h1}>Four levels of sovereignty</Text>
-        <Text style={styles.sub}>EUR · CZK · GA-T. Monthly, or yearly (“Secure Your Future”). Pay by card (Stripe), with GA-T tokens, or subscribe through the App Store / Google Play. Sovereign stays free forever.</Text>
+        <Text style={styles.h1}>{tt('subscription.four_levels_of_sovereignty')}</Text>
+        <Text style={styles.sub}>{tt('subscription.eur_czk_ga_t_monthly_or_yearly_secur')}</Text>
         {data && (
           <View style={styles.currentBox}>
             <Ionicons name={(TIER_ICON[data.tier] || 'earth') as any} size={18} color={(data.tiers[data.tier] || {}).accent || '#5FA779'} />
-            <Text testID="sb-current" style={styles.currentText}>CURRENT TIER: {data.tier.toUpperCase()}{data.tier_until ? ` · until ${String(data.tier_until).slice(0, 10)}` : ''}</Text>
+            <Text testID="sb-current" style={styles.currentText}>{tt('subscription.current_tier')} {data.tier.toUpperCase()}{data.tier_until ? tt('subscription.until', [String(data.tier_until).slice(0, 10)]) : ''}</Text>
             <Text style={styles.gat}>💎 {Number(data.gat_balance).toFixed(0)} GA-T</Text>
           </View>
         )}
@@ -165,23 +167,23 @@ export default function Subscription() {
         {data?.gat_allocation && (
           <Text testID="sb-loyalty" style={styles.loyalty}>
             {data.gat_allocation.eligible
-              ? `💎 Loyalty: +${Number(data.gat_allocation.next_amount).toFixed(0)} GA-T on ${String(data.gat_allocation.next_at || '').slice(0, 10)} · ${data.gat_allocation.months_collected} month(s) collected · bonus +${data.gat_allocation.next_bonus_pct}%`
-              : `💎 Every paid plan credits GA-T automatically each month: Guardian ${data.gat_monthly_by_tier?.guardian ?? 100} · Sentinel ${data.gat_monthly_by_tier?.sentinel ?? 300} · Archangel ${data.gat_monthly_by_tier?.archangel ?? 1000} (+10% loyalty bonus per month, max +50%).`}
+              ? tt('subscription.loyalty_ga_t_on_month_s_collected_bo', [Number(data.gat_allocation.next_amount).toFixed(0), String(data.gat_allocation.next_at || '').slice(0, 10), data.gat_allocation.months_collected, data.gat_allocation.next_bonus_pct])
+              : tt('subscription.every_paid_plan_credits_ga_t_automat', [data.gat_monthly_by_tier?.guardian ?? 100, data.gat_monthly_by_tier?.sentinel ?? 300, data.gat_monthly_by_tier?.archangel ?? 1000])}
           </Text>
         )}
 
         {data?.trial_available && (
           <Pressable testID="sb-trial" onPress={trial} disabled={busy === 'trial'} style={styles.trialBtn}>
-            {busy === 'trial' ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.trialText}>🎁 FREE 7-DAY SENTINEL TRIAL</Text>}
+            {busy === 'trial' ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.trialText}>{tt('subscription.free_7_day_sentinel_trial')}</Text>}
           </Pressable>
         )}
 
         <View style={styles.billingRow}>
           <Pressable testID="sb-monthly" onPress={() => setAnnual(false)} style={[styles.billBtn, !annual && styles.billBtnActive]}>
-            <Text style={[styles.billText, !annual && styles.billTextActive]}>MONTHLY</Text>
+            <Text style={[styles.billText, !annual && styles.billTextActive]}>{tt('subscription.monthly')}</Text>
           </Pressable>
           <Pressable testID="sb-annual" onPress={() => setAnnual(true)} style={[styles.billBtn, annual && styles.billBtnActive]}>
-            <Text style={[styles.billText, annual && styles.billTextActive]}>YEARLY −20% · SECURE YOUR FUTURE</Text>
+            <Text style={[styles.billText, annual && styles.billTextActive]}>{tt('subscription.yearly_20_secure_your_future')}</Text>
           </Pressable>
         </View>
 
@@ -198,34 +200,34 @@ export default function Subscription() {
           const per = annual ? '/yr' : '/mo';
           return (
             <View key={k} style={[styles.tierCard, { borderColor: accent }, premium(k) && { backgroundColor: OBSIDIAN, borderWidth: 2.5 }, active && { borderStyle: 'solid', borderWidth: 3 }]}>
-              {premium(k) && <Text style={[styles.vipRibbon, { color: accent }]}>{k === 'archangel' ? '👑 ELITE SOVEREIGNTY' : '🛰️ VIP SURVIVAL'}</Text>}
+              {premium(k) && <Text style={[styles.vipRibbon, { color: accent }]}>{k === 'archangel' ? tt('subscription.elite_sovereignty') : tt('subscription.vip_survival')}</Text>}
               <View style={styles.tierHead}>
                 <Ionicons name={TIER_ICON[k] as any} size={24} color={accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.tierName, premium(k) && { color: PLATINUM }]}>{t2.name.toUpperCase()}{active ? '  ✓ ACTIVE' : ''}</Text>
-                  <Text style={styles.tierTagline}>{t2.tagline}</Text>
+                  <Text style={[styles.tierName, premium(k) && { color: PLATINUM }]}>{t2.name.toUpperCase()}{active ? '  ' + tt('subscription.active') : ''}</Text>
+                  <Text style={styles.tierTagline}>{tx(t2.tagline)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.tierPrice, premium(k) && { color: PLATINUM }]}>{eur === 0 ? 'FREE' : `${eur} €${per}`}</Text>
-                  {gat > 0 && <Text style={styles.tierGat}>{czk} Kč · {gat} GA-T</Text>}
+                  <Text style={[styles.tierPrice, premium(k) && { color: PLATINUM }]}>{eur === 0 ? tt('subscription.free') : `${eur} €${per}`}</Text>
+                  {gat > 0 && <Text style={styles.tierGat}>{czk} {tt('subscription.kc')} {gat} GA-T</Text>}
                 </View>
               </View>
               {t2.features.map((f: string, i: number) => (
                 <View key={i} style={styles.featRow}>
                   <Ionicons name="checkmark" size={14} color={accent} />
-                  <Text style={[styles.featText, premium(k) && { color: '#B9B9C0' }]}>{f}</Text>
+                  <Text style={[styles.featText, premium(k) && { color: '#B9B9C0' }]}>{tx(f)}</Text>
                 </View>
               ))}
               {k !== 'sovereign' && !active && (
                 <View style={styles.btnRow}>
                   <Pressable testID={`sb-upgrade-${k}-gat`} onPress={() => upgrade(k, 'gat')} disabled={!!busy} style={[styles.payBtn, { backgroundColor: accent }]}>
-                    {busy === `${k}-gat` ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, premium(k) && { color: OBSIDIAN }]}>PAY {gat} GA-T</Text>}
+                    {busy === `${k}-gat` ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, premium(k) && { color: OBSIDIAN }]}>{tt('subscription.pay')} {gat} GA-T</Text>}
                   </Pressable>
                   <Pressable testID={`sb-upgrade-${k}-card`} onPress={() => upgrade(k, 'card')} disabled={!!busy} style={[styles.cardBtn, { borderColor: accent }]}>
                     {busy === `${k}-card` ? <ActivityIndicator size="small" color={accent} /> : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Ionicons name="card-outline" size={14} color={accent} />
-                        <Text style={[styles.cardText, { color: accent }]}>KARTOU {eur} €</Text>
+                        <Text style={[styles.cardText, { color: accent }]}>{tt('subscription.kartou')} {eur} €</Text>
                       </View>
                     )}
                   </Pressable>
@@ -233,7 +235,7 @@ export default function Subscription() {
               )}
               {/* SOVEREIGN — free default plan, no purchase path */}
               {k === 'sovereign' && (
-                <Text testID="sb-sovereign-free" style={styles.tierTagline}>{active ? '✓ Your current plan — free forever, no payment needed.' : 'Free default plan — included for everyone.'}</Text>
+                <Text testID="sb-sovereign-free" style={styles.tierTagline}>{active ? tt('subscription.your_current_plan_free_forever_no_pa') : tt('subscription.free_default_plan_included_for_every')}</Text>
               )}
               {/* NATIVE IN-APP SUBSCRIPTION (RevenueCat · App Store / Google Play) — Guardian / Sentinel / Archangel; price comes from the store offering */}
               {k !== 'sovereign' && !active && (
@@ -248,14 +250,14 @@ export default function Subscription() {
         {/* RODINNÝ BALÍK — one payer unlocks Sentinel for the whole family circle */}
         {data && (
           <View testID="sb-family-pack" style={[styles.tierCard, { borderColor: '#B8860B', backgroundColor: OBSIDIAN, borderWidth: 2.5 }]}>
-            <Text style={[styles.vipRibbon, { color: '#B8860B' }]}>👨‍👩‍👧‍👦 FAMILY PLAN</Text>
+            <Text style={[styles.vipRibbon, { color: '#B8860B' }]}>{tt('subscription.family_plan')}</Text>
             <View style={styles.tierHead}>
               <Ionicons name="people" size={24} color="#B8860B" />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.tierName, { color: PLATINUM }]}>SENTINEL FOR THE WHOLE FAMILY</Text>
-                <Text style={styles.tierTagline}>One payer — you + up to 4 guardians from your family circle</Text>
+                <Text style={[styles.tierName, { color: PLATINUM }]}>{tt('subscription.sentinel_for_the_whole_family')}</Text>
+                <Text style={styles.tierTagline}>{tt('subscription.one_payer_you_up_to_4_guardians_from')}</Text>
               </View>
-              <Text style={[styles.tierPrice, { color: PLATINUM }]}>{annual ? '2390 €/rok' : '249 €/mes.'}</Text>
+              <Text style={[styles.tierPrice, { color: PLATINUM }]}>{annual ? tt('subscription.2390_rok') : tt('subscription.249_mes')}</Text>
             </View>
             {['Sentinel features for 5 people (save up to 66%)', 'Activates automatically for linked Guardians', 'Never downgrades any member’s higher tier'].map((f, i) => (
               <View key={i} style={styles.featRow}>
@@ -267,7 +269,7 @@ export default function Subscription() {
               {busy === 'family_sentinel-card' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="card-outline" size={14} color={OBSIDIAN} />
-                  <Text style={[styles.payText, { color: OBSIDIAN }]}>KARTOU {annual ? '2390' : '249'} €</Text>
+                  <Text style={[styles.payText, { color: OBSIDIAN }]}>{tt('subscription.kartou')} {annual ? '2390' : '249'} €</Text>
                 </View>
               )}
             </Pressable>
@@ -275,41 +277,41 @@ export default function Subscription() {
         )}
 
         {data && (
-          <Text style={styles.ppu}>PAY-PER-USE: Bio-Scanner {data.payperuse?.bioscan_single} GA-T/scan · IPS export {data.payperuse?.ips_export_single} GA-T · Human Second Opinion at the specialist’s rate (GA-T)</Text>
+          <Text style={styles.ppu}>{tt('subscription.pay_per_use_bio_scanner')} {data.payperuse?.bioscan_single} {tt('subscription.ga_t_scan_ips_export')} {data.payperuse?.ips_export_single} {tt('subscription.ga_t_human_second_opinion_at_the_spe')}</Text>
         )}
 
         {/* SPRÁVA PREDPLATNÉHO — payment history + one-tap cancel */}
-        <Text style={styles.mgmtTitle}>MANAGE SUBSCRIPTION</Text>
+        <Text style={styles.mgmtTitle}>{tt('subscription.manage_subscription')}</Text>
         {data && data.tier !== 'sovereign' && !data.inner_circle && data.paid_with !== 'iap' && (
           cancelConfirm ? (
             <View style={styles.cancelRow}>
               <Pressable testID="sb-cancel-yes" onPress={cancelSub} disabled={busy === 'cancel'} style={[styles.cancelBtn, { backgroundColor: C.error, borderColor: C.error }]}>
-                {busy === 'cancel' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.cancelText, { color: '#fff' }]}>YES, CANCEL NOW</Text>}
+                {busy === 'cancel' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.cancelText, { color: '#fff' }]}>{tt('subscription.yes_cancel_now')}</Text>}
               </Pressable>
               <Pressable testID="sb-cancel-no" onPress={() => setCancelConfirm(false)} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>KEEP IT</Text>
+                <Text style={styles.cancelText}>{tt('subscription.keep_it')}</Text>
               </Pressable>
             </View>
           ) : (
             <Pressable testID="sb-cancel" onPress={() => setCancelConfirm(true)} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>CANCEL SUBSCRIPTION</Text>
+              <Text style={styles.cancelText}>{tt('subscription.cancel_subscription')}</Text>
             </Pressable>
           )
         )}
-        {data?.inner_circle && <Text style={styles.txEmpty}>👑 Inner Circle — lifetime Archangel, nothing to cancel.</Text>}
+        {data?.inner_circle && <Text style={styles.txEmpty}>{tt('subscription.inner_circle_lifetime_archangel_noth')}</Text>}
         {/* Apple requires a Restore Purchases entry point — re-syncs the store entitlement into the tier */}
         <RestorePurchasesButton onSynced={load} />
         {data?.paid_with === 'iap' && (
-          <Text testID="sb-iap-note" style={styles.txEmpty}>📱 Paid through your app store — manage or cancel renewal in your App Store / Google Play subscriptions.</Text>
+          <Text testID="sb-iap-note" style={styles.txEmpty}>{tt('subscription.paid_through_your_app_store_manage_o')}</Text>
         )}
         {txs.length === 0 ? (
-          <Text style={styles.txEmpty}>No card payments yet.</Text>
+          <Text style={styles.txEmpty}>{tt('subscription.no_card_payments_yet')}</Text>
         ) : txs.map((tx: any) => (
           <View key={tx.session_id} testID={`sb-tx-${tx.session_id}`} style={styles.txRow}>
             <Ionicons name={tx.processed ? 'checkmark-circle' : tx.payment_status === 'expired' ? 'close-circle' : 'time-outline'} size={16} color={tx.processed ? '#5FA779' : tx.payment_status === 'expired' ? C.error : C.info} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.txTitle}>{tx.tier === 'family_sentinel' ? 'Family plan (Sentinel)' : String(tx.tier).toUpperCase()} · {tx.billing === 'annual' ? 'yearly' : 'monthly'}</Text>
-              <Text style={styles.txMeta}>{String(tx.created_at).slice(0, 10)} · {tx.processed ? 'paid · 🧾 receipt in Vault' : tx.payment_status}</Text>
+              <Text style={styles.txTitle}>{tx.tier === 'family_sentinel' ? tt('subscription.family_plan_sentinel') : String(tx.tier).toUpperCase()} · {tx.billing === 'annual' ? tt('subscription.yearly') : tt('subscription.monthly_1n63')}</Text>
+              <Text style={styles.txMeta}>{String(tx.created_at).slice(0, 10)} · {tx.processed ? tt('subscription.paid_receipt_in_vault') : tx.payment_status}</Text>
             </View>
             <Text style={styles.txAmount}>{tx.amount_eur} €</Text>
           </View>
@@ -317,22 +319,22 @@ export default function Subscription() {
 
         {founder && (
           <View testID="sb-founder" style={styles.founderBox}>
-            <Text style={styles.founderTitle}>👁 FOUNDER ADMIN · WEALTH ENGINE {founder.wealth_engine?.startsWith('SECURED') ? 'SECURED ✓' : ''}</Text>
+            <Text style={styles.founderTitle}>{tt('subscription.founder_admin_wealth_engine')} {founder.wealth_engine?.startsWith('SECURED') ? tt('subscription.secured') : ''}</Text>
             <View style={styles.founderGrid}>
-              <View style={styles.founderCell}><Text style={styles.founderVal}>{founder.mrr_eur} €</Text><Text style={styles.founderLbl}>MRR</Text></View>
-              <View style={styles.founderCell}><Text style={styles.founderVal}>{founder.acv_eur} €</Text><Text style={styles.founderLbl}>ACV</Text></View>
-              <View style={styles.founderCell}><Text style={styles.founderVal}>{(founder.revenue_by_kind?.guardian_tax || 0).toFixed(0)} €</Text><Text style={styles.founderLbl}>GUARDIAN TAX 15%</Text></View>
-              <View style={styles.founderCell}><Text style={styles.founderVal}>{(founder.revenue_by_kind?.payperuse || 0).toFixed(0)} €</Text><Text style={styles.founderLbl}>PAY-PER-USE</Text></View>
+              <View style={styles.founderCell}><Text style={styles.founderVal}>{founder.mrr_eur} €</Text><Text style={styles.founderLbl}>{tt('subscription.mrr')}</Text></View>
+              <View style={styles.founderCell}><Text style={styles.founderVal}>{founder.acv_eur} €</Text><Text style={styles.founderLbl}>{tt('subscription.acv')}</Text></View>
+              <View style={styles.founderCell}><Text style={styles.founderVal}>{(founder.revenue_by_kind?.guardian_tax || 0).toFixed(0)} €</Text><Text style={styles.founderLbl}>{tt('subscription.guardian_tax_15')}</Text></View>
+              <View style={styles.founderCell}><Text style={styles.founderVal}>{(founder.revenue_by_kind?.payperuse || 0).toFixed(0)} €</Text><Text style={styles.founderLbl}>{tt('subscription.pay_per_use')}</Text></View>
             </View>
-            <Text style={styles.founderMeta}>Tiery: {Object.entries(founder.tier_distribution || {}).map(([k, v]) => `${k}:${v}`).join(' · ') || '—'} · GA-T treasury: {Number(founder.gat_treasury).toFixed(0)} · burned: {Number(founder.gat_burned).toFixed(1)}</Text>
+            <Text style={styles.founderMeta}>{tt('subscription.tiery')} {Object.entries(founder.tier_distribution || {}).map(([k, v]) => `${k}:${v}`).join(' · ') || '—'} {tt('subscription.ga_t_treasury')} {Number(founder.gat_treasury).toFixed(0)} {tt('subscription.burned')} {Number(founder.gat_burned).toFixed(1)}</Text>
           </View>
         )}
 
         {/* FOUNDER GIFTING — darovanie prémia */}
         {founder && (
           <View testID="sb-gift" style={styles.giftBox}>
-            <Text style={styles.founderTitle}>🎁 GIFT PREMIUM (FOUNDER)</Text>
-            <Text style={styles.giftHint}>Gift any tier by e-mail — free, instant, with a notification.</Text>
+            <Text style={styles.founderTitle}>{tt('subscription.gift_premium_founder')}</Text>
+            <Text style={styles.giftHint}>{tt('subscription.gift_any_tier_by_e_mail_free_instant')}</Text>
             <TextInput
               testID="sb-gift-email"
               value={giftEmail}
@@ -353,15 +355,15 @@ export default function Subscription() {
             <View style={styles.chipRow}>
               {[30, 90, 365].map(d => (
                 <Pressable key={d} testID={`sb-gift-days-${d}`} onPress={() => setGiftDays(d)} style={[styles.chip, giftDays === d && styles.chipActive]}>
-                  <Text style={[styles.chipText, giftDays === d && styles.chipTextActive]}>{d} DAYS</Text>
+                  <Text style={[styles.chipText, giftDays === d && styles.chipTextActive]}>{d} {tt('subscription.days_yjqb')}</Text>
                 </Pressable>
               ))}
             </View>
             <Pressable testID="sb-gift-send" onPress={sendGift} disabled={!!busy || !giftEmail.trim()} style={[styles.payBtn, { backgroundColor: '#B8860B', marginTop: S.md, opacity: giftEmail.trim() ? 1 : 0.5 }]}>
-              {busy === 'gift' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, { color: OBSIDIAN }]}>GIFT {giftTier.toUpperCase()} · {giftDays} DAYS</Text>}
+              {busy === 'gift' ? <ActivityIndicator size="small" color={OBSIDIAN} /> : <Text style={[styles.payText, { color: OBSIDIAN }]}>{tt('subscription.gift')} {giftTier.toUpperCase()} · {giftDays} {tt('subscription.days_yjqb')}</Text>}
             </Pressable>
             {gifts.slice(0, 5).map((g: any) => (
-              <Text key={g.gift_id} style={styles.giftRow}>🎁 {g.to_email} — {String(g.tier).toUpperCase()} · {g.days} days · {String(g.created_at).slice(0, 10)}</Text>
+              <Text key={g.gift_id} style={styles.giftRow}>🎁 {g.to_email} — {String(g.tier).toUpperCase()} · {g.days} {tt('subscription.days')} {String(g.created_at).slice(0, 10)}</Text>
             ))}
           </View>
         )}

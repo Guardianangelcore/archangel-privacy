@@ -10,8 +10,10 @@ import { useAuth } from '@/src/auth';
 import Art50 from '@/src/Art50';
 import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Paramedic() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -71,13 +73,13 @@ export default function Paramedic() {
         <Pressable testID="pm-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>PARAMEDIC KEY</Text>
+        <Text style={st.title}>{tt('paramedic.paramedic_key')}</Text>
         <View style={{ width: 26 }} />
       </View>
-      <View style={st.banner}><Text style={st.bannerText}>SMART-LOCK API PLACEHOLDER (NUKI/SOMFY) · NCZI/UZIS REGISTRIES SIMULATED</Text></View>
+      <View style={st.banner}><Text style={st.bannerText}>{tt('paramedic.smart_lock_api_placeholder_nuki_somf')}</Text></View>
 
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.intro}>During a verified emergency (beacon / fall / a needs-help pulse) the system issues paramedics a temporary 6-digit entry code to your door.</Text>
+        <Text style={st.intro}>{tt('paramedic.during_a_verified_emergency_beacon_f')}</Text>
 
         {!!msg && <Text testID="pm-msg" style={st.msg}>{msg}</Text>}
         {!!err && <Text testID="pm-err" style={st.err}>{err}</Text>}
@@ -85,20 +87,20 @@ export default function Paramedic() {
         {/* ACTIVE CODES */}
         {active.map(a => (
           <View key={a.access_id} style={st.codeCard}>
-            <Text style={st.codeLbl}>ACTIVE ENTRY CODE · {a.emergency_verified?.toUpperCase()}</Text>
+            <Text style={st.codeLbl}>{tt('paramedic.active_entry_code')} {a.emergency_verified?.toUpperCase()}</Text>
             <Text testID={`pm-code-${a.access_id}`} style={st.codeVal}>{a.code}</Text>
-            <Text style={st.codeMeta}>Locks: {(a.locks || []).join(', ')} · valid until {String(a.expires_at).slice(11, 16)} UTC</Text>
+            <Text style={st.codeMeta}>{tt('paramedic.locks')} {(a.locks || []).join(', ')} {tt('paramedic.valid_until')} {String(a.expires_at).slice(11, 16)} {tt('paramedic.utc')}</Text>
           </View>
         ))}
 
         {/* LOCKS */}
-        <Text style={st.section}>MY SMART LOCKS</Text>
+        <Text style={st.section}>{tt('paramedic.my_smart_locks')}</Text>
         {locks.map(l => (
           <View key={l.lock_id} style={st.row}>
             <Ionicons name="lock-closed-outline" size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
               <Text style={st.rowTitle}>{l.name}</Text>
-              <Text style={st.rowSub}>{l.vendor.toUpperCase()} · API: {l.api_status}</Text>
+              <Text style={st.rowSub}>{l.vendor.toUpperCase()} {tt('paramedic.api')} {l.api_status}</Text>
             </View>
             <Pressable testID={`pm-dellock-${l.lock_id}`} onPress={() => delLock(l.lock_id)} hitSlop={10}>
               <Ionicons name="trash-outline" size={18} color={C.error} />
@@ -123,25 +125,25 @@ export default function Paramedic() {
         <Pressable testID="pm-issue" onPress={() => issueCode(false)} disabled={busy === 'issue' || locks.length === 0} style={[st.actionBtn, locks.length === 0 && { opacity: 0.5 }]}>
           {busy === 'issue' ? <ActivityIndicator color={C.onError} /> : <>
             <Ionicons name="key" size={20} color={C.onError} />
-            <Text style={st.actionText}>ISSUE EMERGENCY ENTRY CODE</Text>
+            <Text style={st.actionText}>{tt('paramedic.issue_emergency_entry_code')}</Text>
           </>}
         </Pressable>
         <Pressable testID="pm-issue-manual" onPress={() => issueCode(true)} disabled={busy === 'issue' || locks.length === 0} style={st.manualBtn}>
-          <Text style={st.manualText}>MANUAL ISSUE (OVERRIDE WITHOUT EMERGENCY)</Text>
+          <Text style={st.manualText}>{tt('paramedic.manual_issue_override_without_emerge')}</Text>
         </Pressable>
 
         {/* REGISTRY */}
-        <Text style={st.section}>PARAMEDIC VERIFICATION · STATE REGISTRY</Text>
-        <Text style={st.intro}>Before issuing a code, verify the clinician licence in the NCZI (SK) / UZIS (CZ) registry.</Text>
+        <Text style={st.section}>{tt('paramedic.paramedic_verification_state_registr')}</Text>
+        <Text style={st.intro}>{tt('paramedic.before_issuing_a_code_verify_the_cli')}</Text>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
           {(['SK', 'CZ'] as const).map(cc => (
             <Pressable testID={`pm-country-${cc}`} key={cc} onPress={() => setCountry(cc)} style={[st.chip, country === cc && st.chipActive]}>
-              <Text style={[st.chipText, country === cc && st.chipTextActive]}>{cc === 'SK' ? 'SK · NCZI' : 'CZ · UZIS'}</Text>
+              <Text style={[st.chipText, country === cc && st.chipTextActive]}>{cc === 'SK' ? tt('paramedic.sk_nczi') : tt('paramedic.cz_uzis')}</Text>
             </Pressable>
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="pm-license" value={lic} onChangeText={setLic} placeholder="Licence number (e.g. A1234567)"
+          <TextInput testID="pm-license" value={lic} onChangeText={setLic} placeholder={tt('paramedic.licence_number_e_g_a1234567')}
             autoCapitalize="characters" placeholderTextColor="#777" style={[st.input, { flex: 1 }]} />
           <Pressable testID="pm-verify" onPress={verifyRegistry} disabled={busy === 'reg' || !lic.trim()} style={st.addBtn}>
             {busy === 'reg' ? <ActivityIndicator color={C.onInverse} size="small" /> : <Ionicons name="shield-checkmark" size={20} color={C.onInverse} />}
@@ -150,10 +152,10 @@ export default function Paramedic() {
         {regResult && (
           <View testID="pm-reg-result" style={[st.regCard, { borderColor: regResult.valid ? C.brand : C.error }]}>
             <Text style={[st.regVerdict, { color: regResult.valid ? C.brand : C.error }]}>
-              {regResult.valid ? '✓ VERIFIED CLINICIAN' : '✗ NOT FOUND IN REGISTRY'}
+              {regResult.valid ? tt('paramedic.verified_clinician') : tt('paramedic.not_found_in_registry')}
             </Text>
             <Text style={st.rowSub}>{regResult.registry}</Text>
-            <Text style={[st.rowSub, { marginTop: 4 }]}>{regResult.detail} (SIMULATION)</Text>
+            <Text style={[st.rowSub, { marginTop: 4 }]}>{regResult.detail} {tt('paramedic.simulation')}</Text>
           </View>
         )}
 

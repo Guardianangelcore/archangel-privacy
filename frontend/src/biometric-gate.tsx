@@ -10,6 +10,7 @@ import { useAuth } from './auth';
 import { speak } from './voice';
 import { stageFromUser, jarvisToneFor } from './age';
 import { C, S, R } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 const UNLOCK_GRACE_MS = 60 * 1000; // don't re-prompt if you unlocked within the last minute
 
@@ -34,6 +35,7 @@ async function biometryLabel(): Promise<string> {
 }
 
 export function BiometricGate({ children }: { children: React.ReactNode }) {
+  const { t: tt, tx } = useI18n();
   const { user, signOut } = useAuth();
   const enabled = !!user?.biometric_enabled;
   const [unlocked, setUnlocked] = useState(false);
@@ -130,24 +132,24 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
       <View style={styles.iconRing}>
         <Ionicons name={label === 'FaceID' ? 'scan-outline' : 'finger-print'} size={72} color={C.brand} />
       </View>
-      <Text style={styles.brand}>GUARDIAN</Text>
-      <Text style={styles.tag}>UNLOCK WITH YOUR PERSONAL SIGNAL</Text>
+      <Text style={styles.brand}>{tt('c_biometric_gate.guardian')}</Text>
+      <Text style={styles.tag}>{tt('c_biometric_gate.unlock_with_your_personal_signal')}</Text>
       <Text style={styles.method}>{label.toUpperCase()}</Text>
       {!!err && <Text style={styles.err}>{err}</Text>}
       <Pressable testID="biometric-unlock" onPress={authenticate} disabled={prompting} style={styles.cta}>
         {prompting ? <ActivityIndicator color={C.onInverse} /> : (
           <>
             <Ionicons name="lock-open" size={18} color={C.onInverse} />
-            <Text style={styles.ctaText}>UNLOCK</Text>
+            <Text style={styles.ctaText}>{tt('c_biometric_gate.unlock')}</Text>
           </>
         )}
       </Pressable>
       <Pressable testID="biometric-signout" onPress={signOut} style={styles.ghost}>
-        <Text style={styles.ghostText}>Sign in with another account</Text>
+        <Text style={styles.ghostText}>{tt('c_biometric_gate.sign_in_with_another_account')}</Text>
       </Pressable>
       {Platform.OS !== 'web' && (
         <Pressable onPress={() => Linking.openSettings()} hitSlop={10}>
-          <Text style={styles.hint}>Nastavenia biometrie</Text>
+          <Text style={styles.hint}>{tt('c_biometric_gate.nastavenia_biometrie')}</Text>
         </Pressable>
       )}
     </View>

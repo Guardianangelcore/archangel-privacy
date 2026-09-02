@@ -9,7 +9,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './auth';
 import { api } from './api';
-import { t as translate, Lang, LANG_NAMES, isRTL } from './i18n';
+import { t as translate, tx as translateText, Lang, LANG_NAMES, isRTL, TVars } from './i18n';
 
 const LANG_KEY = 'ga.lang.v1';            // last language shown on this device
 const PENDING_KEY = 'ga.lang.pending.v1'; // picked while logged out → apply on sign-in
@@ -17,7 +17,9 @@ const PENDING_KEY = 'ga.lang.pending.v1'; // picked while logged out → apply o
 type I18nCtx = {
   lang: Lang;
   rtl: boolean;
-  t: (key: string) => string;
+  t: (key: string, vars?: TVars) => string;
+  /** translate a backend-provided English text (tier features, taglines) when known */
+  tx: (text: string | null | undefined) => string;
   setLang: (l: Lang) => Promise<void>;
 };
 
@@ -80,7 +82,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<I18nCtx>(() => ({
     lang,
     rtl: isRTL(lang),
-    t: (key: string) => translate(key, lang),
+    t: (key: string, vars?: TVars) => translate(key, lang, vars),
+    tx: (text: string | null | undefined) => translateText(text, lang),
     setLang,
   }), [lang, setLang]);
 

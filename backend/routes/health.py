@@ -1926,6 +1926,8 @@ class MagicLensIn(BaseModel):
 @api.post("/magic-lens")
 async def magic_lens(body: MagicLensIn, authorization: Optional[str] = Header(None)):
     ml_user = await get_current_user(authorization)
+    from routes.subscription import require_tier
+    await require_tier(ml_user, "guardian", "Magic Lens")
     b64 = (body.image_base64 or "").split(",")[-1].strip()
     if not b64:
         raise HTTPException(400, "Empty image")

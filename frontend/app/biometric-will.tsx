@@ -8,8 +8,10 @@ import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } fr
 import * as ImagePicker from 'expo-image-picker';
 import { api, apiUpload } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function BiometricWill() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [rec, setRec] = useState<any>(null);
@@ -82,22 +84,21 @@ export default function BiometricWill() {
         <Pressable testID="bw-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>BIOMETRIC WILL</Text>
+        <Text style={styles.title}>{tt('biometric_will.biometric_will')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <View style={styles.heroIcon}><Ionicons name="finger-print-outline" size={28} color={C.brand} /></View>
-        <Text style={styles.h1}>Biometric will confirmation</Text>
+        <Text style={styles.h1}>{tt('biometric_will.biometric_will_confirmation')}</Text>
         <Text style={styles.sub}>
-          Record a short voice or video statement for your digital will. The file is immediately
-          hashed (SHA-256) and written to an immutable timestamped chain — irreversible proof of your intent.
+          {tt('biometric_will.record_a_short_voice_or_video_statem')}
         </Text>
 
         {permBlocked && (
           <View style={styles.permBox}>
-            <Text style={styles.permText}>Microphone/gallery access is blocked. Enable it in your phone settings.</Text>
+            <Text style={styles.permText}>{tt('biometric_will.microphone_gallery_access_is_blocked')}</Text>
             <Pressable testID="bw-settings" onPress={() => Linking.openSettings()} style={styles.permBtn}>
-              <Text style={styles.permBtnText}>OPEN SETTINGS</Text>
+              <Text style={styles.permBtnText}>{tt('biometric_will.open_settings')}</Text>
             </Pressable>
           </View>
         )}
@@ -107,16 +108,16 @@ export default function BiometricWill() {
           <View style={styles.proofCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
               <Ionicons name="shield-checkmark" size={20} color={C.brand} />
-              <Text style={styles.proofTitle}>STATEMENT NOTARIZED</Text>
+              <Text style={styles.proofTitle}>{tt('biometric_will.statement_notarized')}</Text>
             </View>
-            <Proof label="Typ" value={rec.media_type} />
-            <Proof label="Recorded" value={(rec.recorded_at || '').replace('T', ' ').slice(0, 16) + ' UTC'} />
-            <Proof label="SHA-256 (file fingerprint)" value={rec.sha256} mono />
-            <Proof label="Ledger hash (proof chain)" value={rec.ledger_hash} mono />
-            <Proof label="DID" value={rec.did} mono />
+            <Proof label={tt('biometric_will.typ')} value={rec.media_type} />
+            <Proof label={tt('biometric_will.recorded')} value={(rec.recorded_at || '').replace('T', ' ').slice(0, 16) + ' UTC'} />
+            <Proof label={tt('biometric_will.sha_256_file_fingerprint')} value={rec.sha256} mono />
+            <Proof label={tt('biometric_will.ledger_hash_proof_chain')} value={rec.ledger_hash} mono />
+            <Proof label={tt('biometric_will.did')} value={rec.did} mono />
             <Pressable testID="bw-delete" onPress={remove} style={styles.deleteBtn}>
               <Ionicons name="trash-outline" size={16} color={C.error} />
-              <Text style={styles.deleteText}>DELETE & RECORD AGAIN</Text>
+              <Text style={styles.deleteText}>{tt('biometric_will.delete_record_again')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -124,31 +125,30 @@ export default function BiometricWill() {
             {recording ? (
               <Pressable testID="bw-stop" onPress={stopAndUpload} style={[styles.cta, { backgroundColor: C.error }]}>
                 <Ionicons name="stop" size={18} color={C.onError} />
-                <Text style={[styles.ctaText, { color: C.onError }]}>STOP & NOTARIZE</Text>
+                <Text style={[styles.ctaText, { color: C.onError }]}>{tt('biometric_will.stop_notarize')}</Text>
               </Pressable>
             ) : (
               <Pressable testID="bw-record" onPress={startRecording} disabled={uploading} style={styles.cta}>
                 <Ionicons name="mic" size={18} color={C.onInverse} />
-                <Text style={styles.ctaText}>RECORD VOICE STATEMENT</Text>
+                <Text style={styles.ctaText}>{tt('biometric_will.record_voice_statement')}</Text>
               </Pressable>
             )}
             <Pressable testID="bw-video" onPress={pickVideo} disabled={uploading || recording} style={styles.ctaOutline}>
               <Ionicons name="videocam-outline" size={18} color={C.brand} />
-              <Text style={styles.ctaOutlineText}>PICK VIDEO FROM GALLERY</Text>
+              <Text style={styles.ctaOutlineText}>{tt('biometric_will.pick_video_from_gallery')}</Text>
             </Pressable>
             {uploading && (
               <View style={{ marginTop: S.lg, alignItems: 'center' }}>
                 <ActivityIndicator color={C.brand} />
-                <Text style={styles.hint}>Recording and notarizing…</Text>
+                <Text style={styles.hint}>{tt('biometric_will.recording_and_notarizing')}</Text>
               </View>
             )}
-            {recording && <Text style={[styles.hint, { color: C.error }]}>● RECORDING — speak your statement…</Text>}
+            {recording && <Text style={[styles.hint, { color: C.error }]}>{tt('biometric_will.recording_speak_your_statement')}</Text>}
           </>
         )}
 
         <Text style={styles.disclaimer}>
-          The hash is written to a tamper-evident chain (blockchain simulation). For full legal validity
-          of a will, the formalities of your jurisdiction apply.
+          {tt('biometric_will.the_hash_is_written_to_a_tamper_evid')}
         </Text>
       </ScrollView>
     </SafeAreaView>

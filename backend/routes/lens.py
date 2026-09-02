@@ -19,6 +19,7 @@ import os, uuid, hashlib, json, base64, re, tempfile, inspect, asyncio
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 from emergentintegrations.llm.openai import OpenAISpeechToText
 
+from routes.subscription import require_tier
 from core import (
     api, db, logger, clean, get_current_user, _aml_ledger_append,
     APP_NAME, put_object_sync, EMERGENT_LLM_KEY, send_push, apply_watermark,
@@ -71,6 +72,7 @@ async def lens_analyze(file: UploadFile = File(...),
     """Single-model vision OCR + analysis. `model` = gpt|claude|gemini (default gpt).
     `pillar` = optional context (health|hunter|legacy) used for downstream auto-routing."""
     user = await get_current_user(authorization)
+    await require_tier(user, "guardian", "Magic Lens")
     data = await file.read()
     if len(data) == 0:
         raise HTTPException(400, "Empty file")
@@ -148,6 +150,7 @@ async def lens_analyze_consensus(file: UploadFile = File(...),
     Merges verdicts by majority vote on `kind`, longest coherent `summary_sk` and dedup warnings.
     Returns `agreement_pct` (0-100) plus per-model breakdown."""
     user = await get_current_user(authorization)
+    await require_tier(user, "guardian", "Magic Lens")
     data = await file.read()
     if len(data) == 0:
         raise HTTPException(400, "Empty file")
@@ -237,6 +240,7 @@ async def lens_to_jarvis(scan_id: str, authorization: Optional[str] = Header(Non
     """Send a scan verdict into the Jarvis conversation — the user can then dive
     deeper conversationally (dosage, interactions, next steps)."""
     user = await get_current_user(authorization)
+    await require_tier(user, "guardian", "Magic Lens")
     scan = await db.lens_scans.find_one({"scan_id": scan_id, "user_id": user["user_id"]}, {"_id": 0})
     if not scan:
         raise HTTPException(404, "Scan not found")

@@ -40,6 +40,7 @@ async function fireBeacon() {
 }
 
 export default function Home() {
+  const { t: tt, tx } = useI18n();
   const { user, setUser } = useAuth();
   const router = useRouter();
   const { lang } = useI18n();   // re-renders instantly when the language changes
@@ -133,7 +134,7 @@ export default function Home() {
       <View style={styles.header}>
         <Pressable testID="brand-beacon" onLongPress={beacon} delayLongPress={700}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={styles.brand}>GUARDIAN</Text>
+            <Text style={styles.brand}>{tt('tabs_index.guardian')}</Text>
             {beaconSent && <View testID="beacon-dot" style={styles.beaconDot} />}
           </View>
           <Text style={styles.brandSub}>{t('brand_sub', lang)}</Text>
@@ -172,7 +173,7 @@ export default function Home() {
         <View testID="home-welcome-banner" style={styles.welcomeBanner}>
           <Ionicons name="shield-checkmark" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.welcomeTitle}>Archangel OS</Text>
+            <Text style={styles.welcomeTitle}>{tt('tabs_index.archangel_os')}</Text>
             <Text style={styles.welcomeSub}>{t('welcome_sub', lang)}</Text>
           </View>
         </View>
@@ -285,6 +286,7 @@ const ORB_MOOD: Record<string, { color: string; glow: string; dur: number }> = {
 const HOME_ORB = 150;
 
 function HomeOrb({ lang, onPress }: { lang: Lang; onPress: () => void }) {
+  const { t: tt, tx } = useI18n();
   const [agent, setAgent] = useState<any>(null);
   const [geo, setGeo] = useState<any>(null);
   useEffect(() => {
@@ -310,10 +312,10 @@ function HomeOrb({ lang, onPress }: { lang: Lang; onPress: () => void }) {
         <Pressable testID="home-orb" onPress={onPress} style={[styles.orbCore, { borderColor: cfg.color, shadowColor: cfg.color }]}>
           <View style={[styles.orbInner, { backgroundColor: cfg.color }]} />
           <Ionicons name="sparkles" size={40} color={cfg.color} />
-          <Text style={[styles.orbLvl, { color: cfg.color }]}>LVL {agent?.level ?? 1}</Text>
+          <Text style={[styles.orbLvl, { color: cfg.color }]}>{tt('tabs_index.lvl')} {agent?.level ?? 1}</Text>
         </Pressable>
       </Animated.View>
-      <Text style={styles.orbTitle}>JARVIS</Text>
+      <Text style={styles.orbTitle}>{tt('tabs_index.jarvis')}</Text>
       <Text style={styles.orbSub}>{t('orb_sub', lang)}</Text>
       {!!geo && <Text style={styles.orbGeo}>📍 {geo.city} · {geo.country}</Text>}
     </View>
@@ -330,6 +332,7 @@ const HEAL_FALLBACK_META: Record<string, { title: string; icon: string }> = {
 };
 
 function HealingStrip({ router }: any) {
+  const { t: tt, tx } = useI18n();
   const [hs, setHs] = useState<any>(null);
   useEffect(() => { (async () => { try { setHs(await api('/healing/state')); } catch {} })(); }, []);
   const keys: string[] = hs?.step_keys || Object.keys(HEAL_FALLBACK_META);
@@ -338,8 +341,8 @@ function HealingStrip({ router }: any) {
   return (
     <GlassCard testID="home-healing" onPress={() => { tap('medium'); router.push('/healing'); }} pad={S.md} style={{ marginTop: S.lg }} glow>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={styles.healTitle}>⚙️ HEALING LOOP</Text>
-        <Text style={styles.healPct}>{hs?.active ? `${hs.progress_pct} %` : 'THE ENGINE'}</Text>
+        <Text style={styles.healTitle}>{tt('tabs_index.healing_loop')}</Text>
+        <Text style={styles.healPct}>{hs?.active ? `${hs.progress_pct} %` : tt('tabs_index.the_engine')}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm, paddingTop: S.md }}>
         {keys.map((k, i) => {
@@ -355,8 +358,8 @@ function HealingStrip({ router }: any) {
       </ScrollView>
       <Text style={styles.healSub}>
         {hs?.active
-          ? `${hs.journey.kind_label} · ${hs.journey.specialty} — Jarvis steers the whole journey to 100% fit`
-          : 'Injury or illness? One tap — insurance pays instantly, doctor found, sick leave guarded.'}
+          ? tt('tabs_index.jarvis_steers_the_whole_journey_to_1', [hs.journey.kind_label, hs.journey.specialty])
+          : tt('tabs_index.injury_or_illness_one_tap_insurance')}
       </Text>
     </GlassCard>
   );
@@ -364,6 +367,7 @@ function HealingStrip({ router }: any) {
 
 // ---- THE COMPANION — empathetic caregiver check-in (Angel Shield 2.0) ----
 function CompanionCard() {
+  const { t: tt, tx } = useI18n();
   const { lang } = useI18n();
   const [g, setG] = useState<any>(null);
   const [reply, setReply] = useState('');
@@ -379,12 +383,12 @@ function CompanionCard() {
   if (!g) return null;
   return (
     <View testID="angel-companion" style={styles.compCard}>
-      <Text style={styles.compQ}>{g.question}</Text>
+      <Text style={styles.compQ}>{tx(g.question)}</Text>
       {!!g.care_note && <Text style={styles.compCare}>{g.care_note}</Text>}
       {reply ? (
         <Text testID="companion-reply" style={styles.compReply}>💛 {reply}</Text>
       ) : g.answered_today ? (
-        <Text style={styles.compReply}>You already answered me today — thank you. 💛</Text>
+        <Text style={styles.compReply}>{tt('tabs_index.you_already_answered_me_today_thank')}</Text>
       ) : (
         <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
           {([[5, '😊'], [3, '😐'], [1, '😞']] as const).map(([m, e]) => (
@@ -400,6 +404,7 @@ function CompanionCard() {
 
 // ---- VOICE ECHOES CARD — family voice-stream, one tap, no menus ----
 function VoiceEchoCard({ router }: any) {
+  const { t: tt, tx } = useI18n();
   const [unheard, setUnheard] = useState(0);
   useEffect(() => { (async () => { try { const r: any = await api('/family/echoes'); setUnheard(r.unheard || 0); } catch {} })(); }, []);
   return (
@@ -409,8 +414,8 @@ function VoiceEchoCard({ router }: any) {
         {unheard > 0 && <View style={styles.echoBadge}><Text style={styles.echoBadgeText}>{unheard}</Text></View>}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.angelBigTitle}>FAMILY MESSAGES</Text>
-        <Text style={styles.angelBigSub}>{unheard > 0 ? `You have ${unheard} new messages — tap to listen.` : 'Listen to voice messages from your loved ones.'}</Text>
+        <Text style={styles.angelBigTitle}>{tt('tabs_index.family_messages')}</Text>
+        <Text style={styles.angelBigSub}>{unheard > 0 ? tt('tabs_index.you_have_new_messages_tap_to_listen', [unheard]) : tt('tabs_index.listen_to_voice_messages_from_your_l')}</Text>
       </View>
       <Ionicons name="chevron-forward" size={22} color={C.brand} />
     </Pressable>
@@ -435,6 +440,7 @@ function PillarTile({ testID, icon, title, sub, onPress }: any) {  return (
 }
 
 function TosGate({ lang, setUser }: any) {
+  const { t: tt, tx } = useI18n();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -456,7 +462,7 @@ function TosGate({ lang, setUser }: any) {
         <Text style={styles.tosHeadText}>{t('tos_title', lang).toUpperCase()} · v2026-06.1</Text>
       </View>
       <View style={styles.tosBanner}>
-        <Text style={styles.tosBannerText}>AI OUTPUTS ARE INFORMATIONAL ONLY · USE AT YOUR OWN RISK · FULL AUTHOR LIABILITY WAIVER</Text>
+        <Text style={styles.tosBannerText}>{tt('tabs_index.ai_outputs_are_informational_only_us')}</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg }}>
         {text ? <Text style={styles.tosBody}>{text}</Text> : <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
@@ -469,6 +475,7 @@ function TosGate({ lang, setUser }: any) {
 }
 
 function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const wakeEnabled = !!(user as any)?.wake_word_enabled;
   const wakeRecorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
@@ -533,7 +540,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
             <View style={styles.angelTop}>
               <Pressable testID="angel-beacon" onLongPress={onBeacon} delayLongPress={700} hitSlop={10}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.angelWordmark}>GUARDIAN ANGEL</Text>
+                  <Text style={styles.angelWordmark}>{tt('tabs_index.guardian_angel')}</Text>
                   {beaconSent && <View style={styles.beaconDot} />}
                 </View>
               </Pressable>
@@ -560,7 +567,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                   {noise.phase === 'listening'
                     ? t('noise_listening', lang)
                     : noise.heard
-                      ? `I heard: "${noise.heard}" — no SOS keyword. Nothing was sent.`
+                      ? tt('tabs_index.i_heard_no_sos_keyword_nothing_was_s', [noise.heard])
                       : t('noise_none', lang)}
                 </Text>
                 <View style={styles.noiseRow}>
@@ -618,7 +625,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
               <View style={styles.angelEmgWrap}>
                 {/* Hold-to-SOS: a tap only shows the hint — no accidental alarms */}
                 <Pressable testID="angel-sos" onPress={() => setSosHint(true)} onLongPress={goSos} delayLongPress={1500}
-                  accessibilityLabel="Hold for 1.5 seconds to send SOS"
+                  accessibilityLabel={tt('tabs_index.hold_for_1_5_seconds_to_send_sos')}
                   style={[styles.angelEmg, { backgroundColor: C.error }]}>
                   <Ionicons name="alert" size={44} color={C.onError} />
                 </Pressable>

@@ -6,6 +6,7 @@ import { Modal, Pressable, View, Text, StyleSheet, ScrollView, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import { api } from './api';
 import { C, S, R } from './theme';
+import { useI18n } from '@/src/i18n-context';
 
 type City = { city: string; country: string; lang: string };
 
@@ -14,6 +15,7 @@ export function CityPicker({ visible, onClose, onPicked }: {
   onClose: () => void;
   onPicked?: (result: any) => void;
 }) {
+  const { t: tt, tx } = useI18n();
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState('');
@@ -46,8 +48,8 @@ export function CityPicker({ visible, onClose, onPicked }: {
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.handle} />
-          <Text style={styles.title}>MANUAL CITY SELECTION</Text>
-          <Text style={styles.sub}>GPS and IP were blocked or inaccurate — pick your city manually.</Text>
+          <Text style={styles.title}>{tt('c_CityPicker.manual_city_selection')}</Text>
+          <Text style={styles.sub}>{tt('c_CityPicker.gps_and_ip_were_blocked_or_inaccurat')}</Text>
           {!!err && <Text style={styles.err}>{err}</Text>}
           {loading ? <ActivityIndicator color={C.brand} style={{ marginVertical: S.lg }} /> : (
             <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ paddingBottom: S.md }}>
@@ -70,7 +72,7 @@ export function CityPicker({ visible, onClose, onPicked }: {
             </ScrollView>
           )}
           <Pressable testID="cp-cancel" onPress={onClose} style={styles.cancel}>
-            <Text style={styles.cancelText}>CANCEL</Text>
+            <Text style={styles.cancelText}>{tt('c_CityPicker.cancel')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -83,6 +85,7 @@ export function LanguageSuggestionBanner({ suggestion, onAccept, onDismiss }: {
   onAccept: () => void;
   onDismiss: () => void;
 }) {
+  const { t: tt, tx } = useI18n();
   if (!suggestion) return null;
   const LANG_LABEL: Record<string, string> = {
     sk: 'slovenčina', cs: 'čeština', en: 'English', de: 'Deutsch', pl: 'polski',
@@ -92,18 +95,18 @@ export function LanguageSuggestionBanner({ suggestion, onAccept, onDismiss }: {
     <View testID="lang-suggestion" style={styles.bannerBox}>
       <Ionicons name="language" size={20} color={C.brand} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.bannerTitle}>YOU CROSSED A BORDER · {suggestion.country}</Text>
+        <Text style={styles.bannerTitle}>{tt('c_CityPicker.you_crossed_a_border')} {suggestion.country}</Text>
         <Text style={styles.bannerSub}>
-          Switch the app from {LANG_LABEL[suggestion.from] || suggestion.from} to{' '}
+          {tt('c_CityPicker.switch_the_app_from')} {LANG_LABEL[suggestion.from] || suggestion.from} {tt('c_CityPicker.to')}{' '}
           <Text style={{ fontWeight: '900' }}>{LANG_LABEL[suggestion.to] || suggestion.to}</Text>?
         </Text>
       </View>
       <View style={{ gap: 6 }}>
         <Pressable testID="lang-suggest-accept" onPress={onAccept} style={styles.bannerAccept}>
-          <Text style={styles.bannerAcceptText}>YES</Text>
+          <Text style={styles.bannerAcceptText}>{tt('c_CityPicker.yes')}</Text>
         </Pressable>
         <Pressable testID="lang-suggest-dismiss" onPress={onDismiss} style={styles.bannerDismiss}>
-          <Text style={styles.bannerDismissText}>NIE</Text>
+          <Text style={styles.bannerDismissText}>{tt('c_CityPicker.nie')}</Text>
         </Pressable>
       </View>
     </View>

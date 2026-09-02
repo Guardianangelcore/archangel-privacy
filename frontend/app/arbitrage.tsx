@@ -7,8 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Arbitrage() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [quote, setQuote] = useState<any>(null);
@@ -49,46 +51,45 @@ export default function Arbitrage() {
         <Pressable testID="ar-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>MEDICAL ARBITRAGE</Text>
+        <Text style={st.title}>{tt('arbitrage.medical_arbitrage')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <Text style={st.intro}>
-          Cross-border surgery cost optimization: 🇵🇱 Poland · 🇭🇺 Hungary · 🇹🇷 Türkiye.
-          Bill prediction incl. travel, lodging and S2 insurer refund (EU 2011/24).
+          {tt('arbitrage.cross_border_surgery_cost_optimizati')}
         </Text>
 
         {quote && (
           <View testID="ar-quote" style={st.quoteCard}>
             <View style={st.rowSpread}>
-              <Text style={st.quoteTitle}>{countries[quote.country]?.flag} BILL PREDICTION</Text>
+              <Text style={st.quoteTitle}>{countries[quote.country]?.flag} {tt('arbitrage.bill_prediction')}</Text>
               <Pressable testID="ar-quote-close" onPress={() => setQuote(null)} hitSlop={10}>
                 <Ionicons name="close" size={20} color={C.fg} />
               </Pressable>
             </View>
             <Text style={st.quoteProc}>{quote.procedure}</Text>
-            <Text style={st.meta}>{quote.clinic} · wait {quote.wait_days_abroad} days</Text>
-            <View style={st.qRow}><Text style={st.qLbl}>Procedure</Text><Text style={st.qVal}>{quote.breakdown.procedure_eur.toLocaleString('sk-SK')} €</Text></View>
-            <View style={st.qRow}><Text style={st.qLbl}>Cesta (2 os.)</Text><Text style={st.qVal}>{quote.breakdown.travel_eur} €</Text></View>
-            <View style={st.qRow}><Text style={st.qLbl}>Ubytovanie sprievodu</Text><Text style={st.qVal}>{quote.breakdown.accommodation_eur} €</Text></View>
-            <View style={st.qRow}><Text style={st.qLbl}>SPOLU</Text><Text style={[st.qVal, { color: C.fg }]}>{quote.breakdown.total_eur.toLocaleString('sk-SK')} €</Text></View>
-            <View style={st.qRow}><Text style={st.qLbl}>S2 refund (prediction)</Text><Text style={[st.qVal, { color: '#5FA779' }]}>−{quote.breakdown.s2_predicted_refund_eur.toLocaleString('sk-SK')} €</Text></View>
+            <Text style={st.meta}>{quote.clinic} {tt('arbitrage.wait')} {quote.wait_days_abroad} {tt('arbitrage.days')}</Text>
+            <View style={st.qRow}><Text style={st.qLbl}>{tt('arbitrage.procedure')}</Text><Text style={st.qVal}>{quote.breakdown.procedure_eur.toLocaleString('sk-SK')} €</Text></View>
+            <View style={st.qRow}><Text style={st.qLbl}>{tt('arbitrage.cesta_2_os')}</Text><Text style={st.qVal}>{quote.breakdown.travel_eur} €</Text></View>
+            <View style={st.qRow}><Text style={st.qLbl}>{tt('arbitrage.ubytovanie_sprievodu')}</Text><Text style={st.qVal}>{quote.breakdown.accommodation_eur} €</Text></View>
+            <View style={st.qRow}><Text style={st.qLbl}>{tt('arbitrage.spolu')}</Text><Text style={[st.qVal, { color: C.fg }]}>{quote.breakdown.total_eur.toLocaleString('sk-SK')} €</Text></View>
+            <View style={st.qRow}><Text style={st.qLbl}>{tt('arbitrage.s2_refund_prediction')}</Text><Text style={[st.qVal, { color: '#5FA779' }]}>−{quote.breakdown.s2_predicted_refund_eur.toLocaleString('sk-SK')} €</Text></View>
             <View style={[st.qRow, { borderTopWidth: 1, borderColor: C.borderStrong, paddingTop: S.sm }]}>
-              <Text style={[st.qLbl, { fontWeight: '900', color: C.fg }]}>Z VRECKA</Text>
+              <Text style={[st.qLbl, { fontWeight: '900', color: C.fg }]}>{tt('arbitrage.z_vrecka')}</Text>
               <Text style={[st.qVal, { color: C.brand, fontSize: 18 }]}>{quote.breakdown.net_out_of_pocket_eur.toLocaleString('sk-SK')} €</Text>
             </View>
-            <Text style={st.saving}>💰 Savings vs. SK: {quote.saving_vs_sk_eur.toLocaleString('sk-SK')} € · ⏱ wait shorter by {quote.wait_cut_days} days</Text>
-            <Text style={st.meta}>{quote.legal_route} · Ghost Mode compatible (anonymous patient token)</Text>
+            <Text style={st.saving}>{tt('arbitrage.savings_vs_sk')} {quote.saving_vs_sk_eur.toLocaleString('sk-SK')} {tt('arbitrage.wait_shorter_by')} {quote.wait_cut_days} {tt('arbitrage.days')}</Text>
+            <Text style={st.meta}>{quote.legal_route} {tt('arbitrage.ghost_mode_compatible_anonymous_pati')}</Text>
           </View>
         )}
         {!!err && <Text testID="ar-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>PROCEDURES ({data?.procedures?.length ?? 0})</Text>
+        <Text style={st.section}>{tt('arbitrage.procedures')}{data?.procedures?.length ?? 0})</Text>
         {(data?.procedures ?? []).map((p: any) => (
           <View testID={`ar-proc-${p.procedure_id}`} key={p.procedure_id} style={st.card}>
             <Text style={st.cardTitle}>{p.name}</Text>
-            <Text style={st.meta}>🇸🇰 SK: {p.sk_price_eur.toLocaleString('sk-SK')} € · wait {p.sk_wait_days} days</Text>
-            <Text style={st.best}>Best: {countries[p.best_country]?.flag} −{p.best_saving_eur.toLocaleString('sk-SK')} € · −{p.best_wait_cut_days} days of waiting</Text>
+            <Text style={st.meta}>{tt('arbitrage.sk')} {p.sk_price_eur.toLocaleString('sk-SK')} {tt('arbitrage.wait_1h21')} {p.sk_wait_days} {tt('arbitrage.days')}</Text>
+            <Text style={st.best}>{tt('arbitrage.best')} {countries[p.best_country]?.flag} −{p.best_saving_eur.toLocaleString('sk-SK')} € · −{p.best_wait_cut_days} {tt('arbitrage.days_of_waiting')}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               {Object.entries(p.abroad).map(([cc, ab]: [string, any]) => (
                 <Pressable testID={`ar-cc-${p.procedure_id}-${cc}`} key={cc} onPress={() => getQuote(p.procedure_id, cc)}
@@ -97,7 +98,7 @@ export default function Arbitrage() {
                     <>
                       <Text style={st.ccFlag}>{countries[cc]?.flag} {cc}</Text>
                       <Text style={st.ccPrice}>{ab.price_eur.toLocaleString('sk-SK')} €</Text>
-                      <Text style={st.ccWait}>{ab.wait_days} days</Text>
+                      <Text style={st.ccWait}>{ab.wait_days} {tt('arbitrage.days')}</Text>
                     </>
                   )}
                 </Pressable>
@@ -107,25 +108,25 @@ export default function Arbitrage() {
         ))}
         <Text style={st.legal}>{data?.legal_note}</Text>
 
-        <Text style={st.section}>🧬 GENOMIC BIO-IDENTITY</Text>
+        <Text style={st.section}>{tt('arbitrage.genomic_bio_identity')}</Text>
         <Text style={st.intro}>
-          DNA markers in your sovereign vault — only the hash goes on-chain, raw data never leaves your cold storage.
+          {tt('arbitrage.dna_markers_in_your_sovereign_vault')}
         </Text>
         {!!genomic?.genomic_sha256 && (
           <View style={st.card}>
-            <Text style={st.meta}>Provider: {genomic.provider || '—'} · SHA-256 #{genomic.genomic_sha256.slice(0, 14)}…</Text>
+            <Text style={st.meta}>{tt('arbitrage.provider')} {genomic.provider || '—'} {tt('arbitrage.sha_256')}{genomic.genomic_sha256.slice(0, 14)}…</Text>
             {(genomic.markers || []).map((m: string, i: number) => (
               <Text key={i} style={st.markerText}>• {m}</Text>
             ))}
           </View>
         )}
-        <TextInput testID="ar-genomic-provider" value={provider} onChangeText={setProvider} placeholder="Sequencing provider (e.g. Dante Labs)"
+        <TextInput testID="ar-genomic-provider" value={provider} onChangeText={setProvider} placeholder={tt('arbitrage.sequencing_provider_e_g_dante_labs')}
           placeholderTextColor="#777" style={st.input} />
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="ar-genomic-marker" value={marker} onChangeText={setMarker} placeholder="Marker (e.g. BRCA1: negative)"
+          <TextInput testID="ar-genomic-marker" value={marker} onChangeText={setMarker} placeholder={tt('arbitrage.marker_e_g_brca1_negative')}
             placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
           <Pressable testID="ar-genomic-save" onPress={saveGenomic} disabled={busy === 'genomic' || !marker.trim()} style={st.addBtn}>
-            {busy === 'genomic' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.addText}>SAVE</Text>}
+            {busy === 'genomic' ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={st.addText}>{tt('arbitrage.save')}</Text>}
           </Pressable>
         </View>
       </ScrollView>

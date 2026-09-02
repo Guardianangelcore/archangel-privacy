@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const SCOPES = [
   ['emergency_profile', 'Emergency profile'],
@@ -20,6 +21,7 @@ const SIGNALS = [
 ];
 
 export default function Protocol() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [grants, setGrants] = useState<any[]>([]);
   const [audit, setAudit] = useState<any[]>([]);
@@ -86,17 +88,17 @@ export default function Protocol() {
         <Pressable testID="pr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>GUARDIAN PROTOCOL</Text>
+        <Text style={styles.title}>{tt('protocol.guardian_protocol')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Global infrastructure</Text>
-        <Text style={styles.sub}>Guardian OS as a universal protocol: clinic access, anonymous data monetization and the Sentinel survival network.</Text>
+        <Text style={styles.h1}>{tt('protocol.global_infrastructure')}</Text>
+        <Text style={styles.sub}>{tt('protocol.guardian_os_as_a_universal_protocol')}</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         {!!info && <Text style={styles.info}>{info}</Text>}
 
-        <Text style={styles.section}>1 · PARTNER API GATEWAY (ONLY WITH YOUR CONSENT)</Text>
-        <TextInput testID="pr-partner" style={styles.input} placeholder="Partner name (clinic, insurer, ambulance)" placeholderTextColor={C.info} value={partner} onChangeText={setPartner} />
+        <Text style={styles.section}>{tt('protocol.1_partner_api_gateway_only_with_your')}</Text>
+        <TextInput testID="pr-partner" style={styles.input} placeholder={tt('protocol.partner_name_clinic_insurer_ambulanc')} placeholderTextColor={C.info} value={partner} onChangeText={setPartner} />
         {SCOPES.map(([k, l]) => (
           <Pressable key={k} testID={`pr-scope-${k}`} onPress={() => setScopes(scopes.includes(k) ? scopes.filter(s => s !== k) : [...scopes, k])} style={styles.scopeRow}>
             <Ionicons name={scopes.includes(k) ? 'checkbox' : 'square-outline'} size={20} color={C.brand} />
@@ -104,42 +106,42 @@ export default function Protocol() {
           </Pressable>
         ))}
         <Pressable testID="pr-grant" onPress={createGrant} disabled={busy === 'grant'} style={styles.cta}>
-          {busy === 'grant' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>ISSUE PARTNER KEY (30 DAYS)</Text>}
+          {busy === 'grant' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('protocol.issue_partner_key_30_days')}</Text>}
         </Pressable>
         {!!newToken && (
           <View style={styles.tokenBox}>
-            <Text style={styles.tokenLbl}>PARTNER KEY (shown only once — hand over securely):</Text>
+            <Text style={styles.tokenLbl}>{tt('protocol.partner_key_shown_only_once_hand_ove')}</Text>
             <Text testID="pr-token" style={styles.tokenVal} selectable>{newToken}</Text>
           </View>
         )}
         {grants.map(g => (
           <View key={g.grant_id} style={styles.grantRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.grantName}>{g.partner_name}{g.revoked ? '  · REVOKED' : ''}</Text>
+              <Text style={styles.grantName}>{g.partner_name}{g.revoked ? '  ' + tt('protocol.revoked') : ''}</Text>
               <Text style={styles.grantSub}>{(g.scopes || []).join(', ')} · {g.token_preview}</Text>
             </View>
             {!g.revoked && (
               <Pressable testID={`pr-revoke-${g.grant_id}`} onPress={() => revoke(g.grant_id)} style={styles.revokeBtn}>
-                <Text style={styles.revokeText}>CANCEL</Text>
+                <Text style={styles.revokeText}>{tt('protocol.cancel')}</Text>
               </Pressable>
             )}
           </View>
         ))}
         {audit.length > 0 && (
           <>
-            <Text style={styles.mini}>ACCESS AUDIT ({audit.length})</Text>
+            <Text style={styles.mini}>{tt('protocol.access_audit')}{audit.length})</Text>
             {audit.slice(0, 5).map((a, i) => (
               <Text key={i} style={styles.auditRow}>• {a.partner_name} → {a.scope} · {(a.at || '').slice(0, 16).replace('T', ' ')}</Text>
             ))}
           </>
         )}
 
-        <Text style={styles.section}>2 · SOVEREIGN DATA MARKETPLACE (DEMO PAYOUTS)</Text>
+        <Text style={styles.section}>{tt('protocol.2_sovereign_data_marketplace_demo_pa')}</Text>
         <View style={styles.optinRow}>
           <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.optinTitle}>ANONYMIZED DATA MONETIZATION — OPT-IN</Text>
-            <Text style={styles.optinSub}>Earned: {market?.earnings_eur ?? 0} € · data always anonymous (GDPR Art. 9)</Text>
+            <Text style={styles.optinTitle}>{tt('protocol.anonymized_data_monetization_opt_in')}</Text>
+            <Text style={styles.optinSub}>{tt('protocol.earned')} {market?.earnings_eur ?? 0} {tt('protocol.data_always_anonymous_gdpr_art_9')}</Text>
           </View>
           <Switch testID="pr-market-optin" value={!!market?.enabled} onValueChange={setOptin} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
@@ -148,18 +150,18 @@ export default function Protocol() {
           return (
             <View key={o.offer_id} style={styles.offerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.grantName}>{o.title}</Text>
+                <Text style={styles.grantName}>{tx(o.title)}</Text>
                 <Text style={styles.grantSub}>{o.institution} · {o.reward_eur} € / {o.reward_crypto}</Text>
               </View>
               <Pressable testID={`pr-offer-${o.offer_id}`} onPress={() => accept(o.offer_id)} disabled={sold || busy === o.offer_id} style={[styles.sellBtn, sold && { opacity: 0.4 }]}>
-                {busy === o.offer_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.sellText}>{sold ? 'SOLD' : 'SELL'}</Text>}
+                {busy === o.offer_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.sellText}>{sold ? tt('protocol.sold') : tt('protocol.sell')}</Text>}
               </Pressable>
             </View>
           );
         })}
 
-        <Text style={styles.section}>3 · GLOBAL SENTINEL NETWORK</Text>
-        <Text style={styles.sub}>Report outages and shortages anonymously — the network aggregates them for everyone in the region.</Text>
+        <Text style={styles.section}>{tt('protocol.3_global_sentinel_network')}</Text>
+        <Text style={styles.sub}>{tt('protocol.report_outages_and_shortages_anonymo')}</Text>
         <View style={styles.sigGrid}>
           {SIGNALS.map(([k, l, ic]) => (
             <Pressable key={k} testID={`pr-signal-${k}`} onPress={() => report(k)} disabled={busy === `sig-${k}`} style={styles.sigBtn}>
@@ -170,14 +172,14 @@ export default function Protocol() {
         </View>
         {agg && (
           <View style={styles.aggBox}>
-            <Text style={styles.mini}>LIVE SIGNALS (7 DAYS) · ACTIVE NODES: {agg.active_nodes}</Text>
+            <Text style={styles.mini}>{tt('protocol.live_signals_7_days_active_nodes')} {agg.active_nodes}</Text>
             {(agg.signals || []).slice(0, 6).map((s: any, i: number) => (
               <Text key={i} style={styles.auditRow}>• {s.region}: {s.kind} × {s.count}</Text>
             ))}
-            {(agg.signals || []).length === 0 && <Text style={styles.auditRow}>No signals yet.</Text>}
+            {(agg.signals || []).length === 0 && <Text style={styles.auditRow}>{tt('protocol.no_signals_yet')}</Text>}
           </View>
         )}
-        <Text style={styles.disclaimer}>Marketplace payouts and the Sentinel network run in DEMO mode until real partners connect. The partner API gateway is fully functional (scoped keys + audit).</Text>
+        <Text style={styles.disclaimer}>{tt('protocol.marketplace_payouts_and_the_sentinel')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

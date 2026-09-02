@@ -14,6 +14,7 @@ import { C, S, R } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { useI18n } from '@/src/i18n-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -144,6 +145,7 @@ function PainLogger({ guideId }: { guideId: string }) {
 
 /** WEEKLY RECOVERY PLAYLIST — 7-day plan guiding the patient through the whole week. */
 function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
+  const { t: tt, tx } = useI18n();
   const lang = useLang();
   const [plan, setPlan] = useState<any>(null);
   const [pct, setPct] = useState(0);
@@ -207,7 +209,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
                       onPress={() => { tap('light'); onOpenGuide(it.type === 'guide' ? it.id : (it.guide_id || it.id)); }}
                       style={styles.dayItem}>
                       <Ionicons name={it.anchor ? 'star' : it.icon} size={12} color={it.anchor ? C.brand : C.info} />
-                      <Text style={[styles.dayItemText, it.anchor && { color: C.brand, fontWeight: '900' }]} numberOfLines={1}>{it.title}</Text>
+                      <Text style={[styles.dayItemText, it.anchor && { color: C.brand, fontWeight: '900' }]} numberOfLines={1}>{tx(it.title)}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -227,6 +229,7 @@ function WeeklyPlan({ onOpenGuide }: { onOpenGuide: (id: string) => void }) {
 
 /** FOUNDER'S EXPERT VIDEOS — upload your own massage/rehab videos per guide (authentic rehab). */
 function ExpertVideos({ guideId }: { guideId: string }) {
+  const { t: tt, tx } = useI18n();
   const lang = useLang();
   const [videos, setVideos] = useState<any[]>([]);
   const [tk, setTk] = useState('');
@@ -293,8 +296,8 @@ function ExpertVideos({ guideId }: { guideId: string }) {
         <View key={v.video_id} style={styles.evCard}>
           {!!tk && <GuideVideo url={`${API_BASE}/api/physio/videos/${v.video_id}/file?token=${tk}`} testID={`ev-video-${v.video_id}`} muted={false} />}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.evTitle} numberOfLines={1}>{v.title}</Text>
-            {v.is_global && <View style={styles.evBadge}><Text style={styles.evBadgeText}>FOUNDER</Text></View>}
+            <Text style={styles.evTitle} numberOfLines={1}>{tx(v.title)}</Text>
+            {v.is_global && <View style={styles.evBadge}><Text style={styles.evBadgeText}>{tt('physio.founder')}</Text></View>}
             <View style={{ flex: 1 }} />
             {v.mine && (
               <Pressable testID={`ev-del-${v.video_id}`} onPress={() => remove(v.video_id)} hitSlop={10}>
@@ -357,6 +360,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
 }
 
 export default function Physio() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -413,7 +417,7 @@ export default function Physio() {
         <Pressable testID="ph-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>PHYSIO-AI</Text>
+        <Text style={styles.title}>{tt('physio.physio_ai')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <View style={styles.sub}><Text style={styles.subText}>{t('ph_sub', lang)}</Text></View>
@@ -477,8 +481,8 @@ export default function Physio() {
                         <Pressable testID={`guide-${g.id}`} onPress={() => toggleGuide(g.id)} style={styles.guideHead}>
                           <Ionicons name={g.icon} size={20} color={C.brand} />
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.guideTitle}>{g.title}</Text>
-                            <Text style={styles.guideSub}>{g.subtitle}{g.video_url ? ' · 🎬 VIDEO' : ''}</Text>
+                            <Text style={styles.guideTitle}>{tx(g.title)}</Text>
+                            <Text style={styles.guideSub}>{tx(g.subtitle)}{g.video_url ? ' ' + tt('physio.video') : ''}</Text>
                           </View>
                           <Pressable testID={`guide-play-${g.id}`} onPress={() => speakText(g.tts_text)} hitSlop={8} style={styles.guidePlay}>
                             <Ionicons name="volume-high" size={16} color={C.onInverse} />

@@ -10,6 +10,7 @@ import { WheelField, DateField } from '@/src/ui/fields';
 import JarvisAdvice from '@/src/JarvisAdvice';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 type Item = { item_id: string; name: string; quantity: number; unit: string; expires_on?: string; category: string; prescription: boolean; status: string };
 type Ex = { exchange_id: string; user_id: string; type: string; item_name: string; quantity: number; unit: string; city: string; note?: string; owner_name: string };
@@ -17,6 +18,7 @@ type Ex = { exchange_id: string; user_id: string; type: string; item_name: strin
 const CATS = ['painkiller', 'antibiotic', 'chronic', 'supplement', 'first_aid', 'other'];
 
 export default function MedicineCabinet() {
+  const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
   const router = useRouter();
@@ -108,13 +110,13 @@ export default function MedicineCabinet() {
             <View>
               <Pressable testID="mc-ddi-scan" onPress={scanInteractions} disabled={ddiBusy} style={styles.ddiBtn}>
                 <Ionicons name="warning-outline" size={16} color={C.onInverse} />
-                <Text style={styles.ddiBtnText}>{ddiBusy ? 'AI CHECKING INTERACTIONS…' : 'CHECK DRUG INTERACTIONS (AI)'}</Text>
+                <Text style={styles.ddiBtnText}>{ddiBusy ? tt('medicine_cabinet.ai_checking_interactions') : tt('medicine_cabinet.check_drug_interactions_ai')}</Text>
               </Pressable>
               {!!ddiErr && <Text style={styles.ddiErr}>{ddiErr}</Text>}
               {ddi && (
                 <View testID="mc-ddi-result" style={[styles.ddiBox, { borderColor: (ddi.interactions || []).some((x: any) => x.severity === 'high') ? C.error : C.borderStrong }]}>
                   {(ddi.interactions || []).length === 0 ? (
-                    <Text style={styles.ddiOk}>✓ NO KNOWN RISKY INTERACTIONS ({(ddi.meds_scanned || []).length} meds){ddi.note ? `\n${ddi.note}` : ''}</Text>
+                    <Text style={styles.ddiOk}>{tt('medicine_cabinet.no_known_risky_interactions')}{(ddi.meds_scanned || []).length} {tt('medicine_cabinet.meds')}{ddi.note ? `\n${ddi.note}` : ''}</Text>
                   ) : (
                     (ddi.interactions || []).map((x: any, i: number) => (
                       <View key={i} style={{ marginBottom: 8 }}>
@@ -139,9 +141,9 @@ export default function MedicineCabinet() {
                 <View style={styles.rowSpread}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemMeta}>{item.category.toUpperCase()} · EXP: {item.expires_on || '—'}{item.prescription ? ' · Rx' : ''}</Text>
+                    <Text style={styles.itemMeta}>{item.category.toUpperCase()} {tt('medicine_cabinet.exp')} {item.expires_on || '—'}{item.prescription ? ' ' + tt('medicine_cabinet.rx') : ''}</Text>
                   </View>
-                  <View style={[styles.badge, { backgroundColor: b.bg }]}><Text style={[styles.badgeText, { color: b.fg }]}>{b.text}</Text></View>
+                  <View style={[styles.badge, { backgroundColor: b.bg }]}><Text style={[styles.badgeText, { color: b.fg }]}>{tx(b.text)}</Text></View>
                 </View>
                 <View style={styles.qtyRow}>
                   <Pressable testID={`cab-minus-${item.item_id}`} onPress={() => adjustQty(item, -1)} style={styles.qtyBtn}><Ionicons name="remove" size={18} color={C.fg} /></Pressable>
@@ -160,7 +162,7 @@ export default function MedicineCabinet() {
           keyExtractor={i => i.exchange_id}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.fg} />}
           contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}
-          ListHeaderComponent={<Text style={styles.exNote}>CRISIS MODE · OTC ONLY · ENCRYPTED NETWORK</Text>}
+          ListHeaderComponent={<Text style={styles.exNote}>{tt('medicine_cabinet.crisis_mode_otc_only_encrypted_netwo')}</Text>}
           ListEmptyComponent={!loading ? <Text style={styles.empty}>{t('no_data', lang).toUpperCase()}</Text> : null}
           renderItem={({ item }) => (
             <View testID={`ex-${item.exchange_id}`} style={styles.card}>
@@ -198,12 +200,12 @@ export default function MedicineCabinet() {
             <ScrollView contentContainerStyle={{ padding: S.lg, gap: S.md }} style={{ maxHeight: 440 }}>
               {tab === 'stock' ? (
                 <>
-                  <TextInput testID="cab-name" placeholder="Ibuprofen 400mg" value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
+                  <TextInput testID="cab-name" placeholder={tt('medicine_cabinet.ibuprofen_400mg')} value={f.name} onChangeText={v => setF({ ...f, name: v })} style={styles.input} placeholderTextColor="#999" />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
-                    <WheelField testID="cab-qty" title="QUANTITY" min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="20" style={[styles.input, { flex: 1 }]} />
-                    <TextInput testID="cab-unit" placeholder="ks" value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
+                    <WheelField testID="cab-qty" title={tt('medicine_cabinet.quantity')} min={1} max={500} value={f.quantity} onChange={v => setF({ ...f, quantity: v })} placeholder="20" style={[styles.input, { flex: 1 }]} />
+                    <TextInput testID="cab-unit" placeholder={tt('medicine_cabinet.ks')} value={f.unit} onChangeText={v => setF({ ...f, unit: v })} style={[styles.input, { flex: 1 }]} placeholderTextColor="#999" />
                   </View>
-                  <DateField testID="cab-exp" title="EXPIRY" value={f.expires_on} onChange={v => setF({ ...f, expires_on: v })} placeholder="Expiry (EXP)" style={styles.input} />
+                  <DateField testID="cab-exp" title={tt('medicine_cabinet.expiry')} value={f.expires_on} onChange={v => setF({ ...f, expires_on: v })} placeholder={tt('medicine_cabinet.expiry_exp')} style={styles.input} />
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
                     {CATS.map(c => (
                       <Pressable testID={`cab-cat-${c}`} key={c} onPress={() => setF({ ...f, category: c })} style={[styles.chip, f.category === c && styles.chipActive]}>
@@ -212,7 +214,7 @@ export default function MedicineCabinet() {
                     ))}
                   </View>
                   <View style={styles.rowSpread}>
-                    <Text style={styles.lbl}>NA PREDPIS (Rx)</Text>
+                    <Text style={styles.lbl}>{tt('medicine_cabinet.na_predpis_rx')}</Text>
                     <Switch testID="cab-rx" value={f.prescription} onValueChange={v => setF({ ...f, prescription: v })} trackColor={{ true: C.brand, false: C.surface3 }} />
                   </View>
                 </>
@@ -225,13 +227,13 @@ export default function MedicineCabinet() {
                       </Pressable>
                     ))}
                   </View>
-                  <TextInput testID="ex-name" placeholder="Paracetamol, bandages…" value={ef.item_name} onChangeText={v => setEf({ ...ef, item_name: v })} style={styles.input} placeholderTextColor="#999" />
+                  <TextInput testID="ex-name" placeholder={tt('medicine_cabinet.paracetamol_bandages')} value={ef.item_name} onChangeText={v => setEf({ ...ef, item_name: v })} style={styles.input} placeholderTextColor="#999" />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
-                    <WheelField testID="ex-qty" title="QUANTITY" min={1} max={50} value={ef.quantity} onChange={v => setEf({ ...ef, quantity: v })} placeholder="1" style={[styles.input, { flex: 1 }]} />
-                    <TextInput testID="ex-city" placeholder="Bratislava" value={ef.city} onChangeText={v => setEf({ ...ef, city: v })} style={[styles.input, { flex: 2 }]} placeholderTextColor="#999" />
+                    <WheelField testID="ex-qty" title={tt('medicine_cabinet.quantity')} min={1} max={50} value={ef.quantity} onChange={v => setEf({ ...ef, quantity: v })} placeholder="1" style={[styles.input, { flex: 1 }]} />
+                    <TextInput testID="ex-city" placeholder={tt('medicine_cabinet.bratislava')} value={ef.city} onChangeText={v => setEf({ ...ef, city: v })} style={[styles.input, { flex: 2 }]} placeholderTextColor="#999" />
                   </View>
-                  <TextInput testID="ex-note" placeholder="Note" value={ef.note} onChangeText={v => setEf({ ...ef, note: v })} style={styles.input} placeholderTextColor="#999" />
-                  <Text style={styles.exNote}>OTC MEDICATIONS AND MEDICAL SUPPLIES ONLY</Text>
+                  <TextInput testID="ex-note" placeholder={tt('medicine_cabinet.note')} value={ef.note} onChangeText={v => setEf({ ...ef, note: v })} style={styles.input} placeholderTextColor="#999" />
+                  <Text style={styles.exNote}>{tt('medicine_cabinet.otc_medications_and_medical_supplies')}</Text>
                 </>
               )}
             </ScrollView>

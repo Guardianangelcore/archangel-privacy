@@ -12,6 +12,7 @@ import { useAuth } from '@/src/auth';
 import { C, S, R, GOLD } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { useI18n } from '@/src/i18n-context';
 
 type ImpactData = {
   people_helped: number;
@@ -25,6 +26,7 @@ type ImpactData = {
 };
 
 export default function Impact() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [data, setData] = useState<ImpactData | null>(null);
@@ -63,7 +65,7 @@ export default function Impact() {
         <Pressable testID="impact-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>MY WORLD FOOTPRINT</Text>
+        <Text style={styles.title}>{tt('impact.my_world_footprint')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -77,7 +79,7 @@ export default function Impact() {
             <Ionicons name="planet" size={40} color={C.onInverse} />
             <View style={{ flex: 1 }}>
               <Text style={styles.heroNumber}>{data.people_helped.toLocaleString('sk-SK')}</Text>
-              <Text style={styles.heroLbl}>PEOPLE ARE ONE STEP CLOSER TO A CURE THANKS TO YOU</Text>
+              <Text style={styles.heroLbl}>{tt('impact.people_are_one_step_closer_to_a_cure')}</Text>
             </View>
           </LinearGradient>
         </View>
@@ -87,17 +89,17 @@ export default function Impact() {
           <View style={styles.kpi}>
             <Ionicons name="hourglass" size={20} color={C.brand} />
             <Text style={styles.kpiVal}>{data.research_hours} h</Text>
-            <Text style={styles.kpiLbl}>RESEARCH ACCELERATION</Text>
+            <Text style={styles.kpiLbl}>{tt('impact.research_acceleration')}</Text>
           </View>
           <View style={styles.kpi}>
             <Ionicons name="cash" size={20} color={C.brand} />
             <Text style={styles.kpiVal}>{data.tokens_earned}</Text>
-            <Text style={styles.kpiLbl}>GA-T EARNED</Text>
+            <Text style={styles.kpiLbl}>{tt('impact.ga_t_earned')}</Text>
           </View>
           <View style={styles.kpi}>
             <Ionicons name="pulse" size={20} color={C.brand} />
             <Text style={styles.kpiVal}>{data.contributions_total}</Text>
-            <Text style={styles.kpiLbl}>CONTRIBUTIONS</Text>
+            <Text style={styles.kpiLbl}>{tt('impact.contributions')}</Text>
           </View>
         </View>
 
@@ -110,27 +112,27 @@ export default function Impact() {
             <View style={{ flex: 1 }}>
               <Text style={styles.threadTitle}>{data.top_thread.title.toUpperCase()}</Text>
               <Text style={styles.threadMsg}>{data.top_thread.message_sk}</Text>
-              <Text style={styles.threadTap}>▸ TAP — JARVIS READS IT ALOUD</Text>
+              <Text style={styles.threadTap}>{tt('impact.tap_jarvis_reads_it_aloud')}</Text>
             </View>
           </Pressable>
         )}
 
         {/* 4-week timeline */}
-        <Text style={styles.section}>LAST 4 WEEKS</Text>
+        <Text style={styles.section}>{tt('impact.last_4_weeks')}</Text>
         <View style={styles.timeline}>
           {data.timeline_weeks.map((w) => (
             <View key={w.week_ago} style={styles.tlCol}>
               <View style={styles.tlBarWrap}>
                 <View style={[styles.tlBar, { height: Math.max(4, (w.contributions / maxWeek) * 80) }]} />
               </View>
-              <Text style={styles.tlLbl}>{w.week_ago === 0 ? 'T-4' : w.week_ago === 3 ? 'TENTO' : `T-${3 - w.week_ago}`}</Text>
+              <Text style={styles.tlLbl}>{w.week_ago === 0 ? 'T-4' : w.week_ago === 3 ? tt('impact.tento') : `T-${3 - w.week_ago}`}</Text>
               <Text style={styles.tlCount}>{w.contributions}</Text>
             </View>
           ))}
         </View>
 
         {/* Breakdown */}
-        <Text style={styles.section}>KDE PRISPIEVATE</Text>
+        <Text style={styles.section}>{tt('impact.kde_prispievate')}</Text>
         <View style={styles.breakGrid}>
           {[
             { key: 'physio', label: 'Physio-AI', icon: 'fitness', val: data.breakdown.physio },
@@ -143,7 +145,7 @@ export default function Impact() {
             <View key={b.key} style={styles.breakCard}>
               <Ionicons name={b.icon as any} size={20} color={b.val > 0 ? C.brand : C.info} />
               <Text style={[styles.breakVal, { color: b.val > 0 ? C.brand : C.info }]}>{b.val}</Text>
-              <Text style={styles.breakLbl}>{b.label}</Text>
+              <Text style={styles.breakLbl}>{tx(b.label)}</Text>
             </View>
           ))}
         </View>

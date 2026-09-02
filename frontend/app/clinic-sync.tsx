@@ -10,6 +10,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Eas
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { GlassCard, GoldButton, tap } from '@/src/ui/glass';
+import { useI18n } from '@/src/i18n-context';
 
 function RadarRing({ delay }: { delay: number }) {
   const v = useSharedValue(0);
@@ -25,6 +26,7 @@ function RadarRing({ delay }: { delay: number }) {
 }
 
 export default function ClinicSync() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [mode, setMode] = useState<'radar' | 'qr'>('radar');
   const [session, setSession] = useState<any>(null);
@@ -70,20 +72,20 @@ export default function ClinicSync() {
         <Pressable testID="csy-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={st.title}>CLINIC SYNC</Text>
+        <Text style={st.title}>{tt('clinic_sync.clinic_sync')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
-        <Text style={st.tag}>Your doctor beams a report straight into your vault — no paper, no e-mails.</Text>
+        <Text style={st.tag}>{tt('clinic_sync.your_doctor_beams_a_report_straight')}</Text>
 
         <View style={st.toggle}>
           <Pressable testID="csy-mode-radar" onPress={() => { tap(); setMode('radar'); }} style={[st.toggleBtn, mode === 'radar' && st.toggleActive]}>
             <Ionicons name="radio-outline" size={16} color={mode === 'radar' ? C.onInverse : C.brand} />
-            <Text style={[st.toggleText, mode === 'radar' && { color: C.onInverse }]}>RADAR (BLE/NFC)</Text>
+            <Text style={[st.toggleText, mode === 'radar' && { color: C.onInverse }]}>{tt('clinic_sync.radar_ble_nfc')}</Text>
           </Pressable>
           <Pressable testID="csy-mode-qr" onPress={() => { tap(); setMode('qr'); }} style={[st.toggleBtn, mode === 'qr' && st.toggleActive]}>
             <Ionicons name="qr-code-outline" size={16} color={mode === 'qr' ? C.onInverse : C.brand} />
-            <Text style={[st.toggleText, mode === 'qr' && { color: C.onInverse }]}>QR HANDSHAKE</Text>
+            <Text style={[st.toggleText, mode === 'qr' && { color: C.onInverse }]}>{tt('clinic_sync.qr_handshake')}</Text>
           </Pressable>
         </View>
 
@@ -95,14 +97,14 @@ export default function ClinicSync() {
               <RadarRing delay={1600} />
               <View style={st.radarCore}><Ionicons name="medkit" size={26} color={C.onInverse} /></View>
             </View>
-            <Text style={st.radarLbl}>SCANNING NEARBY… ({radar?.nearby?.length ?? 0} devices)</Text>
-            <Text style={st.simNote}>⚠ {radar?.transport || 'BLE/NFC simulation — real radio in a native build'}</Text>
+            <Text style={st.radarLbl}>{tt('clinic_sync.scanning_nearby')}{radar?.nearby?.length ?? 0} {tt('clinic_sync.devices')}</Text>
+            <Text style={st.simNote}>⚠ {radar?.transport || tt('clinic_sync.ble_nfc_simulation_real_radio_in_a_n')}</Text>
             {(radar?.nearby || []).map((n: any, i: number) => (
               <View key={i} style={st.clinicRow}>
                 <Ionicons name="business-outline" size={20} color={C.brand} />
                 <View style={{ flex: 1 }}>
                   <Text style={st.clinicName}>{n.clinic}</Text>
-                  <Text style={st.clinicSub}>{n.dept} · {n.distance_m} m · signal {n.signal}</Text>
+                  <Text style={st.clinicSub}>{n.dept} · {n.distance_m} {tt('clinic_sync.m_signal')} {n.signal}</Text>
                 </View>
                 <View style={st.signalDot} />
               </View>
@@ -116,20 +118,20 @@ export default function ClinicSync() {
                   <QRCode value={session.qr_payload} size={190} backgroundColor="#FFFFFF" color="#000000" />
                 </View>
                 <Text testID="csy-code" style={st.code}>{session.code}</Text>
-                <Text style={st.qrHint}>The doctor scans the QR or enters the code — the report is instantly and encryptedly stored in your vault. Valid for 10 minutes.</Text>
+                <Text style={st.qrHint}>{tt('clinic_sync.the_doctor_scans_the_qr_or_enters_th')}</Text>
               </View>
             ) : (
               <View style={{ alignItems: 'center', gap: S.md }}>
                 <Ionicons name="qr-code-outline" size={56} color={C.brand} />
-                <Text style={st.qrHint}>Generate a one-time security code for the practice.</Text>
+                <Text style={st.qrHint}>{tt('clinic_sync.generate_a_one_time_security_code_fo')}</Text>
               </View>
             )}
-            <GoldButton testID="csy-create" title={waiting ? 'NEW CODE' : 'GENERATE QR HANDSHAKE'} icon="qr-code"
+            <GoldButton testID="csy-create" title={waiting ? tt('clinic_sync.new_code') : tt('clinic_sync.generate_qr_handshake')} icon="qr-code"
               onPress={createSession} loading={busy === 'create'} style={{ marginTop: S.lg }} />
             {waiting && (
               <Pressable testID="csy-simulate" onPress={simulateBeam} disabled={busy === 'beam'} style={st.simBtn}>
                 {busy === 'beam' ? <ActivityIndicator size="small" color={C.brand} /> : (
-                  <Text style={st.simBtnText}>▶ DEMO: SIMULATE RECEIVING A REPORT FROM A DOCTOR</Text>
+                  <Text style={st.simBtnText}>{tt('clinic_sync.demo_simulate_receiving_a_report_fro')}</Text>
                 )}
               </Pressable>
             )}
@@ -138,16 +140,16 @@ export default function ClinicSync() {
 
         {!!err && <Text testID="csy-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>RECEIVED REPORTS ({docs.length})</Text>
-        {docs.length === 0 && <Text style={st.empty}>NONE YET — WAITING FOR A DOCTOR BEAM</Text>}
+        <Text style={st.section}>{tt('clinic_sync.received_reports')}{docs.length})</Text>
+        {docs.length === 0 && <Text style={st.empty}>{tt('clinic_sync.none_yet_waiting_for_a_doctor_beam')}</Text>}
         {docs.map((d: any, i: number) => (
           <GlassCard key={i} pad={S.md} style={{ marginTop: S.sm }} testID={`csy-doc-${d.doc_id}`}
             onPress={() => router.push('/(tabs)/vault')}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
               <Ionicons name="document-text" size={24} color={C.brand} />
               <View style={{ flex: 1 }}>
-                <Text style={st.docTitle}>{d.title}</Text>
-                <Text style={st.docSub}>{d.clinic_name}{d.doctor_name ? ` · ${d.doctor_name}` : ''} → stored in the Vault ✓</Text>
+                <Text style={st.docTitle}>{tx(d.title)}</Text>
+                <Text style={st.docSub}>{d.clinic_name}{d.doctor_name ? ` · ${d.doctor_name}` : ''} {tt('clinic_sync.stored_in_the_vault')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={C.info} />
             </View>

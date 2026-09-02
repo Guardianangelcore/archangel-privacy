@@ -7,8 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function InnerCircle() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [members, setMembers] = useState<any[]>([]);
   const [isFounder, setIsFounder] = useState<boolean | null>(null);
@@ -53,51 +55,50 @@ export default function InnerCircle() {
         <Pressable testID="ic-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>INNER CIRCLE</Text>
+        <Text style={st.title}>{tt('inner_circle.inner_circle')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.heroIcon}><Ionicons name="diamond" size={28} color="#8A2BE2" /></View>
-        <Text style={st.h1}>Founder’s Inner Circle</Text>
+        <Text style={st.h1}>{tt('inner_circle.founder_s_inner_circle')}</Text>
         <Text style={st.sub}>
-          Inner Circle members receive LIFETIME Archangel status — every elite feature, forever, free of charge.
-          Status activates instantly or on first login with that e-mail.
+          {tt('inner_circle.inner_circle_members_receive_lifetim')}
         </Text>
 
         {isFounder === false && (
           <View style={st.lockedCard}>
             <Ionicons name="lock-closed" size={22} color={C.info} />
-            <Text style={st.lockedText}>The Inner Circle is managed solely by the foundation founder. If you are a member, your Archangel status is active automatically — check Subscription.</Text>
+            <Text style={st.lockedText}>{tt('inner_circle.the_inner_circle_is_managed_solely_b')}</Text>
           </View>
         )}
 
         {isFounder && (
           <>
-            <Text style={st.section}>ADD MEMBER</Text>
+            <Text style={st.section}>{tt('inner_circle.add_member')}</Text>
             <TextInput testID="ic-email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
-              placeholder="Family member e-mail" placeholderTextColor="#777" style={st.input} />
+              placeholder={tt('inner_circle.family_member_e_mail')} placeholderTextColor="#777" style={st.input} />
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-              <TextInput testID="ic-name" value={name} onChangeText={setName} placeholder="Meno"
+              <TextInput testID="ic-name" value={name} onChangeText={setName} placeholder={tt('inner_circle.meno')}
                 placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
-              <TextInput testID="ic-relationship" value={relationship} onChangeText={setRelationship} placeholder="Relationship"
+              <TextInput testID="ic-relationship" value={relationship} onChangeText={setRelationship} placeholder={tt('inner_circle.relationship')}
                 placeholderTextColor="#777" style={[st.input, { width: 110, marginTop: 0 }]} />
             </View>
             <Pressable testID="ic-add" onPress={add} disabled={busy === 'add' || !email.includes('@')} style={st.mainBtn}>
-              {busy === 'add' ? <ActivityIndicator color="#FFF" /> : <Text style={st.mainBtnText}>👑 GRANT LIFETIME ARCHANGEL</Text>}
+              {busy === 'add' ? <ActivityIndicator color="#FFF" /> : <Text style={st.mainBtnText}>{tt('inner_circle.grant_lifetime_archangel')}</Text>}
             </Pressable>
             {!!err && <Text testID="ic-err" style={st.err}>{err}</Text>}
 
-            <Text style={st.section}>MEMBERS ({members.length})</Text>
-            {members.length === 0 && <Text style={st.empty}>THE CIRCLE IS EMPTY SO FAR</Text>}
+            <Text style={st.section}>{tt('inner_circle.members')}{members.length})</Text>
+            {members.length === 0 && <Text style={st.empty}>{tt('inner_circle.the_circle_is_empty_so_far')}</Text>}
             {members.map(m => (
               <View testID={`ic-member-${m.member_id}`} key={m.member_id} style={st.card}>
                 <View style={st.rowSpread}>
                   <Text style={st.cardTitle}>{m.name || m.email}</Text>
-                  <View style={st.badge}><Text style={st.badgeText}>ARCHANGEL ∞</Text></View>
+                  <View style={st.badge}><Text style={st.badgeText}>{tt('inner_circle.archangel')}</Text></View>
                 </View>
-                <Text style={st.meta}>{m.email} · {m.relationship}{m.linked_did ? ` · DID linked` : ' · awaiting first login'}</Text>
+                <Text style={st.meta}>{m.email} · {m.relationship}{m.linked_did ? tt('inner_circle.did_linked') : ' ' + tt('inner_circle.awaiting_first_login')}</Text>
                 <Pressable testID={`ic-del-${m.member_id}`} onPress={() => remove(m.member_id)} disabled={busy === m.member_id} style={st.delBtn}>
-                  <Text style={st.delText}>REMOVE FROM CIRCLE</Text>
+                  <Text style={st.delText}>{tt('inner_circle.remove_from_circle')}</Text>
                 </Pressable>
               </View>
             ))}

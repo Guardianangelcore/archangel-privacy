@@ -1,6 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Adaptive i18n dictionary for Archangel OS — 14-language global launch
 import { LEGAL } from './i18n-legal';
+import { GEN } from './locales';
 
 export type Lang = 'sk' | 'cs' | 'en' | 'de' | 'pl' | 'hu' | 'ru' | 'es' | 'fr' | 'it' | 'uk' | 'zh' | 'ja' | 'ar';
 
@@ -291,8 +292,35 @@ export const T: Dict = {
   alarm_cancelled: { sk: 'ALARM ZRUŠENÝ', cs: 'ALARM ZRUŠEN', en: 'ALARM CANCELLED', de: 'ALARM ABGEBROCHEN' },
 };
 
-export function t(key: string, lang: Lang): string {
-  return T[key]?.[lang] ?? EXT[lang]?.[key] ?? CORE[lang]?.[key] ?? LEGAL[lang]?.[key] ?? T[key]?.en ?? LEGAL.en[key] ?? key;
+export type TVars = (string | number)[] | Record<string, string | number>;
+
+/** Interpolate {0},{1}… or {name} placeholders. */
+export function interpolate(s: string, vars?: TVars): string {
+  if (!vars) return s;
+  return s.replace(/\{(\w+)\}/g, (m, k) => {
+    const v = Array.isArray(vars) ? vars[Number(k)] : (vars as Record<string, string | number>)[k];
+    return v === undefined || v === null ? m : String(v);
+  });
+}
+
+export function t(key: string, lang: Lang, vars?: TVars): string {
+  const s = T[key]?.[lang] ?? EXT[lang]?.[key] ?? CORE[lang]?.[key] ?? LEGAL[lang]?.[key] ?? GEN[lang]?.[key]
+    ?? T[key]?.en ?? LEGAL.en[key] ?? GEN.en[key] ?? key;
+  return interpolate(s, vars);
+}
+
+// Translate-by-English-text: for strings that arrive from the backend (tier feature lists, taglines,
+// server messages). Known texts (present in locales/en.json) are looked up by value; unknown → unchanged.
+let REVERSE: Map<string, string> | null = null;
+export function tx(text: string | null | undefined, lang: Lang): string {
+  if (!text) return '';
+  if (lang === 'en') return text;
+  if (!REVERSE) {
+    REVERSE = new Map();
+    for (const [k, v] of Object.entries(GEN.en)) if (!REVERSE.has(v)) REVERSE.set(v, k);
+  }
+  const key = REVERSE.get(text.trim());
+  return key ? (GEN[lang]?.[key] ?? text) : text;
 }
 
 // Core-surface translations for the 10 additional launch languages.

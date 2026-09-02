@@ -7,8 +7,10 @@ import { useRouter } from 'expo-router';
 import { API_BASE, getToken } from '@/src/api';
 import { shareFile } from '@/src/pdf';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function Wallpaper() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,14 +37,13 @@ export default function Wallpaper() {
         <Pressable testID="wp-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>EMERGENCY WALLPAPER</Text>
+        <Text style={styles.title}>{tt('wallpaper.emergency_wallpaper')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60, alignItems: 'center' }}>
-        <Text style={styles.h1}>Emergency Lock-Screen Wallpaper</Text>
+        <Text style={styles.h1}>{tt('wallpaper.emergency_lock_screen_wallpaper')}</Text>
         <Text style={styles.sub}>
-          A QR code with blood type, allergies and an ICE contact — paramedics scan it without unlocking your phone.
-          The data comes from your Emergency Profile.
+          {tt('wallpaper.a_qr_code_with_blood_type_allergies')}
         </Text>
 
         <View style={styles.previewBox}>
@@ -64,7 +65,7 @@ export default function Wallpaper() {
           {busy ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="download-outline" size={18} color={C.onInverse} />
-              <Text style={styles.ctaText}>DOWNLOAD WALLPAPER</Text>
+              <Text style={styles.ctaText}>{tt('wallpaper.download_wallpaper')}</Text>
             </>
           )}
         </Pressable>
@@ -72,7 +73,7 @@ export default function Wallpaper() {
           testID="wp-share"
           onPress={async () => {
             try {
-              if (Platform.OS === 'web' && (navigator as any).share) await (navigator as any).share({ title: 'Guardian emergency wallpaper', url });
+              if (Platform.OS === 'web' && (navigator as any).share) await (navigator as any).share({ title: tt('wallpaper.guardian_emergency_wallpaper'), url });
               else await shareFile('/family/wallpaper.png', 'guardian_emergency_wallpaper.png', 'image/png');
             } catch {}
           }}
@@ -80,14 +81,14 @@ export default function Wallpaper() {
           style={styles.ctaOutline}
         >
           <Ionicons name="people-outline" size={18} color={C.brand} />
-          <Text style={styles.ctaOutlineText}>SEND TO FAMILY WITH ONE TAP</Text>
+          <Text style={styles.ctaOutlineText}>{tt('wallpaper.send_to_family_with_one_tap')}</Text>
         </Pressable>
 
         <View style={styles.steps}>
-          <Text style={styles.stepTitle}>HOW TO SET IT UP</Text>
-          <Text style={styles.step}>1. Download the wallpaper to your gallery.</Text>
-          <Text style={styles.step}>2. Settings → Wallpaper → Lock screen.</Text>
-          <Text style={styles.step}>3. Done — critical info is available without unlocking.</Text>
+          <Text style={styles.stepTitle}>{tt('wallpaper.how_to_set_it_up')}</Text>
+          <Text style={styles.step}>{tt('wallpaper.1_download_the_wallpaper_to_your_gal')}</Text>
+          <Text style={styles.step}>{tt('wallpaper.2_settings_wallpaper_lock_screen')}</Text>
+          <Text style={styles.step}>{tt('wallpaper.3_done_critical_info_is_available_wi')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

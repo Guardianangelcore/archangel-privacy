@@ -8,8 +8,10 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { api, apiUpload } from '@/src/api';
 import { C, S } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function VideoLegacy() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [videos, setVideos] = useState<any[]>([]);
   const [recipient, setRecipient] = useState('');
@@ -71,47 +73,46 @@ export default function VideoLegacy() {
         <Pressable testID="vl-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />
         </Pressable>
-        <Text style={st.title}>VIDEO LEGACY</Text>
+        <Text style={st.title}>{tt('video_legacy.video_legacy')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
         <View style={st.heroIcon}><Ionicons name="videocam-outline" size={28} color={C.brand} /></View>
-        <Text style={st.h1}>Family peace treaty</Text>
+        <Text style={st.h1}>{tt('video_legacy.family_peace_treaty')}</Text>
         <Text style={st.sub}>
-          Upload a sealed video message for your family. The video is zero-knowledge encrypted, its hash anchored
-          on Archangel Chain and released to the family only after life-status verification in the state registry — or when you release it manually.
+          {tt('video_legacy.upload_a_sealed_video_message_for_yo')}
         </Text>
 
         {permBlocked && (
           <View style={st.permBox}>
-            <Text style={st.permText}>Gallery access is blocked. Enable it in your phone settings.</Text>
+            <Text style={st.permText}>{tt('video_legacy.gallery_access_is_blocked_enable_it')}</Text>
             <Pressable testID="vl-settings" onPress={() => Linking.openSettings()} style={st.permBtn}>
-              <Text style={st.permBtnText}>OPEN SETTINGS</Text>
+              <Text style={st.permBtnText}>{tt('video_legacy.open_settings')}</Text>
             </Pressable>
           </View>
         )}
 
-        <Text style={st.section}>NEW MESSAGE</Text>
-        <TextInput testID="vl-title" value={title} onChangeText={setTitle} placeholder="Title (e.g. For my daughter)"
+        <Text style={st.section}>{tt('video_legacy.new_message')}</Text>
+        <TextInput testID="vl-title" value={title} onChangeText={setTitle} placeholder={tt('video_legacy.title_e_g_for_my_daughter')}
           placeholderTextColor="#777" style={st.input} />
         <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-          <TextInput testID="vl-recipient" value={recipient} onChangeText={setRecipient} placeholder="Recipient (name)"
+          <TextInput testID="vl-recipient" value={recipient} onChangeText={setRecipient} placeholder={tt('video_legacy.recipient_name')}
             placeholderTextColor="#777" style={[st.input, { flex: 1, marginTop: 0 }]} />
-          <TextInput testID="vl-relationship" value={relationship} onChangeText={setRelationship} placeholder="Relationship"
+          <TextInput testID="vl-relationship" value={relationship} onChangeText={setRelationship} placeholder={tt('video_legacy.relationship')}
             placeholderTextColor="#777" style={[st.input, { width: 110, marginTop: 0 }]} />
         </View>
         <Pressable testID="vl-upload" onPress={pickAndUpload} disabled={uploading} style={st.uploadBtn}>
           {uploading ? <ActivityIndicator color={C.onInverse} /> : (
             <>
               <Ionicons name="cloud-upload-outline" size={18} color={C.onInverse} />
-              <Text style={st.uploadText}>PICK VIDEO & SEAL</Text>
+              <Text style={st.uploadText}>{tt('video_legacy.pick_video_seal')}</Text>
             </>
           )}
         </Pressable>
         {!!err && <Text testID="vl-err" style={st.err}>{err}</Text>}
 
-        <Text style={st.section}>SEALED MESSAGES ({videos.length})</Text>
-        {videos.length === 0 && <Text style={st.empty}>NO VIDEO MESSAGES YET</Text>}
+        <Text style={st.section}>{tt('video_legacy.sealed_messages')}{videos.length})</Text>
+        {videos.length === 0 && <Text style={st.empty}>{tt('video_legacy.no_video_messages_yet')}</Text>}
         {videos.map(v => (
           <View testID={`vl-video-${v.video_id}`} key={v.video_id} style={st.card}>
             <View style={st.rowSpread}>
@@ -120,17 +121,17 @@ export default function VideoLegacy() {
               </View>
               <Text style={st.meta}>{(v.size / 1024 / 1024).toFixed(1)} MB</Text>
             </View>
-            <Text style={st.cardTitle}>{v.title}</Text>
-            <Text style={st.meta}>Pre: {v.recipient_name} ({v.relationship}) · SHA-256 #{v.sha256?.slice(0, 12)}</Text>
+            <Text style={st.cardTitle}>{tx(v.title)}</Text>
+            <Text style={st.meta}>{tt('video_legacy.pre')} {v.recipient_name} ({v.relationship}{tt('video_legacy.sha_256')}{v.sha256?.slice(0, 12)}</Text>
             <Text style={st.meta}>🔐 {v.encryption}</Text>
             <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
               {!v.released && (
                 <Pressable testID={`vl-release-${v.video_id}`} onPress={() => release(v.video_id)} disabled={busy === v.video_id} style={[st.actBtn, { backgroundColor: C.brand }]}>
-                  <Text style={st.actText}>RELEASE TO FAMILY</Text>
+                  <Text style={st.actText}>{tt('video_legacy.release_to_family')}</Text>
                 </Pressable>
               )}
               <Pressable testID={`vl-delete-${v.video_id}`} onPress={() => remove(v.video_id)} disabled={busy === v.video_id} style={[st.actBtn, { backgroundColor: C.error }]}>
-                <Text style={st.actText}>DELETE</Text>
+                <Text style={st.actText}>{tt('video_legacy.delete')}</Text>
               </Pressable>
             </View>
           </View>

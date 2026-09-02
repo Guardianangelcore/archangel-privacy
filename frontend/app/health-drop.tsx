@@ -12,8 +12,10 @@ import { api, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { ensureDropKeys, decryptDrop, b64encode } from '@/src/dropcrypto';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 export default function HealthDrop() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const [me, setMe] = useState<any>(null);
@@ -100,14 +102,13 @@ export default function HealthDrop() {
         <Pressable testID="hd-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>HEALTH DROP</Text>
+        <Text style={styles.title}>{tt('health_drop.health_drop')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
-        <Text style={styles.h1}>Referral Bridge</Text>
+        <Text style={styles.h1}>{tt('health_drop.referral_bridge')}</Text>
         <Text style={styles.sub}>
-          Your doctor sends a report or referral straight into your vault — no paper. Documents are
-          encrypted with your public key already in the doctor browser (zero-knowledge).
+          {tt('health_drop.your_doctor_sends_a_report_or_referr')}
         </Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -117,15 +118,15 @@ export default function HealthDrop() {
               <View style={styles.qrBox}><QRCode value={dropUrl} size={150} backgroundColor="#FFFFFF" color="#121212" /></View>
             </View>
             <Text style={styles.linkText} numberOfLines={1}>{dropUrl}</Text>
-            <Text style={styles.gid}>Guardian-ID for your doctor: <Text style={{ color: C.brand, fontWeight: '900' }}>{(user?.did || '').slice(-6).toUpperCase()}</Text></Text>
+            <Text style={styles.gid}>{tt('health_drop.guardian_id_for_your_doctor')} <Text style={{ color: C.brand, fontWeight: '900' }}>{(user?.did || '').slice(-6).toUpperCase()}</Text></Text>
             <View style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
               <Pressable testID="hd-copy" onPress={copy} style={styles.ctaOutline}>
                 <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={C.brand} />
-                <Text style={styles.ctaOutlineText}>{copied ? 'COPIED' : 'COPY'}</Text>
+                <Text style={styles.ctaOutlineText}>{copied ? tt('health_drop.copied') : tt('health_drop.copy')}</Text>
               </Pressable>
               <Pressable testID="hd-share" onPress={shareLink} style={styles.cta}>
                 <Ionicons name="share-social-outline" size={16} color={C.onInverse} />
-                <Text style={styles.ctaText}>SHARE LINK</Text>
+                <Text style={styles.ctaText}>{tt('health_drop.share_link')}</Text>
               </Pressable>
             </View>
           </View>
@@ -135,24 +136,24 @@ export default function HealthDrop() {
           <View style={styles.bookedBox}>
             <Ionicons name="checkmark-circle" size={22} color="#5FA779" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.bookedTitle}>APPOINTMENT BOOKED</Text>
+              <Text style={styles.bookedTitle}>{tt('health_drop.appointment_booked')}</Text>
               <Text style={styles.bookedSub}>{booked.specialty}: {booked.found_slot}</Text>
               <Pressable testID="hd-open-timeline" onPress={() => router.push('/health-timeline')}>
-                <Text style={styles.bookedLink}>View in Health Timeline →</Text>
+                <Text style={styles.bookedLink}>{tt('health_drop.view_in_health_timeline')}</Text>
               </Pressable>
             </View>
           </View>
         )}
 
-        <Text style={styles.section}>RECEIVED DOCUMENTS ({inbox.length})</Text>
-        {inbox.length === 0 && <Text style={styles.hint}>None yet. Send the Drop link to your doctor.</Text>}
+        <Text style={styles.section}>{tt('health_drop.received_documents')}{inbox.length})</Text>
+        {inbox.length === 0 && <Text style={styles.hint}>{tt('health_drop.none_yet_send_the_drop_link_to_your')}</Text>}
         {inbox.map(item => (
           <View key={item.drop_doc_id} style={styles.docCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
               <View style={styles.docIcon}><Ionicons name="document-lock-outline" size={20} color={C.brand} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.docTitle}>{item.doc_title}</Text>
-                <Text style={styles.docSub}>{item.sender_name} · {(item.created_at || '').slice(0, 10)} · encrypted</Text>
+                <Text style={styles.docSub}>{item.sender_name} · {(item.created_at || '').slice(0, 10)} {tt('health_drop.encrypted')}</Text>
               </View>
               <Pressable testID={`hd-open-${item.drop_doc_id}`} onPress={() => openDoc(item)} disabled={busy === item.drop_doc_id} style={styles.openBtn}>
                 {busy === item.drop_doc_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Ionicons name="lock-open-outline" size={17} color={C.onInverse} />}
@@ -161,14 +162,14 @@ export default function HealthDrop() {
             {item.is_referral && !item.autobooked && (
               <View style={styles.jarvisBox}>
                 <Text style={styles.jarvisText}>
-                  🤖 Jarvis: I can see a referral{item.specialty_guess ? ` for ${item.specialty_guess}` : ''}. Shall I find and book the earliest available appointment?
+                  {tt('health_drop.jarvis_i_can_see_a_referral')}{item.specialty_guess ? tt('health_drop.for', [item.specialty_guess]) : ''}{tt('health_drop.shall_i_find_and_book_the_earliest_a')}
                 </Text>
                 <Pressable testID={`hd-autobook-${item.drop_doc_id}`} onPress={() => autobook(item)} disabled={busy === `ab-${item.drop_doc_id}`} style={styles.jarvisBtn}>
-                  {busy === `ab-${item.drop_doc_id}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.jarvisBtnText}>YES, BOOK (AUTO-BOOKER)</Text>}
+                  {busy === `ab-${item.drop_doc_id}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.jarvisBtnText}>{tt('health_drop.yes_book_auto_booker')}</Text>}
                 </Pressable>
               </View>
             )}
-            {item.autobooked && <Text style={styles.bookedFlag}>✓ Appointment booked by the Auto-Booker</Text>}
+            {item.autobooked && <Text style={styles.bookedFlag}>{tt('health_drop.appointment_booked_by_the_auto_booke')}</Text>}
           </View>
         ))}
       </ScrollView>

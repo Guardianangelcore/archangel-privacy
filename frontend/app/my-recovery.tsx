@@ -12,6 +12,7 @@ import { WheelField, DateField, TimeField } from '@/src/ui/fields';
 import { EmptyState } from '@/src/ui/EmptyState';
 import { t, Lang } from '@/src/i18n';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const CONTRACTS = [['fulltime', 'Full-time'], ['dpp', 'Part-time (DPP)'], ['dpc', 'Contract (DPC)']];
 
@@ -34,6 +35,7 @@ function outingStatus(outings: any[]) {
 }
 
 export default function MyRecovery() {
+  const { t: tt, tx } = useI18n();
   const router = useRouter();
   const { user } = useAuth();
   const lang: Lang = (user?.language as Lang) || 'en';
@@ -149,12 +151,12 @@ export default function MyRecovery() {
         <Pressable testID="mr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>MOJE ZOTAVENIE</Text>
+        <Text style={styles.title}>{tt('my_recovery.moje_zotavenie')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Hustle Recovery Guard</Text>
-        <Text style={styles.sub}>Sick leave under control: outings, sick pay and official reports — zero paperwork.</Text>
+        <Text style={styles.h1}>{tt('my_recovery.hustle_recovery_guard')}</Text>
+        <Text style={styles.sub}>{tt('my_recovery.sick_leave_under_control_outings_sic')}</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
         {!!info && <Text style={styles.info}>{info}</Text>}
 
@@ -168,20 +170,20 @@ export default function MyRecovery() {
             <View style={{ flex: 1 }}>
               <Text style={styles.statusTitle}>
                 {status.active
-                  ? (status as any).left <= 15 ? `HEAD BACK HOME — ends in ${(status as any).left} min` : `OUTING ACTIVE · ${(status as any).left} min left`
-                  : 'YOU ARE IN HOME MODE'}
+                  ? (status as any).left <= 15 ? tt('my_recovery.head_back_home_ends_in_min', [(status as any).left]) : tt('my_recovery.outing_active_min_left', [(status as any).left])
+                  : tt('my_recovery.you_are_in_home_mode')}
               </Text>
               <Text style={styles.statusSub}>
-                {status.active ? `Window ${(status as any).window}` : (status as any).next ? `Next outing: ${(status as any).next}` : 'No more outings today'}
+                {status.active ? tt('my_recovery.window', [(status as any).window]) : (status as any).next ? tt('my_recovery.next_outing', [(status as any).next]) : tt('my_recovery.no_more_outings_today')}
               </Text>
             </View>
           </View>
         )}
 
-        <Text style={styles.section}>eSICK-NOTE RECORD</Text>
+        <Text style={styles.section}>{tt('my_recovery.esick_note_record')}</Text>
         <View style={styles.row2}>
-          <DateField testID="mr-start" title="SICK LEAVE START" value={start} onChange={setStart} placeholder="Sick leave start" style={[styles.input, { flex: 1 }]} />
-          <DateField testID="mr-end" title="KONIEC PN (ODHAD)" value={end} onChange={setEnd} placeholder="Koniec (odhad)" style={[styles.input, { flex: 1 }]} />
+          <DateField testID="mr-start" title={tt('my_recovery.sick_leave_start')} value={start} onChange={setStart} placeholder={tt('my_recovery.sick_leave_start_wz0a')} style={[styles.input, { flex: 1 }]} />
+          <DateField testID="mr-end" title={tt('my_recovery.koniec_pn_odhad')} value={end} onChange={setEnd} placeholder={tt('my_recovery.koniec_odhad')} style={[styles.input, { flex: 1 }]} />
         </View>
         <View style={styles.row2}>
           {CONTRACTS.map(([k, l]) => (
@@ -189,11 +191,11 @@ export default function MyRecovery() {
               <Text style={[styles.chipText, contract === k && { color: C.onInverse }]}>{l}</Text>
             </Pressable>
           ))}
-          <WheelField testID="mr-gross" title="GROSS SALARY €" min={300} max={5000} step={10} unit="€" value={gross} onChange={setGross} placeholder="Gross salary €" style={[styles.input, { flex: 1 }]} />
+          <WheelField testID="mr-gross" title={tt('my_recovery.gross_salary')} min={300} max={5000} step={10} unit="€" value={gross} onChange={setGross} placeholder={tt('my_recovery.gross_salary_19we')} style={[styles.input, { flex: 1 }]} />
         </View>
-        <TextInput testID="mr-note" style={styles.input} placeholder="Recovery note (e.g. knee after arthroscopy)" placeholderTextColor={C.info} value={note} onChangeText={setNote} />
+        <TextInput testID="mr-note" style={styles.input} placeholder={tt('my_recovery.recovery_note_e_g_knee_after_arthros')} placeholderTextColor={C.info} value={note} onChangeText={setNote} />
 
-        <Text style={styles.section}>OUTINGS (PERMITTED HOURS)</Text>
+        <Text style={styles.section}>{tt('my_recovery.outings_permitted_hours')}</Text>
         {outings.map((o, i) => (
           <View key={i} style={styles.outRow}>
             <Ionicons name="time-outline" size={16} color={C.brand} />
@@ -205,38 +207,38 @@ export default function MyRecovery() {
           </View>
         ))}
         <View style={styles.row2}>
-          <TimeField testID="mr-out-from" title="OUTING FROM" value={oFrom} onChange={setOFrom} placeholder="From" style={[styles.input, { flex: 1 }]} />
-          <TimeField testID="mr-out-to" title="OUTING TO" value={oTo} onChange={setOTo} placeholder="To" style={[styles.input, { flex: 1 }]} />
+          <TimeField testID="mr-out-from" title={tt('my_recovery.outing_from')} value={oFrom} onChange={setOFrom} placeholder={tt('my_recovery.from')} style={[styles.input, { flex: 1 }]} />
+          <TimeField testID="mr-out-to" title={tt('my_recovery.outing_to')} value={oTo} onChange={setOTo} placeholder={tt('my_recovery.to')} style={[styles.input, { flex: 1 }]} />
           <Pressable testID="mr-out-add" onPress={addOuting} style={styles.addBtn}><Ionicons name="add" size={20} color={C.onInverse} /></Pressable>
         </View>
         <Pressable testID="mr-ai-toggle" onPress={() => setShowAi(!showAi)} style={styles.aiToggle}>
           <Ionicons name="sparkles-outline" size={15} color={C.brand} />
-          <Text style={styles.aiToggleText}>JARVIS: EXTRACT OUTINGS FROM A CONFIRMATION</Text>
+          <Text style={styles.aiToggleText}>{tt('my_recovery.jarvis_extract_outings_from_a_confir')}</Text>
         </Pressable>
         {showAi && (
           <View style={{ gap: S.sm }}>
-            <TextInput testID="mr-ai-text" style={[styles.input, { minHeight: 90, textAlignVertical: 'top', paddingTop: S.md }]} multiline placeholder="Paste text from an eSick-note / doctor confirmation…" placeholderTextColor={C.info} value={aiText} onChangeText={setAiText} />
+            <TextInput testID="mr-ai-text" style={[styles.input, { minHeight: 90, textAlignVertical: 'top', paddingTop: S.md }]} multiline placeholder={tt('my_recovery.paste_text_from_an_esick_note_doctor')} placeholderTextColor={C.info} value={aiText} onChangeText={setAiText} />
             <Pressable testID="mr-ai-run" onPress={extractAi} disabled={busy === 'ai'} style={styles.ctaOutline}>
-              {busy === 'ai' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>EXTRACT (AI)</Text>}
+              {busy === 'ai' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>{tt('my_recovery.extract_ai')}</Text>}
             </Pressable>
           </View>
         )}
 
         <View style={styles.row2}>
           <Pressable testID="mr-save" onPress={save} disabled={busy === 'save'} style={[styles.cta, { flex: 1 }]}>
-            {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>SAVE eSICK-NOTE</Text>}
+            {busy === 'save' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('my_recovery.save_esick_note')}</Text>}
           </Pressable>
           <Pressable testID="mr-alerts" onPress={scheduleAlerts} style={[styles.ctaOutline, { flex: 1 }]}>
             <Ionicons name="alarm-outline" size={15} color={C.brand} />
-            <Text style={styles.ctaOutlineText}>UPOZORNENIA</Text>
+            <Text style={styles.ctaOutlineText}>{tt('my_recovery.upozornenia')}</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.section}>SICK-PAY CALCULATOR</Text>
+        <Text style={styles.section}>{tt('my_recovery.sick_pay_calculator')}</Text>
         <View style={styles.row2}>
-          <WheelField testID="mr-days" title="SICK LEAVE DAYS" min={1} max={365} unit="days" value={days} onChange={setDays} placeholder="Number of days" style={[styles.input, { flex: 1 }]} />
+          <WheelField testID="mr-days" title={tt('my_recovery.sick_leave_days')} min={1} max={365} unit="days" value={days} onChange={setDays} placeholder={tt('my_recovery.number_of_days')} style={[styles.input, { flex: 1 }]} />
           <Pressable testID="mr-calc" onPress={runCalc} disabled={busy === 'calc'} style={[styles.cta, { flex: 1 }]}>
-            {busy === 'calc' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>CALCULATE</Text>}
+            {busy === 'calc' ? <ActivityIndicator color={C.onInverse} /> : <Text style={styles.ctaText}>{tt('my_recovery.calculate')}</Text>}
           </Pressable>
         </View>
         {calc && (
@@ -248,17 +250,17 @@ export default function MyRecovery() {
               </View>
             ))}
             <View style={[styles.calcRow, { borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.sm }]}>
-              <Text style={[styles.calcLabel, { fontWeight: '900', color: C.fg }]}>ESTIMATED TOTAL ({calc.days} days)</Text>
+              <Text style={[styles.calcLabel, { fontWeight: '900', color: C.fg }]}>{tt('my_recovery.estimated_total')}{calc.days} {tt('my_recovery.days')}</Text>
               <Text style={[styles.calcVal, { color: C.brand, fontSize: 15 }]}>{calc.total_estimate} €</Text>
             </View>
             <View style={styles.calcRow}>
-              <Text style={styles.calcLabel}>Income shortfall</Text>
+              <Text style={styles.calcLabel}>{tt('my_recovery.income_shortfall')}</Text>
               <Text style={[styles.calcVal, { color: calc.shortfall_pct >= 30 ? C.error : C.fg }]}>−{calc.shortfall} € ({calc.shortfall_pct} %)</Text>
             </View>
             {calc.solidarity_suggested && (
               <Pressable testID="mr-solidarity" onPress={() => router.push('/solidarity')} style={styles.solBox}>
                 <Ionicons name="people-outline" size={16} color={C.onWarn} />
-                <Text style={styles.solText}>Shortfall over 30% — consider a Solidarity Hub campaign</Text>
+                <Text style={styles.solText}>{tt('my_recovery.shortfall_over_30_consider_a_solidar')}</Text>
               </Pressable>
             )}
             {calc.warnings.map((w: string, i: number) => <Text key={i} style={styles.warn}>⚠ {w}</Text>)}
@@ -266,16 +268,16 @@ export default function MyRecovery() {
           </View>
         )}
 
-        <Text style={styles.section}>ONE-TAP REPORTS (PDF)</Text>
+        <Text style={styles.section}>{tt('my_recovery.one_tap_reports_pdf')}</Text>
         <View style={styles.row2}>
           <Pressable testID="mr-pdf-employer" onPress={() => pdf('employer')} disabled={!rec || busy === 'pdf-employer'} style={[styles.ctaOutline, { flex: 1 }, !rec && { opacity: 0.5 }]}>
-            {busy === 'pdf-employer' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>EMPLOYER</Text>}
+            {busy === 'pdf-employer' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>{tt('my_recovery.employer')}</Text>}
           </Pressable>
           <Pressable testID="mr-pdf-social" onPress={() => pdf('social')} disabled={!rec || busy === 'pdf-social'} style={[styles.ctaOutline, { flex: 1 }, !rec && { opacity: 0.5 }]}>
-            {busy === 'pdf-social' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>SOCIAL INSURANCE</Text>}
+            {busy === 'pdf-social' ? <ActivityIndicator color={C.brand} /> : <Text style={styles.ctaOutlineText}>{tt('my_recovery.social_insurance')}</Text>}
           </Pressable>
         </View>
-        <Text style={styles.disclaimer}>Reports are informational documents — they do not replace official forms until accepted by the authority.</Text>
+        <Text style={styles.disclaimer}>{tt('my_recovery.reports_are_informational_documents')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
