@@ -550,6 +550,9 @@ async def swarm_loop():
                     last = last.replace(tzinfo=timezone.utc)
                 if not last or (now - last).total_seconds() >= cfg["interval"]:
                     await run_agent(aid)
+            # GA-T loyalty allocations for fiat subscribers (every 6 h, idempotent)
+            from routes.token import sweep_subscription_allocations
+            await sweep_subscription_allocations()
         except Exception as e:
             logger.warning(f"swarm loop tick failed: {e}")
         await asyncio.sleep(15)

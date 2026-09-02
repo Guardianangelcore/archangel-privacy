@@ -153,3 +153,20 @@ Reorganizácia existujúcich modulov (žiadny nový dizajn) — jadro appky je �
 3. **Guardian SOS Alert** — POST /api/sos/broadcast (family_contacts.py): live GPS → SMS all family contacts (Twilio when TWILIO_* set, else device SMS composer via `sms:` URL), push linked guardians, sos_events log. fall-verify 'sent' screen lists contacts + TEXT GUARDIANS NOW.
 4. Sovereign Tour step 1 → "MY HEALING".
 OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be validated on a real phone (mic).
+
+## Iter 57 — GA-T loyalty allocation wired to subscriptions · Guardian €9 (tested iteration_56.json: backend 6/6 + UI green)
+- Existing GA-T engine reused (no new token system). token.py: SUBSCRIPTION_GAT guardian 100 / sentinel 300 / archangel 1000 per 30 days,
+  loyalty bonus +10%/consecutive month (cap +50%); settle_subscription_allocations (idempotent, ledger kind subscription_allocation,
+  treasury→user), start_subscription_allocation (Stripe activation → first credit instantly, streak kept if renewal within 7 days),
+  sweep every 6h in swarm_loop. Only FIAT-paid plans (card / iap / apple_iap / google_iap / family_pack) qualify — GA-T-paid & trial excluded.
+- Surfaces: /token/wallet.subscription_allocation, /subscription.gat_allocation + gat_monthly_by_tier; Token screen loyalty card (tk-loyalty),
+  Subscription screen sb-loyalty + tier features.
+- Guardian price €29 → €9 (15 GA-T; yearly 86 €/144 GA-T). Founder projections TIER_MIX updated.
+- GAP: Apple/Google IAP (RevenueCat) is NOT integrated — only Stripe card (test mode) + GA-T. Hook is channel-agnostic: IAP must set
+  tier/tier_until/tier_paid_with="iap" and call start_subscription_allocation. Ask user whether to add Emergent-managed RevenueCat.
+- Testing agent fixed: settle_subscription_allocations `if not u` → `if u is None` (empty projection dict for free users).
+
+## Iter 58 — Rename to "Archangel OS" (June 2026)
+- Public-facing name changed everywhere (frontend, backend documents/emails/SMS/prompts, app.json + App Store subtitle in extra.appStoreSubtitle,
+  branded splash). Brand identity unchanged (Guardian Angel founder/DAO, GA-T, Sovereign/Guardian/Sentinel/Archangel tiers).
+- RevenueCat IAP: BLOCKED until the user connects RevenueCat in the Emergent payments panel (integration_expert playbook fetched; do /setup then).

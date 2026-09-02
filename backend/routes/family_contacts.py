@@ -93,7 +93,7 @@ def _sos_body(user: dict, lat: Optional[float] = None, lng: Optional[float] = No
     lat = lat if lat is not None else (user.get("lat") or geo.get("lat"))
     lng = lng if lng is not None else (user.get("lng") or geo.get("lng"))
     loc = f" My live location: https://maps.google.com/?q={lat},{lng}" if lat and lng else ""
-    return f"🆘 SOS! I need help.{loc} — {who} (Guardian Health & Angel)"
+    return f"🆘 SOS! I need help.{loc} — {who} (Archangel OS)"
 
 
 async def _send_sms(phone: str, body: str) -> tuple:

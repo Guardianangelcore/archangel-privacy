@@ -1,5 +1,5 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-// Adaptive i18n dictionary for Guardian Health & Angel — 14-language global launch
+// Adaptive i18n dictionary for Archangel OS — 14-language global launch
 export type Lang = 'sk' | 'cs' | 'en' | 'de' | 'pl' | 'hu' | 'ru' | 'es' | 'fr' | 'it' | 'uk' | 'zh' | 'ja' | 'ar';
 
 export const LANG_NAMES: Record<Lang, string> = {
@@ -24,8 +24,8 @@ export const isRTL = (l: Lang) => l === 'ar';
 type Dict = Record<string, Partial<Record<Lang, string>>>;
 
 export const T: Dict = {
-  app_name: { sk: 'Guardian Health & Angel', cs: 'Guardian Health & Angel', en: 'Guardian Health & Angel', de: 'Guardian Health & Angel' },
-  tagline: { sk: 'Suverénny operačný systém pre zdravie a bezpečnosť.', cs: 'Suverénní operační systém pro zdraví a bezpečí.', en: 'A sovereign OS for medical dignity and safety.', de: 'Souveränes Betriebssystem für Gesundheit und Sicherheit.' },
+  app_name: { sk: 'Archangel OS', cs: 'Archangel OS', en: 'Archangel OS', de: 'Archangel OS' },
+  tagline: { sk: 'Váš suverénny spoločník pre zdravie a bezpečnosť.', cs: 'Váš suverénní společník pro zdraví a bezpečí.', en: 'Your sovereign health & safety companion.', de: 'Ihr souveräner Begleiter für Gesundheit und Sicherheit.' },
   author_credit: { sk: 'Vízia: Guardian Angel', cs: 'Vize: Guardian Angel', en: 'Vision by Guardian Angel', de: 'Vision von Guardian Angel' },
   sign_in_google: { sk: 'Prihlásiť sa cez Google', cs: 'Přihlásit se přes Google', en: 'Sign in with Google', de: 'Mit Google anmelden' },
   choose_language: { sk: 'Vyberte jazyk', cs: 'Vyberte jazyk', en: 'Choose language', de: 'Sprache wählen' },
@@ -297,7 +297,7 @@ export function t(key: string, lang: Lang): string {
 // Any key missing here gracefully falls back to English.
 const EXT: Partial<Record<Lang, Record<string, string>>> = {
   pl: {
-    tagline: 'Suwerenny system operacyjny dla zdrowia i bezpieczeństwa.', author_credit: 'Wizja: Guardian Angel',
+    tagline: 'Twój suwerenny towarzysz zdrowia i bezpieczeństwa.', author_credit: 'Wizja: Guardian Angel',
     sign_in_google: 'Zaloguj się przez Google', choose_language: 'Wybierz język', standard_mode: 'Tryb standardowy', angel_mode: 'Tryb Angel',
     home: 'Start', vault: 'Sejf', waitlist: 'Terminy', profile: 'Profil', sos: 'SOS', call_family: 'Zadzwoń do rodziny',
     medications: 'Leki', documents: 'Dokumenty', upload_doc: 'Prześlij dokument', translate: 'Tłumacz AI',
@@ -330,7 +330,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'Kamera zablokowana — OTWÓRZ USTAWIENIA', ph_video_guide: '▶ PRZEWODNIK WIDEO · HD',
   },
   hu: {
-    tagline: 'Szuverén operációs rendszer az egészségért és biztonságért.', author_credit: 'Vízió: Guardian Angel',
+    tagline: 'Szuverén társad az egészségben és a biztonságban.', author_credit: 'Vízió: Guardian Angel',
     sign_in_google: 'Bejelentkezés Google-fiókkal', choose_language: 'Válasszon nyelvet', standard_mode: 'Normál mód', angel_mode: 'Angel mód',
     home: 'Kezdőlap', vault: 'Széf', waitlist: 'Időpontok', profile: 'Profil', sos: 'SOS', call_family: 'Család hívása',
     medications: 'Gyógyszerek', documents: 'Dokumentumok', upload_doc: 'Dokumentum feltöltése', translate: 'AI fordító',
@@ -363,7 +363,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'A kamera le van tiltva — BEÁLLÍTÁSOK MEGNYITÁSA', ph_video_guide: '▶ VIDEÓS ÚTMUTATÓ · HD',
   },
   ru: {
-    tagline: 'Суверенная операционная система для здоровья и безопасности.', author_credit: 'Видение: Guardian Angel',
+    tagline: 'Ваш суверенный спутник здоровья и безопасности.', author_credit: 'Видение: Guardian Angel',
     sign_in_google: 'Войти через Google', choose_language: 'Выберите язык', standard_mode: 'Стандартный режим', angel_mode: 'Режим Angel',
     home: 'Главная', vault: 'Сейф', waitlist: 'Приёмы', profile: 'Профиль', sos: 'SOS', call_family: 'Позвонить семье',
     medications: 'Лекарства', documents: 'Документы', upload_doc: 'Загрузить документ', translate: 'AI-перевод',
@@ -396,7 +396,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'Камера заблокирована — ОТКРЫТЬ НАСТРОЙКИ', ph_video_guide: '▶ ВИДЕО-ГИД · HD',
   },
   es: {
-    tagline: 'Un sistema operativo soberano para la dignidad médica y la seguridad.', author_credit: 'Visión: Guardian Angel',
+    tagline: 'Tu compañero soberano de salud y seguridad.', author_credit: 'Visión: Guardian Angel',
     sign_in_google: 'Iniciar sesión con Google', choose_language: 'Elige idioma', standard_mode: 'Modo estándar', angel_mode: 'Modo Angel',
     home: 'Inicio', vault: 'Caja fuerte', waitlist: 'Citas', profile: 'Perfil', sos: 'SOS', call_family: 'Llamar a la familia',
     medications: 'Medicamentos', documents: 'Documentos', upload_doc: 'Subir documento', translate: 'Traductor IA',
@@ -429,7 +429,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'Cámara bloqueada — ABRIR AJUSTES', ph_video_guide: '▶ VIDEOGUÍA · HD',
   },
   fr: {
-    tagline: 'Un OS souverain pour la dignité médicale et la sécurité.', author_credit: 'Vision : Guardian Angel',
+    tagline: 'Votre compagnon souverain de santé et de sécurité.', author_credit: 'Vision : Guardian Angel',
     sign_in_google: 'Se connecter avec Google', choose_language: 'Choisir la langue', standard_mode: 'Mode standard', angel_mode: 'Mode Angel',
     home: 'Accueil', vault: 'Coffre', waitlist: 'Rendez-vous', profile: 'Profil', sos: 'SOS', call_family: 'Appeler la famille',
     medications: 'Médicaments', documents: 'Documents', upload_doc: 'Téléverser un document', translate: 'Traduction IA',
@@ -462,7 +462,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'Caméra bloquée — OUVRIR LES RÉGLAGES', ph_video_guide: '▶ GUIDE VIDÉO · HD',
   },
   it: {
-    tagline: 'Un sistema operativo sovrano per la dignità medica e la sicurezza.', author_credit: 'Visione: Guardian Angel',
+    tagline: 'Il tuo compagno sovrano per salute e sicurezza.', author_credit: 'Visione: Guardian Angel',
     sign_in_google: 'Accedi con Google', choose_language: 'Scegli la lingua', standard_mode: 'Modalità standard', angel_mode: 'Modalità Angel',
     home: 'Home', vault: 'Cassaforte', waitlist: 'Appuntamenti', profile: 'Profilo', sos: 'SOS', call_family: 'Chiama la famiglia',
     medications: 'Farmaci', documents: 'Documenti', upload_doc: 'Carica documento', translate: 'Traduttore IA',
@@ -495,7 +495,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'Fotocamera bloccata — APRI IMPOSTAZIONI', ph_video_guide: '▶ VIDEOGUIDA · HD',
   },
   uk: {
-    tagline: 'Суверенна операційна система для здоров’я та безпеки.', author_credit: 'Візія: Guardian Angel',
+    tagline: 'Ваш суверенний супутник здоровʼя та безпеки.', author_credit: 'Візія: Guardian Angel',
     sign_in_google: 'Увійти через Google', choose_language: 'Оберіть мову', standard_mode: 'Стандартний режим', angel_mode: 'Режим Angel',
     home: 'Головна', vault: 'Сейф', waitlist: 'Прийоми', profile: 'Профіль', sos: 'SOS', call_family: 'Подзвонити родині',
     medications: 'Ліки', documents: 'Документи', upload_doc: 'Завантажити документ', translate: 'AI-переклад',
@@ -528,7 +528,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'Камера заблокована — ВІДКРИТИ НАЛАШТУВАННЯ', ph_video_guide: '▶ ВІДЕО-ГІД · HD',
   },
   zh: {
-    tagline: '守护健康与安全的主权操作系统。', author_credit: '愿景：Guardian Angel',
+    tagline: '您的主权健康与安全伙伴。', author_credit: '愿景：Guardian Angel',
     sign_in_google: '使用 Google 登录', choose_language: '选择语言', standard_mode: '标准模式', angel_mode: '天使模式',
     home: '首页', vault: '保险库', waitlist: '预约', profile: '个人资料', sos: 'SOS', call_family: '呼叫家人',
     medications: '药物', documents: '文件', upload_doc: '上传文件', translate: 'AI 翻译',
@@ -561,7 +561,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: '相机被禁用——打开设置', ph_video_guide: '▶ 视频指南 · HD',
   },
   ja: {
-    tagline: '健康と安全のためのソブリンOS。', author_credit: 'ビジョン：Guardian Angel',
+    tagline: 'あなたの主権的な健康と安全のパートナー。', author_credit: 'ビジョン：Guardian Angel',
     sign_in_google: 'Googleでログイン', choose_language: '言語を選択', standard_mode: '標準モード', angel_mode: 'エンジェルモード',
     home: 'ホーム', vault: '金庫', waitlist: '予約', profile: 'プロフィール', sos: 'SOS', call_family: '家族に電話',
     medications: '薬', documents: '書類', upload_doc: '書類をアップロード', translate: 'AI翻訳',
@@ -594,7 +594,7 @@ const EXT: Partial<Record<Lang, Record<string, string>>> = {
     ph_cam_blocked: 'カメラがブロックされています——設定を開く', ph_video_guide: '▶ ビデオガイド · HD',
   },
   ar: {
-    tagline: 'نظام تشغيل سيادي للكرامة الطبية والسلامة.', author_credit: 'الرؤية: Guardian Angel',
+    tagline: 'رفيقك السيادي للصحة والسلامة.', author_credit: 'الرؤية: Guardian Angel',
     sign_in_google: 'تسجيل الدخول عبر Google', choose_language: 'اختر اللغة', standard_mode: 'الوضع القياسي', angel_mode: 'وضع الملاك',
     home: 'الرئيسية', vault: 'الخزنة', waitlist: 'المواعيد', profile: 'الملف الشخصي', sos: 'استغاثة', call_family: 'الاتصال بالعائلة',
     medications: 'الأدوية', documents: 'المستندات', upload_doc: 'رفع مستند', translate: 'الترجمة بالذكاء الاصطناعي',

@@ -221,7 +221,7 @@ async def _auth_pdf(authorization: Optional[str], token: Optional[str]) -> dict:
 
 def _pdf_footer(doc_hash: Optional[str] = None) -> str:
     base = (
-        f"Guardian Health & Angel · Guardian Angel Sovereign Foundation (DAO) · Vygenerované / Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+        f"Archangel OS · Guardian Angel Sovereign Foundation (DAO) · Vygenerované / Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
         "Dokument je šablóna — pre plnú právnu záväznosť sa vyžaduje vlastnoručný podpis a náležitosti podľa vašej jurisdikcie. "
         "This document is a template — full legal validity requires a handwritten signature and the formalities of your jurisdiction.\n"
         "AI obsah je len informačný / AI content is informational only (EU AI Act Art. 50)."

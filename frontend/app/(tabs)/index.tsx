@@ -169,7 +169,7 @@ export default function Home() {
         <View testID="home-welcome-banner" style={styles.welcomeBanner}>
           <Ionicons name="shield-checkmark" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.welcomeTitle}>Guardian Angel OS</Text>
+            <Text style={styles.welcomeTitle}>Archangel OS</Text>
             <Text style={styles.welcomeSub}>{t('welcome_sub', lang)}</Text>
           </View>
         </View>

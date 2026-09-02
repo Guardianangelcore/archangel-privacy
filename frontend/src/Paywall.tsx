@@ -16,7 +16,7 @@ type Props = {
 };
 
 const TIER_UI = {
-  guardian: { title: 'GUARDIAN PLAN', color: '#B8860B', icon: 'shield-checkmark' as const, tiers: 'VIEW PLANS (GUARDIAN €29 / SENTINEL €149)' },
+  guardian: { title: 'GUARDIAN PLAN', color: '#B8860B', icon: 'shield-checkmark' as const, tiers: 'VIEW PLANS (GUARDIAN €9 / SENTINEL €149)' },
   sentinel: { title: 'SENTINEL EXCLUSIVE', color: '#E5E4E2', icon: 'diamond' as const, tiers: 'VIEW TIERS (SENTINEL €149 / ARCHANGEL €499)' },
 };
 

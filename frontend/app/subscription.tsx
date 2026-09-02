@@ -160,6 +160,14 @@ export default function Subscription() {
             <Text style={styles.gat}>💎 {Number(data.gat_balance).toFixed(0)} GA-T</Text>
           </View>
         )}
+        {/* LOYALTY LOOP — paid plan → automatic monthly GA-T allocation */}
+        {data?.gat_allocation && (
+          <Text testID="sb-loyalty" style={styles.loyalty}>
+            {data.gat_allocation.eligible
+              ? `💎 Loyalty: +${Number(data.gat_allocation.next_amount).toFixed(0)} GA-T on ${String(data.gat_allocation.next_at || '').slice(0, 10)} · ${data.gat_allocation.months_collected} month(s) collected · bonus +${data.gat_allocation.next_bonus_pct}%`
+              : `💎 Every paid plan credits GA-T automatically each month: Guardian ${data.gat_monthly_by_tier?.guardian ?? 100} · Sentinel ${data.gat_monthly_by_tier?.sentinel ?? 300} · Archangel ${data.gat_monthly_by_tier?.archangel ?? 1000} (+10% loyalty bonus per month, max +50%).`}
+          </Text>
+        )}
 
         {data?.trial_available && (
           <Pressable testID="sb-trial" onPress={trial} disabled={busy === 'trial'} style={styles.trialBtn}>
@@ -356,6 +364,7 @@ const styles = StyleSheet.create({
   sub: { marginTop: S.sm, fontSize: 12.5, color: C.onS3, lineHeight: 18 },
   currentBox: { flexDirection: 'row', alignItems: 'center', gap: S.sm, backgroundColor: C.surface2, borderRadius: R.sm, padding: S.md, marginTop: S.lg },
   currentText: { flex: 1, color: C.fg, fontWeight: '900', fontSize: 11, letterSpacing: 0.5 },
+  loyalty: { color: '#B8860B', fontSize: 11, lineHeight: 16, fontWeight: '800', marginBottom: S.md },
   gat: { color: '#B8860B', fontWeight: '800', fontSize: 11 },
   trialBtn: { marginTop: S.md, backgroundColor: PLATINUM, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   trialText: { color: OBSIDIAN, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },

@@ -21,7 +21,7 @@ RELEASE_DOCS = {
 }
 
 # ---- Financial forecast (deterministic, tier-mix driven) --------------------
-TIER_MIX = {"guardian": (29.0, 0.80), "sentinel": (149.0, 0.17), "archangel": (499.0, 0.03)}
+TIER_MIX = {"guardian": (9.0, 0.80), "sentinel": (149.0, 0.17), "archangel": (499.0, 0.03)}
 ARPU_PAID = round(sum(p * w for p, w in TIER_MIX.values()), 2)  # blended €/mo per paid user
 GUARDIAN_TAX = 0.15  # hard-coded 15 % take on marketplace + gig GMV
 

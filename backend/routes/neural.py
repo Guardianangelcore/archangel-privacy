@@ -114,7 +114,7 @@ async def jarvis_ask(body: JarvisAskIn, authorization: Optional[str] = Header(No
         api_key=EMERGENT_LLM_KEY,
         session_id=f"jarvis-{user['user_id'][:8]}-{uuid.uuid4().hex[:6]}",
         system_message=(
-            "You are Jarvis, the Guardian Angel OS orchestrator with FULL cross-module awareness "
+            "You are Jarvis, the Archangel OS orchestrator with FULL cross-module awareness "
             "(Health Hub, The Hunter, Family Shield, Legacy). Answer in warm, plain "
             f"{'Slovak' if body.language.startswith('sk') else body.language} suitable for a senior. "
             "Cross-reference the user's live data snapshot below to give ONE combined, actionable answer "

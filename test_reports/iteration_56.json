@@ -1,0 +1,39 @@
+{
+  "summary": "Iter 56 — GA-T subscription-loyalty allocation wired to fiat subscribers verified end-to-end. Backend 6/6 pytest passed: guardian price €9/15 GA-T + €86 annual + '100 GA-T credited every month' feature, gat_allocation + gat_monthly_by_tier fields on /api/subscription, spend_items.tier_guardian_30d=15 & tier_guardian_365d=144. Full 8-step allocation flow validated on a fresh dev-bypass user (loyalty-qa-<rand>@example.com): sovereign→no_active_subscription; card-paid guardian first credit=100 balance & next=110/+10% & ledger period_index=1 exists; idempotent second wallet call; anchor -65d & tier_until +300d → 2 more credits, balance 330 (100+110+120), next=130/+30%; paid_with 'GA-T'→paid_with_gat_or_trial ineligible & balance frozen; trial→ineligible; card+expired tier_until→no_active_subscription; /token/ledger?verify=1 chain.intact=true; /api/subscription mirrors allocation numbers for card-paid state. Regression: document_scan earn +2 GA-T works, spend tier_guardian_30d (15 GA-T) sets tier=guardian/paid_with=GA-T and subsequent wallet correctly reports paid_with_gat_or_trial ineligible. Frontend confirmed on mobile viewport (390x844): loyalty-test@example.com /token shows tk-loyalty='PREMIUM LOYALTY ALLOCATION', tk-loyalty-status='+130 GA-T on 2026-09-27', sub-text 'GUARDIAN plan · 3 months collected · loyalty bonus +30%', tk-balance=330.0, RECENT TRANSACTIONS list contains 'LOYALTY +…' rows; /subscription shows Guardian '9 €/mes.', '15 GA-T', feature '100 GA-T credited every month', sb-loyalty='💎 Loyalty: +130 GA-T on 2026-09-27 · 3 month(s) collected · bonus +30%'. free-tier-test@example.com /token tk-loyalty upsell 'Subscribe to Guardian (9 €/month) …', tk-loyalty-upgrade→/subscription navigates OK; /subscription sb-loyalty lists 'Guardian 100 · Sentinel 300 · Archangel 1000'; /jarvis jv-guardian-gate pw-upgrade text='VIEW PLANS (GUARDIAN €9 / SENTINEL €149)' (no €29). Loyalty-test user restored to tier=guardian/paid_with=card/active for future runs. Fixed one minor bug: settle_subscription_allocations returned {reason:'no_user'} for any user whose users doc had none of the projected fields (empty projection dict is falsy) which surfaced as 'NaN GA-T' in the free-user token upsell; changed `if not u:` → `if u is None:` and added monthly_amount fallback.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/token/wallet", "issue": "settle_subscription_allocations used `if not u:` on a projected find_one; when the users doc has none of the projected keys, Mongo returns an empty dict which is falsy → wallet incorrectly reports reason='no_user' and omits monthly_amount. Fixed to `if u is None:` and added monthly_amount fallback. Verified free-tier-test@example.com now returns {eligible:false, reason:'no_active_subscription', tier:'sovereign', monthly_amount:100.0}."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["React Native Web deprecation warnings in console: shadow* / textShadow* style props deprecated (use boxShadow/textShadow); props.pointerEvents deprecated (use style.pointerEvents). Non-blocking, but should be cleaned up eventually."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter56_loyalty_allocation.py",
+    "/app/test_reports/pytest/pytest_iter56.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: clean up react-native-web deprecation warnings (shadow*/textShadow*/pointerEvents) across screens for a quieter console."
+  ],
+  "critical_code_review_comments": [
+    "routes/token.py settle_subscription_allocations: Mongo find_one with a positive projection returns {} when zero projected fields exist on the doc — always compare with `is None` to distinguish 'user missing' from 'user has no tier fields'. Fixed here for the wallet path; consider auditing similar patterns elsewhere in routes/*.py (e.g. `if not fresh:` occurrences).",
+    "TIERS['guardian'].price_eur=9 is hard-coded — align with any centralized pricing constants if introduced later.",
+    "Frontend token.tsx line ~116 still uses `Number(monthly_amount).toFixed(0)` — now safe with backend fix, but a defensive `?? 100` fallback would prevent regressions if the backend ever omits the field again."
+  ],
+  "updated_files": [
+    "/app/backend/routes/token.py (bug fix: settle_subscription_allocations `if not u` → `if u is None`, add monthly_amount fallback)",
+    "/app/backend/tests/test_iter56_loyalty_allocation.py (new pytest suite, 6 tests)"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (all requested testIDs & texts verified)"},
+  "seed_data_creation": "Created one throwaway dev-bypass user loyalty-qa-<rand>@example.com for the allocation flow. Also created earnqa-*/spendqa-* users for regression. Existing loyalty-test@example.com left in tier=guardian / tier_paid_with='card' / tier_until=+300d as required.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "GA-T loyalty allocation flow is live and verified. Prices Guardian €9 / 15 GA-T. Ledger chain intact. If regressions arise, run: `pytest /app/backend/tests/test_iter56_loyalty_allocation.py -v -o addopts=''` (needs to override the -n xdist default addopts because event loops conflict across workers for the async DB fixture). Frontend: loyalty-test@example.com (card-paid Guardian) and free-tier-test@example.com (sovereign) are the canonical demo accounts.",
+  "rca_of_issue": "Bug found & fixed: In routes/token.py::settle_subscription_allocations, `db.users.find_one({user_id}, {positive_projection})` returns `{}` (not None) when the user doc exists but has zero projected fields. `if not u:` matched `{}` and returned reason='no_user' without monthly_amount, which the frontend then rendered as 'NaN GA-T' in the free-user upsell text on /token. Fix: `if u is None:` and include monthly_amount fallback. Repro: dev-bypass a brand-new e-mail → GET /api/token/wallet → subscription_allocation.reason was 'no_user' pre-fix, now 'no_active_subscription' with monthly_amount=100.0."
+}

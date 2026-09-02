@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Guardian Angel",
+    "name": "Archangel OS",
     "slug": "frontend",
     "version": "1.0.0",
-    "description": "Guardian Health & Angel — Sovereign Survival OS. © 2026 Guardian Angel. All Rights Reserved. Sole Visionary and Legal Owner: Guardian Angel. Proprietary license.",
+    "description": "Archangel OS — Your sovereign health & safety companion. © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. Sole Visionary and Legal Owner: Guardian Angel. Proprietary license.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
@@ -56,7 +56,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-image.png",
-          "imageWidth": 200,
+          "imageWidth": 280,
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
@@ -85,6 +85,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "appStoreSubtitle": "Your sovereign health & safety companion"
     }
   }
 }

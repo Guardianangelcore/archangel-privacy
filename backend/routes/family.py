@@ -492,7 +492,7 @@ def _make_wallpaper(user: dict, prof: dict) -> bytes:
     qimg = qimg.resize((qsize, qsize))
     qy = max(y + 30, 1280)
     img.paste(qimg, ((W - qsize) // 2, qy))
-    center("GUARDIAN HEALTH & ANGEL · SCAN FOR SURVIVAL INFO", qy + qsize + 36, f_tiny, "#8E8E93")
+    center("ARCHANGEL OS · SCAN FOR SURVIVAL INFO", qy + qsize + 36, f_tiny, "#8E8E93")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()

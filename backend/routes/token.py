@@ -32,10 +32,10 @@ SPEND_ITEMS = {
     "vip_sentinel_30d":    {"price": 100.0, "label": "VIP Sentinel tier (30 days)"},
     "expert_consult":      {"price": 40.0,  "label": "Expert Marketplace — consultation"},
     "priority_hunter_7d":  {"price": 25.0,  "label": "Priority Waitlist Hunter (7 days)"},
-    "tier_guardian_30d":   {"price": 50.0,    "label": "Guardian Tier — 30 days (GA-T)"},
+    "tier_guardian_30d":   {"price": 15.0,    "label": "Guardian Tier — 30 days (GA-T)"},
     "tier_sentinel_30d":   {"price": 250.0,   "label": "Sentinel Tier — 30 days (GA-T)"},
     "tier_archangel_30d":  {"price": 800.0,   "label": "Archangel Tier — 30 days (GA-T)"},
-    "tier_guardian_365d":  {"price": 480.0,   "label": "Guardian Tier — yearly −20% (GA-T)"},
+    "tier_guardian_365d":  {"price": 144.0,   "label": "Guardian Tier — yearly −20% (GA-T)"},
     "tier_sentinel_365d":  {"price": 2400.0,  "label": "Sentinel Tier — yearly −20% (GA-T)"},
     "tier_archangel_365d": {"price": 7680.0,  "label": "Archangel Tier — yearly −20% (GA-T)"},
     "bioscan_single":      {"price": 5.0,  "label": "Vitals Bio-Scanner — 1 meranie"},
@@ -158,6 +158,136 @@ class EarnIn(BaseModel):
 class SpendIn(BaseModel):
     item: str
 
+
+# ---------------- SUBSCRIPTION LOYALTY ALLOCATION ----------------
+# Paid (fiat) subscribers — card today, Apple/Google IAP when RevenueCat lands —
+# automatically receive GA-T every 30 days while the subscription is active:
+# pay fiat → premium features → tokens accrue. The longer you stay, the bigger the
+# monthly credit (+10 % per consecutive month, capped at +50 %). Subscriptions paid
+# WITH GA-T or trials never receive allocations (would be a circular mint).
+SUBSCRIPTION_GAT = {"guardian": 100.0, "sentinel": 300.0, "archangel": 1000.0}
+LOYALTY_BONUS_PER_MONTH = 0.10
+LOYALTY_BONUS_CAP = 0.50
+ALLOCATION_PERIOD_DAYS = 30
+FIAT_SOURCES = ("card", "iap", "apple_iap", "google_iap", "family_pack")
+
+
+def allocation_for(tier: str, month_index: int) -> dict:
+    base = SUBSCRIPTION_GAT.get(tier, 0.0)
+    bonus = min(LOYALTY_BONUS_CAP, LOYALTY_BONUS_PER_MONTH * max(0, month_index - 1))
+    return {"amount": round(base * (1 + bonus), 2), "bonus_pct": int(round(bonus * 100)), "base": base}
+
+
+def _as_utc(d):
+    if d is None:
+        return None
+    if isinstance(d, str):
+        d = datetime.fromisoformat(d.replace("Z", "+00:00"))
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+async def settle_subscription_allocations(user_id: str) -> dict:
+    """Idempotently credit every 30-day allocation due since the paid subscription
+    started (anchor). Runs lazily on wallet/subscription views, on activation and
+    in the periodic sweep, so a renewal on ANY channel (Stripe, IAP) is honoured."""
+    from routes.subscription import current_tier
+    u = await db.users.find_one({"user_id": user_id}, {
+        "_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1, "inner_circle": 1,
+        "gat_alloc_anchor": 1, "gat_alloc_count": 1})
+    if u is None:
+        return {"eligible": False, "reason": "no_user",
+                "monthly_amount": SUBSCRIPTION_GAT["guardian"]}
+    tier = current_tier(u)
+    paid_with = (u.get("tier_paid_with") or "").lower()
+    if tier == "sovereign" or tier not in SUBSCRIPTION_GAT:
+        return {"eligible": False, "reason": "no_active_subscription", "tier": tier,
+                "monthly_amount": SUBSCRIPTION_GAT["guardian"]}
+    if paid_with not in FIAT_SOURCES:
+        return {"eligible": False, "reason": "paid_with_gat_or_trial", "tier": tier, "paid_with": paid_with,
+                "monthly_amount": SUBSCRIPTION_GAT[tier]}
+    now = datetime.now(timezone.utc)
+    anchor = _as_utc(u.get("gat_alloc_anchor"))
+    if not anchor:
+        anchor = now
+        await db.users.update_one({"user_id": user_id}, {"$set": {"gat_alloc_anchor": anchor, "gat_alloc_count": 0}})
+    until = _as_utc(u.get("tier_until"))
+    credited = int(u.get("gat_alloc_count") or 0)
+    due = int((now - anchor).total_seconds() // (ALLOCATION_PERIOD_DAYS * 86400)) + 1
+    credited_now, txs = 0, []
+    for i in range(credited + 1, due + 1):
+        period_start = anchor + timedelta(days=ALLOCATION_PERIOD_DAYS * (i - 1))
+        if until and period_start > until:
+            break
+        dup = await db.token_ledger.find_one({"kind": "subscription_allocation", "account": user_id,
+                                              "meta.anchor": anchor.isoformat(), "meta.period_index": i}, {"_id": 1})
+        if dup:
+            credited = i
+            continue
+        alloc = allocation_for(tier, i)
+        supply = await _get_supply()
+        if supply["treasury"] < alloc["amount"]:
+            break
+        await db.token_supply.update_one({"key": "gat"},
+                                         {"$inc": {"treasury": -alloc["amount"], "circulating": alloc["amount"]}})
+        await db.token_accounts.update_one(
+            {"user_id": user_id},
+            {"$inc": {"balance": alloc["amount"], "earned_total": alloc["amount"], "subscription_total": alloc["amount"]},
+             "$set": {"updated_at": now}}, upsert=True)
+        tx = await _ledger_append("subscription_allocation", user_id, alloc["amount"], {
+            "tier": tier, "paid_with": paid_with, "period_index": i, "anchor": anchor.isoformat(),
+            "period_start": period_start.isoformat(), "bonus_pct": alloc["bonus_pct"],
+            "note": f"Premium loyalty — month {i} ({tier}), +{alloc['bonus_pct']}% bonus"})
+        txs.append(clean(tx))
+        credited, credited_now = i, credited_now + 1
+    if credited != int(u.get("gat_alloc_count") or 0):
+        await db.users.update_one({"user_id": user_id}, {"$set": {"gat_alloc_count": credited}})
+    next_at = anchor + timedelta(days=ALLOCATION_PERIOD_DAYS * credited)
+    nxt = allocation_for(tier, credited + 1)
+    return {"eligible": True, "tier": tier, "paid_with": paid_with,
+            "months_collected": credited, "credited_now": credited_now, "credited_txs": txs,
+            "next_at": next_at.isoformat() if (not until or next_at <= until) else None,
+            "next_amount": nxt["amount"], "next_bonus_pct": nxt["bonus_pct"],
+            "monthly_amount": SUBSCRIPTION_GAT[tier], "period_days": ALLOCATION_PERIOD_DAYS,
+            "loyalty_bonus_per_month_pct": int(LOYALTY_BONUS_PER_MONTH * 100),
+            "loyalty_bonus_cap_pct": int(LOYALTY_BONUS_CAP * 100)}
+
+
+async def start_subscription_allocation(user_id: str, prev: Optional[dict] = None) -> dict:
+    """Called on every fiat activation/renewal. Keeps the loyalty anchor (and the bonus
+    streak) when the previous paid period is still active or lapsed < 7 days ago;
+    otherwise the streak restarts. Then credits the first/next allocation immediately."""
+    now = datetime.now(timezone.utc)
+    prev = prev or {}
+    prev_until = _as_utc(prev.get("tier_until"))
+    keep = bool(prev.get("gat_alloc_anchor")) and (prev.get("tier_paid_with") or "").lower() in FIAT_SOURCES \
+        and prev_until is not None and prev_until >= now - timedelta(days=7)
+    if not keep:
+        await db.users.update_one({"user_id": user_id}, {"$set": {"gat_alloc_anchor": now, "gat_alloc_count": 0}})
+    return await settle_subscription_allocations(user_id)
+
+
+_last_sweep: Optional[datetime] = None
+
+async def sweep_subscription_allocations(every_hours: int = 6) -> int:
+    """Periodic safety net (swarm loop): settle all fiat-paid subscribers so renewals
+    are credited even if the user never opens the wallet."""
+    global _last_sweep
+    now = datetime.now(timezone.utc)
+    if _last_sweep and (now - _last_sweep) < timedelta(hours=every_hours):
+        return 0
+    _last_sweep = now
+    n = 0
+    async for u in db.users.find({"tier": {"$in": list(SUBSCRIPTION_GAT)},
+                                  "tier_paid_with": {"$in": list(FIAT_SOURCES)}}, {"_id": 0, "user_id": 1}):
+        try:
+            r = await settle_subscription_allocations(u["user_id"])
+            n += r.get("credited_now", 0)
+        except Exception as e:
+            logger.warning(f"allocation sweep failed for {u['user_id']}: {e}")
+    if n:
+        logger.info(f"GA-T loyalty sweep credited {n} allocation(s)")
+    return n
+
 @api.get("/token/supply")
 async def token_supply(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
@@ -170,13 +300,15 @@ async def token_supply(authorization: Optional[str] = Header(None)):
 async def token_wallet(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     await _get_supply()
+    allocation = await settle_subscription_allocations(user["user_id"])   # lazy renewal credit
     acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
-    acct = {"balance": 0.0, "earned_total": 0.0, "spent_total": 0.0, **acct}
+    acct = {"balance": 0.0, "earned_total": 0.0, "spent_total": 0.0, "subscription_total": 0.0, **acct}
     txs = await db.token_ledger.find({"account": user["user_id"]}, {"_id": 0}).sort("seq", -1).to_list(20)
     fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "vip_until": 1, "hunter_priority_until": 1})
     return {**acct, "symbol": "GA-T",
             "vip_until": (fresh or {}).get("vip_until"),
             "hunter_priority_until": (fresh or {}).get("hunter_priority_until"),
+            "subscription_allocation": allocation,
             "txs": txs, "earn_rules": EARN_RULES, "spend_items": SPEND_ITEMS}
 
 @api.post("/token/earn")

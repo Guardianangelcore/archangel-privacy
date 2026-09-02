@@ -23,7 +23,7 @@ from models import User, EmergencyProfile, Document, WaitlistItem, FallEvent
 
 @api.get("/")
 async def root():
-    return {"app": "Guardian Health & Angel", "author": "Guardian Angel Sovereign Foundation (DAO)", "status": "ok"}
+    return {"app": "Archangel OS", "author": "Guardian Angel Sovereign Foundation (DAO)", "status": "ok"}
 
 
 # --------- AUTH ---------

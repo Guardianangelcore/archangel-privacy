@@ -89,6 +89,42 @@ export default function TokenWallet() {
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
+        {/* PREMIUM LOYALTY LOOP — fiat subscription → automatic monthly GA-T allocation */}
+        {wallet?.subscription_allocation && (
+          <View testID="tk-loyalty" style={[styles.loyalty, wallet.subscription_allocation.eligible && styles.loyaltyOn]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="diamond" size={18} color={C.brand} />
+              <Text style={styles.loyaltyTitle}>PREMIUM LOYALTY ALLOCATION</Text>
+            </View>
+            {wallet.subscription_allocation.eligible ? (
+              <>
+                <Text testID="tk-loyalty-status" style={styles.loyaltyBig}>
+                  +{Number(wallet.subscription_allocation.next_amount).toFixed(0)} GA-T on {String(wallet.subscription_allocation.next_at || '').slice(0, 10) || '—'}
+                </Text>
+                <Text style={styles.loyaltySub}>
+                  {wallet.subscription_allocation.tier.toUpperCase()} plan · {wallet.subscription_allocation.months_collected} month{wallet.subscription_allocation.months_collected === 1 ? '' : 's'} collected · loyalty bonus +{wallet.subscription_allocation.next_bonus_pct}% (grows +{wallet.subscription_allocation.loyalty_bonus_per_month_pct}%/month, max +{wallet.subscription_allocation.loyalty_bonus_cap_pct}%) · total {Number(wallet.subscription_total || 0).toFixed(0)} GA-T
+                </Text>
+                {wallet.subscription_allocation.credited_now > 0 && (
+                  <Text testID="tk-loyalty-credited" style={styles.loyaltyCredit}>✓ {wallet.subscription_allocation.credited_now} allocation{wallet.subscription_allocation.credited_now === 1 ? '' : 's'} just credited</Text>
+                )}
+              </>
+            ) : (
+              <>
+                <Text testID="tk-loyalty-status" style={styles.loyaltySub}>
+                  {wallet.subscription_allocation.reason === 'paid_with_gat_or_trial'
+                    ? 'Monthly GA-T allocations are reserved for card / App Store subscriptions (trials and GA-T-paid plans do not qualify).'
+                    : `Subscribe to Guardian (9 €/month) and receive ${Number(wallet.subscription_allocation.monthly_amount).toFixed(0)} GA-T automatically every month — the longer you stay, the bigger the credit (up to +50%).`}
+                </Text>
+                {wallet.subscription_allocation.reason !== 'paid_with_gat_or_trial' && (
+                  <Pressable testID="tk-loyalty-upgrade" onPress={() => router.push('/subscription')} style={styles.loyaltyBtn}>
+                    <Text style={styles.loyaltyBtnText}>VIEW PLANS</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
         <Text style={styles.section}>EARN GA-T (PROOF-OF-HELP · PROOF-OF-HEALTH)</Text>
         {wallet && Object.entries(wallet.earn_rules || {}).map(([k, r]: any) => (
           <View key={k} style={styles.row}>
@@ -132,8 +168,8 @@ export default function TokenWallet() {
         <Text style={styles.section}>RECENT TRANSACTIONS</Text>
         {(wallet?.txs || []).slice(0, 12).map((t: any) => (
           <View key={t.tx_id} style={styles.txRow}>
-            <Ionicons name={t.kind === 'earn' ? 'arrow-down-circle' : t.kind === 'burn' ? 'flame' : 'arrow-up-circle'} size={16} color={t.kind === 'earn' ? '#5FA779' : t.kind === 'burn' ? C.error : C.fg} />
-            <Text style={styles.txText} numberOfLines={1}>{t.kind.toUpperCase()} {t.amount > 0 ? '+' : ''}{t.amount} · {t.meta?.activity || t.meta?.item || t.meta?.note || ''}</Text>
+            <Ionicons name={t.kind === 'earn' ? 'arrow-down-circle' : t.kind === 'subscription_allocation' ? 'diamond' : t.kind === 'burn' ? 'flame' : 'arrow-up-circle'} size={16} color={t.kind === 'earn' ? '#5FA779' : t.kind === 'subscription_allocation' ? C.brand : t.kind === 'burn' ? C.error : C.fg} />
+            <Text style={styles.txText} numberOfLines={1}>{t.kind === 'subscription_allocation' ? 'LOYALTY' : t.kind.toUpperCase()} {t.amount > 0 ? '+' : ''}{t.amount} · {t.meta?.activity || t.meta?.item || t.meta?.note || ''}</Text>
             <Text style={styles.txAt}>{String(t.at).slice(5, 16).replace('T', ' ')}</Text>
           </View>
         ))}
@@ -171,6 +207,14 @@ const styles = StyleSheet.create({
   vipBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#B8860B', borderRadius: R.sm, paddingHorizontal: S.md, paddingVertical: 6, marginTop: S.md },
   vipText: { color: C.onInverse, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
   section: { marginTop: S.xl, marginBottom: S.sm, fontSize: 11, letterSpacing: 1.5, color: C.brand, fontWeight: '900' },
+  loyalty: { marginTop: S.lg, borderWidth: 1.5, borderColor: C.borderStrong, borderRadius: R.md, padding: S.lg, gap: 6, backgroundColor: C.surface2 },
+  loyaltyOn: { borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.08)' },
+  loyaltyTitle: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
+  loyaltyBig: { color: C.fg, fontWeight: '900', fontSize: 20, marginTop: 4 },
+  loyaltySub: { color: C.info, fontSize: 11, lineHeight: 16 },
+  loyaltyCredit: { color: '#5FA779', fontWeight: '900', fontSize: 11 },
+  loyaltyBtn: { alignSelf: 'flex-start', backgroundColor: C.brand, borderRadius: R.sm, paddingHorizontal: S.lg, minHeight: 40, justifyContent: 'center', marginTop: 4 },
+  loyaltyBtnText: { color: C.onInverse, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.surface2, borderRadius: R.sm, padding: S.md, marginTop: S.sm },
   rowTitle: { color: C.fg, fontWeight: '800', fontSize: 12.5 },
   rowSub: { color: C.info, fontSize: 10.5, marginTop: 2 },

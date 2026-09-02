@@ -555,7 +555,7 @@ export default function Profile() {
 
         <View style={styles.credit}>
           <Text style={styles.creditTitle}>ABOUT</Text>
-          <Text style={styles.creditText}>Guardian Health & Angel is a sovereign survival OS.{'\n'}Steward: <Text style={{ fontWeight: '900' }}>Guardian Angel Sovereign Foundation (DAO)</Text> — pseudonymous, decentralized governance.{'\n'}© 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. Proprietary · Zero-Knowledge.{'\n'}EU AI Act Art. 50: AI outputs are informational only — you act at your own risk.</Text>
+          <Text style={styles.creditText}>Archangel OS is a sovereign survival OS.{'\n'}Steward: <Text style={{ fontWeight: '900' }}>Guardian Angel Sovereign Foundation (DAO)</Text> — pseudonymous, decentralized governance.{'\n'}© 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. Proprietary · Zero-Knowledge.{'\n'}EU AI Act Art. 50: AI outputs are informational only — you act at your own risk.</Text>
           <Text style={styles.creditText}>{'\n'}Proof of Origin (DID):{'\n'}</Text>
           <Text testID="origin-did" style={[styles.creditText, { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 10 }]}>{WATERMARK.did}</Text>
           <Text style={[styles.creditText, { fontSize: 10, marginTop: 4 }]}>Build {WATERMARK.build} · anchored {WATERMARK.anchored_at?.slice(0, 10)}</Text>

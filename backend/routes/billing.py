@@ -104,9 +104,9 @@ async def _issue_receipt(tx: dict, tier_until: datetime, family_members: int = 0
             f"Payment method: Card (Stripe)\n"
             f"Valid until: {tier_until.strftime('%d.%m.%Y')}\n"
             + (f"Family circle members with Sentinel activated: {family_members}\n" if family_members else "")
-            + "\nThank you for protecting yourself and your family with Guardian Health & Angel."
+            + "\nThank you for protecting yourself and your family with Archangel OS."
         )
-        pdf = await run_in_threadpool(_make_pdf, "POTVRDENIE O PLATBE — GUARDIAN HEALTH & ANGEL", body, _pdf_footer())
+        pdf = await run_in_threadpool(_make_pdf, "POTVRDENIE O PLATBE — ARCHANGEL OS", body, _pdf_footer())
         doc_id = uuid.uuid4().hex
         path = f"{APP_NAME}/uploads/{tx['user_id']}/{doc_id}.pdf"
         await run_in_threadpool(put_object_sync, path, pdf, "application/pdf")
@@ -139,6 +139,8 @@ async def _activate_tier(session_id: str) -> bool:
     days = 365 if res["billing"] == "annual" else 30
     until = now + timedelta(days=days)
     family_members = 0
+    prev = await db.users.find_one({"user_id": res["user_id"]},
+                                   {"_id": 0, "tier_until": 1, "tier_paid_with": 1, "gat_alloc_anchor": 1}) or {}
     if res["tier"] == "family_sentinel":
         # payer gets Sentinel + up to 4 family-circle guardians get it too (never downgrades Archangel/Inner Circle)
         await db.users.update_one(
@@ -164,6 +166,14 @@ async def _activate_tier(session_id: str) -> bool:
     await record_revenue("subscription", res["amount_eur"], res["user_id"],
                          {"tier": res["tier"], "billing": res["billing"], "paid_with": "card",
                           "stripe_session": session_id, "family_members": family_members})
+    # LOYALTY LOOP — fiat subscription → monthly GA-T allocation (first credit instantly).
+    try:
+        from routes.token import start_subscription_allocation
+        alloc = await start_subscription_allocation(res["user_id"], prev)
+        await db.payment_transactions.update_one(
+            {"session_id": session_id}, {"$set": {"gat_allocated": alloc.get("credited_now", 0)}})
+    except Exception as e:
+        logger.warning(f"GA-T allocation on activation failed (payment unaffected): {e}")
     await _issue_receipt(res, until, family_members)
     return True
 

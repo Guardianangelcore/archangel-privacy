@@ -41,7 +41,7 @@ export default function TermsOfService() {
             <Text style={st.discTitle}>MEDICAL DISCLAIMER</Text>
           </View>
           <Text style={st.discText}>
-            Guardian Angel OS is NOT a medical device. It does NOT replace professional
+            Archangel OS is NOT a medical device. It does NOT replace professional
             medical care, diagnosis, or treatment. Always consult a licensed physician
             before making any health decision. In an emergency, call your local emergency
             number (112 / 911) immediately.
@@ -49,13 +49,13 @@ export default function TermsOfService() {
         </View>
 
         <Section n="1" title="ACCEPTANCE OF TERMS">
-          <P>By creating an account or using Guardian Angel OS ("the Service"), you agree to
+          <P>By creating an account or using Archangel OS ("the Service"), you agree to
             these Terms of Service and our Privacy Policy. If you do not agree, do not use
             the Service.</P>
         </Section>
 
         <Section n="2" title="THE SERVICE">
-          <P>Guardian Angel OS is a personal health and family-safety companion. It provides
+          <P>Archangel OS is a personal health and family-safety companion. It provides
             informational tools such as health records ("Life Card"), AI assistance (Jarvis),
             document scanning, family alerts, and legacy planning.</P>
           <B>All AI-generated content is informational only and is watermarked in accordance

@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-"""Elite 4-Tier Subscription — Sovereign (free) / Guardian (€29) / Sentinel
+"""Elite 4-Tier Subscription — Sovereign (free) / Guardian (€9) / Sentinel
 (€149) / Archangel (€499). Monthly or annual (−20 %). Multi-currency EUR /
 CZK / GA-T. GA-T payments live via the internal token engine; card billing is
 a placeholder until the real Stripe key is provided (user's decision)."""
@@ -33,18 +33,20 @@ TIERS = {
                      "Basic Health Timeline", "Public Solidarity Hub"],
     },
     "guardian": {
-        "name": "Guardian", "order": 1, **_prices(29, 50),
+        "name": "Guardian", "order": 1, **_prices(9, 15),
         "tagline": "Proactive protection for you and your family",
         "accent": "#B8860B",
-        "features": ["Everything in Sovereign", "Waitlist Hunter alerts",
-                     "AI report translations (Jarvis)", "Angel Mode (falls + safety)",
-                     "Complete Physio-AI encyclopedia"],
+        "features": ["Everything in Sovereign", "Jarvis AI chat + Morning Briefing",
+                     "💎 100 GA-T credited every month (loyalty bonus up to +50 %)",
+                     "Waitlist Hunter alerts", "AI report translations (Jarvis)",
+                     "Angel Mode (falls + safety)", "Complete Physio-AI encyclopedia"],
     },
     "sentinel": {
         "name": "Sentinel", "order": 2, **_prices(149, 250),
         "tagline": "VIP survival — a hospital in your pocket",
         "accent": "#E5E4E2",
-        "features": ["Everything in Guardian", "🛰️ Satellite Emergency Handshake",
+        "features": ["Everything in Guardian", "💎 300 GA-T credited every month",
+                     "🛰️ Satellite Emergency Handshake",
                      "🩺 Vitals Bio-Scanner — neobmedzene", "⚔️ AI Tactical Medic (offline)",
                      "🧬 Longevity Engine + Bio-Age", "Autonomous bookings (Autopilot)",
                      "Insurance Claim Recovery"],
@@ -53,7 +55,8 @@ TIERS = {
         "name": "Archangel", "order": 3, **_prices(499, 800),
         "tagline": "Elite sovereignty — Zero-latency Swarm",
         "accent": "#8A2BE2",
-        "features": ["Everything in Sentinel", "⚡ Priority Swarm orchestration (Zero-latency)",
+        "features": ["Everything in Sentinel", "💎 1 000 GA-T credited every month",
+                     "⚡ Priority Swarm orchestration (Zero-latency)",
                      "👤 Concierge Human Expert — 1 consultation/mo.",
                      "🏛️ DAO governance — foundation voting rights",
                      "White-Label access for family offices"],
@@ -107,10 +110,13 @@ async def subscription_info(authorization: Optional[str] = Header(None)):
     fresh = await db.users.find_one({"user_id": user["user_id"]},
                                     {"_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1,
                                      "tier_billing": 1, "trial_used": 1, "inner_circle": 1}) or {}
+    from routes.token import settle_subscription_allocations, SUBSCRIPTION_GAT
+    allocation = await settle_subscription_allocations(user["user_id"])   # credits any due monthly GA-T
     acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0, "balance": 1})
     tier = current_tier(fresh)
     tu = fresh.get("tier_until")
     return {"tier": tier, "tier_until": tu.isoformat() if hasattr(tu, "isoformat") else tu,
+            "gat_allocation": allocation, "gat_monthly_by_tier": SUBSCRIPTION_GAT,
             "inner_circle": bool(fresh.get("inner_circle")),
             "paid_with": fresh.get("tier_paid_with"), "billing": fresh.get("tier_billing"),
             "trial_available": not fresh.get("trial_used"),

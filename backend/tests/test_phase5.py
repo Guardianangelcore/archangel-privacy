@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-"""Phase 5 backend tests — Guardian Health & Angel: Global Compliance & Indemnity Upgrade.
+"""Phase 5 backend tests — Archangel OS: Global Compliance & Indemnity Upgrade.
 
 Covers:
 - GET /api/legal/region — jurisdiction resolution (EU/UK/US/OTHER), disclaimers, testament_format, AML limits

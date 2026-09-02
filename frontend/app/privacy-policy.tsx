@@ -41,7 +41,7 @@ export default function PrivacyPolicy() {
             <Text style={st.promiseTitle}>YOUR DATA STAYS ON YOUR DEVICE</Text>
           </View>
           <Text style={st.promiseText}>
-            Guardian Angel OS is local-first and zero-surveillance. Contacts, calendar,
+            Archangel OS is local-first and zero-surveillance. Contacts, calendar,
             and sensitive identifiers are stored on your device (SecureStore / encrypted
             storage). Nothing is shared with anyone unless you explicitly opt in. We never
             sell data and we show no advertising.

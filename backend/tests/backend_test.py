@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-"""Backend tests for Guardian Health & Angel MVP."""
+"""Backend tests for Archangel OS MVP."""
 import io
 import os
 import asyncio
@@ -70,7 +70,7 @@ def test_root_public():
     assert r.status_code == 200, r.text
     d = r.json()
     assert d.get("author") == "Guardian Angel Sovereign Foundation (DAO)"
-    assert d.get("app") == "Guardian Health & Angel"
+    assert d.get("app") == "Archangel OS"
     assert d.get("status") == "ok"
 
 

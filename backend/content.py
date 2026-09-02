@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-# Guardian Health & Angel — Founder expert content (Mental Fortress + Physio-AI guides)
+# Archangel OS — Founder expert content (Mental Fortress + Physio-AI guides)
 # Languages: sk / cs / en / de. Informational content only (EU AI Act Art. 50).
 
 STEP_WORD = {"sk": "Krok", "cs": "Krok", "en": "Step", "de": "Schritt"}

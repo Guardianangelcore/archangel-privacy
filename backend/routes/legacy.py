@@ -122,7 +122,7 @@ PROXY_TEMPLATES = {
         "Náhradný zástupca: {alternate}\n"
         "Poznámky: {notes}\n\n"
         "Dátum vystavenia: {date}\nKryptografický odtlačok (SHA-256): {hash}\n\n"
-        "Tento dokument bol vytvorený v aplikácii Guardian Health & Angel a je ukotvený na DID vlastníka. "
+        "Tento dokument bol vytvorený v aplikácii Archangel OS a je ukotvený na DID vlastníka. "
         "Odporúčame notárske overenie podpisu pre plnú právnu istotu."
     ),
     "en": (
@@ -136,7 +136,7 @@ PROXY_TEMPLATES = {
         "and — to the extent stated above — give informed consent on my behalf if I am unable to express my will.\n\n"
         "This authorization {effective}.\nAlternate proxy: {alternate}\nNotes: {notes}\n\n"
         "Date of issue: {date}\nCryptographic fingerprint (SHA-256): {hash}\n\n"
-        "Created in Guardian Health & Angel, anchored to the owner's DID. Notarization recommended for full legal certainty."
+        "Created in Archangel OS, anchored to the owner's DID. Notarization recommended for full legal certainty."
     ),
 }
 SCOPE_TEXT = {
@@ -411,7 +411,7 @@ DISCLAIMERS = {
 
 TOS_TEXT = {
     "sk": (
-        "PODMIENKY POUŽÍVANIA — GUARDIAN HEALTH & ANGEL (v{ver})\n"
+        "PODMIENKY POUŽÍVANIA — ARCHANGEL OS (v{ver})\n"
         "=====================================================\n\n"
         "1. POVAHA SLUŽBY: Aplikácia je suverénny informačný a wellness nástroj. NIE JE poskytovateľom zdravotnej starostlivosti, zdravotníckou pomôckou, právnou kanceláriou ani finančnou inštitúciou.\n\n"
         "2. AI VÝSTUPY (EU AI Act čl. 50): Všetok obsah generovaný AI (Jarvis) je označený a je VÝLUČNE INFORMAČNÝ. Používateľ berie na vedomie a súhlasí, že AI výstupy používa NA VLASTNÉ RIZIKO a pred akýmkoľvek rozhodnutím o zdraví, práve či financiách sa poradí s kvalifikovaným odborníkom.\n\n"
@@ -423,7 +423,7 @@ TOS_TEXT = {
         "AGPL-v3 · Vízia a autorstvo: Guardian Angel · Verzia {ver}"
     ),
     "en": (
-        "TERMS OF SERVICE — GUARDIAN HEALTH & ANGEL (v{ver})\n"
+        "TERMS OF SERVICE — ARCHANGEL OS (v{ver})\n"
         "===================================================\n\n"
         "1. NATURE OF SERVICE: The app is a sovereign informational and wellness tool. It is NOT a healthcare provider, medical device, law firm or financial institution.\n\n"
         "2. AI OUTPUTS (EU AI Act Art. 50): All AI-generated content (Jarvis) is labelled and STRICTLY INFORMATIONAL. The user acknowledges and agrees that AI outputs are used AT THE USER'S OWN RISK and that a qualified professional must be consulted before any health, legal or financial decision.\n\n"

@@ -130,8 +130,8 @@ export default function Login() {
         </View>
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={{ flex: 1 }} />
-          <Text style={styles.hero}>GUARDIAN</Text>
-          <Text style={styles.hero2}>HEALTH & ANGEL</Text>
+          <Text testID="app-title" style={styles.hero}>ARCHANGEL</Text>
+          <Text style={styles.hero2}>OS</Text>
           <View style={styles.divider} />
           <Text style={[styles.tagline, rtl && styles.rtl]}>{t('tagline')}</Text>
 

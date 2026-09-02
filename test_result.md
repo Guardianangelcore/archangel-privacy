@@ -850,3 +850,30 @@ weather Kosice; fresh user + X-Forwarded-For 195.28.64.1 → Bratislava (ip). Fo
 4) Sovereign Tour step 1 title → "MY HEALING" (src/onboarding-tour.tsx).
 Self-tested: founder /sos/broadcast 200 (1 contact, maps_url ok); free user /agent/chat + /agent/briefing → 402 guardian_required;
 UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch instant.
+
+## Iteration 57 (GA-T loyalty allocation wired to subscription · Guardian price €9)
+- NO new token system: reused token.py (token_accounts, hash-chained token_ledger, treasury). New in token.py: SUBSCRIPTION_GAT
+  {guardian:100, sentinel:300, archangel:1000}/30 days, loyalty bonus +10%/consecutive month (cap +50%),
+  settle_subscription_allocations(uid) (idempotent per anchor+period_index, ledger kind "subscription_allocation", treasury→user),
+  start_subscription_allocation(uid, prev) (keeps streak if previous paid period active/lapsed <7d), sweep_subscription_allocations()
+  (every 6h in swarm_loop). ONLY fiat-paid plans qualify: tier_paid_with in card/iap/apple_iap/google_iap/family_pack — GA-T-paid and
+  trial never (circular mint). NOTE: Apple/Google IAP (RevenueCat) is NOT integrated in the app — only Stripe card + GA-T exist; the hook
+  is channel-agnostic (IAP just needs to set tier/tier_until/tier_paid_with="iap").
+- Hooks: GET /api/token/wallet → settles + returns subscription_allocation {...}; GET /api/subscription → settles + gat_allocation +
+  gat_monthly_by_tier; billing._activate_tier (Stripe paid) → start_subscription_allocation (first 100 GA-T instantly).
+- Guardian price: €29 → €9 (GA-T 50 → 15; tier_guardian_30d 15, 365d 144; founder TIER_MIX, Paywall text, founder-toolkit updated).
+- Frontend: token.tsx card testID tk-loyalty (tk-loyalty-status / tk-loyalty-credited / tk-loyalty-upgrade), ledger rows "LOYALTY";
+  subscription.tsx line testID sb-loyalty; TIERS features mention the monthly GA-T.
+- Self-test (backend/tests/manual_loyalty_check.py): free → not eligible; card guardian → +100 instantly; idempotent; anchor 65d ago →
+  +110 +120 (bal 330, next 130 @ +30%); GA-T-paid → not eligible; ledger chain intact; guardian price 9 €/15 GA-T.
+  Test user loyalty-test@example.com left as card-paid guardian (dev-bypass).
+
+## Iteration 58 (Rename → "Archangel OS")
+- Public app name "Guardian Health & Angel" / "Guardian Angel OS" → "Archangel OS" everywhere user-facing: app.json name/description (+ extra.appStoreSubtitle
+  "Your sovereign health & safety companion"), login hero (testID app-title "ARCHANGEL" / "OS"), i18n app_name + tagline (14 langs → "Your sovereign
+  health & safety companion."), home welcome title, profile credit, ToS/Privacy pages, launch.tsx, backend PDFs/receipts/IPS/QR card/SOS SMS body/
+  Jarvis prompts/FastAPI title/root endpoint {"app":"Archangel OS"}, EMAIL_FROM_NAME="Archangel OS". Brand identity kept: "Guardian Angel Sovereign
+  Foundation (DAO)" copyright, "ENTER AS GUARDIAN ANGEL (FOUNDER)", GA-T "GUARDIAN TOKEN", Guardian/Sentinel tiers, Guardian Gold, Guardian Lens.
+- New branded splash image assets/images/splash-image.png (gold halo/wings mark + ARCHANGEL OS + subtitle, transparent bg; imageWidth 280).
+- Smoke: GET /api/ → Archangel OS; login page title "Archangel OS", hero ARCHANGEL/OS, tagline shown, no "HEALTH & ANGEL".
+- RevenueCat (previous request) is PAUSED: connection_state not connected — user must click "Connect RevenueCat" in the payments panel first.

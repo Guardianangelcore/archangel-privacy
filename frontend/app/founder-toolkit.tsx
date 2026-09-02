@@ -86,7 +86,7 @@ export default function FounderToolkit() {
                 </Text>
               </View>
             ))}
-            <Text style={st.note}>Tier mix: Guardian 29 € (80 %) · Sentinel 149 € (17 %) · Archangel 499 € (3 %) · churn {a?.churn_mo_pct} % / mes.</Text>
+            <Text style={st.note}>Tier mix: Guardian 9 € (80 %) · Sentinel 149 € (17 %) · Archangel 499 € (3 %) · churn {a?.churn_mo_pct} % / mes.</Text>
 
             {/* ROADMAP */}
             <Text style={st.kicker2}>VISION</Text>

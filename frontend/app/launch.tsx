@@ -91,7 +91,7 @@ export default function Launch() {
                 1. Press the PUBLISH button (top right in Emergent){'\n'}
                 2. Deploy your app → production URL{'\n'}
                 3. Generate iOS and Android builds → real devices{'\n\n'}
-                Guardian Angel OS — the global sovereign standard. Command handed over. 🫡
+                Archangel OS — the global sovereign standard. Command handed over. 🫡
               </Text>
             </View>
           </>

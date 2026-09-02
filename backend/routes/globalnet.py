@@ -126,7 +126,7 @@ async def _build_ips(user: dict) -> dict:
         "resource": {"resourceType": "Composition", "status": "final",
                      "type": {"coding": [{"system": "http://loinc.org", "code": "60591-5",
                                           "display": "Patient summary Document"}]},
-                     "title": "International Patient Summary (IPS) — Guardian Health & Angel",
+                     "title": "International Patient Summary (IPS) — Archangel OS",
                      "date": now.isoformat(), "subject": {"reference": f"urn:uuid:{pid}"},
                      "author": [{"display": "Guardian Angel Sovereign Foundation (DAO) — patient-mediated export"}],
                      "section": [
@@ -201,7 +201,7 @@ async def ips_summary_pdf(token: Optional[str] = None, authorization: Optional[s
         "Standard: HL7 FHIR International Patient Summary (Bundle-uv-ips).",
         "Interoperable with: " + " · ".join(ips["interoperability"]),
     ]
-    pdf = _make_pdf("INTERNATIONAL PATIENT SUMMARY (IPS)\nUNIVERSAL HEALTH RESUME — Guardian Health & Angel",
+    pdf = _make_pdf("INTERNATIONAL PATIENT SUMMARY (IPS)\nUNIVERSAL HEALTH RESUME — Archangel OS",
                     "\n".join(lines), _pdf_footer(ips["sha256"]))
     return _pdf_response(pdf, "guardian_ips_summary.pdf")
 
