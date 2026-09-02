@@ -21,6 +21,11 @@ from core import (
     api, db, logger, clean, get_current_user, send_push,
     AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY, apply_watermark, ai_http_error, ai_error_message,
 )
+from routes.subscription import require_tier
+
+# PAID-ONLY AI — Jarvis chat + Morning Briefing consume LLM budget, so they are
+# exclusive to the Guardian tier and above (Sovereign = free tier sees an upgrade prompt).
+JARVIS_MIN_TIER = "guardian"
 from routes.neural import _gather_context
 
 # =========================================================================
@@ -441,6 +446,7 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     uid = user["user_id"]
     if not body.message.strip():
         raise HTTPException(400, "message required")
+    await require_tier(user, JARVIS_MIN_TIER, "Jarvis AI")
 
     # HANDS-FREE PAIN DIARY — deterministic intent, instant confirmation (no LLM round-trip)
     pain_lvl = _detect_pain_level(body.message)
@@ -587,6 +593,7 @@ async def agent_briefing(request: Request, language: str = "sk", force: bool = F
                          authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
+    await require_tier(user, JARVIS_MIN_TIER, "Morning Briefing")
     today = datetime.now(timezone.utc).date().isoformat()
     cache_key = f"brief:{uid}:{today}"
     if not force:
@@ -712,6 +719,7 @@ async def agent_analyze(authorization: Optional[str] = Header(None)):
 @api.post("/agent/transcribe")
 async def agent_transcribe(file: UploadFile = File(...), authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_tier(user, JARVIS_MIN_TIER, "Jarvis voice")
     data = await file.read()
     if len(data) == 0:
         raise HTTPException(400, "Empty audio")
@@ -975,6 +983,7 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
     uid = user["user_id"]
     if not body.message.strip():
         raise HTTPException(400, "message required")
+    await require_tier(user, JARVIS_MIN_TIER, "Jarvis AI")
     q = body.message[:1000]
     sse_headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
 

@@ -15,7 +15,7 @@ import { C, S, R } from './theme';
 const TOUR_STEPS = [
   {
     icon: 'sync-circle' as const,
-    title: 'MOJE UZDRAVOVANIE',
+    title: 'MY HEALING',
     subtitle: 'Loop: referral → money → doctor → physio.',
     tts: 'On the left is your Healing.',
     duration: 5000,

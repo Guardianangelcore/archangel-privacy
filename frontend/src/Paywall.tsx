@@ -9,13 +9,20 @@ import { C, S } from './theme';
 
 type Props = {
   message: string;
+  tier?: 'guardian' | 'sentinel';   // minimum plan being advertised (default Sentinel)
   gatLabel?: string;          // e.g. "PAY 5 GA-T PER SCAN"
   onPayGat?: () => void;      // retry with pay_gat
   onUnlocked: () => void;     // called after successful trial
 };
 
-export default function Paywall({ message, gatLabel, onPayGat, onUnlocked }: Props) {
+const TIER_UI = {
+  guardian: { title: 'GUARDIAN PLAN', color: '#B8860B', icon: 'shield-checkmark' as const, tiers: 'VIEW PLANS (GUARDIAN €29 / SENTINEL €149)' },
+  sentinel: { title: 'SENTINEL EXCLUSIVE', color: '#E5E4E2', icon: 'diamond' as const, tiers: 'VIEW TIERS (SENTINEL €149 / ARCHANGEL €499)' },
+};
+
+export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat, onUnlocked }: Props) {
   const router = useRouter();
+  const ui = TIER_UI[tier];
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -31,9 +38,9 @@ export default function Paywall({ message, gatLabel, onPayGat, onUnlocked }: Pro
   };
 
   return (
-    <View testID="paywall" style={st.box}>
-      <Ionicons name="diamond" size={30} color="#E5E4E2" />
-      <Text style={st.title}>SENTINEL EXCLUSIVE</Text>
+    <View testID="paywall" style={[st.box, { borderColor: ui.color }]}>
+      <Ionicons name={ui.icon} size={30} color={ui.color} />
+      <Text style={[st.title, { color: ui.color }]}>{ui.title}</Text>
       <Text style={st.msg}>{message}</Text>
       {!!err && <Text style={st.err}>{err}</Text>}
       <Pressable testID="pw-trial" onPress={trial} disabled={busy} style={st.trialBtn}>
@@ -45,7 +52,7 @@ export default function Paywall({ message, gatLabel, onPayGat, onUnlocked }: Pro
         </Pressable>
       )}
       <Pressable testID="pw-upgrade" onPress={() => router.push('/subscription')} style={st.upBtn}>
-        <Text style={st.upText}>VIEW TIERS (SENTINEL €149 / ARCHANGEL €499)</Text>
+        <Text style={st.upText}>{ui.tiers}</Text>
       </Pressable>
     </View>
   );

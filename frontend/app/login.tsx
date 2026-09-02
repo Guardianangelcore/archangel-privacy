@@ -9,7 +9,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/auth';
 import { api as apiCall } from '@/src/api';
 import { C, S } from '@/src/theme';
-import { t, LANG_NAMES, Lang, isRTL } from '@/src/i18n';
+import { LANG_NAMES, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 
 const BG = 'https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=1200&w=940';
 const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
@@ -17,7 +18,8 @@ const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
 export default function Login() {
   const { signIn, signInDev, signInPassword, registerPassword, authError } = useAuth();
   const router = useRouter();
-  const [lang, setLang] = useState<Lang>('en');
+  // Shared i18n context: the pick here is remembered and applied to the account on sign-in.
+  const { lang, setLang, t, rtl } = useI18n();
   const [busy, setBusy] = useState<'google' | 'dev' | 'pw' | null>(null);
   const [showBypass, setShowBypass] = useState(false);
   const [bypassEmail, setBypassEmail] = useState(FOUNDER_EMAIL);
@@ -124,16 +126,16 @@ export default function Login() {
       />
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.creditRow}>
-          <Text testID="guardian-credit" style={styles.credit}>{t('author_credit', lang).toUpperCase()}</Text>
+          <Text testID="guardian-credit" style={styles.credit}>{t('author_credit').toUpperCase()}</Text>
         </View>
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={{ flex: 1 }} />
           <Text style={styles.hero}>GUARDIAN</Text>
           <Text style={styles.hero2}>HEALTH & ANGEL</Text>
           <View style={styles.divider} />
-          <Text style={[styles.tagline, isRTL(lang) && styles.rtl]}>{t('tagline', lang)}</Text>
+          <Text style={[styles.tagline, rtl && styles.rtl]}>{t('tagline')}</Text>
 
-          <Text style={[styles.langLabel, isRTL(lang) && styles.rtl]}>{t('choose_language', lang).toUpperCase()}</Text>
+          <Text style={[styles.langLabel, rtl && styles.rtl]}>{t('choose_language').toUpperCase()}</Text>
           <View style={styles.langRow}>
             {(Object.keys(LANG_NAMES) as Lang[]).map(l => {
               const active = l === lang;
@@ -157,20 +159,20 @@ export default function Login() {
           <View style={styles.pwTabs}>
             <Pressable testID="pw-tab-login" onPress={() => { setPwMode('login'); setErr(''); }}
               style={[styles.pwTab, pwMode === 'login' && styles.pwTabActive]}>
-              <Text style={[styles.pwTabText, pwMode === 'login' && styles.pwTabTextActive]}>SIGN IN</Text>
+              <Text style={[styles.pwTabText, pwMode === 'login' && styles.pwTabTextActive]}>{t('sign_in')}</Text>
             </Pressable>
             <Pressable testID="pw-tab-register" onPress={() => { setPwMode('register'); setErr(''); }}
               style={[styles.pwTab, pwMode === 'register' && styles.pwTabActive]}>
-              <Text style={[styles.pwTabText, pwMode === 'register' && styles.pwTabTextActive]}>CREATE ACCOUNT</Text>
+              <Text style={[styles.pwTabText, pwMode === 'register' && styles.pwTabTextActive]}>{t('create_account')}</Text>
             </Pressable>
           </View>
           )}
-          {resetMode && <Text style={styles.resetTitle}>FORGOT PASSWORD</Text>}
+          {resetMode && <Text style={styles.resetTitle}>{t('forgot_password').replace('?', '')}</Text>}
           <TextInput
             testID="pw-email"
             value={email}
             onChangeText={setEmail}
-            placeholder="E-mail"
+            placeholder={t('email')}
             placeholderTextColor="rgba(255,255,255,0.5)"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -184,7 +186,7 @@ export default function Login() {
               testID="pw-password"
               value={password}
               onChangeText={setPassword}
-              placeholder={pwMode === 'register' ? 'Password (min. 12 characters)' : 'Password'}
+              placeholder={pwMode === 'register' ? t('password_min') : t('password')}
               placeholderTextColor="rgba(255,255,255,0.5)"
               secureTextEntry={!showPw}
               autoCapitalize="none"
@@ -231,10 +233,10 @@ export default function Login() {
                   color={agreeTerms ? '#7BE0AD' : 'rgba(255,255,255,0.7)'} />
               </Pressable>
               <Text style={styles.agreeText}>
-                I agree to the{' '}
-                <Text testID="reg-tos-link" style={styles.agreeLink} onPress={() => router.push('/terms-of-service')}>Terms of Service</Text>
-                {' '}and the{' '}
-                <Text testID="reg-privacy-link" style={styles.agreeLink} onPress={() => router.push('/privacy-policy')}>Privacy Policy</Text>
+                {t('agree_prefix')}{' '}
+                <Text testID="reg-tos-link" style={styles.agreeLink} onPress={() => router.push('/terms-of-service')}>{t('tos_link')}</Text>
+                {' '}{t('agree_and')}{' '}
+                <Text testID="reg-privacy-link" style={styles.agreeLink} onPress={() => router.push('/privacy-policy')}>{t('privacy_link')}</Text>
               </Text>
             </View>
           )}
@@ -248,7 +250,7 @@ export default function Login() {
           >
             {busy === 'pw'
               ? <ActivityIndicator color={C.onInverse} />
-              : <Text style={styles.signBtnText}>{pwMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}</Text>}
+              : <Text style={styles.signBtnText}>{pwMode === 'register' ? t('create_account') : t('sign_in')}</Text>}
           </Pressable>
           ) : (
           <Pressable
@@ -266,7 +268,7 @@ export default function Login() {
           <View style={styles.linkRow}>
             {!resetMode && pwMode === 'login' && (
               <Pressable testID="forgot-link" onPress={() => { setResetMode(true); setErr(''); setInfo(''); setCodeSent(false); }} hitSlop={8}>
-                <Text style={styles.linkText}>FORGOT PASSWORD?</Text>
+                <Text style={styles.linkText}>{t('forgot_password')}</Text>
               </Pressable>
             )}
             {resetMode && (
@@ -285,7 +287,7 @@ export default function Login() {
 
           <View style={styles.orRow}>
             <View style={styles.orLine} />
-            <Text style={styles.orText}>OR</Text>
+            <Text style={styles.orText}>{t('or')}</Text>
             <View style={styles.orLine} />
           </View>
 
@@ -299,7 +301,7 @@ export default function Login() {
               ? <ActivityIndicator color={C.fg} />
               : <>
                   <Ionicons name="logo-google" size={18} color={C.fg} />
-                  <Text style={styles.googleBtnText}>{t('sign_in_google', lang).toUpperCase()}</Text>
+                  <Text style={styles.googleBtnText}>{t('sign_in_google').toUpperCase()}</Text>
                 </>}
           </Pressable>
 

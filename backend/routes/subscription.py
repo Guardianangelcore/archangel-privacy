@@ -83,9 +83,9 @@ async def require_tier(user: dict, min_tier: str, feature: str) -> str:
     tier = await get_active_tier(user["user_id"])
     if TIER_RANK.get(tier, 0) < TIER_RANK[min_tier]:
         t = TIERS[min_tier]
-        raise HTTPException(402, f"{min_tier}_required: {feature} is exclusive to the {t['name']} tier "
-                                 f"(€{t['price_eur']}/mes. alebo {t['price_gat']:.0f} GA-T). "
-                                 f"Activate the free 7-day Sentinel trial in Subscription.")
+        raise HTTPException(402, f"{min_tier}_required: {feature} requires the {t['name']} Plan "
+                                 f"(€{t['price_eur']}/mo or {t['price_gat']:.0f} GA-T) — upgrade to unlock, "
+                                 f"or activate the free 7-day Sentinel trial in Subscription.")
     return tier
 
 async def record_revenue(kind: str, amount_eur: float, user_id: str, meta: dict) -> None:

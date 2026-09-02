@@ -213,28 +213,45 @@ async def healing_close(authorization: Optional[str] = Header(None)):
 MOOD_LABEL = {1: "very bad", 2: "poor", 3: "okay", 4: "good", 5: "great"}
 
 
-def _companion_greeting_text(hour: int, name: str, last_mood: Optional[int]) -> dict:
-    n = (name or "").split(" ")[0] or "friend"
-    if 5 <= hour < 11:
-        q = f"Good morning, {n}. How did you sleep? Any nice dreams?"
-        topic = "sleep"
-    elif 11 <= hour < 15:
-        q = f"Good afternoon, {n}. Have you had lunch yet? What did you enjoy?"
-        topic = "meal"
-    elif 15 <= hour < 20:
-        q = f"Good early evening, {n}. How does your body feel today — any pain?"
-        topic = "pain"
-    else:
-        q = f"Good evening, {n}. The day is ending — how do you feel? Do not forget your evening meds."
-        topic = "evening"
-    care = ""
-    if last_mood is not None and last_mood <= 2:
-        care = "You did not feel your best last time — I am here for you all the more today. 💛"
-    return {"question": q, "topic": topic, "care_note": care}
+# Companion greeting — localized for the launch markets; English for everything else.
+_GREET = {
+    "en": {"sleep": "Good morning, {n}. How did you sleep? Any nice dreams?",
+           "meal": "Good afternoon, {n}. Have you had lunch yet? What did you enjoy?",
+           "pain": "Good early evening, {n}. How does your body feel today — any pain?",
+           "evening": "Good evening, {n}. The day is ending — how do you feel? Do not forget your evening meds.",
+           "care": "You did not feel your best last time — I am here for you all the more today. 💛",
+           "friend": "friend"},
+    "sk": {"sleep": "Dobré ráno, {n}. Ako ste sa vyspali? Snívalo sa vám niečo pekné?",
+           "meal": "Dobrý deň, {n}. Už ste obedovali? Čo vám chutilo?",
+           "pain": "Dobrý podvečer, {n}. Ako sa dnes cíti vaše telo — bolí niečo?",
+           "evening": "Dobrý večer, {n}. Deň sa končí — ako sa cítite? Nezabudnite na večerné lieky.",
+           "care": "Naposledy ste sa necítili najlepšie — dnes som tu pre vás o to viac. 💛",
+           "friend": "priateľ"},
+    "cs": {"sleep": "Dobré ráno, {n}. Jak jste se vyspali? Zdálo se vám něco hezkého?",
+           "meal": "Dobrý den, {n}. Už jste obědvali? Co vám chutnalo?",
+           "pain": "Dobrý podvečer, {n}. Jak se dnes cítí vaše tělo — bolí něco?",
+           "evening": "Dobrý večer, {n}. Den končí — jak se cítíte? Nezapomeňte na večerní léky.",
+           "care": "Naposledy jste se necítili nejlépe — dnes jsem tu pro vás o to víc. 💛",
+           "friend": "příteli"},
+    "de": {"sleep": "Guten Morgen, {n}. Wie haben Sie geschlafen? Schöne Träume gehabt?",
+           "meal": "Guten Tag, {n}. Haben Sie schon zu Mittag gegessen? Was hat geschmeckt?",
+           "pain": "Guten Abend, {n}. Wie fühlt sich Ihr Körper heute an — irgendwo Schmerzen?",
+           "evening": "Guten Abend, {n}. Der Tag geht zu Ende — wie fühlen Sie sich? Vergessen Sie Ihre Abendmedikamente nicht.",
+           "care": "Beim letzten Mal ging es Ihnen nicht so gut — heute bin ich umso mehr für Sie da. 💛",
+           "friend": "Freund"},
+}
+
+
+def _companion_greeting_text(hour: int, name: str, last_mood: Optional[int], lang: str = "en") -> dict:
+    L = _GREET.get(lang) or _GREET["en"]
+    n = (name or "").split(" ")[0] or L["friend"]
+    topic = "sleep" if 5 <= hour < 11 else "meal" if 11 <= hour < 15 else "pain" if 15 <= hour < 20 else "evening"
+    care = L["care"] if last_mood is not None and last_mood <= 2 else ""
+    return {"question": L[topic].format(n=n), "topic": topic, "care_note": care}
 
 
 @api.get("/companion/greeting")
-async def companion_greeting(authorization: Optional[str] = Header(None)):
+async def companion_greeting(language: Optional[str] = None, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     last = await db.companion_checkins.find_one(
@@ -242,7 +259,7 @@ async def companion_greeting(authorization: Optional[str] = Header(None)):
     today = _now().date().isoformat()
     answered_today = bool(last and str(last.get("created_at", ""))[:10] == today)
     hour = (_now().hour + 2) % 24  # Europe/Prague approximation (CEST)
-    g = _companion_greeting_text(hour, user.get("name") or "", (last or {}).get("mood"))
+    g = _companion_greeting_text(hour, user.get("name") or "", (last or {}).get("mood"), language or user.get("language") or "en")
     return {**g, "answered_today": answered_today, "last_mood": (last or {}).get("mood")}
 
 

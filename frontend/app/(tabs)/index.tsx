@@ -15,6 +15,7 @@ import { useAcousticGuard } from '@/src/acoustic';
 import { C, S, R, GOLD } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 import { stageFromUser, AGE_LABEL_EN, suggestAngelMode } from '@/src/age';
 import { startWakeWord, stopWakeWord } from '@/src/wake-word';
 import { useAudioRecorder, RecordingPresets } from 'expo-audio';
@@ -40,7 +41,7 @@ async function fireBeacon() {
 export default function Home() {
   const { user, setUser } = useAuth();
   const router = useRouter();
-  const lang: Lang = (user?.language as Lang) || 'en';
+  const { lang } = useI18n();   // re-renders instantly when the language changes
   const angel = !!user?.angel_mode;
   const [busy, setBusy] = useState(false);
   const [beaconSent, setBeaconSent] = useState(false);
@@ -169,7 +170,7 @@ export default function Home() {
           <Ionicons name="shield-checkmark" size={20} color={C.brand} />
           <View style={{ flex: 1 }}>
             <Text style={styles.welcomeTitle}>Guardian Angel OS</Text>
-            <Text style={styles.welcomeSub}>Your Personal Health Guardian</Text>
+            <Text style={styles.welcomeSub}>{t('welcome_sub', lang)}</Text>
           </View>
         </View>
 
@@ -177,8 +178,8 @@ export default function Home() {
         <Pressable testID="home-magic-lens" onPress={() => { tap(); router.push('/magic-lens'); }} style={styles.magicTile}>
           <View style={styles.magicIcon}><Ionicons name="scan" size={26} color={C.onInverse} /></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.magicTitle}>✨ MAGIC LENS</Text>
-            <Text style={styles.magicSub}>Point at any document — I read it, explain it and file it. No typing.</Text>
+            <Text style={styles.magicTitle}>✨ {t('magic_lens', lang)}</Text>
+            <Text style={styles.magicSub}>{t('magic_lens_sub', lang)}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={C.brand} />
         </Pressable>
@@ -207,7 +208,7 @@ export default function Home() {
               <Ionicons name="aperture" size={26} color={C.onInverse} />
             </LinearGradient>
             <View style={{ flex: 1 }}>
-              <Text style={styles.briefTitle}>GUARDIAN LENS</Text>
+              <Text style={styles.briefTitle}>{t('guardian_lens', lang)}</Text>
               <Text style={styles.briefSub}>{t('lens_sub', lang)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.info} />
@@ -216,9 +217,9 @@ export default function Home() {
 
         {/* SOVEREIGN TRIANGLE — the three pillars of the OS */}
         <View style={styles.pillarGrid}>
-          <PillarTile testID="pillar-health" icon="sync-circle" title="My Healing" sub="Loop: referral → money → doctor → physio" onPress={() => router.navigate('/(tabs)/health')} />
-          <PillarTile testID="pillar-family" icon="people" title="Family Shield" sub="Angel Mode · Magic Lens · Voice Echoes · SOS" onPress={() => router.navigate('/(tabs)/family')} />
-          <PillarTile testID="pillar-legacy" icon="shield-checkmark" title="Sovereign Vault" sub="Wealth & insurance · Eternal legacy · Bunker mode" onPress={() => router.navigate('/(tabs)/legacy')} />
+          <PillarTile testID="pillar-health" icon="sync-circle" title={t('pillar_healing', lang)} sub={t('pillar_healing_sub', lang)} onPress={() => router.navigate('/(tabs)/health')} />
+          <PillarTile testID="pillar-family" icon="people" title={t('pillar_shield', lang)} sub={t('pillar_shield_sub', lang)} onPress={() => router.navigate('/(tabs)/family')} />
+          <PillarTile testID="pillar-legacy" icon="shield-checkmark" title={t('pillar_vault', lang)} sub={t('pillar_vault_sub', lang)} onPress={() => router.navigate('/(tabs)/legacy')} />
         </View>
 
         {/* GUARDIAN GOLD — the prominent Sentient Switch. One tap → simplest UI on the planet. */}
@@ -233,15 +234,15 @@ export default function Home() {
               <Ionicons name="accessibility" size={32} color={C.onInverse} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.guardianGoldTitle}>SENIOR MODE · GUARDIAN GOLD</Text>
+              <Text style={styles.guardianGoldTitle}>{t('senior_mode', lang)}</Text>
               <Text style={styles.guardianGoldSub}>
                 {seniorHint
-                  ? 'Recommended for you. Icons + voice, no menus. One tap.'
-                  : 'Simplified interface — icons + voice. For parents, grandparents and guests.'}
+                  ? t('senior_mode_rec', lang)
+                  : t('senior_mode_sub', lang)}
               </Text>
               {(user?.birth_year || seniorHint) && (
                 <Text style={styles.guardianGoldStage}>
-                  LIFE STAGE: {AGE_LABEL_EN[stage].toUpperCase()}
+                  {t('life_stage', lang)}: {AGE_LABEL_EN[stage].toUpperCase()}
                 </Text>
               )}
             </View>
@@ -360,9 +361,11 @@ function HealingStrip({ router }: any) {
 
 // ---- THE COMPANION — empathetic caregiver check-in (Angel Shield 2.0) ----
 function CompanionCard() {
+  const { lang } = useI18n();
   const [g, setG] = useState<any>(null);
   const [reply, setReply] = useState('');
-  useEffect(() => { (async () => { try { setG(await api('/companion/greeting')); } catch {} })(); }, []);
+  // Re-fetch when the language changes — the greeting is localized server-side (user.language).
+  useEffect(() => { (async () => { try { setG(await api(`/companion/greeting?language=${lang}`)); } catch {} })(); }, [lang]);
   const answer = async (mood: number) => {
     tap('medium');
     try {
@@ -543,27 +546,27 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
               >
                 <Ionicons name={acoustic.active ? 'ear' : 'ear-outline'} size={16} color={acoustic.active ? C.onInverse : C.brand} />
                 <Text style={[styles.acousticText, acoustic.active && { color: C.onInverse }]}>
-                  {acoustic.active ? 'GUARDING SOUND — LOCAL' : 'ACOUSTIC GUARDIAN'}
+                  {acoustic.active ? t('guarding_sound', lang) : t('acoustic_guardian', lang)}
                 </Text>
               </Pressable>
             </View>
             {noise && (
               <View testID="noise-alert" style={styles.noiseCard}>
-                <Text style={styles.noiseTitle}>🔊 LOUD NOISE DETECTED — ARE YOU OK?</Text>
+                <Text style={styles.noiseTitle}>{t('noise_title', lang)}</Text>
                 <Text testID="noise-status" style={styles.noiseSub}>
                   {noise.phase === 'listening'
-                    ? 'Listening 5 s for "SOS" or "HELP"… Say it clearly if you need help.'
+                    ? t('noise_listening', lang)
                     : noise.heard
                       ? `I heard: "${noise.heard}" — no SOS keyword. Nothing was sent.`
-                      : 'No SOS keyword heard. Nothing was sent.'}
+                      : t('noise_none', lang)}
                 </Text>
                 <View style={styles.noiseRow}>
                   <Pressable testID="noise-fine" onPress={() => { tap(); setNoise(null); }} style={styles.noiseFine}>
-                    <Text style={styles.noiseFineText}>I&apos;M FINE</Text>
+                    <Text style={styles.noiseFineText}>{t('im_fine', lang)}</Text>
                   </Pressable>
                   <Pressable testID="noise-sos" onPress={() => setSosHint(true)} onLongPress={goSos} delayLongPress={1500} style={styles.noiseSos}>
                     <Ionicons name="alert" size={18} color={C.onError} />
-                    <Text style={styles.noiseSosText}>HOLD FOR SOS</Text>
+                    <Text style={styles.noiseSosText}>{t('hold_for_sos', lang)}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -586,15 +589,15 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                     <Ionicons name="mic" size={52} color={C.onInverse} />
                   </Pressable>
                 </Animated.View>
-                <Text style={styles.jarvisLabel}>TALK TO JARVIS</Text>
+                <Text style={styles.jarvisLabel}>{t('talk_to_jarvis', lang)}</Text>
               </View>
 
               {/* MAGIC LENS — one tap: photograph a label, Jarvis reads it aloud */}
               <Pressable testID="angel-magic-lens" onPress={() => { tap('heavy'); router.push('/lens'); }} style={styles.angelBigCard}>
                 <View style={styles.angelBigIcon}><Ionicons name="aperture" size={32} color={C.onInverse} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.angelBigTitle}>MAGIC LENS</Text>
-                  <Text style={styles.angelBigSub}>Photograph a medicine box or newspaper — I will read it aloud.</Text>
+                  <Text style={styles.angelBigTitle}>{t('magic_lens', lang)}</Text>
+                  <Text style={styles.angelBigSub}>{t('angel_lens_sub', lang)}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={22} color={C.brand} />
               </Pressable>
@@ -604,7 +607,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
 
               <Pressable testID="angel-daily-brief" onPress={() => { tap(); router.push('/daily-brief'); }} style={[styles.angelBrief, { alignSelf: 'center', marginTop: S.md }]}>
                 <Ionicons name="sunny" size={22} color={C.brand} />
-                <Text style={styles.angelBriefText}>MY DAY</Text>
+                <Text style={styles.angelBriefText}>{t('my_day', lang)}</Text>
               </Pressable>
             </ScrollView>
 
@@ -616,20 +619,20 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
                   style={[styles.angelEmg, { backgroundColor: C.error }]}>
                   <Ionicons name="alert" size={44} color={C.onError} />
                 </Pressable>
-                <Text style={styles.angelEmgLabel}>{sosHint ? 'HOLD 1.5 S' : 'HOLD FOR SOS'}</Text>
+                <Text style={styles.angelEmgLabel}>{sosHint ? t('hold_hint', lang) : t('hold_for_sos', lang)}</Text>
               </View>
               {/* QR PROFIL — shareable emergency profile QR (replaced the confusing phone icon) */}
               <View style={styles.angelEmgWrap}>
                 <Pressable testID="angel-qr-profile" onPress={() => { tap('medium'); router.push('/emergency-qr'); }} style={styles.angelEmg}>
                   <Ionicons name="qr-code-outline" size={44} color={C.brand} />
                 </Pressable>
-                <Text style={styles.angelEmgLabel}>QR PROFILE</Text>
+                <Text style={styles.angelEmgLabel}>{t('qr_profile', lang)}</Text>
               </View>
               <View style={styles.angelEmgWrap}>
                 <Pressable testID="angel-doctor" onPress={() => router.navigate('/(tabs)/hunter')} style={styles.angelEmg}>
                   <Ionicons name="medkit" size={44} color={C.brand} />
                 </Pressable>
-                <Text style={styles.angelEmgLabel}>DOCTOR</Text>
+                <Text style={styles.angelEmgLabel}>{t('doctor', lang)}</Text>
               </View>
             </View>
           </SafeAreaView>

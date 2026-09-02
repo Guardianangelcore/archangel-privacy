@@ -11,6 +11,7 @@ import { ContactSheet } from '@/src/ui/ContactSheet';
 import { CityPicker, LanguageSuggestionBanner } from '@/src/CityPicker';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
+import { useI18n } from '@/src/i18n-context';
 import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
@@ -21,7 +22,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 export default function Profile() {
   const { user, signOut, setUser } = useAuth();
   const router = useRouter();
-  const lang: Lang = (user?.language as Lang) || 'en';
+  const { lang, setLang } = useI18n();   // instant, app-wide re-render on change
   const [profile, setProfile] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [ecPick, setEcPick] = useState(false);
@@ -131,11 +132,6 @@ export default function Profile() {
     } finally { setSaving(false); }
   };
 
-  const setLang = async (l: Lang) => {
-    const u: any = await api('/me/prefs', { method: 'PATCH', body: JSON.stringify({ language: l }) });
-    setUser(u);
-  };
-
   const setPref = async (patch: Record<string, any>) => {
     const u: any = await api('/me/prefs', { method: 'PATCH', body: JSON.stringify(patch) });
     setUser(u);
@@ -233,12 +229,12 @@ export default function Profile() {
         <View style={styles.identityCard}>
           <Text style={styles.identityName}>{(user?.name || user?.email || '').toUpperCase()}</Text>
           <Text style={styles.identityEmail}>{user?.email}</Text>
-          <Text style={styles.identityLbl}>DECENTRALIZED IDENTIFIER</Text>
+          <Text style={styles.identityLbl}>{t('decentralized_id', lang)}</Text>
           <Text style={styles.identityDid}>{user?.did}</Text>
         </View>
 
         {/* COMPETITION DEMO BADGE — global "DEMO" pill in the top-right corner */}
-        <Text style={styles.section}>DEMO MODE</Text>
+        <Text style={styles.section}>{t('demo_mode', lang)}</Text>
         <View style={styles.guardRow}>
           <Ionicons name="pricetag-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>
@@ -253,7 +249,7 @@ export default function Profile() {
           />
         </View>
 
-        <Text style={styles.section}>LANGUAGE</Text>
+        <Text testID="prof-lang-title" style={styles.section}>{t('language', lang)}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
           {(Object.keys(LANG_NAMES) as Lang[]).map(l => (
             <Pressable testID={`prof-lang-${l}`} key={l} onPress={() => setLang(l)} style={[styles.chip, lang === l && styles.chipActive]}>
@@ -263,7 +259,7 @@ export default function Profile() {
         </View>
 
         {/* ===== SENTIENT UX — the human soul of the OS ===== */}
-        <Text style={styles.section}>SENTIENT UX — THE SOUL OF THE APP</Text>
+        <Text style={styles.section}>{t('sentient_ux', lang)}</Text>
 
         {/* JARVIS VOICE PREVIEW */}
         <View style={styles.guardRow}>
@@ -442,7 +438,7 @@ export default function Profile() {
           </View>
         )}
 
-        <Text style={styles.section}>{t('donor_card', lang).toUpperCase()} + EMERGENCY PROFILE</Text>
+        <Text style={styles.section}>{t('donor_card', lang).toUpperCase()} + {t('emergency_profile', lang)}</Text>
         <Text style={styles.lbl}>FULL NAME</Text>
         <TextInput testID="prof-name" value={profile.full_name || ''} onChangeText={v => setProfile({ ...profile, full_name: v })} style={styles.input} placeholder="First Last" placeholderTextColor="#999" />
 

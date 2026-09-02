@@ -11,6 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/auth";
+import { I18nProvider } from "@/src/i18n-context";
 import { registerForPush } from "@/src/push";
 import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
@@ -204,7 +205,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <RootNav />
+          <I18nProvider>
+            <RootNav />
+          </I18nProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

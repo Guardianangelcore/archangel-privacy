@@ -8,11 +8,13 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { useI18n } from '@/src/i18n-context';
 
 const NOTIF_KEY = 'dailyBriefNotifOn';
 
 export default function DailyBrief() {
   const router = useRouter();
+  const { t } = useI18n();
   const [brief, setBrief] = useState<any>(null);
   const [err, setErr] = useState('');
   const [notifOn, setNotifOn] = useState(false);
@@ -63,14 +65,14 @@ export default function DailyBrief() {
         <Pressable testID="db-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />
         </Pressable>
-        <Text style={styles.title}>DAILY BRIEFING</Text>
+        <Text style={styles.title}>{t('daily_briefing')}</Text>
         <View style={{ width: 26 }} />
       </View>
       <ScrollView
         contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
       >
-        <Text style={styles.greet}>Good morning,{'\n'}{brief?.name || '…'}.</Text>
+        <Text style={styles.greet}>{t('good_morning')}{'\n'}{brief?.name || '…'}.</Text>
         <Text style={styles.date}>{today}</Text>
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -80,7 +82,7 @@ export default function DailyBrief() {
           <Switch testID="db-notif" value={notifOn} onValueChange={toggleNotif} trackColor={{ true: C.brand, false: C.surface3 }} />
         </View>
 
-        <Text style={styles.section}>💊 MEDS TODAY {brief ? `· ${brief.meds.pending} PENDING` : ''}</Text>
+        <Text style={styles.section}>💊 {t('meds_today')} {brief ? `· ${brief.meds.pending} PENDING` : ''}</Text>
         {(brief?.meds?.items || []).map((m: any, i: number) => (
           <Pressable key={i} testID={`db-med-${i}`} onPress={() => !m.taken && takeMed(m)} style={[styles.bigRow, m.taken && { opacity: 0.45 }]}>
             <Ionicons name={m.taken ? 'checkmark-circle' : 'ellipse-outline'} size={30} color={m.taken ? '#5FA779' : C.brand} />
@@ -93,7 +95,7 @@ export default function DailyBrief() {
         ))}
         {brief && brief.meds.items.length === 0 && <Text style={styles.empty}>No meds for today. Add reminders in the Meds section.</Text>}
 
-        <Text style={styles.section}>📅 APPOINTMENTS</Text>
+        <Text style={styles.section}>📅 {t('appointments')}</Text>
         {(brief?.events_today || []).map((e: any) => (
           <View key={e.event_id} style={[styles.bigRow, { borderColor: C.error, borderWidth: 2 }]}>
             <Ionicons name="alarm" size={28} color={C.error} />
@@ -116,7 +118,7 @@ export default function DailyBrief() {
           <Text style={styles.empty}>No appointments in the next 3 days. Rest up. 🌿</Text>
         )}
 
-        <Text style={styles.section}>👪 RODINA</Text>
+        <Text style={styles.section}>👪 {t('family')}</Text>
         {(brief?.family?.pending_pulse || []).map((p: any) => (
           <Pressable key={p.req_id} testID={`db-pulse-${p.req_id}`} onPress={() => answerPulse(p)} style={[styles.bigRow, { backgroundColor: C.brandTer }]}>
             <Ionicons name="heart" size={28} color={C.brand} />

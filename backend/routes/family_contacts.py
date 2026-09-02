@@ -86,6 +86,95 @@ async def delete_family_contact(contact_id: str, authorization: Optional[str] = 
     return {"ok": True}
 
 
+def _sos_body(user: dict, lat: Optional[float] = None, lng: Optional[float] = None) -> str:
+    """SOS message — includes a live GPS map link when the position is known."""
+    who = user.get("name") or "Guardian Angel"
+    geo = user.get("geo") or {}
+    lat = lat if lat is not None else (user.get("lat") or geo.get("lat"))
+    lng = lng if lng is not None else (user.get("lng") or geo.get("lng"))
+    loc = f" My live location: https://maps.google.com/?q={lat},{lng}" if lat and lng else ""
+    return f"🆘 SOS! I need help.{loc} — {who} (Guardian Health & Angel)"
+
+
+async def _send_sms(phone: str, body: str) -> tuple:
+    """TWILIO — real SMS when credentials are configured; graceful device-composer
+    fallback otherwise (keys arrive later → this switches on automatically).
+    Returns (sent, channel, error)."""
+    sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+    tok = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    frm = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
+    if not (sid and tok and frm):
+        return False, "device", None
+    try:
+        from fastapi.concurrency import run_in_threadpool
+        from twilio.rest import Client as TwilioClient
+
+        def _send():
+            to = "+" + re.sub(r"[^0-9]", "", phone)
+            return TwilioClient(sid, tok).messages.create(to=to, from_=frm, body=body)
+
+        msg = await run_in_threadpool(_send)
+        logger.info(f"twilio sos sent sid={msg.sid}")
+        return True, "twilio", None
+    except Exception as e:
+        logger.error(f"twilio sos failed: {e}")
+        return False, "device", str(e)[:200]
+
+
+class SosBroadcastIn(BaseModel):
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    source: str = "fall_verify"   # fall_verify | hold | keyword | manual
+
+
+@api.post("/sos/broadcast")
+async def sos_broadcast(body: SosBroadcastIn, authorization: Optional[str] = Header(None)):
+    """GUARDIAN SOS ALERT — fired once the emergency loop is CONFIRMED (countdown
+    elapsed, hold-to-SOS or explicit keyword). Texts every family contact the live
+    GPS location (Twilio when configured, otherwise the app opens the device SMS
+    composer pre-filled), pushes linked guardians, and records the event."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    lat = body.lat if body.lat is not None and -90 <= body.lat <= 90 else None
+    lng = body.lng if body.lng is not None and -180 <= body.lng <= 180 else None
+    if lat is not None and lng is not None:
+        await db.users.update_one({"user_id": uid}, {"$set": {"lat": lat, "lng": lng, "last_sos_at": now}})
+    sms_body = _sos_body(user, lat, lng)
+    maps_url = f"https://maps.google.com/?q={lat},{lng}" if lat is not None and lng is not None else None
+
+    contacts, sms_sent_count = [], 0
+    async for row in db.family_contacts.find({"user_id": uid}, {"_id": 0}).sort("created_at", 1):
+        phone = _view(row)["phone"]
+        sent, channel, err = await _send_sms(phone, sms_body)
+        sms_sent_count += int(sent)
+        contacts.append({"contact_id": row["contact_id"], "name": row["name"], "phone": phone,
+                         "relation": row.get("relation"), "sms_sent": sent, "channel": channel, "error": err})
+
+    # Linked guardians who have the app → instant push with the map link.
+    guardian_ids = [g["guardian_user_id"] async for g in
+                    db.guardians.find({"user_id": uid}, {"_id": 0, "guardian_user_id": 1})]
+    push_sent = 0
+    if guardian_ids:
+        try:
+            await send_push(guardian_ids, {
+                "title": f"🆘 SOS — {user.get('name') or 'your family member'} needs help",
+                "body": (f"Live location: {maps_url}" if maps_url else "Location unavailable — please call now."),
+                "data": {"deeplink": "/family", "maps_url": maps_url, "user_id": uid},
+            }, idempotency_key=f"sos-broadcast-{uid}-{now.strftime('%Y%m%d%H%M')}")
+            push_sent = len(guardian_ids)
+        except Exception as e:
+            logger.warning(f"sos broadcast push failed: {e}")
+
+    await db.sos_events.insert_one({
+        "event_id": uuid.uuid4().hex, "user_id": uid, "kind": "sos_broadcast", "source": body.source,
+        "lat": lat, "lng": lng, "contacts": len(contacts), "sms_sent": sms_sent_count,
+        "push_sent": push_sent, "at": now})
+    return {"ok": True, "contacts": contacts, "sms_sent": sms_sent_count, "push_sent": push_sent,
+            "maps_url": maps_url, "sms_body": sms_body,
+            "channel": "twilio" if sms_sent_count else "device"}
+
+
 @api.post("/family-contacts/{contact_id}/sos")
 async def sos_family_contact(contact_id: str, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
@@ -96,35 +185,8 @@ async def sos_family_contact(contact_id: str, authorization: Optional[str] = Hea
     now = datetime.now(timezone.utc)
     phone = _view(row)["phone"]
 
-    # SOS message — include a live GPS map link when the user's position is known.
-    who = user.get("name") or "Guardian Angel"
-    geo = user.get("geo") or {}
-    lat, lng = user.get("lat") or geo.get("lat"), user.get("lng") or geo.get("lng")
-    loc = f" My location: https://maps.google.com/?q={lat},{lng}" if lat and lng else ""
-    sms_body = f"🆘 SOS! I need help.{loc} — {who} (Guardian Health & Angel)"
-
-    # TWILIO — real SMS when credentials are configured; graceful device-composer
-    # fallback otherwise (keys arrive later → this switches on automatically).
-    sms_sent, channel, sms_error = False, "device", None
-    sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
-    tok = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
-    frm = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
-    if sid and tok and frm:
-        try:
-            from fastapi.concurrency import run_in_threadpool
-            from twilio.rest import Client as TwilioClient
-
-            def _send():
-                to = "+" + re.sub(r"[^0-9]", "", phone) if not phone.strip().startswith("+") \
-                    else "+" + re.sub(r"[^0-9]", "", phone)
-                return TwilioClient(sid, tok).messages.create(to=to, from_=frm, body=sms_body)
-
-            msg = await run_in_threadpool(_send)
-            sms_sent, channel = True, "twilio"
-            logger.info(f"twilio sos sent sid={msg.sid}")
-        except Exception as e:
-            sms_error = str(e)[:200]
-            logger.error(f"twilio sos failed: {e}")
+    sms_body = _sos_body(user)
+    sms_sent, channel, sms_error = await _send_sms(phone, sms_body)
 
     await db.sos_events.insert_one({
         "event_id": uuid.uuid4().hex, "user_id": user["user_id"],

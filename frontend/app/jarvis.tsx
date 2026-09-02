@@ -15,6 +15,7 @@ import Animated, {
 import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import { fetch as expoFetch } from 'expo/fetch';
 import { api, API_BASE, getToken, errMsg } from '@/src/api';
+import Paywall from '@/src/Paywall';
 import * as Location from 'expo-location';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
@@ -138,6 +139,10 @@ export default function Jarvis() {
   const [auto, setAuto] = useState<any>(null);
   const [traces, setTraces] = useState<Record<string, any>>({});
   const [err, setErr] = useState('');
+  // TIER GATE — Jarvis AI + Morning Briefing are Guardian-plan features (Sovereign = free tier).
+  const [locked, setLocked] = useState<string | null>(null);
+  const GUARDIAN_PROMPT = 'Jarvis AI requires the Guardian Plan — upgrade to unlock. Your free Sovereign plan keeps the Vault, SOS QR and calendar.';
+  const isTierError = (e: any) => String(e?.message || e).includes('guardian_required');
   // Voice playback centralised in src/voice.ts (single module-level player, auto-cleanup)
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const wakeRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -157,7 +162,8 @@ export default function Jarvis() {
   useEffect(() => {
     loadState(); loadMems();
     (async () => {
-      try { const b: any = await api('/agent/briefing'); setBriefing(b); if (b.mood) setMood(b.mood); } catch {}
+      try { const b: any = await api('/agent/briefing'); setBriefing(b); setLocked(null); if (b.mood) setMood(b.mood); }
+      catch (e: any) { if (isTierError(e)) setLocked(GUARDIAN_PROMPT); }
       try { setAuto(await api('/jarvis/actions')); } catch {}
       try { await api('/agent/anomalies'); } catch {}
     })();
@@ -280,7 +286,11 @@ export default function Jarvis() {
           if (viaVoice) speak(res.reply, (res.mood as Mood) || 'calm');
         }
       }
-    } catch (e: any) { setErr(errMsg(e)); setMood('calm'); setStatus(''); }
+    } catch (e: any) {
+      if (isTierError(e)) { setLocked(GUARDIAN_PROMPT); setMsgs(prev => prev.filter(m => !m.streaming)); }
+      else setErr(errMsg(e));
+      setMood('calm'); setStatus('');
+    }
     setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy, mode, user?.language, speak, loadState, loadMems, loadHist]);
@@ -344,6 +354,8 @@ export default function Jarvis() {
         method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: form,
       });
       const data = await res.json();
+      if (res.status === 402) { setLocked(GUARDIAN_PROMPT); setStatus(''); setMood('calm'); return; }
+      if (!res.ok) { setErr(typeof data?.detail === 'string' ? data.detail : 'Voice transcription failed'); setStatus(''); setMood('calm'); return; }
       if (data.transcript) await sendMessage(data.transcript, true);
       else { setStatus(''); setMood('calm'); }
     } catch (e) { console.log('voice err', e); setStatus(''); setMood('calm'); }
@@ -453,8 +465,16 @@ export default function Jarvis() {
           )}
         </View>
 
+        {/* GUARDIAN PLAN GATE — friendly upgrade prompt for free (Sovereign) users */}
+        {!!locked && (
+          <View testID="jv-guardian-gate">
+            <Paywall tier="guardian" message={locked}
+              onUnlocked={async () => { setLocked(null); try { const b: any = await api('/agent/briefing'); setBriefing(b); } catch {} }} />
+          </View>
+        )}
+
         {/* MORNING BRIEFING */}
-        {briefing && (
+        {briefing && !locked && (
           <View style={[st.card, { borderColor: cfg.color }]}>
             <View style={st.cardHead}>
               <Text style={st.cardTitle}>☀️ MORNING BRIEFING</Text>

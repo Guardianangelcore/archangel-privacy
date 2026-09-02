@@ -830,3 +830,23 @@ NOTE: smoketest-user-1 has ~123 exam events from previous suites (pollution, har
   /agent/briefing?force=true). Weather text testID jv-weather.
 Self-tested: /agent/chat → 503 with budget detail; /geo/locate 48.72,21.26 → Kosice (gps); /agent/briefing?force=true →
 weather Kosice; fresh user + X-Forwarded-For 195.28.64.1 → Bratislava (ip). Founder geo reset to unset afterwards.
+
+## Iteration 56 (Language switching fix · Guardian tier gate for Jarvis/Briefing · Guardian SOS Alert · Tour EN)
+1) LANGUAGE SWITCH: new src/i18n-context.tsx (I18nProvider in app/_layout.tsx inside AuthProvider; useI18n() → {lang,t,setLang,rtl}).
+   setLang flips lang instantly (optimistic) + PATCH /me/prefs + setUser; a pick on the LOGIN screen (lang-<code> chips) is stored
+   (AsyncStorage ga.lang.pending.v1) and applied to the account right after sign-in. Screens converted: login.tsx, (tabs)/_layout.tsx
+   tab titles, (tabs)/index.tsx (home + Angel home incl. SOS/noise card), (tabs)/profile.tsx (chips prof-lang-<code>, section headers,
+   testID prof-lang-title), fall-verify.tsx, daily-brief.tsx. ~55 new keys in src/i18n.ts T (sk/cs/en/de) + CORE block for pl/hu/ru/es/fr/it/uk/zh/ja/ar.
+   Backend /companion/greeting?language=xx localized (sk/cs/de/en) — Angel home greeting re-fetches on language change.
+2) GUARDIAN TIER GATE (existing 4-tier system in routes/subscription.py: sovereign/guardian €29/sentinel/archangel): agent.py now calls
+   require_tier(user,"guardian",…) on POST /api/agent/chat, /api/agent/chat/stream, /api/agent/transcribe and GET /api/agent/briefing →
+   402 {"detail":"guardian_required: … requires the Guardian Plan (€29/mo or 50 GA-T) — upgrade to unlock, …"}. Founder/inner_circle = archangel
+   (unlocked). Free (sovereign) users: jarvis.tsx shows Paywall tier="guardian" (testID jv-guardian-gate, title "GUARDIAN PLAN", message
+   "Jarvis AI requires the Guardian Plan — upgrade to unlock…", buttons pw-trial / pw-upgrade → /subscription); briefing card hidden while locked.
+3) GUARDIAN SOS ALERT: POST /api/sos/broadcast {lat,lng,source} (family_contacts.py) → texts every family contact (Twilio if configured,
+   else channel "device"), pushes linked guardians (db.guardians), logs sos_events kind sos_broadcast; returns {contacts[], sms_sent, push_sent,
+   maps_url, sms_body}. fall-verify.tsx: when the loop is CONFIRMED (countdown end / GET HELP NOW) → GPS (asks permission) → /sos/broadcast →
+   'sent' screen lists contacts (sos-contact-<id>), map link (sos-maps), button sos-text-guardians opens device SMS composer pre-filled.
+4) Sovereign Tour step 1 title → "MY HEALING" (src/onboarding-tour.tsx).
+Self-tested: founder /sos/broadcast 200 (1 contact, maps_url ok); free user /agent/chat + /agent/briefing → 402 guardian_required;
+UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch instant.

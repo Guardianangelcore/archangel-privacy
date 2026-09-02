@@ -1,0 +1,32 @@
+{
+  "summary": "Iter 55 regression PASS. Backend pytest 14/14 pass (test_iter55_tier_gate_sos.py): (A) i18n greeting sk/en/de correct; (B) Free tier receives 402 guardian_required on /agent/chat, /agent/briefing, /agent/chat/stream and /agent/transcribe with detail starting 'guardian_required:' containing 'Guardian Plan'; founder gets 200 on /agent/briefing and 503 (budget) — not 402 — on /agent/chat; GET /api/subscription returns tier archangel for founder & sovereign for free-tier, tiers.guardian.price_eur=29; (C) POST /api/sos/broadcast with coords → ok=true, maps_url=https://maps.google.com/?q=48.15,17.11, sms_body contains that URL, contacts[] has ≥1 record with sms_sent=false, channel=device, sms_sent=0, push_sent int; without coords → maps_url=null; family-contacts still lists contacts. Frontend (390x844): (a) /login lang-sk chip flips labels instantly to 'PRIHLÁSIŤ SA' / 'VYTVORIŤ ÚČET' / 'ALEBO'; founder bypass lands on angel-home with SK labels (HOVORIŤ S JARVISOM, MAGICKÁ ŠOŠOVKA, PODRŽTE PRE SOS, QR PROFIL, LEKÁR, AKUSTICKÝ STRÁŽCA) and 'Dobr…' greeting. (b) /profile prof-lang-de → immediate 'PROFIL' + 'SPRACHE'/'DEZENTRALE KENNUNG'/'DEMO-MODUS'; prof-lang-en → 'PROFILE'/'LANGUAGE'/'DECENTRALIZED IDENTIFIER'; EN persists after reload (account pref). (c) Free-tier /jarvis shows jv-guardian-gate with 'GUARDIAN PLAN' + 'requires the Guardian Plan' text, no MORNING BRIEFING; typing hello + jv-ask keeps gate (no raw 402/JSON leak); pw-upgrade navigates to /subscription. (d) Founder /jarvis has NO gate + MORNING BRIEFING with jv-use-location visible. (e) angel-sos quick tap does NOT navigate; label switches HOLD FOR SOS → HOLD 1.5 S. (f) Long-press ≥1.9s → fall-verify-screen → fall-help-now → fall-sent shows 'ALERT SENT', '1 GUARDIANS NOTIFIED', sos-contact-* row (Mária/+421 900 123 456), sos-text-guardians ('TEXT GUARDIANS NOW'); fall-back closes. Founder language left as EN. No blocking bugs.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter55_tier_gate_sos.py",
+    "/app/test_reports/pytest/pytest_iter55.xml"
+  ],
+  "action_items": [
+    "None. All four items (A language switch, B tier gate, C SOS broadcast, D Sovereign Tour i18n) verified. LLM budget still exhausted → real Jarvis chat still returns 503 by design; top-up when convenient to validate live gpt-5.4 reply text against founder chat."
+  ],
+  "critical_code_review_comments": [
+    "Tier gate correctly returns 402 with detail 'guardian_required: Jarvis AI requires the Guardian Plan — upgrade to unlock…' from routes/agent.py; frontend jarvis.tsx catches this and renders jv-guardian-gate + pw-upgrade → /subscription. Clean end-to-end path with no raw 402/JSON leaks.",
+    "sos_broadcast maps_url format matches spec exactly ('https://maps.google.com/?q=<lat>,<lng>'); when Twilio env vars are blank each contact correctly reports channel='device' and sms_sent=false; sms_sent aggregate = 0 while push_sent is populated. Consider adding a warning in the response when TWILIO_* is empty so the client UI can hint 'device SMS handoff'.",
+    "i18n-context.tsx switching is reactive: prof-lang-de flips title to 'PROFIL' + section labels within <1s without reload, and PATCH /me/prefs persists language to account (verified via reload). Login-screen chip also seeds the newly-signed-in account (founder bypass carried SK into home)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter55_tier_gate_sos.py (new)",
+    "/app/test_reports/iteration_55.json (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "free-tier-test@example.com dev-bypass user created once by backend test suite (sovereign tier). Founder account unchanged. Founder language left = 'en'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "EMERGENT_LLM_KEY budget still EXHAUSTED — Jarvis chat/briefing text falls back to deterministic template; 503 for chat is EXPECTED. Iter 55 features (language switch, tier gate 402, SOS broadcast, tour i18n) are all stable. Next re-run: /app/backend/tests/test_iter55_tier_gate_sos.py should stay green; if LLM key is topped up the founder chat test (test_founder_chat_503_not_402) will need to be updated to accept 200. testIDs used: lang-sk, pw-tab-login, pw-tab-register, founder-bypass-btn, bypass-toggle, bypass-email, bypass-submit, angel-home, angel-sos, prof-lang-de, prof-lang-en, prof-lang-title, jv-guardian-gate, jv-input, jv-ask, pw-upgrade, jv-use-location, fall-verify-screen, fall-help-now, fall-sent, sos-contact-*, sos-text-guardians, fall-back.",
+  "rca_of_issue": "N/A — features already implemented and verified this iteration."
+}

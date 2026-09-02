@@ -7,9 +7,11 @@ import { C } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { useAuth } from '@/src/auth';
 import { GuardianEyeFAB } from '@/src/GuardianEye';
+import { useI18n } from '@/src/i18n-context';
 
 export default function TabsLayout() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const angel = !!user?.angel_mode;
 
   return (
@@ -36,7 +38,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="health"
         options={{
-          title: 'HEALING',
+          title: t('tab_healing'),
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'sync-circle' : 'sync-circle-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-health',
         }}
@@ -44,7 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="family"
         options={{
-          title: 'FAMILY SHIELD',
+          title: t('tab_family_shield'),
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-family',
         }}
@@ -52,7 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="legacy"
         options={{
-          title: 'VAULT',
+          title: t('tab_vault'),
           tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} size={size} color={color} />,
           tabBarButtonTestID: 'tab-legacy',
         }}
