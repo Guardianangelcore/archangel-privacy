@@ -506,6 +506,19 @@ export default function Jarvis() {
                 <Text style={st.alertText}>{a.text}</Text>
               </View>
             ))}
+            {/* LIVE HEALTH NEWS — Perplexity Sonar (sonar-pro), one call per language/country per day */}
+            {!!briefing.news?.length && (
+              <View testID="jv-news" style={st.citeBox}>
+                <Text style={st.citeLbl}>🌐 HEALTH NEWS TODAY · LIVE · {briefing.news_engine || 'SONAR'}</Text>
+                {briefing.news.slice(0, 3).map((n: any, i: number) => (
+                  <Pressable key={i} testID={`jv-news-${i}`} onPress={() => n.url && Linking.openURL(n.url)} hitSlop={4} style={st.newsRow}>
+                    <Text style={st.newsTitle}>{i + 1}. {n.title}</Text>
+                    {!!n.summary && <Text style={st.newsSummary}>{n.summary}</Text>}
+                    <Text style={st.citeLink} numberOfLines={1}>{n.source}{n.url ? ` · ${String(n.url).replace(/^https?:\/\//, '')}` : ''}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -795,6 +808,9 @@ const st = StyleSheet.create({
   citeBox: { marginTop: S.sm, borderTopWidth: 1, borderTopColor: C.border, paddingTop: S.sm, gap: 2 },
   citeLbl: { color: C.brand, fontWeight: '900', fontSize: 9, letterSpacing: 1.5 },
   citeLink: { color: '#4A90D9', fontSize: 11, textDecorationLine: 'underline' },
+  newsRow: { minHeight: 44, justifyContent: 'center', paddingVertical: 6, gap: 2 },
+  newsTitle: { color: C.fg, fontWeight: '800', fontSize: 12.5, lineHeight: 17 },
+  newsSummary: { color: C.onS3, fontSize: 11, lineHeight: 15 },
   histRow: { flexDirection: 'row', gap: S.sm, alignItems: 'center', marginHorizontal: S.xl, marginTop: S.sm, backgroundColor: C.surface2, borderRadius: R.sm, borderWidth: 1, borderColor: C.border, padding: S.md, minHeight: 52 },
   histQuery: { color: C.fg, fontSize: 12.5, fontWeight: '700' },
   histMeta: { color: C.info, fontSize: 10, marginTop: 2 },

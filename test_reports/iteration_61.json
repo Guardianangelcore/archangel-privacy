@@ -1,0 +1,38 @@
+{
+  "summary": "Iter 61 Perplexity Sonar integration into Medical News Sentinel + Morning Briefing verified end-to-end. Backend 9/9 pytest passed (test_iter61_perplexity_news.py); founder /api/news/feed returns 200 fast (<8s) with live=true, engine 'Perplexity Sonar · sonar-pro', 6 general items all live-* with http URLs, no [1] or ** markers, and shaped correctly; fresh dev-bypass user got immediate live cache hit (warm general:sk:EU) with 6 live items and no crash; ?force=true 200; unauth 401; /news/{id}/hunt 200 with waitlist_item for a live item having hunt_city and 404 unknown; /news/tech-tracker 200; /agent/briefing (founder, force+cached) 200 with briefing text + 3 news + news_engine 'Perplexity Sonar · sonar-pro'; /agent/search regression 200 with live_search=true and citations. Frontend web (390x844): founder-bypass-btn login → /medical-news shows testID news-live-badge 'LIVE · Perplexity Sonar · sonar-pro · updated 04:39 PM · refreshing…', 6 news-source-<news_id> underlined links, 1 news-hunt-* (only cards with 🏥 city), 6 news-jarvis-* consult buttons, disclaimer mentions Perplexity Sonar; /jarvis shows jv-news card with header '🌐 HEALTH NEWS TODAY · LIVE · Perplexity Sonar · sonar-pro', rows jv-news-0..2 with title/summary/source/url, jv-mode-sonar chip present, briefing text renders. Fresh UI user (bypass-toggle/email/submit) → /medical-news renders instantly with LIVE badge + live cards, no blank/hang. Observation (non-blocker): founder personalized array = 0 in current cache so 'FOR YOU (0)' shows empty-state message and no MATCHES YOUR VAULT badge appears — matches spec fallback; general feed content appears in Czech (cache likely populated by a cs user) even though founder lang=en per playbook — worth confirming personal cache is running.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "medical-news personalized (founder)", "issue": "FOR YOU (0) shown for the founder — personal Sonar cache appears empty so no MATCHES YOUR VAULT badge / jarvis_alert card is rendered. Backend response shape is correct (empty personalized array). Confirm _user_focus() actually returns focus terms and that the personal cache key is being refreshed.", "affected_testIDs": ["news-live-badge"]},
+      {"flow": "live feed language for founder", "issue": "General live items display in Czech even though founder language=en per playbook (screenshot: 'Kmenové buňky přidané k bypassu…', 'V časné klinické studii…'). Cache key uses (lang,country) so a Czech user hitting general:en:SG shouldn't overwrite en output — verify the cache was actually populated for en and that the founder's user.language is 'en' in DB.", "affected_testIDs": ["news-source-*"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "styles across screens", "issue": "Console spam on web: deprecated 'shadow*' and 'textShadow*' style props (use boxShadow / textShadow) and props.pointerEvents (use style.pointerEvents). Not blocking but should be migrated for RN 0.75+ / Expo SDK 51+."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter61_perplexity_news.py",
+    "/app/test_reports/pytest/pytest_iter61.xml"
+  ],
+  "action_items": [
+    "Verify founder personalized live cache is being written (key personal:<uid>:<focus_hash>) — currently returning 0 personalized items even though the playbook says warm caches exist. Possibly _user_focus() returns [] for the founder in this fork (no waitlist / jarvis_actions / disease/surgery events).",
+    "Investigate general feed items rendering in Czech for founder (lang=en). Confirm user.language in db.users for guardian.angel.core@proton.me and check whether medical_news_live docs for general:en:SG actually contain English text.",
+    "Migrate deprecated RN style props (shadow*, textShadow*, props.pointerEvents) — noisy console warnings on every screen render."
+  ],
+  "critical_code_review_comments": [
+    "perplexity.py sonar() handles 429 with a single 2.5s retry — reasonable, but after that it returns None and callers back off for 3 minutes (LIVE_BACKOFF). Good.",
+    "routes/news.py _cached_live returns stale items + pending=true when the cache is stale, and never blocks the response — correct implementation of the 'response never waits for Sonar' requirement.",
+    "routes/agent.py _live_health_news caches empty results ONLY when items>0 — good, avoids sticky empty briefing news."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter61_perplexity_news.py"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% of tested flows"},
+  "seed_data_creation": "One fresh dev-bypass user created per run (iter61-fresh-<uuid>@example.com, iter61-ui-<uuid>@example.com) — harmless test users.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Perplexity API key valid; warm caches for general:en:SG, general:sk:EU exist. If retesting, avoid pounding ?force=true (rate-limit sensitive). Founder personalized may still be empty until backend seeds waitlist/jarvis_actions or user_focus returns tags.",
+  "rca_of_issue": "N/A — no failures. Only observations logged in integration_issues for the main agent to confirm."
+}

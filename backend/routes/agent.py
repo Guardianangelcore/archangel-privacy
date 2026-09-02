@@ -588,6 +588,53 @@ def _edge_invalidate_prefix(prefix: str):
             _EDGE_CACHE.pop(k, None)
 
 
+BRIEF_NEWS_SCHEMA = {
+    "type": "object",
+    "properties": {"items": {"type": "array", "items": {
+        "type": "object",
+        "properties": {"title": {"type": "string"}, "summary": {"type": "string"},
+                       "source": {"type": "string"}, "url": {"type": "string"}},
+        "required": ["title", "summary", "source", "url"]}}},
+    "required": ["items"],
+}
+
+
+async def _live_health_news(user: dict, today: str) -> list:
+    """2-3 real health headlines for the Morning Briefing (Perplexity sonar-pro, one call per
+    language+country per day, cached in db.medical_news_live). Empty list when unavailable."""
+    from perplexity import sonar, pplx_enabled, parse_json, strip_cite_marks, SONAR_PRO
+    if not pplx_enabled():
+        return []
+    lang = (user.get("language") or "en")[:5]
+    country = ((user.get("geo") or {}).get("country") or "EU")[:3]
+    key = f"brief-news:{lang}:{country}:{today}"
+    doc = await db.medical_news_live.find_one({"key": key}, {"_id": 0, "items": 1})
+    if doc:
+        return doc["items"]
+    region = f"{country} and the EU" if country not in ("EU", "US") else "the EU"
+    res = await sonar(
+        [{"role": "system", "content": "You are a health news editor for a caring EU patient companion app. Only real, "
+                                       "recent news from reputable sources with a real URL. Return ONLY JSON matching the schema."},
+         {"role": "user", "content": f"Give the 3 most relevant public-health or medical news items from the last 7 days for "
+                                     f"patients in {region} (vaccination campaigns, drug approvals/recalls, epidemics, heat/air "
+                                     f"warnings, hospital or insurance changes). Title (max 12 words) and a one-sentence summary "
+                                     f"in {_lang_name(user)}; source publisher name; url."}],
+        model=SONAR_PRO, recency="week", context_size="low", max_tokens=700, json_schema=BRIEF_NEWS_SCHEMA, timeout=25.0)
+    items: list = []
+    if res:
+        parsed = parse_json(res["content"]) or {}
+        for r in (parsed.get("items") if isinstance(parsed, dict) else parsed) or []:
+            if isinstance(r, dict) and r.get("title") and str(r.get("url", "")).startswith("http"):
+                items.append({"title": strip_cite_marks(str(r["title"]))[:140],
+                              "summary": strip_cite_marks(str(r.get("summary") or ""))[:300],
+                              "source": str(r.get("source") or "")[:60], "url": str(r["url"])})
+        items = items[:3]
+    if items:  # never cache an empty result — retry on the next briefing regen
+        await db.medical_news_live.update_one({"key": key}, {"$set": {"items": items, "fetched_at": datetime.now(timezone.utc)}}, upsert=True)
+    return items
+
+
+
 @api.get("/agent/briefing")
 async def agent_briefing(request: Request, language: str = "sk", force: bool = False,
                          authorization: Optional[str] = Header(None)):
@@ -626,6 +673,7 @@ async def agent_briefing(request: Request, language: str = "sk", force: bool = F
         {"user_id": uid, "created_at": {"$gte": since}, "topic": {"$in": ["health", "family", "event"]}},
         {"_id": 0}).sort("created_at", -1).to_list(3)
     anomalies = await _detect_anomalies(uid)
+    health_news = await _live_health_news(user, today)
     hour = (datetime.now(timezone.utc).hour + 2) % 24  # CET-ish
     part = "morning" if 5 <= hour < 11 else "afternoon" if 11 <= hour < 18 else "evening"
     payload = {
@@ -633,6 +681,7 @@ async def agent_briefing(request: Request, language: str = "sk", force: bool = F
         "meds_today": meds_today[:6], "upcoming_exams": cal,
         "memory_followups": [m["text"] for m in recent_mem],
         "health_alerts": [a["text"] for a in anomalies],
+        "health_news_today": [{"title": n["title"], "source": n["source"]} for n in health_news],
         "level": level, "streak_days": st.get("streak_days", 0),
     }
     sys = (
@@ -641,7 +690,8 @@ async def agent_briefing(request: Request, language: str = "sk", force: bool = F
         "greet by name and part of day, mention weather (if present), pending meds, upcoming appointments, "
         "and IMPORTANTLY ask a caring follow-up question about any recent memory "
         "(e.g. 'Yesterday you mentioned your loved one had aching veins — how are they today?'). "
-        "If health alerts exist, warn clearly. End with one encouraging sentence. "
+        "If health alerts exist, warn clearly. If health_news_today is present, mention the FIRST headline in one "
+        "short sentence as today's health news. End with one encouraging sentence. "
         "No markdown, plain text only." + AI_COMPLIANCE_NOTE
     )
     chat = LlmChat(
@@ -657,12 +707,14 @@ async def agent_briefing(request: Request, language: str = "sk", force: bool = F
         text = (f"Good {part}, {user.get('name') or ''}! " +
                 (f"It's {weather['now_c']} °C, {weather['desc']}. " if weather else "") +
                 (f"You have {pend} medications ahead today. " if pend else "All your medications are taken. ") +
+                (f"Health news today: {health_news[0]['title']} ({health_news[0]['source']}). " if health_news else "") +
                 "Have a peaceful day — I am here for you.")
     mood = "concerned" if anomalies else "energetic" if part == "morning" else "calm"
     doc = {"user_id": uid, "date": today, "briefing": apply_watermark(str(text)), "mood": mood,
            "weather": weather, "meds_today": meds_today[:6],
            "upcoming_exams": clean(cal), "alerts": anomalies,
            "followups": [m["text"] for m in recent_mem],
+           "news": health_news, "news_engine": "Perplexity Sonar · sonar-pro" if health_news else None,
            "at": datetime.now(timezone.utc)}
     await db.agent_briefings.update_one({"user_id": uid, "date": today}, {"$set": doc}, upsert=True)
     xp = await _award_once_daily(uid, 10, "briefing_daily")

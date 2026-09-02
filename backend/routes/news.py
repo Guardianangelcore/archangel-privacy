@@ -3,15 +3,23 @@
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 """Medical News Sentinel — personalized medical-breakthrough intelligence.
 
-Curated feed (simulated real-time ingestion — Phase 3: live RSS/clinical-trial
-APIs) cross-referenced with the user's Vault. Regional CZ/SK Tech-Tracker for
-robotic surgery & 3D dental printing. Health-economics link into Wealth Advisor."""
+LIVE feed via Perplexity Sonar (sonar-pro, structured JSON, 12 h cache per language/country
++ a personal query per user built from their Vault/waitlist focus). The curated seed below is
+the offline fallback when PERPLEXITY_API_KEY is blank or the upstream call fails. Regional
+CZ/SK Tech-Tracker for robotic surgery & 3D dental printing. Health-economics link into
+Wealth Advisor."""
 from fastapi import HTTPException, Header
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import asyncio
+import hashlib
+import logging
 import uuid
 
 from core import api, db, clean, get_current_user
+from perplexity import sonar, pplx_enabled, strip_cite_marks, parse_json, SONAR_PRO
+
+logger = logging.getLogger("guardian")
 
 # Curated breakthrough database (seeded; refreshed by the swarm news agent)
 NEWS_SEED = [
@@ -66,6 +74,190 @@ NEWS_SEED = [
 ]
 
 HIGH_TECH = {"robotic_surgery", "dental_3d", "laser", "regenerative"}
+TECH_KINDS = HIGH_TECH | {"ai_screening", "wearable", "pharma", "other"}
+
+# ---------------- LIVE FEED (Perplexity Sonar · sonar-pro) ----------------
+LIVE_TTL = timedelta(hours=12)        # shared / personal cache lifetime
+LIVE_FORCE_MIN = timedelta(hours=1)   # pull-to-refresh can bypass the cache at most hourly
+LIVE_KEEP_DAYS = 14                   # live items stay huntable in db.medical_news this long
+
+NEWS_SCHEMA = {
+    "type": "object",
+    "properties": {"items": {"type": "array", "items": {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"}, "summary": {"type": "string"},
+            "specialty": {"type": "string"}, "region": {"type": "string"},
+            "tech": {"type": "string", "enum": sorted(TECH_KINDS)},
+            "source": {"type": "string"}, "url": {"type": "string"}, "date": {"type": "string"},
+            "hunt_city": {"type": ["string", "null"]}, "savings_note": {"type": ["string", "null"]},
+            "keywords": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["title", "summary", "specialty", "region", "tech", "source", "url", "keywords"]}}},
+    "required": ["items"],
+}
+
+NEWS_SYSTEM = (
+    "You are the Medical News Sentinel of Archangel OS, an EU health companion app. Curate REAL, "
+    "recent medical breakthroughs and health-technology deployments from reputable sources (peer-reviewed "
+    "journals, EMA/ECDC/WHO, university hospitals, medical congresses, major health media). Never invent "
+    "items; every item needs a real source URL. Patient-friendly, informational only — never diagnose. "
+    "Return ONLY JSON matching the schema."
+)
+
+
+def _lang_full(lang: str) -> str:
+    from routes.agent import LANG_FULL
+    return LANG_FULL.get(lang or "en", "English")
+
+
+def _news_user_prompt(lang: str, country: str, focus: Optional[list], n: int) -> str:
+    region = f"{country}/EU" if country and country not in ("EU", "US") else "EU"
+    focus_txt = (f" FOCUS strictly on these patient topics: {', '.join(focus)}." if focus else
+                 " Cover a spread of specialties (cardiology, orthopedics, oncology, diabetes, dentistry, "
+                 "ophthalmology, neurology, regenerative medicine, robotic surgery, digital health).")
+    return (
+        f"Find {n} medical breakthroughs or health-tech deployments from the last 30 days relevant to patients "
+        f"in {region}.{focus_txt} LANGUAGE RULE: title, summary, specialty, savings_note and keywords MUST ALL be "
+        f"written in {_lang_full(lang)} (translate English sources). For each item give: "
+        "specialty, region code (SK, CZ, EU or World), tech category, source publisher name, "
+        "the source url, date (YYYY-MM-DD if known), hunt_city (a CZ/SK/EU city whose clinic already offers it, "
+        "else null), savings_note (one sentence on cost/time saved for the patient, else null) and 3-6 lowercase "
+        "keyword stems (diseases, organs, procedures) for matching against the patient's records."
+    )
+
+
+def _domain(url: str) -> str:
+    try:
+        return url.split("//", 1)[1].split("/", 1)[0].replace("www.", "")
+    except Exception:
+        return url or ""
+
+
+def _norm_item(raw: dict, lang: str, personal_for: Optional[str] = None) -> Optional[dict]:
+    title = strip_cite_marks(str(raw.get("title") or ""))[:160]
+    url = str(raw.get("url") or "").strip()
+    if not title or not url.startswith("http"):
+        return None
+    tech = raw.get("tech") if raw.get("tech") in TECH_KINDS else "other"
+    specialty = str(raw.get("specialty") or "Medicine")[:60]
+    kws = [str(k).lower().strip() for k in (raw.get("keywords") or []) if len(str(k).strip()) >= 4]  # ≥4 chars: no "ai"/"rna" false matches
+    tags = sorted({*kws[:8], *[w for w in specialty.lower().replace("/", " ").split() if len(w) >= 4]})
+    return {
+        "news_id": "live-" + hashlib.sha1(url.encode()).hexdigest()[:12],
+        "title": title, "summary": strip_cite_marks(str(raw.get("summary") or ""))[:700],
+        "region": str(raw.get("region") or "EU")[:12], "tech": tech, "specialty": specialty,
+        "hunt_city": (raw.get("hunt_city") or "") if isinstance(raw.get("hunt_city"), str) else "",
+        "savings_note": raw.get("savings_note") or None, "savings_eur": 0,
+        "source": str(raw.get("source") or _domain(url))[:80], "url": url,
+        "date": raw.get("date") or None, "tags": tags, "live": True, "lang": lang,
+        "personal_for": personal_for, "published_at": datetime.now(timezone.utc),
+    }
+
+
+async def _fetch_live(lang: str, country: str, focus: Optional[list], n: int,
+                      personal_for: Optional[str] = None) -> Optional[list]:
+    res = await sonar(
+        [{"role": "system", "content": NEWS_SYSTEM},
+         {"role": "user", "content": _news_user_prompt(lang, country, focus, n)}],
+        model=SONAR_PRO, recency="month", context_size="medium", max_tokens=2200,
+        json_schema=NEWS_SCHEMA, timeout=90.0)
+    if not res:
+        return None
+    parsed = parse_json(res["content"]) or {}
+    raws = parsed.get("items") if isinstance(parsed, dict) else parsed
+    items = [i for i in (_norm_item(r, lang, personal_for) for r in (raws or []) if isinstance(r, dict)) if i]
+    if not items:
+        logger.error("perplexity news: empty/invalid items")
+        return None
+    # Keep live items huntable + visible to the swarm News Sentinel; prune old ones.
+    now = datetime.now(timezone.utc)
+    for it in items:
+        await db.medical_news.update_one({"news_id": it["news_id"]}, {"$set": it}, upsert=True)
+    await db.medical_news.delete_many({"live": True, "published_at": {"$lt": now - timedelta(days=LIVE_KEEP_DAYS)}})
+    return items
+
+
+async def _refresh_live(key: str, fetch) -> None:
+    now = datetime.now(timezone.utc)
+    try:
+        items = await fetch()
+        if items is not None:
+            await db.medical_news_live.update_one({"key": key}, {"$set": {"items": items, "fetched_at": now}, "$unset": {"failed_at": ""}}, upsert=True)
+        else:   # upstream failure (e.g. 429 rate limit) → back off before the next attempt
+            await db.medical_news_live.update_one({"key": key}, {"$set": {"failed_at": now}}, upsert=True)
+    except Exception as e:
+        logger.error(f"live news refresh {key}: {e}")
+        await db.medical_news_live.update_one({"key": key}, {"$set": {"failed_at": now}}, upsert=True)
+    finally:
+        _inflight.pop(key, None)
+
+
+_inflight: dict = {}
+LIVE_BACKOFF = timedelta(minutes=3)
+
+
+async def _cached_live(key: str, force: bool, fetch) -> tuple:
+    """(items | None, pending). 12 h cache in db.medical_news_live; a miss/stale entry schedules ONE
+    background Sonar refresh (never blocks the request — Sonar takes ~25 s) and returns the stale
+    items meanwhile. `force` (pull-to-refresh) bypasses the cache at most hourly. After an upstream
+    failure the key backs off for LIVE_BACKOFF so a rate-limited API is never hammered."""
+    if not pplx_enabled():
+        return None, False
+    now = datetime.now(timezone.utc)
+    doc = await db.medical_news_live.find_one({"key": key}, {"_id": 0}) or {}
+    items = doc.get("items")
+    if items is not None and doc.get("fetched_at"):
+        age = now - doc["fetched_at"].replace(tzinfo=timezone.utc)
+        if age < LIVE_TTL and not (force and age > LIVE_FORCE_MIN):
+            return items, False
+    if doc.get("failed_at") and now - doc["failed_at"].replace(tzinfo=timezone.utc) < LIVE_BACKOFF:
+        return items, False
+    task = _inflight.get(key)
+    if task is None or task.done():
+        _inflight[key] = asyncio.create_task(_refresh_live(key, fetch))
+    return items, True
+
+
+async def warm_live_news() -> int:
+    """Swarm hook: keep the shared general cache fresh for every language/country combo seen among
+    users active in the last 24 h (max 6 combos per pass) so the screen opens instantly."""
+    if not pplx_enabled():
+        return 0
+    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    uids = [s["user_id"] for s in await db.user_sessions.find({"created_at": {"$gte": since}}, {"_id": 0, "user_id": 1}).to_list(500)]
+    combos: list = []
+    async for u in db.users.find({"user_id": {"$in": list(set(uids))}}, {"_id": 0, "language": 1, "geo.country": 1}):
+        combo = ((u.get("language") or "en")[:5], ((u.get("geo") or {}).get("country") or "EU")[:3])
+        if combo not in combos:
+            combos.append(combo)
+    started = 0
+    for lang, country in combos[:6]:
+        _, pending = await _cached_live(f"general:{lang}:{country}", False, lambda l=lang, c=country: _fetch_live(l, c, None, 6))
+        started += int(pending)
+    return started
+
+
+async def _user_focus(uid: str) -> list:
+    """Structured patient focus (specialties + recent diagnoses/surgeries) for the personal live query.
+    Items spawned by the News Sentinel itself are excluded (no news→hunt→news feedback loop) and the
+    result is sorted so the cache key stays stable."""
+    focus: list = []
+    for coll, field in (("waitlist", "specialty"), ("jarvis_actions", "specialty")):
+        q = {"user_id": uid, field: {"$nin": [None, ""]}, "source": {"$not": {"$regex": "^swarm:"}}, "news_id": None}
+        for d in await db[coll].find(q, {"_id": 0, field: 1}).sort("created_at", -1).to_list(6):
+            focus.append(str(d[field]))
+    for e in await db.calendar_events.find({"user_id": uid, "child_id": None, "category": {"$in": ["disease", "surgery"]}},
+                                           {"_id": 0, "title": 1}).sort("date", -1).to_list(4):
+        if e.get("title"):
+            focus.append(str(e["title"]))
+    seen, out = set(), []
+    for f in focus:
+        k = f.strip().lower()
+        if k and k not in seen:
+            seen.add(k)
+            out.append(f.strip()[:40])
+    return sorted(out[:4], key=str.lower)
 
 
 async def ensure_news_seed():
@@ -88,21 +280,49 @@ async def _user_keywords(uid: str) -> str:
 
 
 @api.get("/news/feed")
-async def news_feed(authorization: Optional[str] = Header(None)):
+async def news_feed(force: bool = False, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    uid = user["user_id"]
     await ensure_news_seed()
-    corpus = await _user_keywords(user["user_id"])
-    items = await db.medical_news.find({}, {"_id": 0}).to_list(50)
+    corpus = await _user_keywords(uid)
+    lang = (user.get("language") or "en")[:5]
+    country = ((user.get("geo") or {}).get("country") or "EU")[:3]
+    # LIVE — shared query per language/country (+ a personal query when the user has a health focus).
+    # Cache misses are refreshed in the background; the response never waits for Sonar.
+    general, g_pending = await _cached_live(f"general:{lang}:{country}", force,
+                                            lambda: _fetch_live(lang, country, None, 6))
+    personal: list = []
+    p_pending = False
+    focus = await _user_focus(uid) if pplx_enabled() else []
+    if focus:
+        fkey = hashlib.sha1("|".join(focus).lower().encode()).hexdigest()[:10]
+        p_items, p_pending = await _cached_live(f"personal:{uid}:{fkey}", force,
+                                                lambda: _fetch_live(lang, country, focus, 3, personal_for=uid))
+        personal = p_items or []
+    live = general is not None
+    if live:
+        seen: set = set()
+        items = [n for n in personal + general if not (n["news_id"] in seen or seen.add(n["news_id"]))]
+    else:
+        items = await db.medical_news.find({"live": {"$ne": True}}, {"_id": 0}).to_list(50)
     matched, other = [], []
     for n in items:
-        hit = [tg for tg in n["tags"] if tg in corpus]
-        entry = {**n, "matched": bool(hit), "matched_tags": hit,
-                 "high_tech": n["tech"] in HIGH_TECH,
-                 "jarvis_alert": (f"Guardian Angel, prelom: {n['title']}. "
-                                  f"Verified clinic: {n['hunt_city']} ({n['region']}). Should I hunt for an appointment?") if hit else None}
-        (matched if hit else other).append(entry)
-    return {"personalized": matched, "general": other,
-            "note": "Curated feed (simulated real-time ingestion — Phase 3: live RSS/clinical-trials API)."}
+        hit = [tg for tg in n.get("tags", []) if tg and tg in corpus]
+        is_personal = bool(hit) or n.get("personal_for") == uid
+        clinic = f" Verified clinic: {n['hunt_city']} ({n['region']})." if n.get("hunt_city") else ""
+        entry = {**n, "matched": is_personal, "matched_tags": hit or (focus[:3] if is_personal else []),
+                 "high_tech": n.get("tech") in HIGH_TECH,
+                 "jarvis_alert": (f"Guardian Angel, prelom: {n['title']}.{clinic} "
+                                  f"Should I hunt for an appointment?") if is_personal else None}
+        (matched if is_personal else other).append(entry)
+    fetched = await db.medical_news_live.find_one({"key": f"general:{lang}:{country}"}, {"_id": 0, "fetched_at": 1})
+    pending = g_pending or p_pending
+    return {"personalized": clean(matched), "general": clean(other), "live": live, "pending": pending,
+            "fetched_at": fetched["fetched_at"].isoformat() if (live and fetched) else None,
+            "engine": "Perplexity Sonar · sonar-pro" if (live or pending) else "curated",
+            "note": ("Live web retrieval via Perplexity Sonar — sources linked on every item; refreshed every 12 h."
+                     if live else "Fetching live sources from the web (Perplexity Sonar)…" if pending
+                     else "Curated feed (live web retrieval is offline right now).")}
 
 
 @api.get("/news/tech-tracker")

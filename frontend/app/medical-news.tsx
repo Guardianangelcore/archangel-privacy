@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, RefreshControl, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,10 +17,14 @@ export default function MedicalNews() {
   const [err, setErr] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const pollRef = useRef(0);
+  const load = useCallback(async (force = false) => {
     try {
-      const [f, t2] = await Promise.all([api('/news/feed'), api('/news/tech-tracker')]);
+      const [f, t2] = await Promise.all([api(force ? '/news/feed?force=true' : '/news/feed'), api('/news/tech-tracker')]);
       setFeed(f); setTracker(t2);
+      // Live sources are fetched in the background (~25 s) — poll a few times until they land
+      if (f?.pending && pollRef.current < 8) { pollRef.current += 1; setTimeout(() => load(), 10000); }
+      else if (!f?.pending) pollRef.current = 0;
     } catch (e: any) { setErr(String(e.message || e)); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -46,14 +50,22 @@ export default function MedicalNews() {
       )}
       <Text style={styles.cardTitle}>{n.high_tech ? '⚡ ' : ''}{n.title}</Text>
       <Text style={styles.cardSummary}>{n.summary}</Text>
-      <Text style={styles.cardMeta}>{n.region} · {n.specialty} · {n.source}</Text>
+      <Text style={styles.cardMeta}>{n.region} · {n.specialty} · {n.source}{n.date ? ` · ${n.date}` : ''}{n.hunt_city ? ` · 🏥 ${n.hunt_city}` : ''}</Text>
+      {!!n.url && (
+        <Pressable testID={`news-source-${n.news_id}`} onPress={() => Linking.openURL(n.url)} hitSlop={6} style={styles.sourceBtn}>
+          <Ionicons name="open-outline" size={12} color={C.brand} />
+          <Text style={styles.sourceText} numberOfLines={1}>{n.url.replace(/^https?:\/\//, '')}</Text>
+        </Pressable>
+      )}
       {!!n.savings_note && <Text style={styles.savings}>💰 Wealth Advisor: {n.savings_note}</Text>}
       {personalized && !!n.jarvis_alert && <Text style={styles.jarvisAlert}>🧠 „{n.jarvis_alert}“</Text>}
       <View style={styles.actions}>
-        <Pressable testID={`news-hunt-${n.news_id}`} onPress={() => hunt(n)} disabled={busy === n.news_id} style={styles.huntBtn}>
-          <Ionicons name="search" size={14} color={C.onInverse} />
-          <Text style={styles.huntText}>{busy === n.news_id ? '…' : 'HUNT AN APPOINTMENT'}</Text>
-        </Pressable>
+        {!!n.hunt_city && (
+          <Pressable testID={`news-hunt-${n.news_id}`} onPress={() => hunt(n)} disabled={busy === n.news_id} style={styles.huntBtn}>
+            <Ionicons name="search" size={14} color={C.onInverse} />
+            <Text style={styles.huntText}>{busy === n.news_id ? '…' : 'HUNT AN APPOINTMENT'}</Text>
+          </Pressable>
+        )}
         <Pressable testID={`news-jarvis-${n.news_id}`} onPress={() => { hap(); router.push('/jarvis'); }} style={styles.consultBtn}>
           <Ionicons name="sparkles" size={14} color={C.brand} />
           <Text style={styles.consultText}>CONSULT WITH JARVIS</Text>
@@ -73,10 +85,20 @@ export default function MedicalNews() {
       </View>
       <ScrollView
         contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={C.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(true); setRefreshing(false); }} tintColor={C.brand} />}
       >
         <Text style={styles.h1}>Breaking Medical Insights</Text>
         <Text style={styles.sub}>World breakthroughs matched against your Vault. What concerns you is on top — with a Jarvis alert and an appointment-hunt button.</Text>
+        {feed && (
+          <View testID="news-live-badge" style={[styles.liveBadge, !feed.live && { borderColor: C.border }]}>
+            <View style={[styles.liveDot, { backgroundColor: feed.live ? '#5FA779' : feed.pending ? '#FFC53D' : C.info }]} />
+            <Text style={styles.liveText}>
+              {feed.live
+                ? `LIVE · ${feed.engine}${feed.fetched_at ? ` · updated ${new Date(feed.fetched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}${feed.pending ? ' · refreshing…' : ''}`
+                : feed.pending ? 'FETCHING LIVE SOURCES · Perplexity Sonar…' : 'CURATED FEED · live retrieval offline'}
+            </Text>
+          </View>
+        )}
         {!!msg && <Text style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
@@ -117,6 +139,11 @@ const styles = StyleSheet.create({
   cardTitle: { color: C.fg, fontWeight: '900', fontSize: 14, lineHeight: 19 },
   cardSummary: { color: C.onS3, fontSize: 12, lineHeight: 17, marginTop: 4 },
   cardMeta: { color: C.info, fontSize: 9.5, marginTop: 6 },
+  sourceBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, minHeight: 28 },
+  sourceText: { color: C.brand, fontSize: 10, textDecorationLine: 'underline', flex: 1 },
+  liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: S.md, borderWidth: 1, borderColor: '#5FA779', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 5 },
+  liveDot: { width: 7, height: 7, borderRadius: 4 },
+  liveText: { color: C.fg, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
   savings: { color: '#B8860B', fontSize: 11, fontWeight: '700', marginTop: 6 },
   jarvisAlert: { color: C.brand, fontSize: 11, fontStyle: 'italic', marginTop: 6, lineHeight: 15 },
   actions: { flexDirection: 'row', gap: S.sm, marginTop: S.md, flexWrap: 'wrap' },

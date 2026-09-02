@@ -301,8 +301,12 @@ async def _agent_wealth_sentinel() -> int:
 async def _agent_news_sentinel() -> int:
     """Cross-reference the curated medical-news DB with each user's Vault corpus;
     push one priority Jarvis alert per user per news item (deduped)."""
-    from routes.news import ensure_news_seed, _user_keywords
+    from routes.news import ensure_news_seed, _user_keywords, warm_live_news
     await ensure_news_seed()
+    try:
+        await warm_live_news()   # keep the Perplexity live feed cache warm for active users
+    except Exception as e:
+        logger.error(f"news sentinel warm-up: {e}")
     actions = 0
     items = await db.medical_news.find({}, {"_id": 0}).to_list(50)
     users = await db.users.find({}, {"_id": 0, "user_id": 1}).to_list(200)
@@ -322,7 +326,7 @@ async def _agent_news_sentinel() -> int:
             # autonomously — no question asked, the slot lands in the calendar.
             udoc = await db.users.find_one({"user_id": u["user_id"]}, {"_id": 0, "jarvis_autopilot": 1})
             if (udoc or {}).get("jarvis_autopilot", True):
-                spec = (n.get("tags") or ["Specialist"])[0].capitalize()
+                spec = (n.get("specialty") or (n.get("tags") or ["Specialist"])[0]).capitalize()
                 await db.waitlist.insert_one({
                     "item_id": uuid.uuid4().hex, "user_id": u["user_id"],
                     "specialty": spec, "city": n.get("hunt_city", ""),
@@ -334,7 +338,7 @@ async def _agent_news_sentinel() -> int:
             try:
                 await send_push(recipients=[u["user_id"]],
                                 data={"title": "🔬 MEDICAL BREAKTHROUGH FOR YOU",
-                                      "message": f"{n['title']} — clinic {n['hunt_city']} ({n['region']}). Should I hunt down an appointment?",
+                                      "message": f"{n['title']}{(' — clinic ' + n['hunt_city']) if n.get('hunt_city') else ''} ({n.get('region', 'EU')}). Should I hunt down an appointment?",
                                       "action_url": "/medical-news"})
             except Exception:
                 pass

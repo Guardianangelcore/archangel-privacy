@@ -898,3 +898,6 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 ## Iter 60 — RevenueCat IAP (Sept 2026)
 - iteration_60.json: backend 11/11 (tests/test_iter60_iap_sync.py) + UI flows green. HIGH bug (ledger seq race → 500, double iap-sync POST) FIXED (retry-on-DuplicateKey in token._ledger_append; shared in-flight promise in src/iap-mirror.ts). Also fixed: success message unmount (sb-msg), Browser-Mode cancel code (numeric 1). Self-verified E2E: cancel silent, failed purchase → iap-error, valid purchase → sb-msg "+100 GA-T", tier GUARDIAN.
 - Real store purchases need a native build — untestable here.
+
+## Iter 61 — Perplexity live news + briefing
+- iteration_61.json: backend 9/9 (tests/test_iter61_perplexity_news.py), UI green (news-live-badge LIVE, source links, jv-news rows). Post-test fixes: live-item tags now ≥4 chars (no "ai"/"rna" false Vault matches), swarm News Sentinel uses item specialty for auto-hunts, stale Czech general:en:SG cache purged (language rule enforced in prompt), 16 noise auto-hunts from live news removed. Verified founder feed: live:true, 4 personal + 5 general, English.
