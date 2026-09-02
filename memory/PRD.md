@@ -214,3 +214,9 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - Tier gates (Guardian+): backend require_tier on /waitlist (GET/POST via Depends → 402 before body validation)/scan, /lens/analyze*, /magic-lens, /agent/search (+ existing Jarvis). Frontend Paywall (pw-upgrade → /subscription) on Waitlist tab (waitlist-paywall), Magic Lens (ml-paywall), Jarvis (paywall).
 - sonar-reasoning-pro EMPTY content root cause: max_tokens ≲2500 → hidden reasoning exhausts budget → API returns empty content (0 completion tokens, finish=stop). Fix: perplexity.sonar() enforces max_tokens ≥ 6000 for reasoning models and treats empty content as failure; Jarvis agent_search max_tokens 2200 → 6000. Verified live (JSON prompt now returns parseable content).
 - Tests: tests/test_iter63_gates.py 8/8 (gates 402, unlock per tier, Sonar live). iteration_63.json UI green (paywalls, no raw i18n keys, Slovak render).
+
+## Iter 64 — Jarvis weather location fix (Sept 2026)
+- Root cause of "Singapore" weather: (a) on web the app never used browser GPS (Platform.OS!=='web' guard), (b) server-side IP fallback saw the cloud ingress/egress IP (SG) via X-Forwarded-For and persisted it as source "ip" (= resolved → never re-located).
+- Fix: shared `src/geo.ts locateDevice({askPermission})` — expo-location GPS on native AND web (asks permission once when geo is not gps/manual), fallback = client-side HTTPS IP lookup on the DEVICE (ipapi.co → ipwho.is) posted to POST /geo/ip-locate {lat,lng,city,country}; server X-Forwarded-For lookup remains last resort. Used by GuardianMonitor startup (every session) and Jarvis `jv-use-location`.
+- Backend: /geo/ip-locate accepts optional body coords; `_apply_geo` invalidates today's cached briefing (db.agent_briefings + edge cache) when the city changes so weather follows the new place immediately.
+- Verified: web GPS Singapore→Košice (source gps), denied-permission → ipapi.co path, briefing weather Vienna→Rome after move.

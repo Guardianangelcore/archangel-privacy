@@ -141,6 +141,15 @@ async def _apply_geo(user: dict, near: dict, source: str, raw: Optional[tuple] =
     elif country_changed and near["lang"] != current_lang:
         lang_suggestion = {"from": current_lang, "to": near["lang"], "city": near["city"], "country": near["country"]}
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": update})
+    if prev.get("city") != geo["city"]:
+        # Place changed → today's cached briefing (weather of the old place) is stale.
+        try:
+            from routes.agent import _edge_invalidate_prefix
+            today = datetime.now(timezone.utc).date().isoformat()
+            await db.agent_briefings.delete_many({"user_id": user["user_id"], "date": today})
+            _edge_invalidate_prefix(f"brief:{user['user_id']}:")
+        except Exception:
+            pass
     return {"geo": clean(geo), "previous_city": prev.get("city"),
             "city_changed": prev.get("city") != near["city"],
             "country_changed": country_changed,
@@ -227,11 +236,26 @@ async def ensure_geo(user: dict, request: Request) -> dict:
         return user
 
 
+class IpLocateIn(BaseModel):
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+
+
 @api.post("/geo/ip-locate")
-async def geo_ip_locate(request: Request, authorization: Optional[str] = Header(None)):
-    """IP-based fallback when GPS is unavailable/denied. Uses X-Forwarded-For (behind
-    ingress). Falls back to the unresolved default if IP is private or lookup fails."""
+async def geo_ip_locate(request: Request, body: Optional[IpLocateIn] = None,
+                        authorization: Optional[str] = Header(None)):
+    """IP-based fallback when GPS is unavailable/denied. Prefers coords resolved ON THE
+    DEVICE (the device's own public IP — behind the ingress the server only sees the
+    cloud egress IP, e.g. Singapore). Falls back to X-Forwarded-For lookup, then to the
+    unresolved default if IP is private or lookup fails."""
     user = await get_current_user(authorization)
+    if body and body.lat is not None and body.lng is not None \
+            and -90 <= body.lat <= 90 and -180 <= body.lng <= 180:
+        near = nearest_city(body.lat, body.lng)
+        res = await _apply_geo(user, near, "ip", raw=(body.lat, body.lng))
+        return {**res, "raw_ip_city": body.city or "", "raw_ip_country": (body.country or "").upper()}
     return await _locate_by_ip(user, request)
 
 

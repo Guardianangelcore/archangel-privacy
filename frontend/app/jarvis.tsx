@@ -17,7 +17,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { api, API_BASE, getToken, errMsg } from '@/src/api';
 import Paywall from '@/src/Paywall';
 import { useI18n } from '@/src/i18n-context';
-import * as Location from 'expo-location';
+import { locateDevice } from '@/src/geo';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
 import { tap } from '@/src/ui/glass';
@@ -402,20 +402,11 @@ export default function Jarvis() {
   const useMyLocation = async () => {
     tap('light'); setLocBusy(true); setErr('');
     try {
-      let located = false;
-      if (Platform.OS !== 'web') {
-        let p = await Location.getForegroundPermissionsAsync();
-        if (!p.granted && p.canAskAgain) p = await Location.requestForegroundPermissionsAsync();
-        if (p.granted) {
-          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          await api('/geo/locate', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
-          located = true;
-        } else if (!p.canAskAgain) {
-          Alert.alert(tt('jarvis.location_is_blocked'), tt('jarvis.allow_location_in_settings_so_your_b'),
-            [{ text: tt('jarvis.later') }, { text: tt('jarvis.open_settings'), onPress: () => Linking.openSettings() }]);
-        }
+      const res = await locateDevice({ askPermission: true });
+      if (res.blocked && Platform.OS !== 'web') {
+        Alert.alert(tt('jarvis.location_is_blocked'), tt('jarvis.allow_location_in_settings_so_your_b'),
+          [{ text: tt('jarvis.later') }, { text: tt('jarvis.open_settings'), onPress: () => Linking.openSettings() }]);
       }
-      if (!located) await api('/geo/ip-locate', { method: 'POST' });
       const b: any = await api('/agent/briefing?force=true'); setBriefing(b);
     } catch (e: any) { setErr(errMsg(e)); }
     finally { setLocBusy(false); }
