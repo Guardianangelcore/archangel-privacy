@@ -1,0 +1,53 @@
+{
+  "summary": "Iter 60 — RevenueCat IAP (Test Store, Browser Mode) wired into the tier system. BACKEND: 11/11 tests pass on POST /api/subscription/iap-sync (activate → guardian + 100 GA-T; idempotent replay unchanged; 409 identity mismatch / anonymous RC id; 422 expired; 400 unknown entitlement; downgrade / noop; TRIAL grants guardian but no GA-T; founder archangel kept_higher_tier; Guardian gate opens for /agent/briefing & /agent/chat after IAP activation — no 402). FRONTEND (390x844 mobile viewport): subscription page shows sb-iap-guardian card with iap-buy-monthly '$9.99/mo', iap-buy-annual '$79.99/yr' via sb-annual toggle, iap-simulated label. iap-confirm modal opens with CONFIRM SUBSCRIPTION / SIMULATED note; iap-confirm-no closes; iap-confirm-yes opens RevenueCat's HTML 'Test Store Purchase' dialog. After clicking 'Test valid purchase' the tier flips to GUARDIAN · until <date>, sb-loyalty shows '1 month(s) collected', sb-iap-note visible, sb-cancel hidden, iap-restore → iap-restore-msg '✓ Purchases restored — GUARDIAN active.'. Jarvis paywall renders with iap-buy-monthly + iap-simulated + pw-trial + pw-upgrade; confirm modal opens/closes. Founder regression: sub page shows ARCHANGEL, IAP button still present in Guardian card; home renders (no useSubscription/SubscriptionProvider error in console). ISSUE: iap-ok success text does NOT appear after a valid purchase because the /iap-sync call from the buy button races with the useIapMirror auto-sync (both fire on the same CustomerInfo update) and one returns 500 (E11000 DuplicateKeyError on token_ledger.seq_1). The tier update still lands, but the user never sees the '✓ GUARDIAN active … +100 GA-T loyalty credited' confirmation. 'Test failed purchase' and 'Cancel' UI paths could not be verified end-to-end due to a Sovereign Tour onboarding overlay that blocks the iap-buy-monthly click for brand-new dev-bypass users — code review of IapBuyButton.buy() shows correct handling (userCancelled swallowed, errMsg → iap-error) but not observed live.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/subscription/iap-sync",
+        "issue": "Race condition: token_ledger._ledger_append derives `seq` from a read-then-insert pattern (not atomic). When the direct sync from IapBuyButton and the useIapMirror auto-sync fire concurrently on the same CustomerInfo event, both compute the same seq and one aborts with pymongo.errors.DuplicateKeyError (E11000, token_ledger index seq_1) → HTTP 500. The tier update still lands (users.update_one runs first), but the success payload (gat_allocation.credited_now / credited_txs) is lost and the client never renders iap-ok. Fix: allocate seq via findOneAndUpdate on a counter doc, or retry on DuplicateKeyError inside _ledger_append (routes/token.py:47-58). Alternatively, dedupe on the client — do not double-sync when the useIapMirror useEffect will also fire.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "IapBuyButton.buy() (frontend/src/IapPurchase.tsx)",
+        "issue": "After a valid Test Store purchase the iap-ok success message never appears because syncIapEntitlement() raises on the backend 500 (see backend race above). setOk() is never called and setErr() gets 'Internal Server Error'; because the mirror useEffect then completes the sync silently, users see NEITHER the green success line NOR a red error, only the CURRENT TIER re-render. Expected: '✓ GUARDIAN active via APP STORE / GOOGLE PLAY · +100 GA-T loyalty credited'.",
+        "testID": "iap-ok",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Double IAP sync on purchase",
+        "issue": "IapBuyButton.buy() calls syncIapEntitlement() directly AND useIapMirror useEffect fires on the same CustomerInfo change → two concurrent POSTs /api/subscription/iap-sync. Consider skipping the direct call and relying on the mirror (single source of truth), or gating the mirror when the buy button just synced.",
+        "affected_testIDs": ["iap-ok", "iap-error"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter60_iap_sync.py",
+    "/app/test_reports/pytest/pytest_iter60.xml"
+  ],
+  "action_items": [
+    "Fix concurrency in routes/token.py::_ledger_append — use an atomic counter (db.token_counters.findOneAndUpdate {$inc:{seq:1}}) or a retry loop on DuplicateKeyError; today two concurrent writes fail with E11000 on token_ledger.seq_1.",
+    "Avoid double IAP sync on a successful purchase: either drop syncIapEntitlement() from IapBuyButton.buy() and rely solely on useIapMirror, or debounce/coordinate the two calls so only one lands.",
+    "Verify manually that after the fix a valid Test Store purchase renders iap-ok with '✓ GUARDIAN active via APP STORE / GOOGLE PLAY · +100 GA-T loyalty credited'.",
+    "OPTIONAL: End-to-end verification of 'Test failed purchase' → iap-error visible + tier stays SOVEREIGN, and 'Cancel' → no error shown. Blocked in the automated run by the Sovereign Tour tutorial overlay on brand-new users; a manual tap or a testID on the tour close button (currently only visual '×') would make it deterministic."
+  ],
+  "critical_code_review_comments": [
+    "routes/token.py::_ledger_append (line 47-58) is not concurrency-safe — read-max-seq + insert races. Every GA-T-writing path (earn, spend, subscription_allocation, iap sync loyalty credit) can 500 under concurrent load. This is a general bug, not just an IAP one; two rapid POSTs to /token/earn or a swarm-sweep that overlaps a user hit will exhibit the same crash.",
+    "IapBuyButton.buy() and useIapMirror both POST /api/subscription/iap-sync on every purchase — duplicated work + guaranteed race until the ledger bug above is fixed."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter60_iap_sync.py"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "~85% (success + paywall + founder regression + restore verified; iap-ok/iap-error UX broken by backend race; failed/cancel paths not verified live)"},
+  "seed_data_creation": "Created several fresh dev-bypass users via POST /api/auth/dev-bypass during tests (email pattern iap-t-<ms>@example.com, iap-ui-<ts>@example.com, iap-jv-<ts>@example.com, iap-fail-<ts>@example.com). Founder guardian.angel.core@proton.me reused (inner_circle archangel). Existing iap-test-1@example.com left untouched per handoff note.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Focus retest: 1) After main agent fixes _ledger_append concurrency and/or removes the double-sync in IapBuyButton, run a fresh dev-bypass user through /subscription buy-monthly → Test valid purchase and confirm iap-ok text appears with the expected string, GA-T balance = 100, sb-loyalty '1 month(s) collected'. 2) Verify 'Test failed purchase' UI path shows iap-error (tier stays SOVEREIGN) and RC Cancel is silent. To bypass the Sovereign Tour overlay on brand-new users, click the small × close button at top-right of the tour modal before touching iap-buy-monthly, OR set localStorage 'gh_onboarding_done'=true after login. Backend suite: pytest /app/backend/tests/test_iter60_iap_sync.py — should stay 11/11.",
+  "rca_of_issue": "RCA of missing iap-ok — RevenueCat purchasePackage() emits a CustomerInfo snapshot that (a) is returned to IapBuyButton.buy() which then calls syncIapEntitlement(), and (b) is written into the react-query cache via setInfo(), which triggers useIapMirror's useEffect → a SECOND syncIapEntitlement() call. Both POSTs hit /api/subscription/iap-sync concurrently. Inside the handler, when both requests reach `start_subscription_allocation → settle_subscription_allocations → _ledger_append`, both threads read the same max(seq) from token_ledger, compute seq=N+1, and race the insert. The second insert violates the unique index on `seq_1` → pymongo DuplicateKeyError → uncaught → 500. Because users.update_one already ran first (line 216-218 of routes/subscription.py), the user IS upgraded to Guardian, but the buy() promise rejects, so setOk() is never called. The mirror's second call also raised (`console.log('[IAP mirror] sync failed: 500: Internal Server Error')`) but its error is swallowed. Reproduction: fresh dev-bypass user → /subscription → iap-buy-monthly → iap-confirm-yes → Test valid purchase → observe backend.err.log for the DuplicateKeyError trace and console for '[IAP mirror] sync failed: 500'. Mitigation options: (i) atomic counter for token_ledger.seq (findOneAndUpdate on a token_counters doc), (ii) retry-on-DuplicateKey loop in _ledger_append, (iii) remove the direct syncIapEntitlement() from IapBuyButton.buy() and rely entirely on useIapMirror (but then buy() needs to await the mirror before showing iap-ok — trickier UX)."
+}

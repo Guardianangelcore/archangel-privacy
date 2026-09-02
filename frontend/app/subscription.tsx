@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
+import { IapBuyButton, RestorePurchasesButton } from '@/src/IapPurchase';
 
 const TIER_ICON: Record<string, string> = { sovereign: 'earth', guardian: 'shield-checkmark', sentinel: 'diamond', archangel: 'flame' };
 const OBSIDIAN = '#0B0B0D';
@@ -152,7 +153,7 @@ export default function Subscription() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60 }}>
         <Text style={styles.h1}>Four levels of sovereignty</Text>
-        <Text style={styles.sub}>EUR · CZK · GA-T. Monthly, or yearly at −20% (“Secure Your Future”). Pay by card (Stripe) or with GA-T tokens.</Text>
+        <Text style={styles.sub}>EUR · CZK · GA-T. Monthly, or yearly at −20% (“Secure Your Future”). Pay by card (Stripe), with GA-T tokens, or subscribe to Guardian through the App Store / Google Play.</Text>
         {data && (
           <View style={styles.currentBox}>
             <Ionicons name={(TIER_ICON[data.tier] || 'earth') as any} size={18} color={(data.tiers[data.tier] || {}).accent || '#5FA779'} />
@@ -184,7 +185,7 @@ export default function Subscription() {
           </Pressable>
         </View>
 
-        {!!msg && <Text style={styles.info}>{msg}</Text>}
+        {!!msg && <Text testID="sb-msg" style={styles.info}>{msg}</Text>}
         {!!err && <Text style={styles.err}>{err}</Text>}
 
         {data && order.map(k => {
@@ -230,6 +231,12 @@ export default function Subscription() {
                   </Pressable>
                 </View>
               )}
+              {/* NATIVE IN-APP SUBSCRIPTION (RevenueCat · App Store / Google Play) — Guardian only; price comes from the store offering */}
+              {k === 'guardian' && !active && (
+                <View testID="sb-iap-guardian">
+                  <IapBuyButton period={annual ? 'annual' : 'monthly'} accent={accent} onSynced={(_r, message) => { setMsg(message); setErr(''); load(); }} />
+                </View>
+              )}
             </View>
           );
         })}
@@ -269,7 +276,7 @@ export default function Subscription() {
 
         {/* SPRÁVA PREDPLATNÉHO — payment history + one-tap cancel */}
         <Text style={styles.mgmtTitle}>MANAGE SUBSCRIPTION</Text>
-        {data && data.tier !== 'sovereign' && !data.inner_circle && (
+        {data && data.tier !== 'sovereign' && !data.inner_circle && data.paid_with !== 'iap' && (
           cancelConfirm ? (
             <View style={styles.cancelRow}>
               <Pressable testID="sb-cancel-yes" onPress={cancelSub} disabled={busy === 'cancel'} style={[styles.cancelBtn, { backgroundColor: C.error, borderColor: C.error }]}>
@@ -286,6 +293,11 @@ export default function Subscription() {
           )
         )}
         {data?.inner_circle && <Text style={styles.txEmpty}>👑 Inner Circle — lifetime Archangel, nothing to cancel.</Text>}
+        {/* Apple requires a Restore Purchases entry point — re-syncs the store entitlement into the tier */}
+        <RestorePurchasesButton onSynced={load} />
+        {data?.paid_with === 'iap' && (
+          <Text testID="sb-iap-note" style={styles.txEmpty}>📱 Paid through your app store — manage or cancel renewal in your App Store / Google Play subscriptions.</Text>
+        )}
         {txs.length === 0 ? (
           <Text style={styles.txEmpty}>No card payments yet.</Text>
         ) : txs.map((tx: any) => (

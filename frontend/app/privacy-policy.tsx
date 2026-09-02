@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { C, S, R } from '@/src/theme';
 import { LEGAL_VERSION as VERSION, LEGAL_EFFECTIVE as EFFECTIVE } from '@/src/legal';
+import { useI18n } from '@/src/i18n-context';
 
 function Section({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
@@ -21,6 +22,7 @@ const B = ({ children }: { children: React.ReactNode }) => <Text style={st.bulle
 
 export default function PrivacyPolicy() {
   const router = useRouter();
+  const { t, rtl } = useI18n();
   return (
     <SafeAreaView testID="privacy-screen" style={st.root} edges={['top']}>
       <View style={st.header}>
@@ -118,6 +120,11 @@ export default function PrivacyPolicy() {
           <Text style={st.linkBtnText}>READ THE TERMS OF SERVICE</Text>
         </Pressable>
 
+        {/* CONSOLIDATED LEGAL DISCLAIMER — footer (localized, key disclaimer.general) */}
+        <View testID="privacy-disclaimer" style={st.discBox}>
+          <Text style={st.discTitle}>{t('disclaimer.title')}</Text>
+          <Text testID="privacy-disclaimer-text" style={[st.discText, rtl && st.rtl]}>{t('disclaimer.general')}</Text>
+        </View>
         <Text style={st.footer}>ZERO SURVEILLANCE · LOCAL-FIRST · © 2026 GUARDIAN ANGEL SOVEREIGN FOUNDATION (DAO)</Text>
       </ScrollView>
     </SafeAreaView>
@@ -129,6 +136,10 @@ const st = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.lg, paddingVertical: S.md },
   title: { color: C.fg, fontWeight: '900', letterSpacing: 2, fontSize: 14 },
   meta: { color: C.info, fontSize: 10.5, letterSpacing: 0.5, marginBottom: 4 },
+  discBox: { borderWidth: 1.5, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.08)', borderRadius: R.md, padding: S.lg, marginTop: S.xl, gap: 6 },
+  discTitle: { color: C.brand, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
+  discText: { color: C.fg, fontSize: 12.5, lineHeight: 19, fontWeight: '700' },
+  rtl: { writingDirection: 'rtl', textAlign: 'right' },
   promiseBox: { borderWidth: 2, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.08)', borderRadius: R.md, padding: S.lg, marginTop: S.md },
   promiseHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   promiseTitle: { color: C.brand, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },

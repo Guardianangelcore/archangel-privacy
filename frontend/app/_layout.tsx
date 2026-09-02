@@ -8,10 +8,13 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/auth";
 import { I18nProvider } from "@/src/i18n-context";
+import { initializeRevenueCat, SubscriptionProvider } from "@/src/revenuecat";
+import { useIapMirror } from "@/src/iap-mirror";
 import { registerForPush } from "@/src/push";
 import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
@@ -44,6 +47,14 @@ function DemoBadge() {
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
 
+// REVENUECAT — SDK init ONCE at module scope (before any component mounts). A config error must never crash the app.
+try {
+  initializeRevenueCat();
+} catch (err) {
+  console.warn("RevenueCat unavailable:", err);
+}
+const queryClient = new QueryClient();
+
 // Push: foreground display behaviour — MODULE SCOPE
 if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
@@ -68,6 +79,8 @@ function RootNav() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  // IAP → tier mirror (renewals / restores / lapses) whenever RevenueCat CustomerInfo changes
+  useIapMirror();
 
   useEffect(() => {
     if (loading) return;
@@ -204,11 +217,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <I18nProvider>
-            <RootNav />
-          </I18nProvider>
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <I18nProvider>
+                <RootNav />
+              </I18nProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

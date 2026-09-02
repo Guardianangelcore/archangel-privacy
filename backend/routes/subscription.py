@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from core import api, db, clean, get_current_user
+from core import api, db, clean, get_current_user, _aml_ledger_append
 
 CZK_RATE = 25.0
 ANNUAL_DISCOUNT = 0.20
@@ -151,6 +151,83 @@ async def subscription_upgrade(body: UpgradeIn, authorization: Optional[str] = H
     await record_revenue("subscription", amount, user["user_id"],
                          {"tier": body.tier, "billing": body.billing, "paid_with": "GA-T"})
     return {"ok": True, "tier": body.tier, "billing": body.billing, "paid_with": "GA-T", **result}
+
+
+# --------- IN-APP PURCHASES (RevenueCat · App Store / Google Play) ---------
+# The RevenueCat SDK on the device is the source of truth for the `pro` entitlement.
+# The app mirrors an ACTIVE entitlement here so the existing server-side features
+# (Guardian gate for Jarvis, monthly GA-T loyalty allocation) apply to IAP subscribers.
+IAP_ENTITLEMENT_TIER = {"pro": "guardian"}
+
+
+class IapSyncIn(BaseModel):
+    entitlement: str = "pro"
+    active: bool
+    product_identifier: Optional[str] = None
+    expires_date: Optional[str] = None       # ISO 8601 from CustomerInfo (None = lifetime/unknown)
+    store: Optional[str] = None              # APP_STORE | PLAY_STORE | TEST_STORE …
+    period_type: Optional[str] = None        # NORMAL | TRIAL | INTRO
+    app_user_id: Optional[str] = None        # current RevenueCat app user id (must equal our user_id)
+    will_renew: Optional[bool] = None
+
+
+@api.post("/subscription/iap-sync")
+async def subscription_iap_sync(body: IapSyncIn, authorization: Optional[str] = Header(None)):
+    """Mirror the device's RevenueCat entitlement into the tier system (idempotent)."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    tier = IAP_ENTITLEMENT_TIER.get(body.entitlement)
+    if not tier:
+        raise HTTPException(400, f"unknown entitlement {body.entitlement}")
+    if body.app_user_id and body.app_user_id != uid:
+        raise HTTPException(409, "RevenueCat identity does not match the signed-in user")
+    fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1,
+                                                       "gat_alloc_anchor": 1, "iap": 1})
+    if not body.active:
+        # Entitlement lapsed: only downgrade what IAP granted; never touch card/GA-T/trial/inner-circle tiers.
+        if (fresh.get("tier_paid_with") or "").lower() == "iap" and fresh.get("tier") == tier:
+            await db.users.update_one({"user_id": uid}, {"$set": {"tier": "sovereign", "tier_until": None,
+                                                                  "iap.active": False, "iap.synced_at": now}})
+            return {"status": "downgraded", "tier": "sovereign"}
+        return {"status": "noop", "tier": current_tier(fresh)}
+
+    until = None
+    if body.expires_date:
+        try:
+            until = datetime.fromisoformat(body.expires_date.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(422, "invalid expires_date")
+        if until <= now:
+            raise HTTPException(422, "entitlement already expired")
+    prev_iap = fresh.get("iap") or {}
+    same = (fresh.get("tier") == tier and (fresh.get("tier_paid_with") or "").lower() == "iap"
+            and prev_iap.get("expires_date") == body.expires_date)
+    iap = {"entitlement": body.entitlement, "product_identifier": body.product_identifier, "store": body.store,
+           "period_type": body.period_type, "expires_date": body.expires_date, "will_renew": body.will_renew,
+           "app_user_id": body.app_user_id, "active": True, "synced_at": now}
+    if same:
+        await db.users.update_one({"user_id": uid}, {"$set": {"iap.synced_at": now}})
+    else:
+        # Never let IAP downgrade a higher active tier (e.g. Sentinel via card, inner-circle Archangel).
+        if TIERS[current_tier(fresh)]["order"] > TIERS[tier]["order"]:
+            await db.users.update_one({"user_id": uid}, {"$set": {"iap": iap}})
+            return {"status": "kept_higher_tier", "tier": current_tier(fresh)}
+        await db.users.update_one({"user_id": uid}, {"$set": {
+            "tier": tier, "tier_until": until, "tier_paid_with": "iap", "iap": iap,
+            "tier_started_at": fresh.get("tier_started_at") or now}})
+        await _aml_ledger_append(uid, "iap_entitlement_sync", {
+            "entitlement": body.entitlement, "product": body.product_identifier, "store": body.store,
+            "expires": body.expires_date, "period_type": body.period_type})
+    # LOYALTY LOOP — fiat subscription → monthly GA-T (trial periods are excluded by the allocator).
+    from routes.token import start_subscription_allocation, settle_subscription_allocations
+    if (body.period_type or "NORMAL").upper() == "NORMAL":
+        alloc = await settle_subscription_allocations(uid) if same else await start_subscription_allocation(uid, fresh)
+    else:
+        alloc = {"eligible": False, "reason": "trial_or_intro_period"}
+    return {"status": "synced" if not same else "unchanged", "tier": tier,
+            "tier_until": until.isoformat() if until else None, "gat_allocation": alloc}
+
 
 
 @api.post("/subscription/trial")

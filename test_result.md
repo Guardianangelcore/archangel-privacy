@@ -877,3 +877,24 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 - New branded splash image assets/images/splash-image.png (gold halo/wings mark + ARCHANGEL OS + subtitle, transparent bg; imageWidth 280).
 - Smoke: GET /api/ → Archangel OS; login page title "Archangel OS", hero ARCHANGEL/OS, tagline shown, no "HEALTH & ANGEL".
 - RevenueCat (previous request) is PAUSED: connection_state not connected — user must click "Connect RevenueCat" in the payments panel first.
+
+## Iteration 59 (Disclaimer audit — consolidated legal disclaimer in 14 languages)
+- New src/i18n-legal.ts: LEGAL[lang] with keys 'disclaimer.general' (consolidated text incl. personal-liability sentence), 'disclaimer.title',
+  'disclaimer.card_title', 'disclaimer.medical_short', 'disclaimer.emergency_short', 'disclaimer.i_understand', 'disclaimer.read_terms', 'ai_label'
+  for all 14 langs; t() falls back T → EXT → CORE → LEGAL → en.
+- Placement: terms-of-service.tsx top box testID tos-disclaimer / tos-disclaimer-text (bold, replaces the old medical box); privacy-policy.tsx footer
+  testID privacy-disclaimer-text; login.tsx registration consent → reg-disclaimer under the checkbox text. All switch instantly with lang chips.
+- ToS body (EN) now also covers: AI Act Art. 50 label, medication reference-only, health data not a medical measurement, does not replace
+  112/999/911, fall detection/Acoustic Guardian may fail, GA-T not financial instruments/legal tender, personal limitation of liability.
+- First-launch dismissible card src/FirstLaunchDisclaimer.tsx (testID first-launch-disclaimer; buttons disclaimer-ok / disclaimer-terms) rendered on
+  home (standard + Angel) once per device per LEGAL_VERSION (AsyncStorage ga.disclaimer.seen.2026-06.1).
+- EU AI Act Art. 50: jarvis.tsx shows label "🤖 AI-generated content · EU AI Act Art. 50 · informational only" under every finished agent bubble
+  (testID jv-ai-label-<i>) and under the Morning Briefing (jv-ai-label-briefing); server-side apply_watermark kept.
+- Smoke: reg-disclaimer switches sk→en; first-launch card shows after founder login and dismisses.
+- Iter 59 testing (iteration_58.json): 92% pass; HIGH bug fixed — streamed agent bubbles never left `streaming:true`, hiding the AI label.
+  jarvis.tsx now flips the last bubble to streaming:false when the SSE finishes. Self-verified: 2 labels (briefing + reply) render.
+- RevenueCat: status check → connection_state "disconnected" / project_state "oauth_pending" → BLOCKED until user clicks Connect RevenueCat.
+
+## Iter 60 — RevenueCat IAP (Sept 2026)
+- iteration_60.json: backend 11/11 (tests/test_iter60_iap_sync.py) + UI flows green. HIGH bug (ledger seq race → 500, double iap-sync POST) FIXED (retry-on-DuplicateKey in token._ledger_append; shared in-flight promise in src/iap-mirror.ts). Also fixed: success message unmount (sb-msg), Browser-Mode cancel code (numeric 1). Self-verified E2E: cancel silent, failed purchase → iap-error, valid purchase → sb-msg "+100 GA-T", tier GUARDIAN.
+- Real store purchases need a native build — untestable here.

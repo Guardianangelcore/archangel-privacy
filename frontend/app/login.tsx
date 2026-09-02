@@ -228,16 +228,20 @@ export default function Login() {
           {/* MANDATORY CONSENT — required before an account can be created */}
           {!resetMode && pwMode === 'register' && (
             <View style={styles.agreeRow}>
-              <Pressable testID="reg-agree" onPress={() => setAgreeTerms(v => !v)} hitSlop={12}>
+              <Pressable testID="reg-agree" onPress={() => setAgreeTerms(v => !v)} hitSlop={12} style={{ paddingTop: 2 }}>
                 <Ionicons name={agreeTerms ? 'checkbox' : 'square-outline'} size={24}
                   color={agreeTerms ? '#7BE0AD' : 'rgba(255,255,255,0.7)'} />
               </Pressable>
-              <Text style={styles.agreeText}>
-                {t('agree_prefix')}{' '}
-                <Text testID="reg-tos-link" style={styles.agreeLink} onPress={() => router.push('/terms-of-service')}>{t('tos_link')}</Text>
-                {' '}{t('agree_and')}{' '}
-                <Text testID="reg-privacy-link" style={styles.agreeLink} onPress={() => router.push('/privacy-policy')}>{t('privacy_link')}</Text>
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.agreeText, rtl && styles.rtl]}>
+                  {t('agree_prefix')}{' '}
+                  <Text testID="reg-tos-link" style={styles.agreeLink} onPress={() => router.push('/terms-of-service')}>{t('tos_link')}</Text>
+                  {' '}{t('agree_and')}{' '}
+                  <Text testID="reg-privacy-link" style={styles.agreeLink} onPress={() => router.push('/privacy-policy')}>{t('privacy_link')}</Text>
+                </Text>
+                {/* Consolidated legal disclaimer — the consent covers it (key disclaimer.general, 14 languages) */}
+                <Text testID="reg-disclaimer" style={[styles.agreeDisclaimer, rtl && styles.rtl]}>{t('disclaimer.general')}</Text>
+              </View>
             </View>
           )}
           {!resetMode ? (
@@ -411,8 +415,9 @@ const styles = StyleSheet.create({
   err: { color: C.error, fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   info: { color: '#7BE0AD', fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   resetTitle: { color: C.fg, fontSize: 12, fontWeight: '900', letterSpacing: 2, textAlign: 'center', paddingVertical: 6 },
-  agreeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  agreeText: { flex: 1, color: C.fg, opacity: 0.85, fontSize: 11.5, lineHeight: 17 },
+  agreeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 4 },
+  agreeText: { color: C.fg, opacity: 0.85, fontSize: 11.5, lineHeight: 17 },
+  agreeDisclaimer: { color: C.fg, opacity: 0.7, fontSize: 9.5, lineHeight: 13.5, marginTop: 6 },
   agreeLink: { color: '#7BE0AD', fontWeight: '900', textDecorationLine: 'underline' },
   linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 2 },
   footer: { color: C.fg, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center', marginTop: 6 },

@@ -170,3 +170,26 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - Public-facing name changed everywhere (frontend, backend documents/emails/SMS/prompts, app.json + App Store subtitle in extra.appStoreSubtitle,
   branded splash). Brand identity unchanged (Guardian Angel founder/DAO, GA-T, Sovereign/Guardian/Sentinel/Archangel tiers).
 - RevenueCat IAP: BLOCKED until the user connects RevenueCat in the Emergent payments panel (integration_expert playbook fetched; do /setup then).
+
+## Iter 59 — Legal disclaimer audit (tested iteration_58.json + fix verified)
+- Consolidated disclaimer key `disclaimer.general` (src/i18n-legal.ts, 14 langs, incl. personal limitation-of-liability sentence) on ToS top (bold),
+  Privacy footer, registration consent; first-launch dismissible card (medical + 112) once per device per LEGAL_VERSION; EU AI Act Art. 50 label
+  under every Jarvis reply + briefing; ToS body extended (112/999/911, fall detection, medication reference-only, data accuracy, GA-T not
+  financial instrument, personal liability).
+- RevenueCat IAP still BLOCKED: proxy status disconnected/oauth_pending — user must click "Connect RevenueCat" (Preview → manage → payments).
+  Plan once connected: /setup with bundle com.emergent.angelos.qvqss9 → keys to frontend/.env → lib/revenuecat.tsx (SubscriptionProvider,
+  logIn(user_id) on auth paths) → subscription.tsx buys via offerings → POST /subscription/iap-sync mirrors the active `pro` entitlement into
+  tier/tier_until/tier_paid_with="iap" so Jarvis gate + GA-T loyalty allocation fire (client entitlement remains source of truth; no webhooks).
+
+## Iter 60 — RevenueCat IAP LIVE in app (Sept 2026) — see /app/memory/revenuecat.md
+- RevenueCat connected (proj10bfa652, entitlement `pro`, offering `default`, $rc_monthly $9.99 / $rc_annual $79.99 USD — prices unchanged, Guardian only).
+- Wiring: QueryClientProvider + SubscriptionProvider in _layout (SDK init module scope); identity logIn/logOut inside provider; IapBuyButton in Guardian tier card
+  (sb-iap-guardian) + Jarvis Paywall (tier guardian); RestorePurchasesButton (iap-restore) in MANAGE SUBSCRIPTION; useIapMirror auto-syncs renewals/lapses.
+- Backend POST /api/subscription/iap-sync (fixed missing `_aml_ledger_append` import; identity check = app_user_id == user_id): active pro → tier guardian,
+  tier_paid_with iap → GA-T loyalty (verified E2E in preview Test Store: user iap-test-1 got tier guardian + 100 GA-T ledger entry). Lapse → sovereign.
+- Fixed corrupted frontend/.env (TEST key glued to EXPO_PACKAGER_PROXY_URL); removed duplicate package-lock.json (deploy warn).
+- Real App Store / Google Play purchases require a native store build + store-side products/credentials (FAQ in payments panel) — cannot be tested in Expo Go/web.
+- Testing agent (iteration_60.json): backend 11/11 (tests/test_iter60_iap_sync.py), UI green. Found+fixed: (a) token.py `_ledger_append` race
+  (concurrent GA-T writes → DuplicateKeyError 500) → retry-on-duplicate loop; (b) buy button + useIapMirror double-POSTed iap-sync → shared
+  in-flight promise per entitlement snapshot; (c) success text was unmounted when the Guardian card flipped to ACTIVE → message lifted to screen
+  level (testID sb-msg); (d) Browser-Mode cancel code is numeric 1 (native "1") → isUserCancelled() handles both, cancel stays silent.

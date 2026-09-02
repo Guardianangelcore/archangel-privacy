@@ -16,6 +16,7 @@ import { C, S, R, GOLD } from '@/src/theme';
 import { GlassCard, tap } from '@/src/ui/glass';
 import { t, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
+import FirstLaunchDisclaimer from '@/src/FirstLaunchDisclaimer';
 import { stageFromUser, AGE_LABEL_EN, suggestAngelMode } from '@/src/age';
 import { startWakeWord, stopWakeWord } from '@/src/wake-word';
 import { useAudioRecorder, RecordingPresets } from 'expo-audio';
@@ -112,10 +113,12 @@ export default function Home() {
     return <TosGate lang={lang} setUser={setUser} />;
   }
 
-  if (angel) return <AngelHome onToggle={toggleAngel} lang={lang} router={router} onBeacon={beacon} beaconSent={beaconSent} />;
+  if (angel) return (<><AngelHome onToggle={toggleAngel} lang={lang} router={router} onBeacon={beacon} beaconSent={beaconSent} /><FirstLaunchDisclaimer /></>);
 
   return (
     <SafeAreaView testID="standard-home" style={styles.root} edges={['top']}>
+      {/* First-launch legal notice (not a medical device · does not replace 112) — once per device */}
+      <FirstLaunchDisclaimer />
       {/* Freeze toast — appears when the user long-presses the streak chip to protect their series */}
       {!!freezeMsg && (
         <View testID="home-freeze-toast" style={styles.freezeToast}>

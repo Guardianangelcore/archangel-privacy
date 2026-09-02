@@ -16,6 +16,7 @@ import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } fr
 import { fetch as expoFetch } from 'expo/fetch';
 import { api, API_BASE, getToken, errMsg } from '@/src/api';
 import Paywall from '@/src/Paywall';
+import { useI18n } from '@/src/i18n-context';
 import * as Location from 'expo-location';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
@@ -138,6 +139,7 @@ export default function Jarvis() {
   const [recording, setRecording] = useState(false);
   const [auto, setAuto] = useState<any>(null);
   const [traces, setTraces] = useState<Record<string, any>>({});
+  const { t: tr } = useI18n();
   const [err, setErr] = useState('');
   // TIER GATE — Jarvis AI + Morning Briefing are Guardian-plan features (Sovereign = free tier).
   const [locked, setLocked] = useState<string | null>(null);
@@ -272,6 +274,11 @@ export default function Jarvis() {
             }
           }
           if (!acc) throw new Error('empty stream');
+          // Stream finished → mark the bubble final so the EU AI Act label renders.
+          setMsgs(prev => {
+            const last = prev[prev.length - 1];
+            return last && last.role === 'agent' && last.streaming ? [...prev.slice(0, -1), { ...last, streaming: false }] : prev;
+          });
           if (meta) { applyMeta(meta); } else { setStatus(''); setMood('calm'); loadState(); loadMems(); }
           if (viaVoice) speak(acc, (meta?.mood as Mood) || 'calm');
         } catch (streamErr) {
@@ -485,6 +492,7 @@ export default function Jarvis() {
             {!!briefing.weather && (
               <Text testID="jv-weather" style={st.weather}>🌤 {briefing.weather.city}: {briefing.weather.now_c} °C · {briefing.weather.desc} · min {briefing.weather.min_c} / max {briefing.weather.max_c} °C</Text>
             )}
+            <Text testID="jv-ai-label-briefing" style={st.aiLabel}>🤖 {tr('ai_label')}</Text>
             <Pressable testID="jv-use-location" onPress={useMyLocation} disabled={locBusy} style={st.locBtn}>
               {locBusy ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name="location-outline" size={14} color={C.brand} />}
               <Text style={st.locBtnText}>
@@ -505,6 +513,9 @@ export default function Jarvis() {
         {msgs.map((m, i) => (
           <View key={i} testID={`jv-msg-${i}-${m.role}`} style={[st.bubble, m.role === 'user' ? st.bubbleUser : st.bubbleAgent]}>
             <Text style={[st.bubbleText, m.role === 'user' && { color: C.onInverse }]}>{m.text}</Text>
+            {m.role !== 'user' && !m.streaming && (
+              <Text testID={`jv-ai-label-${i}`} style={st.aiLabel}>🤖 {tr('ai_label')}</Text>
+            )}
             {!!m.image && (
               <Image source={{ uri: `data:image/png;base64,${m.image}` }} style={st.genImage} contentFit="cover" transition={300} />
             )}
@@ -773,6 +784,7 @@ const st = StyleSheet.create({
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: C.brand },
   bubbleAgent: { alignSelf: 'flex-start', backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
   bubbleText: { color: C.fg, fontSize: 14, lineHeight: 20 },
+  aiLabel: { color: C.info, fontSize: 9.5, letterSpacing: 0.5, marginTop: 6, fontWeight: '700' },
   modeRow: { flexDirection: 'row', gap: S.sm, marginTop: S.lg, marginHorizontal: S.xl },
   modeChip: { flexDirection: 'row', gap: 6, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: R.pill, paddingHorizontal: S.md, minHeight: 40, justifyContent: 'center' },
   modeChipActive: { backgroundColor: C.brand, borderColor: C.brand },

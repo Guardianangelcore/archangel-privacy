@@ -1,5 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // Adaptive i18n dictionary for Archangel OS — 14-language global launch
+import { LEGAL } from './i18n-legal';
+
 export type Lang = 'sk' | 'cs' | 'en' | 'de' | 'pl' | 'hu' | 'ru' | 'es' | 'fr' | 'it' | 'uk' | 'zh' | 'ja' | 'ar';
 
 export const LANG_NAMES: Record<Lang, string> = {
@@ -290,7 +292,7 @@ export const T: Dict = {
 };
 
 export function t(key: string, lang: Lang): string {
-  return T[key]?.[lang] ?? EXT[lang]?.[key] ?? CORE[lang]?.[key] ?? T[key]?.en ?? key;
+  return T[key]?.[lang] ?? EXT[lang]?.[key] ?? CORE[lang]?.[key] ?? LEGAL[lang]?.[key] ?? T[key]?.en ?? LEGAL.en[key] ?? key;
 }
 
 // Core-surface translations for the 10 additional launch languages.

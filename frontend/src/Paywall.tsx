@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from './api';
 import { C, S } from './theme';
+import { IapBuyButton } from './IapPurchase';
 
 type Props = {
   message: string;
@@ -46,6 +47,12 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
       <Pressable testID="pw-trial" onPress={trial} disabled={busy} style={st.trialBtn}>
         {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>ACTIVATE A FREE 7-DAY TRIAL</Text>}
       </Pressable>
+      {/* Guardian plan → native App Store / Google Play subscription (RevenueCat); unlocks immediately after tier mirror */}
+      {tier === 'guardian' && (
+        <View style={{ alignSelf: 'stretch' }}>
+          <IapBuyButton period="monthly" accent={ui.color} onSynced={(r) => { if (r && r.status !== 'noop' && r.status !== 'downgraded') onUnlocked(); }} />
+        </View>
+      )}
       {!!gatLabel && onPayGat && (
         <Pressable testID="pw-gat" onPress={onPayGat} style={st.gatBtn}>
           <Text style={st.gatText}>💎 {gatLabel}</Text>

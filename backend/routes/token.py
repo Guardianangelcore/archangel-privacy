@@ -12,7 +12,7 @@ from fastapi import HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
-import uuid, hashlib, json
+import uuid, hashlib, json, asyncio
 
 from core import api, db, logger, clean, get_current_user
 
@@ -45,17 +45,25 @@ SPEND_ITEMS = {
 
 # ---------------- HASH-CHAINED LEDGER ----------------
 async def _ledger_append(kind: str, account: str, amount: float, meta: dict) -> dict:
-    last = await db.token_ledger.find_one({}, {"_id": 0, "entry_hash": 1, "seq": 1}, sort=[("seq", -1)])
-    prev_hash = last["entry_hash"] if last else "gat-genesis"
-    seq = (last["seq"] + 1) if last else 1
-    body = json.dumps({"seq": seq, "kind": kind, "account": account, "amount": round(amount, 4),
-                       "meta": meta, "prev": prev_hash}, sort_keys=True, default=str)
-    entry_hash = hashlib.sha256(body.encode()).hexdigest()
-    entry = {"seq": seq, "tx_id": uuid.uuid4().hex, "kind": kind, "account": account,
-             "amount": round(amount, 4), "meta": meta, "prev_hash": prev_hash,
-             "entry_hash": entry_hash, "at": datetime.now(timezone.utc)}
-    await db.token_ledger.insert_one(entry.copy())
-    return entry
+    """Append one hash-chained entry. The unique index on `seq` makes concurrent appends
+    collide (DuplicateKeyError) — the loser simply re-reads the new head and retries."""
+    from pymongo.errors import DuplicateKeyError
+    for attempt in range(8):
+        last = await db.token_ledger.find_one({}, {"_id": 0, "entry_hash": 1, "seq": 1}, sort=[("seq", -1)])
+        prev_hash = last["entry_hash"] if last else "gat-genesis"
+        seq = (last["seq"] + 1) if last else 1
+        body = json.dumps({"seq": seq, "kind": kind, "account": account, "amount": round(amount, 4),
+                           "meta": meta, "prev": prev_hash}, sort_keys=True, default=str)
+        entry_hash = hashlib.sha256(body.encode()).hexdigest()
+        entry = {"seq": seq, "tx_id": uuid.uuid4().hex, "kind": kind, "account": account,
+                 "amount": round(amount, 4), "meta": meta, "prev_hash": prev_hash,
+                 "entry_hash": entry_hash, "at": datetime.now(timezone.utc)}
+        try:
+            await db.token_ledger.insert_one(entry.copy())
+            return entry
+        except DuplicateKeyError:
+            await asyncio.sleep(0.02 * (attempt + 1))
+    raise RuntimeError("token_ledger append failed after concurrent retries")
 
 
 async def verify_ledger_chain(limit: int = 5000) -> dict:

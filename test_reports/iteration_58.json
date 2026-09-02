@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only audit of legal disclaimer consolidation (viewport 390x844, EXPO_BACKEND_URL). PASSED: (1) /login registration tab renders testID reg-disclaimer localized to EN/SK/DE instantly, all starting with expected sentence and containing 'shall not be held personally liable'; reg-agree, reg-tos-link, reg-privacy-link, pw-submit all present; pw-submit is aria-disabled=true when the consent checkbox is unchecked. (2) /terms-of-service shows testID tos-disclaimer-text near top with the consolidated text and 'LEGAL DISCLAIMER' heading (old 'MEDICAL DISCLAIMER' replaced); body contains 'does not replace 112 / 999 / 911', 'Automatic fall detection', 'Medication information is for reference only', 'not a medical measurement', 'not financial instruments', 'shall not be held personally liable'. (3) /privacy-policy renders privacy-disclaimer-text at the footer with the consolidated disclaimer. (4) First-launch card: after clearing localStorage ga.disclaimer.seen keys and founder-bypass sign-in the first-launch-disclaimer modal appears with 'IMPORTANT — PLEASE READ' plus medical + emergency lines; disclaimer-ok dismisses; reload does NOT re-open; clearing the ga.disclaimer.seen.2026-06.1 key + reload re-opens; disclaimer-terms navigates to /terms-of-service. (5) Jarvis: jv-ai-label-briefing renders on the Morning Briefing containing 'AI-generated content · EU AI Act Art. 50 · informational only'. FAIL: sending a chat message returned an agent bubble ('Hello, I'm here with you. Quick check received and all looks in order.' — fallback / cached reply) but that bubble had NO jv-ai-label-<i> beneath it; only 1 jv-ai-label-* was found in the DOM (the briefing one). Root cause: in /app/frontend/app/jarvis.tsx the SSE streaming path never flips the last agent message's `streaming` flag back to false when the stream ends, and the label render is gated on `!m.streaming`. Fix required in main agent scope.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Jarvis chat bubble", "issue": "Streaming agent bubble is never flipped to streaming:false after SSE completes, so jv-ai-label-<i> never renders under any streamed reply. Any cached/fallback/streamed agent bubble is missing the EU AI Act Art. 50 label — violates the audit rule 'every Jarvis AI response must carry the label'. Reference: /app/frontend/app/jarvis.tsx lines 262-277 (streaming setMsgs keeps streaming:true; when d.done arrives, meta is stored but the last message's streaming flag is not cleared). Label render is gated at line 511 (`!m.streaming`).", "testID": "jv-ai-label-0", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In /app/frontend/app/jarvis.tsx streaming branch: after the SSE loop finishes (or when meta arrives), update the last agent message so streaming:false — e.g. `setMsgs(prev => { const last = prev[prev.length-1]; if (last?.role==='agent' && last.streaming) return [...prev.slice(0,-1), { ...last, streaming:false }]; return prev; });` before/after `applyMeta(meta)`. This ensures jv-ai-label-<i> renders on every completed agent bubble (streamed, cached, or fallback). Retest by sending a message in /jarvis and verifying at least one jv-ai-label-<i> is present next to the agent bubble."
+  ],
+  "critical_code_review_comments": [
+    "Console shows expected non-blocking deprecation warnings from RN Web ('shadow*'/'textShadow*'/'pointerEvents'); not related to this audit.",
+    "LEGAL_VERSION-based storage key `ga.disclaimer.seen.${LEGAL_VERSION}` (currently ga.disclaimer.seen.2026-06.1) is correct — matches the spec's clear-key check.",
+    "All required disclaimer testIDs exist and are localized via useI18n / i18n-legal.ts across the 14 launch languages."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "92%"},
+  "seed_data_creation": "None — founder-bypass sign-in used as instructed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Legal disclaimer consolidation is fully working on /login (reg-disclaimer), /terms-of-service (tos-disclaimer-text + LEGAL DISCLAIMER title + all required phrases), /privacy-policy (privacy-disclaimer-text at footer), and the first-launch card (first-launch-disclaimer + disclaimer-ok + disclaimer-terms → /terms-of-service). jv-ai-label-briefing is correct. Only remaining issue: streaming agent bubbles in /jarvis never clear their `streaming:true` flag, so jv-ai-label-<i> never renders on any streamed/cached/fallback reply. Fix is a small state update in the SSE completion handler. LLM budget-exhausted assumption in the request appears not fully accurate — a fallback/cached reply DID render during testing.",
+  "rca_of_issue": "In /app/frontend/app/jarvis.tsx sendMessage's streaming branch (~lines 242-289): while streaming, each token appends via setMsgs with `streaming: true`. When the stream ends and `d.done` is received, `meta` is captured and `applyMeta(meta)` is called for mood/xp/state, but nothing mutates the last message's `streaming` flag back to false. The JSX at line 511 renders jv-ai-label-<i> only when `!m.streaming`, so the label is permanently suppressed for any streamed reply. Reproduction: log in as founder, open /jarvis, send any message via jv-input+jv-ask, wait for agent bubble → observe missing jv-ai-label-<i>. Mitigation: after the reader loop breaks (both success and fallback branches), update the last agent bubble to `{ ...last, streaming: false }`."
+}
