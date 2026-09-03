@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
 import { useI18n } from '@/src/i18n-context';
+import Paywall from '@/src/Paywall';
 
 export default function GhostMode() {
   const { t: tt, tx } = useI18n();
@@ -17,6 +18,7 @@ export default function GhostMode() {
   const [power, setPower] = useState<any>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [locked, setLocked] = useState(false);   // Sentinel+ tier gate
 
   const load = useCallback(async () => {
     try {
@@ -29,7 +31,7 @@ export default function GhostMode() {
   const toggleGhost = async (v: boolean) => {
     setBusy('ghost'); setErr('');
     try { setGhost(await api('/ghost/toggle', { method: 'POST', body: JSON.stringify({ enabled: v }) })); }
-    catch (e: any) { setErr(String(e.message || e)); }
+    catch (e: any) { if (/^402:/.test(String(e?.message || e))) setLocked(true); else setErr(String(e.message || e)); }
     finally { setBusy(null); }
   };
 
@@ -65,6 +67,11 @@ export default function GhostMode() {
         )}
 
         <Text style={st.section}>{tt('ghost_mode.ghost_mode')}</Text>
+        {locked && (
+          <View testID="gh-paywall" style={{ marginBottom: S.md }}>
+            <Paywall tier="sentinel" message={tt('ghost_mode.ghost_mode') + ' — Sentinel'} onUnlocked={() => setLocked(false)} />
+          </View>
+        )}
         <View style={st.card}>
           <View style={st.rowSpread}>
             <View style={{ flex: 1, paddingRight: S.md }}>

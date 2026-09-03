@@ -23,6 +23,7 @@ export default function Hunter() {
         { testID: 'ht-humanitarian', icon: 'earth-outline', title: tt('tabs_hunter.humanitarian_shield'), subtitle: tt('tabs_hunter.crisis_identity_red_cross_un'), route: '/humanitarian' },
         { testID: 'ht-enviro', icon: 'thunderstorm-outline', title: tt('tabs_hunter.threat_map'), subtitle: tt('tabs_hunter.environmental_threats_mesh_consensus'), route: '/enviro' },
         { testID: 'ht-blackout', icon: 'flash-off-outline', title: tt('tabs_hunter.blackout_protocol'), subtitle: tt('tabs_hunter.offline_mode_mesh_network'), route: '/blackout' },
+        { testID: 'ht-crisis', icon: 'list-outline', title: tt('crisis.crisis_protocols'), subtitle: tt('crisis.step_by_step_checklists_blackout_med'), route: '/crisis-protocols' },
       ]}
     />
   );

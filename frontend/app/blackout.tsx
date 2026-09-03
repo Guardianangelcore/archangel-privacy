@@ -10,6 +10,7 @@ import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
 import { t, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
+import Paywall from '@/src/Paywall';
 
 const KEY = 'gh_blackout_snapshot';
 
@@ -21,6 +22,7 @@ export default function Blackout() {
   const [snap, setSnap] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);   // Sentinel+ tier gate
 
   useEffect(() => {
     (async () => {
@@ -35,7 +37,7 @@ export default function Blackout() {
       const s = await api('/blackout/snapshot');
       setSnap(s); setSaved((s as any).generated_at);
       await AsyncStorage.setItem(KEY, JSON.stringify(s));
-    } catch (e) { console.log(e); }
+    } catch (e: any) { if (/^402:/.test(String(e?.message || e))) setLocked(true); else console.log(e); }
     setLoading(false);
   };
 
@@ -58,6 +60,11 @@ export default function Blackout() {
           <Text style={styles.heroSub}>{tt('blackout.sync_a_signed_snapshot_to_survive_in')}</Text>
         </View>
 
+        {locked && (
+          <View testID="bo-paywall" style={{ marginBottom: S.lg }}>
+            <Paywall tier="sentinel" message={tt('blackout.sync_snapshot_now') + ' — Sentinel'} onUnlocked={() => { setLocked(false); refresh(); }} />
+          </View>
+        )}
         <Pressable testID="bo-refresh" onPress={refresh} disabled={loading} style={styles.refreshBtn}>
           {loading ? <ActivityIndicator color={C.onInverse} /> : <>
             <Ionicons name="cloud-download-outline" size={18} color={C.onInverse} />

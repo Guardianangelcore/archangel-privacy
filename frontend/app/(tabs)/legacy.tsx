@@ -33,6 +33,7 @@ export default function LegacyWealth() {
           { testID: 'lw-compass', icon: 'compass-outline', title: tt('tabs_legacy.survival_compass'), subtitle: tt('tabs_legacy.satellite_handshake_bio_beacon_point'), route: '/compass' },
           { testID: 'lw-mesh', icon: 'radio-outline', title: tt('tabs_legacy.mesh_messages'), subtitle: tt('tabs_legacy.p2p_offline_messages_independent_of'), route: '/mesh' },
           { testID: 'lw-blackout', icon: 'flash-off-outline', title: tt('tabs_legacy.blackout_protocol'), subtitle: tt('tabs_legacy.offline_mode_mesh_network'), route: '/blackout' },
+          { testID: 'lw-crisis', icon: 'list-outline', title: tt('crisis.crisis_protocols'), subtitle: tt('crisis.step_by_step_checklists_blackout_med'), route: '/crisis-protocols' },
           { testID: 'lw-survival', icon: 'cube-outline', title: tt('tabs_legacy.survival_supplies'), subtitle: tt('tabs_legacy.supply_arbitrage_water_food_survival'), route: '/survival-auditor' },
           { testID: 'lw-pantry', icon: 'scan-circle-outline', title: tt('tabs_legacy.survival_pantry_scanner'), subtitle: tt('tabs_legacy.jarvis_guards_cans_batteries_filters'), route: '/pantry' },
           { testID: 'lw-enviro', icon: 'thunderstorm-outline', title: tt('tabs_legacy.threat_map'), subtitle: tt('tabs_legacy.environmental_threats_mesh_consensus'), route: '/enviro' },

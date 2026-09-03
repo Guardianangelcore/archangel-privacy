@@ -107,6 +107,7 @@ async def del_waitlist(item_id: str, authorization: Optional[str] = Header(None)
 async def blackout_snapshot(authorization: Optional[str] = Header(None)):
     """Returns everything the phone needs to survive an internet outage — cache locally."""
     user = await get_current_user(authorization)
+    await require_tier(user, "sentinel", "Blackout Protocol")
     prof = await db.emergency_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     docs = await db.documents.find({"user_id": user["user_id"]}, {"_id": 0}).sort("uploaded_at", -1).limit(20).to_list(20)
     contacts = [{
@@ -125,6 +126,79 @@ async def blackout_snapshot(authorization: Optional[str] = Header(None)):
             "SK: The QR code with DID is readable even without internet.",
         ],
     }
+
+
+# --------- CRISIS PROTOCOLS (Sentinel+) — step-by-step checklists, per-user check state ---------
+CRISIS_PROTOCOLS = [
+    {"id": "blackout", "icon": "flash-off-outline", "title": "Power blackout", "steps": [
+        "Switch phone to power-saver, download the Blackout snapshot (offline copy)",
+        "Fill bottles and the bathtub with water while pressure lasts",
+        "Unplug sensitive electronics; keep one lamp/torch ready",
+        "Keep fridge/freezer closed — food stays safe ~4 h / 24–48 h",
+        "Check on elderly neighbours and anyone on powered medical devices",
+        "Emergency: 112 · Ambulance 155 · Police 158 · Fire 150"]},
+    {"id": "medical", "icon": "medkit-outline", "title": "Medical emergency at home", "steps": [
+        "Call 112 — state address, what happened, age of the person",
+        "Open Emergency QR on the lock screen for paramedics (blood type, allergies, meds)",
+        "Unconscious & not breathing: start CPR 30:2, keep going until help arrives",
+        "Severe bleeding: firm pressure, elevate, do not remove the cloth",
+        "Prepare the medicine list + insurance card for the ambulance crew",
+        "Notify the Guardian Circle (SOS long-press)"]},
+    {"id": "evacuation", "icon": "exit-outline", "title": "Evacuation (fire · flood · gas)", "steps": [
+        "Grab the go-bag: documents, meds for 7 days, charger, cash, water",
+        "Turn off gas, water and main breaker if safe to do so",
+        "Take the Survival Bible PDF (printed) and the Emergency QR card",
+        "Leave via stairs, never the elevator; close doors behind you",
+        "Meet at the agreed family point; confirm arrival in the Guardian Circle",
+        "Follow official instructions (112 / local authority channels)"]},
+    {"id": "heatwave", "icon": "sunny-outline", "title": "Heatwave", "steps": [
+        "Drink 2–3 l of water a day even when not thirsty; avoid alcohol",
+        "Stay indoors 11:00–16:00; shade windows, ventilate at night",
+        "Check medication heat-sensitivity (insulin, some blood-pressure drugs)",
+        "Cool wrists/neck with wet cloths; light clothing",
+        "Warning signs: confusion, no sweating, temp > 39 °C → call 155"]},
+    {"id": "pandemic", "icon": "shield-checkmark-outline", "title": "Pandemic / quarantine", "steps": [
+        "Stock 14 days of medication, food and hygiene supplies",
+        "Set up remote doctor contact (Clinic Sync / e-prescriptions)",
+        "Isolate the sick person in one room; ventilate, separate towels",
+        "Track temperature and SpO2 daily in the Bio-Scanner",
+        "Arrange contactless deliveries via the Guardian Circle"]},
+    {"id": "cyber", "icon": "lock-closed-outline", "title": "Digital blackout / data breach", "steps": [
+        "Enable Ghost Mode — anonymous patient token instead of identity",
+        "Change passwords, enable biometric lock in Settings",
+        "Print the Survival Bible so records survive offline",
+        "Revoke all partner API grants in Guardian Protocol",
+        "Report the incident: local CSIRT / police 158"]},
+]
+
+
+@api.get("/survival/protocols")
+async def crisis_protocols(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await require_tier(user, "sentinel", "Crisis Protocols")
+    rows = await db.crisis_checks.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(50)
+    checked = {r["protocol_id"]: r.get("steps", []) for r in rows}
+    out = []
+    for p in CRISIS_PROTOCOLS:
+        done = [i for i in checked.get(p["id"], []) if 0 <= i < len(p["steps"])]
+        out.append({**p, "done": done, "progress": round(len(done) / len(p["steps"]), 2)})
+    return {"protocols": out}
+
+
+@api.put("/survival/protocols/{pid}/steps/{idx}")
+async def crisis_toggle_step(pid: str, idx: int, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await require_tier(user, "sentinel", "Crisis Protocols")
+    proto = next((p for p in CRISIS_PROTOCOLS if p["id"] == pid), None)
+    if not proto or not (0 <= idx < len(proto["steps"])):
+        raise HTTPException(404, "protocol/step not found")
+    row = await db.crisis_checks.find_one({"user_id": user["user_id"], "protocol_id": pid}, {"_id": 0}) or {"steps": []}
+    steps = set(row.get("steps", []))
+    steps.symmetric_difference_update({idx})
+    done = sorted(steps)
+    await db.crisis_checks.update_one({"user_id": user["user_id"], "protocol_id": pid},
+                                      {"$set": {"steps": done, "updated_at": datetime.now(timezone.utc)}}, upsert=True)
+    return {"protocol_id": pid, "done": done, "progress": round(len(done) / len(proto["steps"]), 2)}
 
 
 # --------- SURVIVAL AUDITOR ---------
@@ -181,6 +255,7 @@ async def survival_runway(authorization: Optional[str] = Header(None)):
 @api.get("/survival/bible.pdf")
 async def survival_bible_pdf(token: Optional[str] = None, authorization: Optional[str] = Header(None)):
     user = await _auth_pdf(authorization, token)
+    await require_tier(user, "sentinel", "Survival Bible")
     uid = user["user_id"]
     prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
     proxy = await db.proxy_directives.find_one({"user_id": uid}, {"_id": 0}) or {}

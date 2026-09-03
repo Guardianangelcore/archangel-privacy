@@ -53,7 +53,7 @@ export default function HealthHub() {
           { testID: 'hh-news', icon: 'flask-outline', title: tt('tabs_health.medical_news'), subtitle: tt('tabs_health.breakthroughs_matched_to_your_vault'), route: '/medical-news' },
           { testID: 'hh-border', icon: 'airplane-outline', title: tt('tabs_health.travel_certificate'), subtitle: tt('tabs_health.medication_certificate_14_languages'), route: '/border-pass' },
           { testID: 'hh-ips', icon: 'globe-outline', title: tt('tabs_health.health_summary_ips'), subtitle: tt('tabs_health.one_tap_hl7_fhir_export_eu_uk_usa'), onPress: () => { sharePdf('/ips/summary.pdf', 'guardian_ips_summary.pdf').catch(() => {}); } },
-          { testID: 'hh-bible', icon: 'book-outline', title: tt('tabs_health.survival_bible'), subtitle: tt('tabs_health.one_tap_printable_pdf_of_critical_da'), onPress: () => { sharePdf('/survival/bible.pdf', 'guardian_survival_bible.pdf').catch(() => {}); } },
+          { testID: 'hh-bible', icon: 'book-outline', title: tt('tabs_health.survival_bible'), subtitle: tt('tabs_health.one_tap_printable_pdf_of_critical_da'), onPress: () => { sharePdf('/survival/bible.pdf', 'guardian_survival_bible.pdf').catch((e: any) => { if (/^402:/.test(String(e?.message || e))) router.push('/subscription' as any); }); } },
         ] },
         { title: tt('tabs_health.meds_body'), items: [
           { testID: 'hh-meds', icon: 'alarm-outline', title: tt('tabs_health.meds_today'), subtitle: tt('tabs_health.reminders_scan_interactions_pharmaci'), choices: [

@@ -51,6 +51,8 @@ class GhostToggleIn(BaseModel):
 @api.post("/ghost/toggle")
 async def ghost_toggle(body: GhostToggleIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    from routes.subscription import require_tier
+    await require_tier(user, "sentinel", "Ghost Mode")
     if body.enabled:
         token = f"GHOST-{uuid.uuid4().hex[:12].upper()}"
         exp = datetime.now(timezone.utc) + timedelta(hours=GHOST_TTL_HOURS)
