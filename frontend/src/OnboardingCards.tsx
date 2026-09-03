@@ -12,8 +12,14 @@ import { useI18n } from './i18n-context';
 export const FIRST_LAUNCH_KEY = 'ga.first_launch.done.v1';
 const GOLD = '#D4AF37';
 
+/** First-launch check with a 3 s safety timeout — if storage does not answer, behave as NOT first
+ *  launch so the app never waits on it. */
 export async function isFirstLaunch(): Promise<boolean> {
-  try { return !(await AsyncStorage.getItem(FIRST_LAUNCH_KEY)); } catch { return false; }
+  try {
+    const read = AsyncStorage.getItem(FIRST_LAUNCH_KEY).then(v => !v);
+    const timeout = new Promise<boolean>(res => setTimeout(() => res(false), 3000));
+    return await Promise.race([read, timeout]);
+  } catch { return false; }
 }
 
 const CARDS: { key: string; icon: any }[] = [

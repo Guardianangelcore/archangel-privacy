@@ -1,7 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LogBox, View, Text, ActivityIndicator, Platform, Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -216,12 +216,18 @@ function RootNav() {
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
+  // Startup must never block on the network: in Expo Go the icon fonts come from a CDN and a
+  // slow/blocked download used to keep the splash screen up forever. After 3 s we proceed
+  // regardless (fonts keep loading in the background and appear when ready).
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => { const id = setTimeout(() => setTimedOut(true), 3000); return () => clearTimeout(id); }, []);
+  const ready = loaded || !!error || timedOut;
 
   useEffect(() => {
-    if (loaded || error) SplashScreen.hideAsync();
-  }, [loaded, error]);
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
 
-  if (!loaded && !error) return null;
+  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

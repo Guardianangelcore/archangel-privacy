@@ -908,3 +908,6 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 
 ## Iter 63
 - iteration_63.json: 7/8 → fixed POST /waitlist 422→402 via Depends gate; now 8/8. UI: paywalls on waitlist/magic-lens/jarvis for Sovereign, pw-upgrade → /subscription, no raw i18n keys, Slovak renders.
+
+## Iter 64 (fork physio-lang-fix) — startup freeze fix
+- iteration_64.json: intro/onboarding/second-launch/logged-in/slow-CDN all pass on web; static review: all startup async paths time-boxed. Expo Go path (CDN fonts) now unblocked by 3 s RootLayout timeout.

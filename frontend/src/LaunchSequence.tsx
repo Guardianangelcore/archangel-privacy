@@ -7,13 +7,15 @@ import { OnboardingCards, isFirstLaunch } from './OnboardingCards';
 export function LaunchSequence() {
   const [phase, setPhase] = useState<'intro' | 'onboarding' | 'done'>('intro');
   const [first, setFirst] = useState<boolean | null>(null);
-  useEffect(() => { isFirstLaunch().then(setFirst); }, []);
+  useEffect(() => {
+    let alive = true;
+    isFirstLaunch().then(v => { if (alive) setFirst(v); }).catch(() => { if (alive) setFirst(false); });
+    return () => { alive = false; };
+  }, []);
 
-  if (phase === 'intro') return <CinematicIntro onDone={() => setPhase(first === false ? 'done' : 'onboarding')} />;
-  if (phase === 'onboarding') {
-    if (first === null) return null;                 // flag still loading (rare) — wait
-    if (!first) { setPhase('done'); return null; }
-    return <OnboardingCards onDone={() => setPhase('done')} />;
-  }
+  // Intro runs on every start; when it ends we show onboarding ONLY if the flag resolved to
+  // "first launch". Unknown (storage slow/unavailable) counts as NOT first — never block.
+  if (phase === 'intro') return <CinematicIntro onDone={() => setPhase(first === true ? 'onboarding' : 'done')} />;
+  if (phase === 'onboarding') return <OnboardingCards onDone={() => setPhase('done')} />;
   return null;
 }
