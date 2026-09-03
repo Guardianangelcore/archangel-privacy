@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { C, S, R } from './theme';
 import { useI18n } from './i18n-context';

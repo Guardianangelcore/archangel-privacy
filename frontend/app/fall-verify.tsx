@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ActivityIndicator, Linking, ScrollView } from 'react-native';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';

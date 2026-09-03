@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ScrollView, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { C, S, R, GLASS } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 

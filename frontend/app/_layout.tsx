@@ -60,6 +60,8 @@ if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: false,
     }),
@@ -84,12 +86,13 @@ function RootNav() {
 
   useEffect(() => {
     if (loading) return;
-    const inAuthGroup = segments[0] === 'login' || segments[0] === undefined || segments[0] === 'index';
-    const isPublic = segments[0] === 'drop' || segments[0] === 'terms-of-service' || segments[0] === 'privacy-policy'; // public — no login
+    const seg0 = segments[0] as string | undefined;
+    const inAuthGroup = seg0 === 'login' || seg0 === undefined || seg0 === 'index';
+    const isPublic = seg0 === 'drop' || seg0 === 'terms-of-service' || seg0 === 'privacy-policy'; // public — no login
     if (isPublic) return;
     if (!user && !inAuthGroup) {
       router.replace('/login');
-    } else if (user && (segments[0] === 'login' || segments[0] === 'index' || segments[0] === undefined)) {
+    } else if (user && (seg0 === 'login' || seg0 === 'index' || seg0 === undefined)) {
       router.replace('/(tabs)');
     }
   }, [user, loading, segments]);

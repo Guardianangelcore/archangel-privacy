@@ -2,7 +2,7 @@
 // Reusable premium paywall — Sentinel trial / GA-T micropayment / upgrade
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { api } from './api';
 import { C, S } from './theme';

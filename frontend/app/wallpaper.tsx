@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { API_BASE, getToken } from '@/src/api';
 import { shareFile } from '@/src/pdf';

@@ -84,7 +84,7 @@ export function ConfettiBurst({ onDone }: { onDone?: () => void }) {
     <View
       pointerEvents="none"
       style={[
-        StyleSheet.absoluteFillObject,
+        StyleSheet.absoluteFill,
         Platform.OS === 'web' ? ({ position: 'fixed' as any } as any) : null,
         { overflow: 'hidden', zIndex: 10000 },
       ]}

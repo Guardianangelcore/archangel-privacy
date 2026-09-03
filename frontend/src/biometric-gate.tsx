@@ -4,7 +4,7 @@
 // Fails soft on: web, hardware-less devices, disabled biometrics, or opt-out.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, AppState, Platform, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from './auth';
 import { speak } from './voice';

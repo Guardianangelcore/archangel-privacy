@@ -6,9 +6,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platform, Linking, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
-import * as Contacts from 'expo-contacts';
+import * as Contacts from 'expo-contacts/legacy';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import { C, S, R } from '@/src/theme';
@@ -51,7 +51,7 @@ export default function GuardianCircleSync() {
   const { t: tt, tx } = useI18n();
   const router = useRouter();
   const [circle, setCircle] = useState<PickedContact[]>([]);
-  const [phoneContacts, setPhoneContacts] = useState<Contacts.Contact[] | null>(null);
+  const [phoneContacts, setPhoneContacts] = useState<Contacts.ExistingContact[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState('');
   const [permStatus, setPermStatus] = useState<'undetermined' | 'granted' | 'denied' | 'blocked'>('undetermined');
@@ -86,7 +86,7 @@ export default function GuardianCircleSync() {
     finally { setBusy(false); }
   };
 
-  const addToCircle = async (c: Contacts.Contact) => {
+  const addToCircle = async (c: Contacts.ExistingContact) => {
     if (circle.length >= MAX_CIRCLE) { setErr(`The circle is full (max ${MAX_CIRCLE}).`); return; }
     const phone = c.phoneNumbers?.[0]?.number || '';
     const name = c.name || 'Unknown';

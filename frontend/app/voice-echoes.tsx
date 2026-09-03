@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Modal, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { createAudioPlayer, setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import { api, apiUpload } from '@/src/api';

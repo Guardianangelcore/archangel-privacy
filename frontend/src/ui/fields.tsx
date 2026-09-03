@@ -3,7 +3,7 @@
 // Policy: NO manual typing for numbers, dates or times anywhere in the app.
 import React, { useState } from 'react';
 import { Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { C } from '@/src/theme';
 import { tap } from '@/src/ui/glass';
 import { WheelSheet, DateSheet, TimeSheet } from '@/src/ui/sheets';

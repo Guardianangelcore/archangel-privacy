@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, ScrollView, Modal, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';

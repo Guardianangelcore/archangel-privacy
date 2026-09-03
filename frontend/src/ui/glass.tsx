@@ -5,7 +5,7 @@ import { View, Text, Pressable, StyleSheet, Platform, ActivityIndicator, ViewSty
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { C, S, R, GOLD, GLASS, SHADOW } from '@/src/theme';
 

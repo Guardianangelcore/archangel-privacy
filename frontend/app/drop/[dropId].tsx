@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -65,7 +65,7 @@ export default function DropPortal() {
         const CH = 0x8000;
         let bin = '';
         for (let i = 0; i < ciphertext.length; i += CH) bin += String.fromCharCode.apply(null, Array.from(ciphertext.subarray(i, i + CH)) as any);
-        b64ct = (global as any).btoa ? (global as any).btoa(bin) : '';
+        b64ct = (globalThis as any).btoa ? (globalThis as any).btoa(bin) : '';
         await FileSystem.writeAsStringAsync(tmp, b64ct, { encoding: 'base64' as any });
         form.append('file', { uri: tmp, name: 'encrypted.bin', type: 'application/octet-stream' } as any);
       }

@@ -5,7 +5,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { C } from './theme';

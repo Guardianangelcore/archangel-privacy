@@ -3,7 +3,7 @@
 // Prices and packages ALWAYS come from offerings — never hardcoded.
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Modal, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { rcEnabled, rcSimulated, useSubscription, IAP_PACKAGES, IapTier } from './revenuecat';
 import { syncIapEntitlement, creditedGat, IapSyncResult } from './iap-mirror';

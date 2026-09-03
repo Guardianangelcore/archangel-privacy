@@ -1,6 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Platform, Linking } from 'react-native';
+import { createURL } from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { api, saveToken, getToken, clearToken } from './api';
 import { LEGAL_VERSION } from './legal';
@@ -16,6 +17,11 @@ export type User = {
   did: string;
   language: Lang;
   angel_mode: boolean;
+  birth_year?: number | null;
+  biometric_enabled?: boolean;
+  onboarding_completed?: boolean;
+  tier?: string;
+  [extra: string]: any;
 };
 
 type Ctx = {
@@ -128,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async () => {
     const redirect = Platform.OS === 'web'
       ? (typeof window !== 'undefined' ? window.location.origin + '/' : '')
-      : Linking.createURL('');
+      : createURL('');
     const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirect)}`;
 
     if (Platform.OS === 'web') {

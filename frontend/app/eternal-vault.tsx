@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { C, S, R } from '@/src/theme';

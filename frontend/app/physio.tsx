@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, LayoutAnimation, Platform, UIManager, Linking, Animated as RNAnimated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -51,7 +51,7 @@ function GuideVideo({ url, testID, muted = true }: { url: string; testID: string
   return (
     <View style={styles.videoWrap}>
       <VideoView testID={testID} player={player} style={styles.video} contentFit="cover"
-        nativeControls allowsFullscreen allowsPictureInPicture={false} />
+        nativeControls fullscreenOptions={{ enable: true }} allowsPictureInPicture={false} />
       <View style={styles.videoBadge}><Text style={styles.videoBadgeText}>{t('ph_video_guide', lang)}</Text></View>
     </View>
   );

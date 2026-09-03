@@ -2,8 +2,8 @@
 // Native Contact Picker (expo-contacts) in a glass bottom sheet — with full permission contract
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, TextInput, FlatList, Platform, Linking, ActivityIndicator } from 'react-native';
-import * as Contacts from 'expo-contacts';
-import { Ionicons } from '@expo/vector-icons';
+import * as Contacts from 'expo-contacts/legacy';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { C, S, R } from '@/src/theme';
 import { Sheet } from '@/src/ui/sheets';
 import { tap, GoldButton } from '@/src/ui/glass';
@@ -14,7 +14,7 @@ export function ContactSheet({ visible, onClose, onPick }: {
   visible: boolean; onClose: () => void; onPick: (c: PickedContact) => void;
 }) {
   const [perm, setPerm] = useState<'unknown' | 'granted' | 'ask' | 'blocked'>('unknown');
-  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  const [contacts, setContacts] = useState<Contacts.ExistingContact[]>([]);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
   const [manualName, setManualName] = useState('');

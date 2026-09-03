@@ -2,7 +2,7 @@
 // NATIVE CALENDAR BRIDGE — shared helper for the dedicated on-device
 // "Guardian Angel" calendar (used by /calendar-sync and Karta života).
 import { Platform } from 'react-native';
-import * as Calendar from 'expo-calendar';
+import * as Calendar from 'expo-calendar/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CAL_ID_KEY = 'gh_native_calendar_id_v1';

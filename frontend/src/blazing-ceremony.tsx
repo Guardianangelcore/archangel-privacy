@@ -6,7 +6,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { api } from './api';
 import { useAuth } from './auth';
 import { speak as jarvisSpeak, stopSpeaking } from './voice';
