@@ -105,6 +105,15 @@ MARKET_OFFERS = [
     {"offer_id": "sk-vaccination", "institution": "Central European Epidemiology Institute", "title": "Anonymized V4-region vaccination coverage", "reward_eur": 8.0, "reward_crypto": "2.7 USDC", "category": "vaccination"},
 ]
 
+MARKET_CATEGORIES = ["medication", "wellness", "vaccination"]
+
+def _gat_per_offer() -> float:
+    try:
+        from routes.token import EARN_RULES
+        return float(EARN_RULES["proof_of_health"]["amount"])
+    except Exception:
+        return 5.0
+
 class MarketOptinIn(BaseModel):
     enabled: bool
     categories: List[str] = []
@@ -112,6 +121,9 @@ class MarketOptinIn(BaseModel):
 @api.put("/marketplace/optin")
 async def marketplace_optin(body: MarketOptinIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    from routes.subscription import require_tier
+    await require_tier(user, "guardian", "Sovereign Data Marketplace")
+    body.categories = [c for c in body.categories if c in MARKET_CATEGORIES]
     await db.marketplace_optins.update_one(
         {"user_id": user["user_id"]},
         {"$set": {"enabled": body.enabled, "categories": body.categories[:10], "updated_at": datetime.now(timezone.utc)},
@@ -123,25 +135,31 @@ async def marketplace_optin(body: MarketOptinIn, authorization: Optional[str] = 
 @api.get("/marketplace/me")
 async def marketplace_me(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
-    me = await db.marketplace_optins.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {"enabled": False, "earnings_eur": 0.0}
+    me = await db.marketplace_optins.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {"enabled": False, "earnings_eur": 0.0, "categories": []}
     sold = await db.marketplace_sales.find({"user_id": user["user_id"]}, {"_id": 0}).sort("at", -1).to_list(20)
-    return {**me, "sales": sold, "simulated": True}
+    earnings_gat = round(sum(float(s.get("gat_reward") or 0) for s in sold), 2)
+    return {**me, "sales": sold, "earnings_gat": earnings_gat, "categories_available": MARKET_CATEGORIES, "simulated": True}
 
 @api.get("/marketplace/offers")
 async def marketplace_offers(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
-    return {"offers": MARKET_OFFERS, "simulated": True,
+    gat = _gat_per_offer()
+    return {"offers": [{**o, "reward_gat": gat} for o in MARKET_OFFERS], "simulated": True,
             "disclaimer": "DEMO mode — real research institutions and payouts will be connected in production. Data is always anonymized and shared only with your explicit consent (GDPR Art. 9)."}
 
 @api.post("/marketplace/offers/{offer_id}/accept")
 async def marketplace_accept(offer_id: str, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    from routes.subscription import require_tier
+    await require_tier(user, "guardian", "Sovereign Data Marketplace")
     me = await db.marketplace_optins.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not me or not me.get("enabled"):
         raise HTTPException(403, "optin_required: First enable anonymized data sharing (opt-in).")
     offer = next((o for o in MARKET_OFFERS if o["offer_id"] == offer_id), None)
     if not offer:
         raise HTTPException(404, "Offer not found")
+    if offer["category"] not in (me.get("categories") or []):
+        raise HTTPException(403, f"category_not_shared: You have not enabled sharing of '{offer['category']}' data.")
     dup = await db.marketplace_sales.find_one({"user_id": user["user_id"], "offer_id": offer_id})
     if dup:
         raise HTTPException(409, "Offer already accepted")
@@ -155,6 +173,7 @@ async def marketplace_accept(offer_id: str, authorization: Optional[str] = Heade
         from routes.token import award_tokens
         gat_tx = await award_tokens(user["user_id"], "proof_of_health", f"marketplace sale: {offer_id}")
         sale["gat_reward"] = gat_tx["amount"] if gat_tx else 0
+        await db.marketplace_sales.update_one({"user_id": user["user_id"], "offer_id": offer_id}, {"$set": {"gat_reward": sale["gat_reward"]}})
     except Exception as e:
         logger.warning(f"marketplace GA-T award failed: {e}")
     return clean(sale)

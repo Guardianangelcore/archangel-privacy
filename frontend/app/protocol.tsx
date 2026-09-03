@@ -7,11 +7,17 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { useI18n } from '@/src/i18n-context';
+import Paywall from '@/src/Paywall';
 
 const SCOPES = [
   ['emergency_profile', 'Emergency profile'],
   ['vault_list', 'Document list (metadata only)'],
   ['recovery_status', 'Sick leave / recovery status'],
+];
+const MARKET_CATS: [string, string, any][] = [
+  ['medication', 'protocol.cat_medication', 'flask-outline'],
+  ['wellness', 'protocol.cat_wellness', 'walk-outline'],
+  ['vaccination', 'protocol.cat_vaccination', 'shield-checkmark-outline'],
 ];
 const SIGNALS = [
   ['pharmacy_out', 'Medication unavailable', 'flask-outline'],
@@ -34,6 +40,7 @@ export default function Protocol() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [info, setInfo] = useState('');
+  const [marketLocked, setMarketLocked] = useState(false);   // Guardian+ tier gate (402)
 
   const load = async () => {
     try {
@@ -60,17 +67,26 @@ export default function Protocol() {
     try { await api(`/gateway/grants/${id}`, { method: 'DELETE' }); await load(); } catch {}
   };
 
-  const setOptin = async (v: boolean) => {
-    try { await api('/marketplace/optin', { method: 'PUT', body: JSON.stringify({ enabled: v, categories: ['medication', 'wellness', 'vaccination'] }) }); await load(); }
-    catch (e: any) { setErr(String(e.message || e)); }
+  const saveOptin = async (enabled: boolean, categories: string[]) => {
+    setErr('');
+    try { await api('/marketplace/optin', { method: 'PUT', body: JSON.stringify({ enabled, categories }) }); await load(); }
+    catch (e: any) {
+      const m = String(e.message || e);
+      if (/^402:/.test(m)) { setMarketLocked(true); return; }
+      setErr(m);
+    }
   };
+  const sharedCats: string[] = !market ? [] : market.categories?.length ? market.categories : (market.enabled ? [] : MARKET_CATS.map(c => c[0]));
+  const setOptin = (v: boolean) => saveOptin(v, sharedCats.length ? sharedCats : MARKET_CATS.map(c => c[0]));
+  const toggleCat = (c: string) => saveOptin(!!market?.enabled, sharedCats.includes(c) ? sharedCats.filter(x => x !== c) : [...sharedCats, c]);
 
   const accept = async (id: string) => {
     setBusy(id); setErr(''); setInfo('');
-    try { const s: any = await api(`/marketplace/offers/${id}/accept`, { method: 'POST' }); setInfo(`Sold anonymously: +${s.reward_eur} € (${s.reward_crypto}) — DEMO payout.`); await load(); }
+    try { const s: any = await api(`/marketplace/offers/${id}/accept`, { method: 'POST' }); setInfo(`Sold anonymously: +${s.reward_eur} € (${s.reward_crypto}) · +${s.gat_reward ?? 0} GA-T — DEMO payout.`); await load(); }
     catch (e: any) {
       const m = String(e.message || e);
-      setErr(m.includes('optin_required') ? 'First enable anonymized sharing (opt-in).' : m.includes('409') ? 'You already accepted this offer.' : m);
+      if (/^402:/.test(m)) { setMarketLocked(true); return; }
+      setErr(m.includes('optin_required') ? 'First enable anonymized sharing (opt-in).' : m.includes('category_not_shared') ? tt('protocol.enable_this_category_first') : m.includes('409') ? 'You already accepted this offer.' : m);
     }
     finally { setBusy(null); }
   };
@@ -137,28 +153,50 @@ export default function Protocol() {
         )}
 
         <Text style={styles.section}>{tt('protocol.2_sovereign_data_marketplace_demo_pa')}</Text>
-        <View style={styles.optinRow}>
-          <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.optinTitle}>{tt('protocol.anonymized_data_monetization_opt_in')}</Text>
-            <Text style={styles.optinSub}>{tt('protocol.earned')} {market?.earnings_eur ?? 0} {tt('protocol.data_always_anonymous_gdpr_art_9')}</Text>
+        {marketLocked ? (
+          <View testID="pr-market-paywall">
+            <Paywall tier="guardian" message={tt('protocol.anonymized_data_monetization_opt_in') + ' — Guardian Plan'} onUnlocked={() => { setMarketLocked(false); load(); }} />
           </View>
-          <Switch testID="pr-market-optin" value={!!market?.enabled} onValueChange={setOptin} trackColor={{ true: C.brand, false: C.surface3 }} />
-        </View>
-        {offers.map(o => {
-          const sold = (market?.sales || []).some((s: any) => s.offer_id === o.offer_id);
-          return (
-            <View key={o.offer_id} style={styles.offerRow}>
+        ) : (
+          <>
+            <View style={styles.optinRow}>
+              <Ionicons name="lock-closed-outline" size={18} color={C.brand} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.grantName}>{tx(o.title)}</Text>
-                <Text style={styles.grantSub}>{o.institution} · {o.reward_eur} € / {o.reward_crypto}</Text>
+                <Text style={styles.optinTitle}>{tt('protocol.anonymized_data_monetization_opt_in')}</Text>
+                <Text style={styles.optinSub}>{tt('protocol.earned')} {market?.earnings_eur ?? 0} € · <Text testID="pr-market-gat" style={{ color: C.brand, fontWeight: '900' }}>{market?.earnings_gat ?? 0} GA-T</Text> {tt('protocol.data_always_anonymous_gdpr_art_9')}</Text>
               </View>
-              <Pressable testID={`pr-offer-${o.offer_id}`} onPress={() => accept(o.offer_id)} disabled={sold || busy === o.offer_id} style={[styles.sellBtn, sold && { opacity: 0.4 }]}>
-                {busy === o.offer_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.sellText}>{sold ? tt('protocol.sold') : tt('protocol.sell')}</Text>}
-              </Pressable>
+              <Switch testID="pr-market-optin" value={!!market?.enabled} onValueChange={setOptin} disabled={!market} trackColor={{ true: C.brand, false: C.surface3 }} />
             </View>
-          );
-        })}
+            {/* WHAT YOU SHARE — per-category consent (anonymized, GDPR Art. 9) */}
+            <Text style={styles.catTitle}>{tt('protocol.what_you_share')}</Text>
+            <View style={styles.catRow}>
+              {MARKET_CATS.map(([c, key, icon]) => {
+                const on = sharedCats.includes(c);
+                return (
+                  <Pressable key={c} testID={`pr-cat-${c}`} onPress={() => toggleCat(c)} disabled={!market} style={[styles.catChip, on && styles.catChipOn]}>
+                    <Ionicons name={icon} size={14} color={on ? C.brand : C.info} />
+                    <Text style={[styles.catText, on && { color: C.brand }]}>{tt(key)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {offers.map(o => {
+              const sold = (market?.sales || []).some((s: any) => s.offer_id === o.offer_id);
+              const shared = sharedCats.includes(o.category);
+              return (
+                <View key={o.offer_id} style={[styles.offerRow, !shared && { opacity: 0.45 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.grantName}>{tx(o.title)}</Text>
+                    <Text style={styles.grantSub}>{o.institution} · {o.reward_eur} € / {o.reward_crypto} · <Text style={{ color: C.brand, fontWeight: '900' }}>+{o.reward_gat ?? 0} GA-T</Text></Text>
+                  </View>
+                  <Pressable testID={`pr-offer-${o.offer_id}`} onPress={() => accept(o.offer_id)} disabled={sold || busy === o.offer_id} style={[styles.sellBtn, sold && { opacity: 0.4 }]}>
+                    {busy === o.offer_id ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.sellText}>{sold ? tt('protocol.sold') : tt('protocol.sell')}</Text>}
+                  </Pressable>
+                </View>
+              );
+            })}
+          </>
+        )}
 
         <Text style={styles.section}>{tt('protocol.3_global_sentinel_network')}</Text>
         <Text style={styles.sub}>{tt('protocol.report_outages_and_shortages_anonymo')}</Text>
@@ -210,6 +248,11 @@ const styles = StyleSheet.create({
   optinRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.brand, padding: S.md },
   optinTitle: { color: C.brand, fontWeight: '900', fontSize: 10.5, letterSpacing: 0.5 },
   optinSub: { color: C.onS3, fontSize: 11, marginTop: 2 },
+  catTitle: { color: C.info, fontWeight: '800', fontSize: 10, letterSpacing: 1, marginTop: S.md, marginBottom: S.sm },
+  catRow: { flexDirection: 'row', gap: S.sm, marginBottom: S.md },
+  catChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: 'rgba(255,255,255,0.04)' },
+  catChipOn: { borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.12)' },
+  catText: { color: C.info, fontWeight: '800', fontSize: 10, letterSpacing: 0.3 },
   offerRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: C.surface2, borderRadius: R.sm, padding: S.md, marginTop: S.sm },
   sellBtn: { backgroundColor: C.brand, borderRadius: R.sm, paddingHorizontal: S.md, minHeight: 42, alignItems: 'center', justifyContent: 'center' },
   sellText: { color: C.onInverse, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
