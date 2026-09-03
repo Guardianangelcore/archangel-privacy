@@ -13,6 +13,7 @@ import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
 import { tap } from '@/src/ui/glass';
+import { startJudgeTour } from '@/src/judge-tour';   // DEMO_ONLY
 import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
@@ -22,7 +23,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Profile() {
   const { t: tt, tx } = useI18n();
-  const { user, signOut, setUser } = useAuth();
+  const { user, signOut, setUser, refresh } = useAuth();
   const router = useRouter();
   const { lang, setLang } = useI18n();   // instant, app-wide re-render on change
   const [profile, setProfile] = useState<any>({});
@@ -268,6 +269,14 @@ export default function Profile() {
 
         {/* COMPETITION DEMO BADGE — global "DEMO" pill in the top-right corner */}
         <Text style={styles.section}>{t('demo_mode', lang)}</Text>
+        <Pressable testID="prof-judge-tour" onPress={() => { tap('medium'); startJudgeTour(refresh); }} style={styles.tourBtn}>
+          <Ionicons name="play-circle" size={22} color="#0B0B0D" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tourTitle}>{tt('judge_tour.judge_quick_tour_3_min')}</Text>
+            <Text style={styles.tourSub}>{tt('judge_tour.guided_walkthrough_of_the_9_strongest')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#0B0B0D" />
+        </Pressable>
         <View style={styles.guardRow}>
           <Ionicons name="pricetag-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>
@@ -662,6 +671,9 @@ const styles = StyleSheet.create({
   guardRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, marginBottom: S.sm, backgroundColor: C.bg },
   guardTitle: { fontWeight: '900', letterSpacing: 1, color: C.fg, fontSize: 13 },
   guardSub: { color: C.onS3, fontSize: 11, marginTop: 2 },
+  tourBtn: { flexDirection: 'row', alignItems: 'center', gap: S.md, backgroundColor: '#FFD60A', padding: S.md, minHeight: 56, marginBottom: S.md },
+  tourTitle: { color: '#0B0B0D', fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+  tourSub: { color: '#3A3A1A', fontSize: 11, marginTop: 2 },
   loyaltyBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: S.sm, paddingHorizontal: S.md, paddingVertical: 6, borderWidth: 1, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.10)' },
   loyaltyText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
   voiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginBottom: S.sm },

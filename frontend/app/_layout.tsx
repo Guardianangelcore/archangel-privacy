@@ -21,6 +21,7 @@ import { C } from "@/src/theme";
 import { GA_ORIGIN_MARK } from "@/src/watermark";
 import { BiometricGate } from "@/src/biometric-gate";
 import { DemoBanner } from "@/src/DemoMode";   // DEMO_ONLY
+import { JudgeTourOverlay } from "@/src/judge-tour";   // DEMO_ONLY — 3-minute judge walkthrough
 import { OnboardingTour } from "@/src/onboarding-tour";
 import { startPanicGesture } from "@/src/panic-gesture";
 import { CrisisHUD } from "@/src/CrisisHUD";
@@ -193,6 +194,7 @@ function RootNav() {
         }} />
         {/* SENTIENT ONBOARDING — 30-second Sovereign Tour on first launch (Onyx narrated) */}
         <OnboardingTour />
+        <JudgeTourOverlay />
         {/* COGNITIVE TRIAGE — auto Crisis HUD when biometrics cross distress threshold */}
         <CrisisHUD />
       </BiometricGate>
