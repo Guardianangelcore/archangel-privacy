@@ -35,6 +35,7 @@ export default function HealthHub() {
         { title: tt('tabs_health.healing_loop_the_core'), items: [
           { testID: 'hh-healing', icon: 'sync-outline', title: tt('tabs_health.healing_loop'), subtitle: tt('tabs_health.injury_instant_money_doctor_sick_lea'), route: '/healing' },
           { testID: 'hh-translate', icon: 'language-outline', title: tt('tabs_health.referral_ai_translator'), subtitle: tt('tabs_health.scan_a_referral_slip_ocr_plain_langu'), route: '/translate' },
+          { testID: 'hh-nearby-care', icon: 'navigate-outline', title: tt('nearby_care.find_care_nearby'), subtitle: tt('nearby_care.pharmacies_doctors_emergency_by_gps'), route: '/nearby-care' },
           { testID: 'hh-waitlist', icon: 'calendar-outline', title: tt('tabs_health.appointment_hunter'), subtitle: tt('tabs_health.automatic_hunting_booking_based_on_y'), route: '/(tabs)/waitlist' },
           { testID: 'hh-arbitrage', icon: 'airplane-outline', title: tt('tabs_health.global_arbitrage'), subtitle: tt('tabs_health.surgeries_in_bill_prediction'), route: '/arbitrage' },
           { testID: 'hh-recovery', icon: 'bed-outline', title: tt('tabs_health.my_recovery_sick_leave'), subtitle: tt('tabs_health.esick_note_outings_sick_pay_calculat'), route: '/my-recovery' },
