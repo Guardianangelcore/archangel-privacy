@@ -271,3 +271,8 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 
 ## Iter 74 — Judge Quick Tour (Sept 2026)
 - src/judge-tour.tsx (DEMO_ONLY): external store + JudgeTourOverlay mounted in _layout. startJudgeTour(refresh) → activates DEMO MODE, navigates through 9 stops × 20 s = 3:00 (jarvis, magic-lens, nearby-care, crisis-protocols, (tabs)/family, bioscan, protocol, health-timeline, subscription), narrates each pitch with the user's Jarvis voice, auto-advances with countdown; controls jt-prev / jt-pause / jt-next / jt-end; testIDs judge-tour, jt-title, jt-timer. Entry points: Profile → Demo mode section prof-judge-tour; subscription.tsx sb-judge-tour. 23 i18n keys judge_tour.* in 14 locales.
+
+## Iter 75 — Cinematic Intro + Onboarding cards (Sept 2026)
+- src/LaunchSequence.tsx mounted in _layout: CinematicIntro (EVERY start) → OnboardingCards (FIRST launch only, AsyncStorage ga.first_launch.done.v1).
+- src/CinematicIntro.tsx: #000 canvas, SVG archangel silhouette (white body, gold wings) sweeps L→R via Animated, headline "The world is changing. Are you ready?" fades in, SVG Archangel logo mark + "GUARDIAN ANGEL" + gold "Sovereign Health & Survival OS", gold-border "ENTER THE SYSTEM", auto-skip 5 s. Ambient sound intentionally not shipped (default OFF per spec). testIDs cinematic-intro, intro-headline, intro-enter.
+- src/OnboardingCards.tsx: 4 paged cards (heart / shield / coin / join), progress dots, SKIP top-right, NEXT, card 4 "GET STARTED FREE" + "I ALREADY HAVE AN ACCOUNT" (both set flag → /login). testIDs onboarding-cards, ob-card-N, ob-dot-N, ob-next, ob-skip, ob-get-started, ob-have-account. 16 i18n keys intro.* / onboarding.* in 14 locales.
