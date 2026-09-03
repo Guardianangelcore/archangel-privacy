@@ -29,8 +29,27 @@ export const MOOD_VOICE: Record<string, { voice: JarvisVoice; speed: number }> =
 // One module-level player — stopped on every new call, so a stale narration
 // never plays over the next screen. Required by expo-audio best practices.
 let _player: any = null;
+let _speaking = false;
+let _gen = 0;                                   // playback generation (ignores stale player events)
+const _listeners = new Set<(speaking: boolean) => void>();
+
+function setSpeaking(v: boolean) {
+  if (_speaking === v) return;
+  _speaking = v;
+  _listeners.forEach((cb) => { try { cb(v); } catch {} });
+}
+
+/** True while Jarvis narration is playing (used to mute the wake-word + show STOP). */
+export function isSpeaking(): boolean { return _speaking; }
+
+/** Subscribe to speaking-state changes. Returns an unsubscribe function. */
+export function onSpeakingChange(cb: (speaking: boolean) => void): () => void {
+  _listeners.add(cb);
+  return () => { _listeners.delete(cb); };
+}
 
 function stopCurrent() {
+  _gen += 1;
   try {
     if (_player) {
       _player.pause?.();
@@ -38,6 +57,7 @@ function stopCurrent() {
       _player = null;
     }
   } catch {}
+  setSpeaking(false);
 }
 
 export type SpeakOptions = {
@@ -86,11 +106,23 @@ export async function speak(text: string, opts: SpeakOptions = {}): Promise<void
     // 3) Download to a stable local URI (Expo-safe; never uses data: base64).
     const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
 
-    // 4) Play — replace any prior player instance.
+    // 4) Play — replace any prior player instance. Plays exactly ONCE (no loop) and
+    //    reports "finished" so the wake-word / STOP button can react.
     stopCurrent();
+    const gen = _gen;
     _player = createAudioPlayer(
       src.headers ? { uri: src.uri, headers: src.headers } : { uri: src.uri }
     );
+    try { _player.loop = false; } catch {}
+    try {
+      _player.addListener?.('playbackStatusUpdate', (s: any) => {
+        if (gen !== _gen) return;
+        if (s?.didJustFinish || (s?.isLoaded && s?.playing === false && s?.currentTime > 0 && s?.currentTime >= (s?.duration || Infinity))) {
+          stopCurrent();
+        }
+      });
+    } catch {}
+    setSpeaking(true);
     _player.play();
   } catch (e) {
     // Never throw from a voice call — the caller UI must not crash if TTS fails.

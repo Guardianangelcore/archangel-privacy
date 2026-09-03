@@ -11,6 +11,7 @@
 //    swapped in during the native build via the same start()/stop() API.
 import { Platform, AppState } from 'react-native';
 import { AudioModule, setAudioModeAsync } from 'expo-audio';
+import { isSpeaking } from './voice';
 
 export type WakeWordListener = () => void | Promise<void>;
 
@@ -59,13 +60,18 @@ export async function startWakeWord(recorder: any, onWake: WakeWordListener): Pr
   // Metering poll — a loud spike combined with a >600ms sustain is a plausible
   // "JARVIS" call. A real production build swaps this loop for a Porcupine ppn
   // model matched on the actual phoneme sequence.
+  // IMPORTANT: only real `metering` (dBFS) counts. The recorder must be created with
+  // `isMeteringEnabled: true`; without it we never fire (the old `durationMillis`
+  // fallback was always > -18 → self-triggered 600 ms after arming = Jarvis loop).
+  // Hits are ignored while Jarvis himself is speaking (loudspeaker → mic feedback).
   let sustainedHits = 0;
   _timer = setInterval(async () => {
     try {
       const status: any = await recorder.getStatus?.();
-      const metering = status?.metering ?? status?.durationMillis ?? -160;
+      const metering = status?.metering;
+      if (typeof metering !== 'number' || isSpeaking()) { sustainedHits = 0; return; }
       // Threshold: ~ -18 dBFS as a rough "someone shouted at the phone" signal.
-      if (typeof metering === 'number' && metering > -18) {
+      if (metering > -18) {
         sustainedHits += 1;
         if (sustainedHits >= 2 && _onWake) {
           const fn = _onWake;

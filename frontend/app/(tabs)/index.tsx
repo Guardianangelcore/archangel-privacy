@@ -478,7 +478,7 @@ function AngelHome({ onToggle, lang, router, onBeacon, beaconSent }: any) {
   const { t: tt, tx } = useI18n();
   const { user } = useAuth();
   const wakeEnabled = !!(user as any)?.wake_word_enabled;
-  const wakeRecorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
+  const wakeRecorder = useAudioRecorder({ ...RecordingPresets.LOW_QUALITY, isMeteringEnabled: true });
   const scale = useSharedValue(1);
   useEffect(() => {
     scale.value = withRepeat(withSequence(withTiming(1.07, { duration: 1200 }), withTiming(1, { duration: 1200 })), -1);

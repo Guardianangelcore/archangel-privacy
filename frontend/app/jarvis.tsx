@@ -1,7 +1,7 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // JARVIS 2.0 — THE LIVING SOUL: breathing AI Orb · Level 1→10 companion · full voice
 // conversation (Whisper→gpt-5.4→emotional TTS) · self-teaching memory · visual thinking.
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, Modal, Platform, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,7 @@ import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
 import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
-import { speak as jarvisSpeak, stopSpeaking } from '@/src/voice';
+import { speak as jarvisSpeak, stopSpeaking, onSpeakingChange } from '@/src/voice';
 
 type Mood = 'calm' | 'thinking' | 'alert' | 'energetic' | 'concerned';
 
@@ -149,7 +149,12 @@ export default function Jarvis() {
   const isTierError = (e: any) => String(e?.message || e).includes('guardian_required');
   // Voice playback centralised in src/voice.ts (single module-level player, auto-cleanup)
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const wakeRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  // Wake-word recorder MUST report metering (dBFS) — without it the listener stays silent.
+  const wakeRecorder = useAudioRecorder({ ...RecordingPresets.LOW_QUALITY, isMeteringEnabled: true });
+  // STOP control — one place to halt everything Jarvis is doing right now.
+  const [speaking, setSpeaking] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => onSpeakingChange(setSpeaking), []);
   const toastY = useSharedValue(0);
   const toastStyle = useAnimatedStyle(() => ({ opacity: toastY.value, transform: [{ translateY: (1 - toastY.value) * 12 }] }));
 
@@ -241,12 +246,15 @@ export default function Jarvis() {
           loadState(); loadMems();
         };
         let acc = '';
+        const ctl = new AbortController();
+        abortRef.current = ctl;
         try {
           const token = await getToken();
           const resp = await expoFetch(`${API_BASE}/api/agent/chat/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
             body: JSON.stringify({ message: q, language: user?.language || 'en' }),
+            signal: ctl.signal,
           });
           if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
           const reader = (resp.body as any).getReader();
@@ -284,6 +292,7 @@ export default function Jarvis() {
           if (meta) { applyMeta(meta); } else { setStatus(''); setMood('calm'); loadState(); loadMems(); }
           if (viaVoice) speak(acc, (meta?.mood as Mood) || 'calm');
         } catch (streamErr) {
+          if (ctl.signal.aborted) throw streamErr;   // user pressed STOP → no fallback call
           console.log('stream fallback', streamErr);
           const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'en' }) });
           setMsgs(prev => {
@@ -296,10 +305,14 @@ export default function Jarvis() {
         }
       }
     } catch (e: any) {
-      if (isTierError(e)) { setLocked(GUARDIAN_PROMPT); setMsgs(prev => prev.filter(m => !m.streaming)); }
+      if (abortRef.current?.signal.aborted) {
+        // STOP pressed — keep whatever streamed so far, mark bubble final, stay quiet.
+        setMsgs(prev => prev.map(m => (m.streaming ? { ...m, streaming: false } : m)).filter(m => m.text));
+      } else if (isTierError(e)) { setLocked(GUARDIAN_PROMPT); setMsgs(prev => prev.filter(m => !m.streaming)); }
       else setErr(errMsg(e));
       setMood('calm'); setStatus('');
     }
+    abortRef.current = null;
     setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy, mode, user?.language, speak, loadState, loadMems, loadHist]);
@@ -318,6 +331,7 @@ export default function Jarvis() {
   const orbPress = async () => {
     tap('medium');
     if (recording) { await stopVoice(); return; }
+    if (busy || speaking) return;   // one turn at a time — never stack a new session on a running one
     try {
       let perm = await AudioModule.getRecordingPermissionsAsync();
       if (!perm.granted) {
@@ -335,15 +349,31 @@ export default function Jarvis() {
 
   // WAKE-WORD "JARVIS" — active in ALL 3 modes (chat · sonar · imagine).
   // Hearing the wake-word hands-free opens the mic for a voice conversation.
+  // Armed ONLY while idle: never while recording, thinking or speaking (the loudspeaker
+  // would otherwise re-trigger the mic → Jarvis answering himself in a loop).
   useEffect(() => {
-    if (Platform.OS === 'web' || recording || busy) return;
+    if (Platform.OS === 'web' || recording || busy || speaking) return;
     let cleanup: (() => void) | undefined;
     (async () => {
       cleanup = await startWakeWord(wakeRecorder, () => { orbPress(); });
     })();
     return () => { try { cleanup?.(); } catch {} stopWakeWord(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, recording, busy]);
+  }, [mode, recording, busy, speaking]);
+
+  // STOP — halts everything at once: narration, live stream, open mic, wake-word.
+  // Jarvis then waits for the next explicit trigger (orb tap / send / wake-word).
+  const stopAll = async () => {
+    tap('medium');
+    stopSpeaking();
+    abortRef.current?.abort();
+    stopWakeWord();
+    if (recording) {
+      setRecording(false);
+      try { await recorder.stop(); } catch {}
+    }
+    setStatus(''); setMood('calm'); setErr('');
+  };
 
   const stopVoice = async () => {
     setRecording(false); setStatus('Transcribing your voice…'); setMood('thinking');
@@ -375,10 +405,14 @@ export default function Jarvis() {
     if (busy === 'analyze') return;
     setBusy('analyze'); setErr(''); setInsight(''); setThinkSteps([]); setThinkIdx(-1);
     setMood('thinking'); setStatus('Deep data analysis…');
+    const ctl = new AbortController();
+    abortRef.current = ctl;
     try {
       const res: any = await api('/agent/analyze', { method: 'POST' });
+      if (ctl.signal.aborted) throw new Error('stopped');
       setThinkSteps(res.steps);
       for (let i = 0; i < res.steps.length; i++) {
+        if (ctl.signal.aborted) throw new Error('stopped');
         setThinkIdx(i);
         await new Promise(r => setTimeout(r, res.steps[i].ms || 600));
       }
@@ -388,7 +422,11 @@ export default function Jarvis() {
       showXp(res.xp_gained);
       if (res.level_up) setLevelUp({ level: res.level, name: '' });
       loadState();
-    } catch (e: any) { setErr(String(e.message || e)); setMood('calm'); setStatus(''); }
+    } catch (e: any) {
+      if (!ctl.signal.aborted) setErr(String(e.message || e));
+      setMood('calm'); setStatus('');
+    }
+    abortRef.current = null;
     setBusy(null);
   };
 
@@ -456,6 +494,12 @@ export default function Jarvis() {
           <Text style={st.xpText}>{state?.xp ?? 0} / {state?.xp_next ?? 100} {tt('jarvis.xp')} {state?.memories_count ?? 0} {tt('jarvis.spomienok')}</Text>
           {!!nextAbility && <Text style={st.nextAbility}>{tt('jarvis.next_unlock_lvl')} {nextAbility.level}): {nextAbility.name}</Text>}
           {!!status && <Text style={st.status}>{status}</Text>}
+          {(speaking || !!busy || recording) && (
+            <Pressable testID="jv-stop" onPress={stopAll} style={st.stopBtn} hitSlop={8}>
+              <Ionicons name="stop-circle" size={18} color="#FF6B6B" />
+              <Text style={st.stopText}>STOP</Text>
+            </Pressable>
+          )}
           <Text style={st.orbHint}>{tt('jarvis.tap_the_orb_and_speak_jarvis_replies')}</Text>
           {micDenied && (
             <Pressable testID="jv-mic-settings" onPress={() => Linking.openSettings()} style={st.settingsBtn}>
@@ -774,6 +818,8 @@ const st = StyleSheet.create({
   xpText: { color: C.info, fontSize: 12, marginTop: 2, fontWeight: '700' },
   nextAbility: { color: C.onS3, fontSize: 10, marginTop: 6, textAlign: 'center', letterSpacing: 0.5 },
   status: { color: '#9B6DFF', fontWeight: '800', fontSize: 12, marginTop: S.sm },
+  stopBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: S.sm, minHeight: 44, paddingHorizontal: S.lg, borderWidth: 1, borderColor: '#FF6B6B', borderRadius: R.pill, backgroundColor: 'rgba(255,107,107,0.10)' },
+  stopText: { color: '#FF6B6B', fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
   orbHint: { color: C.info, fontSize: 11, marginTop: S.md, textAlign: 'center' },
   settingsBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: S.sm, minHeight: 44, paddingHorizontal: S.md, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill },
   settingsText: { color: C.brand, fontWeight: '800', fontSize: 11 },
