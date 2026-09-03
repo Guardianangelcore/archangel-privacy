@@ -6,16 +6,36 @@ import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { useI18n } from '@/src/i18n-context';
 import { tap } from '@/src/ui/glass';
 import Paywall from '@/src/Paywall';
+import { syncSeasonalReminders } from '@/src/seasonal-reminder';
 
 type Proto = { id: string; icon: any; title: string; steps: string[]; done: number[]; progress: number };
 
+// OFFLINE PROTOCOLS — the checklists are cached on the device after the first successful load
+// so they open during a total blackout (no internet). Ticks made offline are applied locally
+// and replayed to the server on the next online load.
+const CACHE_KEY = 'ga.crisis.protocols.v1';
+const PENDING_KEY = 'ga.crisis.pending.v1';
+type Pending = { pid: string; idx: number }[];
+const saveCache = (p: Proto[]) => AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), protocols: p })).catch(() => {});
+const readCache = async (): Promise<{ at: number; protocols: Proto[] } | null> => {
+  try { const raw = await AsyncStorage.getItem(CACHE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+};
+const readPending = async (): Promise<Pending> => { try { return JSON.parse((await AsyncStorage.getItem(PENDING_KEY)) || '[]'); } catch { return []; } };
+const writePending = (p: Pending) => AsyncStorage.setItem(PENDING_KEY, JSON.stringify(p)).catch(() => {});
+const applyLocal = (list: Proto[], pid: string, idx: number) => list.map(p => {
+  if (p.id !== pid) return p;
+  const done = p.done.includes(idx) ? p.done.filter(i => i !== idx) : [...p.done, idx].sort((a, b) => a - b);
+  return { ...p, done, progress: Math.round((done.length / p.steps.length) * 100) / 100 };
+});
+
 export default function CrisisProtocols() {
-  const { t: tt, tx } = useI18n();
+  const { t: tt, tx, lang } = useI18n();
   const router = useRouter();
   const [protos, setProtos] = useState<Proto[]>([]);
   const [open, setOpen] = useState<string | null>(null);
@@ -23,12 +43,27 @@ export default function CrisisProtocols() {
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [offline, setOffline] = useState<'cached' | 'serving' | null>(null);   // ✓ available offline · serving from cache
 
   const load = async () => {
     setErr('');
-    try { const r: any = await api('/survival/protocols'); setProtos(r.protocols || []); if (!open && r.protocols?.length) setOpen(r.protocols[0].id); }
-    catch (e: any) { const m = String(e?.message || e); if (/^402:/.test(m)) setLocked(true); else setErr(m); }
-    finally { setLoading(false); }
+    try {
+      // replay ticks made while offline, then fetch fresh state
+      const pending = await readPending();
+      for (const t of pending) { try { await api(`/survival/protocols/${t.pid}/steps/${t.idx}`, { method: 'PUT' }); } catch {} }
+      if (pending.length) await writePending([]);
+      const r: any = await api('/survival/protocols');
+      const list: Proto[] = r.protocols || [];
+      setProtos(list); if (!open && list.length) setOpen(list[0].id);
+      await saveCache(list); setOffline('cached');
+      syncSeasonalReminders(list, lang);
+    } catch (e: any) {
+      const m = String(e?.message || e);
+      if (/^402:/.test(m)) { setLocked(true); return; }
+      const c = await readCache();   // blackout / no network → serve the local copy
+      if (c?.protocols?.length) { setProtos(c.protocols); if (!open) setOpen(c.protocols[0].id); setOffline('serving'); }
+      else setErr(m);
+    } finally { setLoading(false); }
   };
   useEffect(() => { load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -37,9 +72,14 @@ export default function CrisisProtocols() {
     tap('light'); setBusy(`${pid}-${idx}`);
     try {
       const r: any = await api(`/survival/protocols/${pid}/steps/${idx}`, { method: 'PUT' });
-      setProtos(prev => prev.map(p => (p.id === pid ? { ...p, done: r.done, progress: r.progress } : p)));
-    } catch (e: any) { const m = String(e?.message || e); if (/^402:/.test(m)) setLocked(true); else setErr(m); }
-    finally { setBusy(null); }
+      setProtos(prev => { const next = prev.map(p => (p.id === pid ? { ...p, done: r.done, progress: r.progress } : p)); saveCache(next); syncSeasonalReminders(next, lang); return next; });
+    } catch (e: any) {
+      const m = String(e?.message || e);
+      if (/^402:/.test(m)) { setLocked(true); return; }
+      // offline → tick locally, persist, queue for replay
+      setProtos(prev => { const next = applyLocal(prev, pid, idx); saveCache(next); return next; });
+      const pending = await readPending(); await writePending([...pending, { pid, idx }]); setOffline('serving');
+    } finally { setBusy(null); }
   };
 
   return (
@@ -57,6 +97,14 @@ export default function CrisisProtocols() {
       ) : (
         <ScrollView contentContainerStyle={st.body}>
           <Text style={st.sub}>{tt('crisis.tick_each_step_as_you_prepare')}</Text>
+          {!!offline && (
+            <View testID="cp-offline" style={[st.offline, offline === 'serving' && st.offlineServing]}>
+              <Ionicons name={offline === 'serving' ? 'cloud-offline-outline' : 'cloud-done-outline'} size={14} color={offline === 'serving' ? C.warn : '#5FA779'} />
+              <Text style={[st.offlineText, offline === 'serving' && { color: C.warn }]}>
+                {offline === 'serving' ? tt('crisis.offline_showing_saved_copy') : tt('crisis.offline_available')}
+              </Text>
+            </View>
+          )}
           {loading && <ActivityIndicator color={C.brand} style={{ marginTop: S.xl }} />}
           {!!err && <Text style={st.err}>{err}</Text>}
           {protos.map(p => {
@@ -98,6 +146,9 @@ const st = StyleSheet.create({
   title: { color: C.fg, fontWeight: '900', fontSize: 16, letterSpacing: 1 },
   body: { padding: S.lg, paddingBottom: S.xxxl, gap: S.md },
   sub: { color: C.info, fontSize: 12, marginBottom: S.xs },
+  offline: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: S.md, paddingVertical: 6, borderRadius: R.pill, borderWidth: 1, borderColor: '#5FA779', backgroundColor: 'rgba(95,167,121,0.10)' },
+  offlineServing: { borderColor: C.warn, backgroundColor: 'rgba(255,183,77,0.10)' },
+  offlineText: { color: '#5FA779', fontWeight: '800', fontSize: 11 },
   err: { color: C.error, textAlign: 'center' },
   card: { borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: 'rgba(255,255,255,0.04)', overflow: 'hidden' },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: S.md, padding: S.md, minHeight: 56 },

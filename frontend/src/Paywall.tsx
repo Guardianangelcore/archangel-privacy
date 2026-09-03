@@ -7,6 +7,8 @@ import { useRouter } from 'expo-router';
 import { api } from './api';
 import { C, S } from './theme';
 import { IapBuyButton } from './IapPurchase';
+import { startDemoMode } from './DemoMode';   // DEMO_ONLY
+import { useAuth } from './auth';
 import { useI18n } from '@/src/i18n-context';
 
 type Props = {
@@ -28,6 +30,9 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
   const ui = TIER_UI[tier];
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const { refresh } = useAuth();
+  // DEMO_ONLY — competition judges: 30-min full access without payment
+  const demo = async () => { setBusy(true); const ok = await startDemoMode(refresh); setBusy(false); if (ok) onUnlocked(); else setErr('Demo mode unavailable'); };
 
   const trial = async () => {
     setBusy(true); setErr('');
@@ -61,6 +66,11 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
       <Pressable testID="pw-upgrade" onPress={() => router.push('/subscription')} style={st.upBtn}>
         <Text style={st.upText}>{ui.tiers}</Text>
       </Pressable>
+      {/* DEMO_ONLY */}
+      <Pressable testID="pw-demo" onPress={demo} disabled={busy} style={st.demoBtn}>
+        <Ionicons name="flask-outline" size={14} color="#FFD60A" />
+        <Text style={st.demoText}>DEMO MODE · 30 MIN</Text>
+      </Pressable>
     </View>
   );
 }
@@ -72,6 +82,8 @@ const st = StyleSheet.create({
   err: { color: C.error, fontSize: 11, fontWeight: '800', textAlign: 'center' },
   trialBtn: { alignSelf: 'stretch', backgroundColor: '#E5E4E2', paddingVertical: S.md, alignItems: 'center', minHeight: 48, justifyContent: 'center', marginTop: S.sm },
   trialText: { color: '#0B0B0D', fontWeight: '900', letterSpacing: 1, fontSize: 12 },
+  demoBtn: { alignSelf: 'stretch', flexDirection: 'row', gap: 6, borderWidth: 1, borderStyle: 'dashed', borderColor: '#FFD60A', paddingVertical: S.sm, alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  demoText: { color: '#FFD60A', fontWeight: '900', letterSpacing: 1.5, fontSize: 11 },
   gatBtn: { alignSelf: 'stretch', borderWidth: 1.5, borderColor: '#B8860B', paddingVertical: S.md, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   gatText: { color: '#B8860B', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   upBtn: { paddingVertical: S.sm, minHeight: 40, justifyContent: 'center' },

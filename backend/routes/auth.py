@@ -436,11 +436,23 @@ class PrefIn(BaseModel):
     biometric_enabled: Optional[bool] = None  # FaceID/Fingerprint gate on app open
     wake_word_enabled: Optional[bool] = None  # Alexa-style "JARVIS" always-listening
     onboarding_completed: Optional[bool] = None  # 30-second Sovereign Tour played once
+    # Jarvis voice — engine + voice chosen in Settings (applied to every /voice/tts call)
+    voice_engine: Optional[str] = None      # "openai" | "elevenlabs"
+    jarvis_voice: Optional[str] = None      # OpenAI voice name (alloy … shimmer)
+    eleven_voice_id: Optional[str] = None   # ElevenLabs voice_id
 
 @api.patch("/me/prefs")
 async def update_prefs(body: PrefIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "voice_engine" in upd and upd["voice_engine"] not in ("openai", "elevenlabs"):
+        from fastapi import HTTPException
+        raise HTTPException(400, "voice_engine must be openai | elevenlabs")
+    if "jarvis_voice" in upd:
+        from routes.health import OPENAI_VOICES
+        if upd["jarvis_voice"] not in OPENAI_VOICES:
+            from fastapi import HTTPException
+            raise HTTPException(400, "unknown jarvis_voice")
     if "birth_year" in upd:
         by = int(upd["birth_year"])
         if by < 1900 or by > 2030:

@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platform, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import { CityPicker, LanguageSuggestionBanner } from '@/src/CityPicker';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
+import { tap } from '@/src/ui/glass';
 import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
@@ -197,12 +198,37 @@ export default function Profile() {
     await setPref({ wake_word_enabled: v });
   };
 
-  // Sentient UX — voice-preview button ("Ako znie Jarvis?")
-  const previewVoice = () => {
-    jarvisSpeak(
-      'Good day. I am Jarvis, your guardian angel. From now on I will speak to you in a human voice.',
-      { voice: 'onyx', speed: 0.95, language: lang }
-    );
+  // LOYALTY MILESTONES — badge in the identity card + one-time in-app congratulation
+  const [loyalty, setLoyalty] = useState<any>(null);
+  useEffect(() => {
+    api('/loyalty').then((l: any) => {
+      setLoyalty(l);
+      if (l?.unseen?.length) {
+        const m = l.unseen[l.unseen.length - 1];
+        const title = tt('loyalty.congratulations');
+        const body = tt('loyalty.x_months_with_us_you_receive_y_gat', [m.months, Number(m.gat).toFixed(0), m.badge]);
+        const seen = () => { api('/loyalty/seen', { method: 'POST' }).catch(() => {}); };
+        if (Platform.OS === 'web') { (globalThis as any).alert?.(`${title}\n\n${body}`); seen(); }
+        else Alert.alert(title, body, [{ text: 'OK', onPress: seen }]);
+      }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sentient UX — voice picker + preview ("Ako znie Jarvis?")
+  const [voices, setVoices] = useState<any>(null);
+  useEffect(() => { api('/voice/voices').then(setVoices).catch(() => {}); }, []);
+  const SAMPLE = 'Good day. I am Jarvis, your guardian angel. From now on I will speak to you in this voice.';
+  const previewVoice = () => { jarvisSpeak(SAMPLE, { speed: 0.95, language: lang }); };
+  const pickOpenAiVoice = async (v: string) => {
+    tap('light');
+    jarvisSpeak(SAMPLE, { voice: v as any, engine: 'openai', override: true, speed: 0.95, language: lang });
+    await setPref({ voice_engine: 'openai', jarvis_voice: v });
+  };
+  const pickElevenVoice = async (id: string) => {
+    tap('light');
+    jarvisSpeak(SAMPLE, { engine: 'elevenlabs', elevenVoiceId: id, override: true, speed: 0.95, language: lang });
+    await setPref({ voice_engine: 'elevenlabs', eleven_voice_id: id });
   };
 
   // Panic gesture threshold (default 19 taps on back of phone)
@@ -214,7 +240,7 @@ export default function Profile() {
     await setPanicTaps(n);
     setPanicTapsTxt(String(Math.max(3, Math.min(30, n))));
     setBioMsg(`Panic gesture set to ${n} taps on the back of the phone.`);
-    jarvisSpeak(`Panic gesture set to ${n} taps.`, { voice: 'onyx', speed: 0.95, language: lang });
+    jarvisSpeak(`Panic gesture set to ${n} taps.`, { speed: 0.95, language: lang });
   };
 
   return (
@@ -232,6 +258,12 @@ export default function Profile() {
           <Text style={styles.identityEmail}>{user?.email}</Text>
           <Text style={styles.identityLbl}>{t('decentralized_id', lang)}</Text>
           <Text style={styles.identityDid}>{user?.did}</Text>
+          {!!loyalty?.badge && (
+            <View testID="prof-loyalty-badge" style={styles.loyaltyBadge}>
+              <Ionicons name={(loyalty.milestones?.[loyalty.milestones.length - 1]?.icon || 'ribbon-outline') as any} size={14} color={C.brand} />
+              <Text style={styles.loyaltyText}>{loyalty.badge.toUpperCase()} · {tt('loyalty.n_months', [loyalty.months])}</Text>
+            </View>
+          )}
         </View>
 
         {/* COMPETITION DEMO BADGE — global "DEMO" pill in the top-right corner */}
@@ -262,18 +294,59 @@ export default function Profile() {
         {/* ===== SENTIENT UX — the human soul of the OS ===== */}
         <Text style={styles.section}>{t('sentient_ux', lang)}</Text>
 
-        {/* JARVIS VOICE PREVIEW */}
+        {/* JARVIS VOICE — engine + voice picker with instant preview */}
         <View style={styles.guardRow}>
           <Ionicons name="mic-circle" size={24} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>{tt('tabs_profile.jarvis_voice_onyx')}</Text>
-            <Text style={styles.guardSub}>{tt('tabs_profile.deep_human_voice_openai_tts_robotic')}</Text>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.jarvis_voice')}</Text>
+            <Text style={styles.guardSub}>{tt('tabs_profile.pick_a_voice_tap_to_hear_it')}</Text>
           </View>
           <Pressable testID="prof-voice-preview" onPress={previewVoice} style={styles.previewBtn}>
             <Ionicons name="volume-high" size={16} color={C.onInverse} />
             <Text style={styles.previewText}>{tt('tabs_profile.preview')}</Text>
           </Pressable>
         </View>
+        <View style={styles.voiceWrap}>
+          {(voices?.openai || []).map((v: any) => {
+            const on = ((user as any)?.voice_engine || 'openai') === 'openai' && ((user as any)?.jarvis_voice || 'onyx') === v.id;
+            return (
+              <Pressable key={v.id} testID={`prof-voice-${v.id}`} onPress={() => pickOpenAiVoice(v.id)} style={[styles.voiceChip, on && styles.voiceChipOn]}>
+                <Ionicons name={on ? 'volume-high' : 'volume-medium-outline'} size={14} color={on ? C.onInverse : C.fg} />
+                <Text style={[styles.voiceChipText, on && { color: C.onInverse }]}>{v.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {/* ELEVENLABS — native Slovak/Czech/… pronunciation (needs ELEVENLABS_API_KEY on the server) */}
+        <View style={[styles.guardRow, { marginTop: S.sm }]}>
+          <Ionicons name="language-outline" size={22} color={C.fg} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>{tt('tabs_profile.elevenlabs_native_slovak_voice')}</Text>
+            <Text style={styles.guardSub}>
+              {voices?.elevenlabs_available ? tt('tabs_profile.natural_pronunciation_in_29_languages') : tt('tabs_profile.not_configured_add_elevenlabs_api_key')}
+            </Text>
+          </View>
+          <Switch
+            testID="prof-voice-engine"
+            value={(user as any)?.voice_engine === 'elevenlabs'}
+            disabled={!voices?.elevenlabs_available}
+            onValueChange={(v) => setPref({ voice_engine: v ? 'elevenlabs' : 'openai', eleven_voice_id: v ? ((user as any)?.eleven_voice_id || voices?.elevenlabs?.[0]?.voice_id || undefined) : undefined })}
+            trackColor={{ true: C.brand, false: C.surface3 }}
+          />
+        </View>
+        {voices?.elevenlabs_available && (user as any)?.voice_engine === 'elevenlabs' && (
+          <View style={styles.voiceWrap}>
+            {(voices?.elevenlabs || []).map((v: any) => {
+              const on = (user as any)?.eleven_voice_id === v.voice_id;
+              return (
+                <Pressable key={v.voice_id} testID={`prof-eleven-${v.voice_id}`} onPress={() => pickElevenVoice(v.voice_id)} style={[styles.voiceChip, on && styles.voiceChipOn]}>
+                  <Ionicons name={on ? 'volume-high' : 'volume-medium-outline'} size={14} color={on ? C.onInverse : C.fg} />
+                  <Text style={[styles.voiceChipText, on && { color: C.onInverse }]}>{v.name}{v.language ? ` · ${v.language}` : ''}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         {/* BIO-TIMELINE — the Growth Engine */}
         <View style={styles.guardRow}>
@@ -589,6 +662,12 @@ const styles = StyleSheet.create({
   guardRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, borderWidth: 1.5, borderColor: C.borderStrong, padding: S.md, marginBottom: S.sm, backgroundColor: C.bg },
   guardTitle: { fontWeight: '900', letterSpacing: 1, color: C.fg, fontSize: 13 },
   guardSub: { color: C.onS3, fontSize: 11, marginTop: 2 },
+  loyaltyBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: S.sm, paddingHorizontal: S.md, paddingVertical: 6, borderWidth: 1, borderColor: C.brand, backgroundColor: 'rgba(212,175,55,0.10)' },
+  loyaltyText: { color: C.brand, fontWeight: '900', fontSize: 10, letterSpacing: 1 },
+  voiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginBottom: S.sm },
+  voiceChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: S.md, minHeight: 44, borderWidth: 1.5, borderColor: C.borderStrong, backgroundColor: C.bg },
+  voiceChipOn: { backgroundColor: C.inverse, borderColor: C.inverse },
+  voiceChipText: { fontWeight: '800', color: C.fg, letterSpacing: 0.5, fontSize: 12 },
   geoMsg: { color: C.brand, fontSize: 11, marginTop: S.sm, fontWeight: '700' },
   chip: { paddingHorizontal: S.md, paddingVertical: 8, borderWidth: 1.5, borderColor: C.borderStrong, height: 36, alignItems: 'center', justifyContent: 'center' },
   chipActive: { backgroundColor: C.inverse },

@@ -3,11 +3,14 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { Platform, Linking } from 'react-native';
 import { createURL } from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, saveToken, getToken, clearToken } from './api';
 import { LEGAL_VERSION } from './legal';
 import type { Lang } from './i18n';
 
 WebBrowser.maybeCompleteAuthSession();
+
+const USER_CACHE_KEY = 'ga.user.cache.v1';
 
 export type User = {
   user_id: string;
@@ -83,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!tok) { setUser(null); return; }
       const res: any = await api('/auth/me');
       setUser(res.user);
+      AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(res.user)).catch(() => {});   // offline/blackout snapshot
     } catch (e: any) {
       // Only clear the session on a real auth rejection — never on transient
       // network failures (offline, aborted request, server restart).
@@ -90,6 +94,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (msg.startsWith('401') || msg.startsWith('403')) {
         await clearToken();
         setUser(null);
+        AsyncStorage.removeItem(USER_CACHE_KEY).catch(() => {});
+      } else {
+        // BLACKOUT — no network at cold start: restore the last known profile so offline
+        // features (cached Crisis Protocols, Blackout snapshot) stay reachable.
+        try {
+          const raw = await AsyncStorage.getItem(USER_CACHE_KEY);
+          if (raw) setUser(prev => prev ?? JSON.parse(raw));
+        } catch {}
       }
     }
   }, []);
@@ -157,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [exchangeSessionId]);
 
   const signOut = useCallback(async () => {
+    AsyncStorage.removeItem(USER_CACHE_KEY).catch(() => {});
     try { await api('/auth/logout', { method: 'POST' }); } catch {}
     await clearToken();
     setUser(null);

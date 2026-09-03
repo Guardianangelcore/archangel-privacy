@@ -345,13 +345,67 @@ async def ai_translate_doc(body: TranslateDocIn, authorization: Optional[str] = 
         raise HTTPException(502, "AI service unavailable")
 
 
-# --------- VOICE: TTS ---------
+# --------- VOICE: TTS (OpenAI via Emergent key · optional ElevenLabs for native Slovak) ---------
 _tts_client: Optional[OpenAITextToSpeech] = None
 def get_tts():
     global _tts_client
     if _tts_client is None:
         _tts_client = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
     return _tts_client
+
+OPENAI_VOICES = {
+    "alloy": "Neutral, balanced", "ash": "Clear, articulate", "coral": "Warm, friendly",
+    "echo": "Smooth, calm", "fable": "Expressive, storytelling", "nova": "Energetic, upbeat",
+    "onyx": "Deep, authoritative", "sage": "Wise, measured", "shimmer": "Bright, cheerful",
+}
+DEFAULT_OPENAI_VOICE = "onyx"
+ELEVEN_MODEL = "eleven_multilingual_v2"     # native pronunciation for sk/cs/de/… (29 languages)
+
+def _eleven_key() -> str:
+    return os.environ.get("ELEVENLABS_API_KEY", "").strip()
+
+_eleven_client = None
+def get_eleven():
+    global _eleven_client
+    if _eleven_client is None:
+        from elevenlabs.client import AsyncElevenLabs
+        _eleven_client = AsyncElevenLabs(api_key=_eleven_key(), timeout=30.0)
+    return _eleven_client
+
+async def _eleven_speech(text: str, voice_id: str, speed: float) -> bytes:
+    from elevenlabs import VoiceSettings
+    stream = get_eleven().text_to_speech.convert(
+        text=text, voice_id=voice_id, model_id=ELEVEN_MODEL, output_format="mp3_44100_128",
+        voice_settings=VoiceSettings(stability=0.5, similarity_boost=0.75, style=0.0,
+                                     use_speaker_boost=True, speed=min(1.2, max(0.7, speed))),
+    )
+    buf = b""
+    async for chunk in stream:
+        buf += chunk
+    return buf
+
+_eleven_voices_cache: dict = {"at": 0.0, "voices": []}
+async def _eleven_voices() -> list:
+    """Voices available on the configured ElevenLabs account (premade + library/cloned)."""
+    import time as _t
+    if not _eleven_key():
+        return []
+    if _t.time() - _eleven_voices_cache["at"] < 600 and _eleven_voices_cache["voices"]:
+        return _eleven_voices_cache["voices"]
+    try:
+        res = await get_eleven().voices.get_all()
+        out = []
+        for v in (res.voices or []):
+            labels = getattr(v, "labels", None) or {}
+            out.append({"voice_id": v.voice_id, "name": v.name, "category": getattr(v, "category", "") or "",
+                        "language": labels.get("language", ""), "accent": labels.get("accent", ""),
+                        "gender": labels.get("gender", ""), "description": labels.get("description", ""),
+                        "preview_url": getattr(v, "preview_url", None)})
+        _eleven_voices_cache.update(at=_t.time(), voices=out)
+        return out
+    except Exception as e:
+        logger.warning(f"elevenlabs voices err {e}")
+        return _eleven_voices_cache["voices"]
 
 def clean_for_tts(text: str) -> str:
     text = re.sub(r"https?://\S+", "", text)
@@ -364,28 +418,72 @@ _tts_cache: dict = {}  # in-memory {hash: bytes}
 
 class TTSIn(BaseModel):
     text: str
-    voice: str = "nova"
+    voice: Optional[str] = None       # OpenAI voice — request default; the user's Settings choice wins unless override
     language: str = "sk"
     speed: float = 1.0  # emotional pacing: 0.9 calm/soothing · 1.05 energetic
+    engine: Optional[str] = None      # "openai" | "elevenlabs" (preview / explicit)
+    eleven_voice_id: Optional[str] = None
+    override: bool = False            # True = use exactly the requested engine/voice (Settings preview)
+
+def _resolve_voice(user: dict, body: TTSIn) -> tuple[str, str]:
+    """→ (engine, voice). Settings preference beats the caller's hardcoded default; `override`
+    (used by the Settings preview) beats everything. ElevenLabs silently falls back to OpenAI
+    when no key / no voice is configured."""
+    if body.override:
+        engine = body.engine or "openai"
+        voice = body.eleven_voice_id if engine == "elevenlabs" else (body.voice or DEFAULT_OPENAI_VOICE)
+    else:
+        engine = user.get("voice_engine") or body.engine or "openai"
+        voice = (user.get("eleven_voice_id") or body.eleven_voice_id) if engine == "elevenlabs" \
+            else (user.get("jarvis_voice") or body.voice or DEFAULT_OPENAI_VOICE)
+    if engine == "elevenlabs" and (not _eleven_key() or not voice):
+        engine, voice = "openai", (user.get("jarvis_voice") or body.voice or DEFAULT_OPENAI_VOICE)
+    if engine == "openai" and voice not in OPENAI_VOICES:
+        voice = DEFAULT_OPENAI_VOICE
+    return engine, voice
 
 @api.post("/voice/tts")
 async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None)):
-    await get_current_user(authorization)
+    user = await get_current_user(authorization)
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "TTS key not configured")
     text = clean_for_tts(body.text)
     if not text:
         raise HTTPException(400, "Empty text")
     speed = min(1.3, max(0.7, body.speed or 1.0))
-    key = hashlib.sha256(f"{text}|{body.voice}|{speed}|tts-1|mp3".encode()).hexdigest()
+    engine, voice = _resolve_voice(user, body)
+    model = ELEVEN_MODEL if engine == "elevenlabs" else "tts-1"
+    key = hashlib.sha256(f"{text}|{engine}|{voice}|{speed}|{model}|mp3".encode()).hexdigest()
     if key not in _tts_cache:
         try:
-            audio = await get_tts().generate_speech(text=text, model="tts-1", voice=body.voice, speed=speed)
+            if engine == "elevenlabs":
+                try:
+                    audio = await _eleven_speech(text, voice, speed)
+                except Exception as e:
+                    logger.warning(f"elevenlabs tts failed, falling back to openai: {e}")
+                    engine, voice = "openai", (user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE)
+                    audio = await get_tts().generate_speech(text=text, model="tts-1", voice=voice, speed=speed)
+            else:
+                audio = await get_tts().generate_speech(text=text, model="tts-1", voice=voice, speed=speed)
             _tts_cache[key] = audio
         except Exception as e:
             logger.error(f"tts err {e}")
             raise HTTPException(502, "TTS service failed")
-    return {"key": key, "url": f"/api/voice/tts/{key}.mp3"}
+    return {"key": key, "url": f"/api/voice/tts/{key}.mp3", "engine": engine, "voice": voice}
+
+@api.get("/voice/voices")
+async def tts_voices(authorization: Optional[str] = Header(None)):
+    """Voice catalogue for Settings: 9 OpenAI voices (Emergent key) + the ElevenLabs account voices."""
+    user = await get_current_user(authorization)
+    eleven = await _eleven_voices()
+    return {
+        "openai": [{"id": k, "label": k.capitalize(), "description": v} for k, v in OPENAI_VOICES.items()],
+        "elevenlabs": eleven,
+        "elevenlabs_available": bool(_eleven_key()),
+        "current": {"engine": user.get("voice_engine") or "openai",
+                    "jarvis_voice": user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE,
+                    "eleven_voice_id": user.get("eleven_voice_id") or ""},
+    }
 
 @api.get("/voice/tts/{key}.mp3")
 async def tts_stream(key: str):

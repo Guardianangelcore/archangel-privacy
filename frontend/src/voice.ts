@@ -14,16 +14,16 @@ export type JarvisVoice = 'onyx' | 'nova' | 'coral' | 'sage' | 'alloy' | 'echo' 
 // The founder explicitly requested this over the cheerful 'nova' default.
 export const DEFAULT_VOICE: JarvisVoice = 'onyx';
 
-// Mood-to-voice mapping for the Living Soul.
-// All moods keep 'onyx' as the base timbre — Jarvis has ONE voice, not a chorus.
-// Speed alone modulates the emotion (soothing under stress, brisk in the morning).
-export const MOOD_VOICE: Record<string, { voice: JarvisVoice; speed: number }> = {
-  calm:       { voice: 'onyx', speed: 0.95 },
-  concerned:  { voice: 'onyx', speed: 0.9 },
-  energetic:  { voice: 'onyx', speed: 1.05 },
-  thinking:   { voice: 'onyx', speed: 1.0 },
-  alert:      { voice: 'onyx', speed: 1.1 },
-  onboarding: { voice: 'onyx', speed: 0.92 }, // slow, warm welcome for first-run
+// Mood-to-pacing mapping for the Living Soul. Jarvis has ONE voice (the one chosen in
+// Settings — resolved server-side from the user's preference); speed alone modulates the
+// emotion (soothing under stress, brisk in the morning).
+export const MOOD_VOICE: Record<string, { speed: number }> = {
+  calm:       { speed: 0.95 },
+  concerned:  { speed: 0.9 },
+  energetic:  { speed: 1.05 },
+  thinking:   { speed: 1.0 },
+  alert:      { speed: 1.1 },
+  onboarding: { speed: 0.92 }, // slow, warm welcome for first-run
 };
 
 // One module-level player — stopped on every new call, so a stale narration
@@ -65,6 +65,9 @@ export type SpeakOptions = {
   speed?: number;
   mood?: keyof typeof MOOD_VOICE;
   language?: Lang;
+  engine?: 'openai' | 'elevenlabs';   // Settings preview only
+  elevenVoiceId?: string;              // Settings preview only
+  override?: boolean;                  // force exact engine/voice (bypass user preference)
 };
 
 /**
@@ -88,15 +91,17 @@ export async function speak(text: string, opts: SpeakOptions = {}): Promise<void
     .trim();
   if (!cleanText) return;
   const preset = opts.mood ? MOOD_VOICE[opts.mood] : undefined;
-  const voice: JarvisVoice = opts.voice || preset?.voice || DEFAULT_VOICE;
+  const voice: JarvisVoice = opts.voice || DEFAULT_VOICE;   // request default — the user's Settings voice wins server-side
   const speed = opts.speed ?? preset?.speed ?? 1.0;
   const language = opts.language || 'en';
 
   try {
-    // 1) Ask the backend to generate (or fetch cached) audio bytes.
+    // 1) Ask the backend to generate (or fetch cached) audio bytes. `override` (Settings
+    //    preview) forces the exact engine/voice; otherwise the user's saved voice is used.
     const res: any = await api('/voice/tts', {
       method: 'POST',
-      body: JSON.stringify({ text: cleanText.slice(0, 3800), voice, speed, language }),
+      body: JSON.stringify({ text: cleanText.slice(0, 3800), voice, speed, language,
+        engine: opts.engine, eleven_voice_id: opts.elevenVoiceId, override: !!opts.override }),
     });
     if (!res?.url) return;
 

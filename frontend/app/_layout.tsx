@@ -20,6 +20,7 @@ import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
 import { GA_ORIGIN_MARK } from "@/src/watermark";
 import { BiometricGate } from "@/src/biometric-gate";
+import { DemoBanner } from "@/src/DemoMode";   // DEMO_ONLY
 import { OnboardingTour } from "@/src/onboarding-tour";
 import { startPanicGesture } from "@/src/panic-gesture";
 import { CrisisHUD } from "@/src/CrisisHUD";
@@ -179,6 +180,7 @@ function RootNav() {
   return (
     <>
       <GuardianMonitor />
+      <DemoBanner />
       <BiometricGate>
         <Stack screenOptions={{
           headerShown: false,

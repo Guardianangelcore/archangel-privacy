@@ -11,6 +11,8 @@ import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { IapBuyButton, RestorePurchasesButton } from '@/src/IapPurchase';
 import { useI18n } from '@/src/i18n-context';
+import { startDemoMode } from '@/src/DemoMode';   // DEMO_ONLY
+import { useAuth } from '@/src/auth';
 
 const TIER_ICON: Record<string, string> = { sovereign: 'earth', guardian: 'shield-checkmark', sentinel: 'diamond', archangel: 'flame' };
 const OBSIDIAN = '#0B0B0D';
@@ -34,6 +36,7 @@ export default function Subscription() {
   const [giftDays, setGiftDays] = useState(30);
   const polledRef = useRef(false);
 
+  const { refresh } = useAuth();
   const load = useCallback(async () => {
     try {
       setData(await api('/subscription'));
@@ -131,6 +134,8 @@ export default function Subscription() {
     finally { setBusy(null); }
   };
 
+  // DEMO_ONLY — judges: 30-minute full-access session, no payment
+  const demoStart = async () => { setBusy('demo'); await startDemoMode(refresh); await load(); setBusy(null); };
   const trial = async () => {
     setBusy('trial'); setErr(''); setMsg('');
     try {
@@ -175,6 +180,12 @@ export default function Subscription() {
         {data?.trial_available && (
           <Pressable testID="sb-trial" onPress={trial} disabled={busy === 'trial'} style={styles.trialBtn}>
             {busy === 'trial' ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.trialText}>{tt('subscription.free_7_day_sentinel_trial')}</Text>}
+          </Pressable>
+        )}
+        {/* DEMO_ONLY — competition judges */}
+        {!data?.demo_active && (
+          <Pressable testID="sb-demo" onPress={demoStart} disabled={busy === 'demo'} style={styles.demoBtn}>
+            {busy === 'demo' ? <ActivityIndicator color="#FFD60A" /> : (<><Ionicons name="flask-outline" size={16} color="#FFD60A" /><Text style={styles.demoText}>DEMO MODE — 30 MIN FULL ACCESS (NO PAYMENT)</Text></>)}
           </Pressable>
         )}
 
@@ -385,6 +396,8 @@ const styles = StyleSheet.create({
   loyalty: { color: '#B8860B', fontSize: 11, lineHeight: 16, fontWeight: '800', marginBottom: S.md },
   gat: { color: '#B8860B', fontWeight: '800', fontSize: 11 },
   trialBtn: { marginTop: S.md, backgroundColor: PLATINUM, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  demoBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#FFD60A', paddingVertical: S.md, minHeight: 48, marginBottom: S.md },
+  demoText: { color: '#FFD60A', fontWeight: '900', letterSpacing: 1, fontSize: 11 },
   trialText: { color: OBSIDIAN, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
   billingRow: { flexDirection: 'row', marginTop: S.md, borderWidth: 1.5, borderColor: C.borderStrong },
   billBtn: { flex: 1, paddingVertical: S.md, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
