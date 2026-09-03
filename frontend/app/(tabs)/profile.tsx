@@ -509,6 +509,16 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{t('legal_hub', lang).toUpperCase()} · 2026</Text>
         </Pressable>
 
+        <Pressable testID="prof-tos-btn" onPress={() => router.push('/terms-of-service')} style={styles.qrBtn}>
+          <Ionicons name="document-text-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>{tt('terms_of_service.terms_of_service')}</Text>
+        </Pressable>
+
+        <Pressable testID="prof-privacy-btn" onPress={() => router.push('/privacy-policy')} style={styles.qrBtn}>
+          <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>{tt('privacy_policy.privacy_policy')}</Text>
+        </Pressable>
+
         <Pressable testID="eternal-vault-btn" onPress={() => router.push('/eternal-vault')} style={styles.qrBtn}>
           <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>{tt('tabs_profile.eternal_vault_legacy_last_will')}</Text>

@@ -236,3 +236,7 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - Verified: web bundle builds (Metro 1780 modules), Home + Jarvis render, briefing/weather/STOP intact; RevenueCat IAP + tier-gate pytest 25/25 green (backend untouched). RevenueCat SDK (react-native-purchases 10.8.1) unchanged & compatible.
 - NOT tested (needs native build/EAS): actual store purchases, push, mic/wake-word, calendar/contacts native writes. Expo Go for SDK 57 is not on stores — use `eas go`/dev build.
 - use-icon-fonts.ts still references @expo/vector-icons CDN for Expo-Go font fallback (harmless; native/web use autolinked fonts). Left as-is.
+
+## Iter 67 — ToS/Privacy Settings links (Sept 2026)
+- ToS/Privacy requirement was already satisfied by earlier phases: standalone screens /terms-of-service (tos-screen) + /privacy-policy (privacy-screen), first-launch blocking modal src/FirstLaunchDisclaimer.tsx (AsyncStorage key ga.disclaimer.seen.<LEGAL_VERSION>, "I understand", shown once), and full 14-lang legal text (medical disclaimer, GDPR bases, local-first/zero-surveillance, operator = Guardian Angel Sovereign Foundation (DAO) — NOT renamed to "GA Labs" to preserve established brand).
+- ONLY change this task: added two direct Settings rows in app/(tabs)/profile.tsx — testID prof-tos-btn → /terms-of-service, prof-privacy-btn → /privacy-policy (reusing i18n keys terms_of_service.terms_of_service / privacy_policy.privacy_policy). Verified on web: both render under the Legal Hub button and navigate to the Slovak screens.
