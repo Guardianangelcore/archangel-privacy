@@ -20,6 +20,7 @@ let _timer: any = null;
 let _recorder: any = null;
 let _onWake: WakeWordListener | null = null;
 let _appStateSub: any = null;
+let _startSeq = 0;   // bumps on every start/stop — an in-flight start() bails if it was superseded
 
 async function ensureMic(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
@@ -41,8 +42,11 @@ async function ensureMic(): Promise<boolean> {
  */
 export async function startWakeWord(recorder: any, onWake: WakeWordListener): Promise<() => void> {
   if (_active) stopWakeWord();
+  const seq = ++_startSeq;
   const ok = await ensureMic();
-  if (!ok) return () => {};
+  // Superseded while awaiting the permission (Jarvis started speaking / recording) → do not
+  // grab the recorder, the barge-in monitor or the voice turn owns it now.
+  if (!ok || seq !== _startSeq) return () => {};
   _onWake = onWake;
   _recorder = recorder;
   _active = true;
@@ -50,6 +54,7 @@ export async function startWakeWord(recorder: any, onWake: WakeWordListener): Pr
   try {
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true } as any);
     await recorder.prepareToRecordAsync();
+    if (seq !== _startSeq) return () => {};   // stopped while preparing — leave the recorder alone
     recorder.record();
   } catch (e) {
     console.log('wake-word start err', e);
@@ -112,6 +117,7 @@ function resumeInternal() {
 }
 
 export function stopWakeWord() {
+  _startSeq += 1;
   _active = false;
   if (_timer) { clearInterval(_timer); _timer = null; }
   if (_appStateSub) { _appStateSub.remove?.(); _appStateSub = null; }

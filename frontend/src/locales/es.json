@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (ESTIMACIÓN)",
   "wealth_vault.wallet_address": "Dirección de billetera",
   "wealth_vault.wealth_vault": "BÓVEDA PATRIMONIAL",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "MANOS LIBRES · SÍ",
+  "jarvis.hands_free_off": "MANOS LIBRES · NO",
+  "jarvis.hands_free_hint": "Habla sobre Jarvis para interrumpirlo · una pausa envía · vuelve a escuchar tras cada respuesta.",
+  "jarvis.listening_hands_free": "Escuchando… haz una pausa al terminar",
+  "intro.skip_narration": "SALTAR"
 }

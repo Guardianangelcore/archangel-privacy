@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndic
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
+import { getNotifications } from '@/src/notifications';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
@@ -107,6 +107,8 @@ export default function MyRecovery() {
   const scheduleAlerts = async () => {
     if (Platform.OS === 'web') { setInfo('Alerts work on a phone (Expo Go / native build).'); return; }
     try {
+      const Notifications = await getNotifications();
+      if (!Notifications) { setInfo('Alerts need the native app build — not available in Expo Go.'); return; }
       const perm = await Notifications.requestPermissionsAsync();
       if (!perm.granted) { setErr('Notification permission denied.'); return; }
       let n = 0;

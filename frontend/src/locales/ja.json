@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH（推定）",
   "wealth_vault.wallet_address": "ウォレットアドレス",
   "wealth_vault.wealth_vault": "WEALTH VAULT",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "ハンズフリー · オン",
+  "jarvis.hands_free_off": "ハンズフリー · オフ",
+  "jarvis.hands_free_hint": "話しかけるとJarvisを中断 · 沈黙で送信 · 回答後は自動で再び聞き取ります。",
+  "jarvis.listening_hands_free": "聞いています…話し終えたら少し待ってください",
+  "intro.skip_narration": "スキップ"
 }

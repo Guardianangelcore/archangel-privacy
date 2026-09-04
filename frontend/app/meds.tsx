@@ -4,7 +4,7 @@ import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Modal, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
+import { getNotifications } from '@/src/notifications';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { api, API_BASE, getToken } from '@/src/api';
@@ -33,6 +33,8 @@ const SLOT_LABEL: Record<string, string> = Object.fromEntries(SLOTS.map(s => [s.
 async function rescheduleLocal(reminders: Reminder[]) {
   if (Platform.OS === 'web') return;
   try {
+    const Notifications = await getNotifications();
+    if (!Notifications) return;   // Expo Go — local reminders need a native build
     const { status } = await Notifications.requestPermissionsAsync();
     await Notifications.cancelAllScheduledNotificationsAsync();
     if (status !== 'granted') return;

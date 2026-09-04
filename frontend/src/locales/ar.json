@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (تقدير)",
   "wealth_vault.wallet_address": "عنوان المحفظة",
   "wealth_vault.wealth_vault": "خزنة الثروة",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "بدون لمس · مفعّل",
+  "jarvis.hands_free_off": "بدون لمس · معطّل",
+  "jarvis.hands_free_hint": "تحدّث فوق جارفيس لمقاطعته · التوقف يُرسل · يستمع مجددًا بعد كل إجابة.",
+  "jarvis.listening_hands_free": "أستمع… توقّف قليلًا عند الانتهاء",
+  "intro.skip_narration": "تخطّي"
 }

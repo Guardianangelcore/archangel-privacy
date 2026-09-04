@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN 财富（估算）",
   "wealth_vault.wallet_address": "钱包地址",
   "wealth_vault.wealth_vault": "财富保险库",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "免提 · 开",
+  "jarvis.hands_free_off": "免提 · 关",
+  "jarvis.hands_free_hint": "说话即可打断 Jarvis · 停顿即发送 · 每次回答后自动继续聆听。",
+  "jarvis.listening_hands_free": "正在聆听…说完请稍作停顿",
+  "intro.skip_narration": "跳过"
 }

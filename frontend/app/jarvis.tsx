@@ -8,6 +8,8 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
 import { startWakeWord, stopWakeWord } from '@/src/wake-word';
+import { watchBargeIn, watchEndOfTurn } from '@/src/duplex';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSpring, withSequence, Easing, cancelAnimation,
@@ -141,13 +143,55 @@ export default function Jarvis() {
   const GUARDIAN_PROMPT = 'Jarvis AI requires the Guardian Plan — upgrade to unlock. Your free Sovereign plan keeps the Vault, SOS QR and calendar.';
   const isTierError = (e: any) => String(e?.message || e).includes('guardian_required');
   // Voice playback centralised in src/voice.ts (single module-level player, auto-cleanup)
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  // Metering ON — full-duplex end-of-turn detection reads dBFS from this recorder.
+  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   // Wake-word recorder MUST report metering (dBFS) — without it the listener stays silent.
+  // Also doubles as the BARGE-IN monitor while Jarvis speaks (the wake-word is idle then).
   const wakeRecorder = useAudioRecorder({ ...RecordingPresets.LOW_QUALITY, isMeteringEnabled: true });
   // STOP control — one place to halt everything Jarvis is doing right now.
   const [speaking, setSpeaking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  useEffect(() => onSpeakingChange(setSpeaking), []);
+  // FULL-DUPLEX (hands-free) — native only. Persisted; default ON.
+  const [duplex, setDuplex] = useState(Platform.OS !== 'web');
+  const duplexRef = useRef(duplex);
+  const turnRef = useRef(false);                 // true while Jarvis speaks a reply in a voice turn → auto-listen after
+  const bargeStopRef = useRef<(() => void) | null>(null);
+  const eotStopRef = useRef<(() => void) | null>(null);
+  const startListeningRef = useRef<(auto: boolean) => void>(() => {});
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    AsyncStorage.getItem('jarvis.duplex').then(v => { if (v === '0' || v === '1') { setDuplex(v === '1'); duplexRef.current = v === '1'; } }).catch(() => {});
+  }, []);
+  const toggleDuplex = (v: boolean) => {
+    tap('light'); setDuplex(v); duplexRef.current = v;
+    AsyncStorage.setItem('jarvis.duplex', v ? '1' : '0').catch(() => {});
+    if (!v) { bargeStopRef.current?.(); bargeStopRef.current = null; eotStopRef.current?.(); eotStopRef.current = null; }
+  };
+  const stopBargeIn = () => { bargeStopRef.current?.(); bargeStopRef.current = null; };
+  const startBargeIn = async () => {
+    stopBargeIn();
+    stopWakeWord();   // frees wakeRecorder synchronously (the effect cleanup would come too late)
+    bargeStopRef.current = await watchBargeIn(wakeRecorder, () => {
+      // USER SPOKE OVER JARVIS → he goes silent at once and listens.
+      tap('light');
+      turnRef.current = false;
+      abortRef.current?.abort();
+      stopSpeaking();
+      startListeningRef.current(true);
+    });
+  };
+  useEffect(() => onSpeakingChange((v) => {
+    setSpeaking(v);
+    if (Platform.OS === 'web') return;
+    if (v) {
+      if (duplexRef.current) startBargeIn();
+    } else {
+      stopBargeIn();
+      // Reply finished naturally in a hands-free turn → open the mic without a tap.
+      if (duplexRef.current && turnRef.current) { turnRef.current = false; startListeningRef.current(true); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
   const toastY = useSharedValue(0);
   const toastStyle = useAnimatedStyle(() => ({ opacity: toastY.value, transform: [{ translateY: (1 - toastY.value) * 12 }] }));
 
@@ -178,8 +222,9 @@ export default function Jarvis() {
     toastY.value = withSequence(withTiming(1, { duration: 250 }), withTiming(1, { duration: 1400 }), withTiming(0, { duration: 400 }));
   };
 
-  const speak = useCallback(async (text: string, m: Mood) => {
+  const speak = useCallback(async (text: string, m: Mood, voiceTurn = false) => {
     if (!text) return;
+    turnRef.current = voiceTurn && duplexRef.current;
     try {
       await jarvisSpeak(text.slice(0, 2000), { mood: m, language: (user?.language as any) || 'en' });
     } catch (e) { console.log('tts err', e); }
@@ -201,8 +246,8 @@ export default function Jarvis() {
   }, [clearSlow]);
   useEffect(() => () => clearSlow(), [clearSlow]);
 
-  // Stop any ongoing narration when Jarvis unmounts.
-  useEffect(() => () => { stopSpeaking(); }, []);
+  // Stop any ongoing narration + hands-free monitors when Jarvis unmounts.
+  useEffect(() => () => { stopSpeaking(); bargeStopRef.current?.(); eotStopRef.current?.(); }, []);
 
   const sendMessage = useCallback(async (text: string, viaVoice = false) => {
     const q = text.trim();
@@ -226,7 +271,7 @@ export default function Jarvis() {
         showXp(res.xp_gained);
         if (res.level_up) setLevelUp({ level: res.level, name: res.level_name });
         loadState();
-        if (viaVoice) speak('Your image is ready and stored in the Vault.', 'energetic');
+        if (viaVoice) speak('Your image is ready and stored in the Vault.', 'energetic', true);
       } else if (mode === 'sonar') {
         const res: any = await api('/agent/search', { method: 'POST', body: JSON.stringify({ query: q, language: user?.language || 'en' }) });
         clearSlow();
@@ -241,7 +286,7 @@ export default function Jarvis() {
         if (viaVoice) {
           const n = res.citations?.length || 0;
           const spoken = n > 0 ? `${res.reply} I found ${n === 1 ? 'one verified source' : `${n} verified sources`} — you will find them below the answer.` : res.reply;
-          speak(spoken, 'calm');
+          speak(spoken, 'calm', true);
         }
       } else {
         // LIVE STREAM — first tokens hit the bubble in <0.5 s (SSE via expo/fetch).
@@ -257,6 +302,7 @@ export default function Jarvis() {
         abortRef.current = ctl;
         // STREAMING TTS — when the turn came by voice, Jarvis starts speaking the first
         // sentence while the rest of the answer is still being generated.
+        turnRef.current = viaVoice && duplexRef.current;
         const voiceOut = viaVoice ? speakStream({ mood: 'calm', language: (user?.language as any) || 'en' }) : null;
         try {
           const token = await getToken();
@@ -315,7 +361,7 @@ export default function Jarvis() {
             return [...base.slice(-8), { role: 'agent', text: res.reply }];
           });
           applyMeta(res);
-          if (viaVoice) speak(res.reply, (res.mood as Mood) || 'calm');
+          if (viaVoice) speak(res.reply, (res.mood as Mood) || 'calm', true);
         }
       }
     } catch (e: any) {
@@ -344,23 +390,45 @@ export default function Jarvis() {
   };
 
   // ---- FULL VOICE CONVERSATION (tap Orb: record → Whisper → gpt-5.4 → emotional TTS) ----
-  const orbPress = async () => {
-    tap('medium');
-    if (recording) { await stopVoice(); return; }
-    if (busy || speaking) return;   // one turn at a time — never stack a new session on a running one
+  // Opens the mic. `auto` = hands-free (after a reply / barge-in): the end of the utterance is
+  // detected from silence, so no second tap is needed.
+  const startListening = async (auto: boolean) => {
+    if (recording) return;
     try {
       let perm = await AudioModule.getRecordingPermissionsAsync();
       if (!perm.granted) {
-        if (perm.canAskAgain === false) { setMicDenied(true); return; }
+        if (auto || perm.canAskAgain === false) { setMicDenied(true); return; }
         perm = await AudioModule.requestRecordingPermissionsAsync();
         if (!perm.granted) { setMicDenied(perm.canAskAgain === false); return; }
       }
       setMicDenied(false);
+      setRecording(true);   // synchronously — parks the wake-word effect before the recorder starts
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true } as any);
       await recorder.prepareToRecordAsync();
       recorder.record();
-      setRecording(true); setStatus('Listening… tap the orb to send');
-    } catch (e) { console.log('rec err', e); }
+      if (duplexRef.current) {
+        setStatus(tt('jarvis.listening_hands_free'));
+        eotStopRef.current?.();
+        eotStopRef.current = watchEndOfTurn(recorder, () => { stopVoice(); }, () => { cancelListening(); });
+      } else {
+        setStatus('Listening… tap the orb to send');
+      }
+    } catch (e) { console.log('rec err', e); setRecording(false); }
+  };
+  startListeningRef.current = startListening;
+
+  // Nobody spoke → close the mic quietly (wake-word re-arms).
+  const cancelListening = async () => {
+    eotStopRef.current?.(); eotStopRef.current = null;
+    setRecording(false); setStatus(''); setMood('calm');
+    try { await recorder.stop(); } catch {}
+  };
+
+  const orbPress = async () => {
+    tap('medium');
+    if (recording) { await stopVoice(); return; }
+    if (busy || speaking) return;   // one turn at a time — never stack a new session on a running one
+    await startListening(false);
   };
 
   // WAKE-WORD "JARVIS" — active in ALL 3 modes (chat · sonar · imagine).
@@ -381,6 +449,9 @@ export default function Jarvis() {
   // Jarvis then waits for the next explicit trigger (orb tap / send / wake-word).
   const stopAll = async () => {
     tap('medium');
+    turnRef.current = false;          // no auto-listen after a manual STOP
+    stopBargeIn();
+    eotStopRef.current?.(); eotStopRef.current = null;
     stopSpeaking();
     abortRef.current?.abort();
     stopWakeWord();
@@ -392,6 +463,7 @@ export default function Jarvis() {
   };
 
   const stopVoice = async () => {
+    eotStopRef.current?.(); eotStopRef.current = null;
     setRecording(false); setStatus('Transcribing your voice…'); setMood('thinking');
     try {
       await recorder.stop();
@@ -517,6 +589,15 @@ export default function Jarvis() {
             </Pressable>
           )}
           <Text style={st.orbHint}>{tt('jarvis.tap_the_orb_and_speak_jarvis_replies')}</Text>
+          {Platform.OS !== 'web' && (
+            <>
+              <Pressable testID="jv-duplex" onPress={() => toggleDuplex(!duplex)} style={[st.duplexChip, duplex && st.duplexChipOn]} hitSlop={6}>
+                <Ionicons name={duplex ? 'headset' : 'headset-outline'} size={14} color={duplex ? C.onInverse : C.info} />
+                <Text style={[st.duplexText, duplex && { color: C.onInverse }]}>{duplex ? tt('jarvis.hands_free_on') : tt('jarvis.hands_free_off')}</Text>
+              </Pressable>
+              {duplex && <Text style={st.duplexHint}>{tt('jarvis.hands_free_hint')}</Text>}
+            </>
+          )}
           {micDenied && (
             <Pressable testID="jv-mic-settings" onPress={() => Linking.openSettings()} style={st.settingsBtn}>
               <Ionicons name="settings-outline" size={14} color={C.brand} />
@@ -837,6 +918,10 @@ const st = StyleSheet.create({
   stopBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: S.sm, minHeight: 44, paddingHorizontal: S.lg, borderWidth: 1, borderColor: '#FF6B6B', borderRadius: R.pill, backgroundColor: 'rgba(255,107,107,0.10)' },
   stopText: { color: '#FF6B6B', fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
   orbHint: { color: C.info, fontSize: 11, marginTop: S.md, textAlign: 'center' },
+  duplexChip: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: S.sm, minHeight: 40, paddingHorizontal: S.md, borderWidth: 1, borderColor: C.border, borderRadius: R.pill },
+  duplexChipOn: { backgroundColor: C.brand, borderColor: C.brand },
+  duplexText: { color: C.info, fontWeight: '900', fontSize: 10.5, letterSpacing: 1 },
+  duplexHint: { color: C.info, fontSize: 10.5, lineHeight: 15, marginTop: 6, textAlign: 'center', paddingHorizontal: S.lg },
   settingsBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: S.sm, minHeight: 44, paddingHorizontal: S.md, borderWidth: 1, borderColor: C.brand, borderRadius: R.pill },
   settingsText: { color: C.brand, fontWeight: '800', fontSize: 11 },
   card: { marginTop: S.lg, marginHorizontal: S.xl, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1.5, padding: S.lg },

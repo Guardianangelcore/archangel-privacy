@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "PATRIMOINE SOUVERAIN (ESTIMATION)",
   "wealth_vault.wallet_address": "Adresse du portefeuille",
   "wealth_vault.wealth_vault": "COFFRE-FORT PATRIMONIAL",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "MAINS LIBRES · OUI",
+  "jarvis.hands_free_off": "MAINS LIBRES · NON",
+  "jarvis.hands_free_hint": "Parlez par-dessus Jarvis pour l'interrompre · une pause envoie · il réécoute après chaque réponse.",
+  "jarvis.listening_hands_free": "J'écoute… faites une pause quand vous avez fini",
+  "intro.skip_narration": "PASSER"
 }

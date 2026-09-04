@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (SZACUNEK)",
   "wealth_vault.wallet_address": "Adres portfela",
   "wealth_vault.wealth_vault": "SEJF MAJĄTKOWY",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "TRYB GŁOŚNOMÓWIĄCY · WŁ",
+  "jarvis.hands_free_off": "TRYB GŁOŚNOMÓWIĄCY · WYŁ",
+  "jarvis.hands_free_hint": "Mów podczas wypowiedzi Jarvisa, aby go przerwać · pauza wysyła · po każdej odpowiedzi słucha ponownie.",
+  "jarvis.listening_hands_free": "Słucham… zrób pauzę, gdy skończysz",
+  "intro.skip_narration": "POMIŃ"
 }

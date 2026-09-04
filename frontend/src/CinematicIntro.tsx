@@ -1,14 +1,18 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // CINEMATIC INTRO — shown on EVERY app start before the main screen. Black canvas, a white/gold
-// archangel silhouette sweeps left → right, headline fades in, logo + gold subtitle, auto-skip
-// after 5 s or "Enter the System". Ambient sound: optional, DEFAULT OFF (no asset shipped).
+// archangel silhouette sweeps left → right, headline fades in, logo + gold subtitle. JARVIS narrates
+// a short welcome (public /api/voice/intro.mp3, app language); the intro ends with the narration
+// (hard cap 14 s), or after 5 s when the voice cannot start (offline). "Skip" / "Enter" stop it.
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing, useWindowDimensions } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useI18n } from './i18n-context';
+import { API_BASE } from './api';
+import { speakUri, stopSpeaking } from './voice';
 
 const GOLD = '#D4AF37';
-const AUTO_SKIP_MS = 5000;
+const AUTO_SKIP_MS = 5000;      // silent fallback (narration never started)
+const NARRATION_CAP_MS = 14000; // never hold the user longer than this
 
 function Archangel({ size }: { size: number }) {
   // Minimal silhouette: head, body, two wings — white body, gold wing edges.
@@ -38,9 +42,10 @@ function LogoMark({ size }: { size: number }) {
 }
 
 export function CinematicIntro({ onDone }: { onDone: () => void }) {
-  const { t: tt } = useI18n();
+  const { t: tt, lang } = useI18n();
   const { width, height } = useWindowDimensions();
   const [gone, setGone] = useState(false);
+  const [narrating, setNarrating] = useState(false);
   const fly = useRef(new Animated.Value(0)).current;      // 0 → 1 : left → right
   const textOp = useRef(new Animated.Value(0)).current;
   const logoOp = useRef(new Animated.Value(0)).current;
@@ -50,6 +55,7 @@ export function CinematicIntro({ onDone }: { onDone: () => void }) {
   const finish = () => {
     if (finished.current) return;
     finished.current = true;
+    stopSpeaking();
     Animated.timing(fade, { toValue: 0, duration: 350, useNativeDriver: true }).start(() => { setGone(true); onDone(); });
   };
 
@@ -59,8 +65,16 @@ export function CinematicIntro({ onDone }: { onDone: () => void }) {
     ]).start();
     Animated.timing(textOp, { toValue: 1, duration: 1200, delay: 900, useNativeDriver: true }).start();
     Animated.timing(logoOp, { toValue: 1, duration: 900, delay: 2000, useNativeDriver: true }).start();
-    const id = setTimeout(finish, AUTO_SKIP_MS);
-    return () => clearTimeout(id);
+
+    // JARVIS NARRATION — the intro lasts as long as the voice (capped); if the voice never
+    // starts (offline / TTS down) the classic 5 s auto-skip applies.
+    let started = false;
+    const silentSkip = setTimeout(() => { if (!started) finish(); }, AUTO_SKIP_MS);
+    const cap = setTimeout(finish, NARRATION_CAP_MS);
+    speakUri(`${API_BASE}/api/voice/intro.mp3?lang=${lang}`, () => { started = true; setNarrating(true); })
+      .then(() => { if (started) finish(); })
+      .catch(() => {});
+    return () => { clearTimeout(silentSkip); clearTimeout(cap); stopSpeaking(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -85,6 +99,11 @@ export function CinematicIntro({ onDone }: { onDone: () => void }) {
         </Animated.View>
       </View>
 
+      {narrating && (
+        <Pressable testID="intro-skip" onPress={finish} style={st.skipBtn} hitSlop={10}>
+          <Text style={st.skipText}>⏭ {tt('intro.skip_narration')}</Text>
+        </Pressable>
+      )}
       <Pressable testID="intro-enter" onPress={finish} style={st.enterBtn} hitSlop={8}>
         <Text style={st.enterText}>{tt('intro.enter_the_system')}</Text>
       </Pressable>
@@ -102,4 +121,6 @@ const st = StyleSheet.create({
   subtitle: { color: GOLD, fontWeight: '800', letterSpacing: 1.5, fontSize: 12, textAlign: 'center' },
   enterBtn: { position: 'absolute', bottom: 64, minHeight: 52, paddingHorizontal: 32, borderWidth: 1.5, borderColor: GOLD, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(212,175,55,0.08)' },
   enterText: { color: GOLD, fontWeight: '900', letterSpacing: 2.5, fontSize: 13 },
+  skipBtn: { position: 'absolute', top: 56, right: 20, minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
+  skipText: { color: 'rgba(255,255,255,0.7)', fontWeight: '800', letterSpacing: 2, fontSize: 11 },
 });

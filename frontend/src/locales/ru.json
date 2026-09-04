@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (ОЦЕНКА)",
   "wealth_vault.wallet_address": "Адрес кошелька",
   "wealth_vault.wealth_vault": "ХРАНИЛИЩЕ КАПИТАЛА",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "БЕЗ РУК · ВКЛ",
+  "jarvis.hands_free_off": "БЕЗ РУК · ВЫКЛ",
+  "jarvis.hands_free_hint": "Заговорите поверх Джарвиса, чтобы прервать · пауза отправляет · после ответа он слушает снова.",
+  "jarvis.listening_hands_free": "Слушаю… сделайте паузу, когда закончите",
+  "intro.skip_narration": "ПРОПУСТИТЬ"
 }

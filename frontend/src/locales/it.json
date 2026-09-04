@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (STIMA)",
   "wealth_vault.wallet_address": "Indirizzo wallet",
   "wealth_vault.wealth_vault": "CAVEAU PATRIMONIALE",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "VIVAVOCE · ON",
+  "jarvis.hands_free_off": "VIVAVOCE · OFF",
+  "jarvis.hands_free_hint": "Parla sopra Jarvis per interromperlo · una pausa invia · riascolta dopo ogni risposta.",
+  "jarvis.listening_hands_free": "Ascolto… fai una pausa quando hai finito",
+  "intro.skip_narration": "SALTA"
 }

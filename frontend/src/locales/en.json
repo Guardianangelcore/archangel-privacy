@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (ESTIMATE)",
   "wealth_vault.wallet_address": "Wallet address",
   "wealth_vault.wealth_vault": "WEALTH VAULT",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "HANDS-FREE · ON",
+  "jarvis.hands_free_off": "HANDS-FREE · OFF",
+  "jarvis.hands_free_hint": "Speak over Jarvis to interrupt him · pause to send · he listens again after each answer.",
+  "jarvis.listening_hands_free": "Listening… pause when you are done",
+  "intro.skip_narration": "SKIP"
 }

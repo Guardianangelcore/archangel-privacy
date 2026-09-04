@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN VAGYON (BECSLÉS)",
   "wealth_vault.wallet_address": "Pénztárcacím",
   "wealth_vault.wealth_vault": "VAGYONPÁNCÉLTEREM",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "KIHANGOSÍTÓ · BE",
+  "jarvis.hands_free_off": "KIHANGOSÍTÓ · KI",
+  "jarvis.hands_free_hint": "Szóljon bele, és Jarvis elhallgat · a szünet elküld · minden válasz után újra figyel.",
+  "jarvis.listening_hands_free": "Hallgatom… ha kész, tartson szünetet",
+  "intro.skip_narration": "KIHAGYÁS"
 }

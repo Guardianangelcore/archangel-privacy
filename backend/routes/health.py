@@ -426,6 +426,7 @@ class TTSIn(BaseModel):
     engine: Optional[str] = None      # "openai" | "elevenlabs" (preview / explicit)
     eleven_voice_id: Optional[str] = None
     override: bool = False            # True = use exactly the requested engine/voice (Settings preview)
+    stream: bool = False              # True = LIVE: audio bytes are relayed while the engine still renders
 
 def _resolve_voice(user: dict, body: TTSIn) -> tuple[str, str]:
     """→ (engine, voice). ONE unified JARVIS preset app-wide: the user's Settings voice, else
@@ -456,22 +457,160 @@ async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None))
     engine, voice = _resolve_voice(user, body)
     model = ELEVEN_MODEL if engine == "elevenlabs" else "tts-1"
     key = hashlib.sha256(f"{text}|{engine}|{voice}|{speed}|{model}|mp3".encode()).hexdigest()
-    if key not in _tts_cache:
-        try:
-            if engine == "elevenlabs":
-                try:
-                    audio = await _eleven_speech(text, voice, speed)
-                except Exception as e:
-                    logger.warning(f"elevenlabs tts failed, falling back to openai: {e}")
-                    engine, voice = "openai", (user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE)
-                    audio = await get_tts().generate_speech(text=text, model="tts-1", voice=voice, speed=speed)
-            else:
+    if key in _tts_cache:
+        return {"key": key, "url": f"/api/voice/tts/{key}.mp3", "engine": engine, "voice": voice, "cached": True}
+    if body.stream:
+        # LIVE — no wait for the full render, no second download round-trip: the player pulls
+        # the bytes as ElevenLabs / OpenAI produce them (one-shot public ticket URL).
+        job_id = _start_live_job(key, engine, voice, speed, text, body.language,
+                                 fallback_voice=(user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE))
+        return {"key": key, "url": f"/api/voice/tts/live/{job_id}.mp3", "engine": engine, "voice": voice, "live": True}
+    try:
+        if engine == "elevenlabs":
+            try:
+                audio = await _eleven_speech(text, voice, speed)
+            except Exception as e:
+                logger.warning(f"elevenlabs tts failed, falling back to openai: {e}")
+                engine, voice = "openai", (user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE)
                 audio = await get_tts().generate_speech(text=text, model="tts-1", voice=voice, speed=speed)
-            _tts_cache[key] = audio
-        except Exception as e:
-            logger.error(f"tts err {e}")
-            raise HTTPException(502, "TTS service failed")
+        else:
+            audio = await get_tts().generate_speech(text=text, model="tts-1", voice=voice, speed=speed)
+        _tts_cache[key] = audio
+    except Exception as e:
+        logger.error(f"tts err {e}")
+        raise HTTPException(502, "TTS service failed")
     return {"key": key, "url": f"/api/voice/tts/{key}.mp3", "engine": engine, "voice": voice}
+
+
+# --------- LIVE TTS RELAY (first sound in ~0.5 s with ElevenLabs Flash · no intermediate download) ---------
+ELEVEN_LIVE_MODEL = "eleven_flash_v2_5"     # ~75 ms model latency · 32 languages incl. sk/cs/de/pl/hu
+ELEVEN_LIVE_LANGS = {"sk", "cs", "en", "de", "pl", "hu", "ru", "es", "fr", "it", "uk", "zh", "ja", "ar", "pt", "nl", "ro"}
+LIVE_JOB_TTL = 600.0
+_live_jobs: dict = {}   # job_id -> {"chunks": [bytes], "done": bool, "error": str|None, "key": str, "at": float}
+
+
+async def _eleven_stream(text: str, voice_id: str, speed: float, language: str):
+    from elevenlabs import VoiceSettings
+    lang = (language or "")[:2].lower()
+    kwargs = {"language_code": lang} if lang in ELEVEN_LIVE_LANGS else {}
+    stream = get_eleven().text_to_speech.stream(
+        text=text, voice_id=voice_id, model_id=ELEVEN_LIVE_MODEL, output_format="mp3_44100_128",
+        optimize_streaming_latency=3,
+        voice_settings=VoiceSettings(stability=0.7, similarity_boost=0.8, style=0.1,
+                                     use_speaker_boost=True, speed=min(1.2, max(0.7, speed))),
+        **kwargs,
+    )
+    async for chunk in stream:
+        if chunk:
+            yield chunk
+
+
+async def _openai_stream(text: str, voice: str, speed: float):
+    """Relay OpenAI TTS bytes as the Emergent proxy sends them (OpenAI-compatible /audio/speech)."""
+    base = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+    headers = {"Authorization": f"Bearer {EMERGENT_LLM_KEY}", "Content-Type": "application/json"}
+    if os.environ.get("APP_URL"):
+        headers["X-App-ID"] = os.environ["APP_URL"]
+    payload = {"model": "tts-1", "input": text, "voice": voice, "speed": speed, "response_format": "mp3"}
+    async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=5.0)) as cli:
+        async with cli.stream("POST", f"{base}/llm/audio/speech", headers=headers, json=payload) as r:
+            r.raise_for_status()
+            async for chunk in r.aiter_bytes():
+                if chunk:
+                    yield chunk
+
+
+async def _run_live_job(job_id: str, engine: str, voice: str, speed: float, text: str, language: str, fallback_voice: str):
+    job = _live_jobs[job_id]
+    try:
+        gen = _eleven_stream(text, voice, speed, language) if engine == "elevenlabs" else _openai_stream(text, voice, speed)
+        async for chunk in gen:
+            job["chunks"].append(chunk)
+    except Exception as e:
+        logger.warning(f"live tts ({engine}) failed: {e}")
+        if not job["chunks"]:
+            try:   # full-render fallback — never leave the player with an empty stream
+                job["chunks"].append(await get_tts().generate_speech(text=text, model="tts-1", voice=fallback_voice, speed=speed))
+            except Exception as e2:
+                logger.error(f"live tts fallback err {e2}")
+                job["error"] = str(e2)
+    job["done"] = True
+    if job["chunks"] and not job["error"]:
+        _tts_cache[job["key"]] = b"".join(job["chunks"])
+
+
+def _start_live_job(key: str, engine: str, voice: str, speed: float, text: str, language: str, fallback_voice: str) -> str:
+    import time as _t
+    now = _t.time()
+    for jid in [j for j, v in _live_jobs.items() if now - v["at"] > LIVE_JOB_TTL]:
+        _live_jobs.pop(jid, None)
+    job_id = uuid.uuid4().hex
+    _live_jobs[job_id] = {"chunks": [], "done": False, "error": None, "key": key, "at": now}
+    asyncio.create_task(_run_live_job(job_id, engine, voice, speed, text, language, fallback_voice))
+    return job_id
+
+
+async def _iter_live(job: dict):
+    i = 0
+    while True:
+        while i < len(job["chunks"]):
+            yield job["chunks"][i]
+            i += 1
+        if job["done"]:
+            return
+        await asyncio.sleep(0.03)
+
+
+def _live_response(job: dict):
+    if job["done"]:   # finished (or player re-request / range probe) → plain file response
+        if job["error"] and not job["chunks"]:
+            raise HTTPException(502, "TTS service failed")
+        return Response(content=b"".join(job["chunks"]), media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+    return StreamingResponse(_iter_live(job), media_type="audio/mpeg",
+                             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+
+
+@api.get("/voice/tts/live/{job_id}.mp3")
+async def tts_live(job_id: str):
+    job = _live_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "expired")
+    return _live_response(job)
+
+
+# --------- INTRO NARRATION (public · fixed script · JARVIS preset) ---------
+INTRO_SCRIPT = {
+    "sk": "Vitajte v Archangel OS. Som Jarvis — váš strážny anjel. Systém je pripravený.",
+    "cs": "Vítejte v Archangel OS. Jsem Jarvis — váš strážný anděl. Systém je připraven.",
+    "en": "Welcome to Archangel OS. I am Jarvis — your guardian angel. The system is ready.",
+    "de": "Willkommen bei Archangel OS. Ich bin Jarvis — Ihr Schutzengel. Das System ist bereit.",
+    "pl": "Witaj w Archangel OS. Jestem Jarvis — twój anioł stróż. System jest gotowy.",
+    "hu": "Üdvözlöm az Archangel OS-ben. Jarvis vagyok — az őrangyala. A rendszer készen áll.",
+    "es": "Bienvenido a Archangel OS. Soy Jarvis, su ángel guardián. El sistema está listo.",
+    "fr": "Bienvenue dans Archangel OS. Je suis Jarvis, votre ange gardien. Le système est prêt.",
+    "it": "Benvenuto in Archangel OS. Sono Jarvis, il tuo angelo custode. Il sistema è pronto.",
+    "uk": "Вітаю в Archangel OS. Я Джарвіс — ваш янгол-охоронець. Система готова.",
+    "ru": "Добро пожаловать в Archangel OS. Я Джарвис — ваш ангел-хранитель. Система готова.",
+}
+
+
+@api.get("/voice/intro.mp3")
+async def voice_intro(lang: str = "en"):
+    """PUBLIC (pre-login) — the cinematic intro narration in the app language, JARVIS preset."""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(500, "TTS key not configured")
+    lk = (lang or "en")[:2].lower()
+    text = INTRO_SCRIPT.get(lk) or INTRO_SCRIPT["en"]
+    speed = 0.88
+    key = hashlib.sha256(f"{text}|openai|{DEFAULT_OPENAI_VOICE}|{speed}|tts-1|mp3".encode()).hexdigest()
+    if key in _tts_cache:
+        return Response(content=_tts_cache[key], media_type="audio/mpeg", headers={"Cache-Control": "public, max-age=86400"})
+    # one shared render per language — concurrent app starts attach to the same job
+    for job in _live_jobs.values():
+        if job["key"] == key and not job["done"]:
+            return _live_response(job)
+    job_id = _start_live_job(key, "openai", DEFAULT_OPENAI_VOICE, speed, text, lk, DEFAULT_OPENAI_VOICE)
+    return _live_response(_live_jobs[job_id])
 
 @api.get("/voice/voices")
 async def tts_voices(authorization: Optional[str] = Header(None)):

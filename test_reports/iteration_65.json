@@ -1,0 +1,28 @@
+{
+  "summary": "Iter 65 — Expo Go crash fix + live TTS relay + public intro narration + cinematic-intro SKIP button verified. Backend: 8/8 pytest passed (test_iter65_voice_live.py). (1) POST /api/voice/tts stream:true returns 200 with url starting with /api/voice/tts/live/ and live:true; GET the ticket url (no auth) returns 200 audio/mpeg with body>5KB; a SECOND GET of the same live URL also returns 200 audio/mpeg with the full bytes (server keeps the buffer, ticket is replayable, not one-shot). (2) POST /api/voice/tts with voice:'nova' (no override) responds with voice=='onyx' — unified preset confirmed. (3) GET /api/voice/intro.mp3?lang=sk (public, no auth) returns 200 audio/mpeg > 20 KB in ~0.3s cached; ?lang=en and ?lang=xx (fallback) both return 200 audio/mpeg > 20 KB. (4) GET /api/voice/tts/live/doesnotexist.mp3 → 404 as expected. (5) POST /api/agent/chat/stream with 'Aký je dnes deň?' streams data:{t:...} chunks and a final data:{done:true,...}; identical repeat returns cached:true in <1s (measured 0.7 s < 3 s budget). Frontend web (390x844, session gh_session_token=smoketok-fresh-2026): cinematic-intro renders (testID cinematic-intro visible). Because Chromium autoplay policy blocked audio playback (pageerror: 'play() failed because the user didn't interact…'), narration never started, so intro-skip button did NOT appear within 9s — expected per spec. Auto-close after 5s fired correctly and cinematic-intro left the DOM. No red error screen (verifies static expo-notifications import removed on web). Grep confirmed only /app/frontend/src/notifications.ts references expo-notifications, and only via dynamic import inside a Platform!='web' && !isExpoGo guard. /jarvis: onboarding cards PRESKOČIŤ and disclaimer bypassed cleanly. jv-duplex hands-free chip is NOT rendered on web (correct). jv-input + jv-ask → agent bubble streams and shows the 'AI Content · Sovereign Protocol' watermark within ~1s. jv-brief-play → jv-stop appears in ~0.5s and is hidden after pressing jv-stop.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter65_voice_live.py",
+    "/app/test_reports/pytest/pytest_iter65.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "src/notifications.ts is now the ONLY entry point for expo-notifications and uses dynamic import guarded by Platform.OS!='web' && !isExpoGo. Failure paths (_failed=true) degrade silently. Verified via grep — no static imports remain in /app/frontend/{app,src}.",
+    "src/voice.ts fetchSrc() passes stream:true to /api/voice/tts and honours res.live=true by building the live-ticket URL. First sentence goes live, subsequent sentences prefetched as files — good architecture for perceived latency.",
+    "src/CinematicIntro.tsx has 3 completion paths: silentSkip at 5 s (narration didn't start), NARRATION_CAP_MS at 14 s (hard cap), and speakUri().then(finish) after narration finishes. finished.current guards prevent double-fire. In headless-blocked-autoplay mode we hit the 5 s path — verified.",
+    "Live-ticket URL /api/voice/tts/live/{id}.mp3 is REPLAYABLE (second GET also returns full bytes) — this matches spec and is safer than one-shot for retry-after-network-blip on mobile."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "seed_data_creation": "None — reused existing token smoketok-fresh-2026 (smoketest-user-1). Cache warming for /api/voice/intro.mp3?lang=sk and one /api/agent/chat/stream reply were persisted server-side (expected).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Full-duplex hands-free (jv-duplex, /jarvis native only) NOT tested on web per spec. ElevenLabs is in blocked mode → backend transparently falls back to OpenAI TTS onyx; still produces valid audio/mpeg > 20 KB (that's what we assert on). All 5 backend targets and all 3 frontend targets from the review request are green.",
+  "rca_of_issue": "N/A — no issues found. Autoplay-blocked path in headless is expected and the intro auto-close fallback (5 s) handled it correctly, as the spec anticipated."
+}

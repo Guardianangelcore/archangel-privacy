@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Platform, Refres
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
+import { getNotifications } from '@/src/notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
@@ -34,6 +34,8 @@ export default function DailyBrief() {
     await AsyncStorage.setItem(NOTIF_KEY, v ? '1' : '0');
     if (Platform.OS === 'web') return;
     try {
+      const Notifications = await getNotifications();
+      if (!Notifications) { setNotifOn(false); await AsyncStorage.setItem(NOTIF_KEY, '0'); return; }   // Expo Go
       await Notifications.cancelScheduledNotificationAsync('daily-brief-8am').catch(() => {});
       if (v) {
         const { status, canAskAgain } = await Notifications.getPermissionsAsync();

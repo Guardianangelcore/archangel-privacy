@@ -3,7 +3,7 @@
 // "Check your crisis protocols before <season>." Scheduled ONLY while at least one protocol is
 // unfinished; all four are cancelled when everything is ticked. Localized via i18n keys.
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { getNotifications } from './notifications';
 import { t, Lang } from './i18n';
 
 const CATEGORY = 'crisis-seasonal';
@@ -15,7 +15,9 @@ const SEASONS: { key: string; month: number }[] = [
   { key: 'winter', month: 12 },
 ];
 
-async function cancelAll() {
+type N = NonNullable<Awaited<ReturnType<typeof getNotifications>>>;
+
+async function cancelAll(Notifications: N) {
   const all = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(all.filter(n => n.content?.data?.category === CATEGORY)
     .map(n => Notifications.cancelScheduledNotificationAsync(n.identifier)));
@@ -25,8 +27,10 @@ async function cancelAll() {
 export async function syncSeasonalReminders(protocols: { progress: number }[], lang: Lang): Promise<'scheduled' | 'cancelled' | 'skipped'> {
   if (Platform.OS === 'web') return 'skipped';
   try {
+    const Notifications = await getNotifications();
+    if (!Notifications) return 'skipped';   // Expo Go — local notifications need a native build
     const unfinished = protocols.some(p => p.progress < 1);
-    await cancelAll();
+    await cancelAll(Notifications);
     if (!unfinished) return 'cancelled';
     let perm = await Notifications.getPermissionsAsync();
     if (!perm.granted && perm.canAskAgain) perm = await Notifications.requestPermissionsAsync();

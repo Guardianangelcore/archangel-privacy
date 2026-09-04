@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN MAJETOK (ODHAD)",
   "wealth_vault.wallet_address": "Adresa peňaženky",
   "wealth_vault.wealth_vault": "TREZOR MAJETKU",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "HANDS-FREE · ZAP",
+  "jarvis.hands_free_off": "HANDS-FREE · VYP",
+  "jarvis.hands_free_hint": "Prehovorte cez Jarvisa a preruší sa · pauza odošle · po každej odpovedi znova počúva.",
+  "jarvis.listening_hands_free": "Počúvam… keď skončíte, urobte pauzu",
+  "intro.skip_narration": "PRESKOČIŤ"
 }

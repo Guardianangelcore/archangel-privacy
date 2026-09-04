@@ -2106,5 +2106,10 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (ОЦІНКА)",
   "wealth_vault.wallet_address": "Адреса гаманця",
   "wealth_vault.wealth_vault": "СХОВИЩЕ ДОБРОБУТУ",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.hands_free_on": "БЕЗ РУК · УВІМК",
+  "jarvis.hands_free_off": "БЕЗ РУК · ВИМК",
+  "jarvis.hands_free_hint": "Заговоріть поверх Джарвіса, щоб перервати · пауза надсилає · після відповіді він слухає знову.",
+  "jarvis.listening_hands_free": "Слухаю… зробіть паузу, коли закінчите",
+  "intro.skip_narration": "ПРОПУСТИТИ"
 }
