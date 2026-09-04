@@ -304,3 +304,6 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - **I Creator royalty**: `creator_royalty()` 5% on `/token/spend` and `/features/buy` → `creator_royalties` log + GA-T credit to `users.creator_account=true` (founder flagged). `GET /creator/earnings`, `app/creator-earnings.tsx` (profile row for creator/admin).
 - **J Demo fix**: DemoBadge removed from `_layout`, badge switch removed from profile; demo only via Paywall "DEMO MODE · 30 MIN"; `DemoBanner` countdown + auto refresh on expiry (backend `demo_until`).
 - **K Golden Supernova intro**: `CinematicIntro.tsx` rewritten with Animated API only (2px gold point → gold/white wave → white flash → "ARCHANGEL OS / VISION BY GUARDIAN ANGEL / Sovereign Health & Survival OS" → fade); narration + skip kept.
+
+## Entry-flow fix (June 2026)
+- 4 standalone screens: `app/choose-language.tsx` (step 1, `markLangChosen` in `src/entry-flow.ts`, persisted `ga.lang.chosen.v1`) → `/login` (language chips removed; `change-language` link) → `/user-type` (guard in `_layout.tsx` when `user.user_type` missing) → `/(tabs)` Spider Hub. Router guard in `_layout.tsx` RootNav uses `useLangChosen()` (in-memory + AsyncStorage, no race).

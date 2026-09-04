@@ -15,7 +15,8 @@ import { I18nProvider } from "@/src/i18n-context";
 import { initializeRevenueCat, SubscriptionProvider } from "@/src/revenuecat";
 import { useIapMirror } from "@/src/iap-mirror";
 import { registerForPush } from "@/src/push";
-import { getNotifications } from "@/src/notifications";   // lazy + Expo Go-safe (static import crashes Expo Go)
+import { getNotifications } from "@/src/notifications";
+import { useLangChosen } from "@/src/entry-flow";   // lazy + Expo Go-safe (static import crashes Expo Go)
 import GuardianMonitor from "@/src/guardian";
 import { C } from "@/src/theme";
 import { GA_ORIGIN_MARK } from "@/src/watermark";
@@ -49,18 +50,25 @@ function RootNav() {
   // IAP → tier mirror (renewals / restores / lapses) whenever RevenueCat CustomerInfo changes
   useIapMirror();
 
+  // ENTRY FLOW — four standalone screens, in order:
+  // 1 choose-language → 2 login/register → 3 user-type → 4 Spider Hub ((tabs) home).
+  const langChosen = useLangChosen();
+
   useEffect(() => {
-    if (loading) return;
+    if (loading || langChosen === null) return;
     const seg0 = segments[0] as string | undefined;
-    const inAuthGroup = seg0 === 'login' || seg0 === undefined || seg0 === 'index';
+    const entry = seg0 === 'login' || seg0 === 'choose-language' || seg0 === undefined || seg0 === 'index';
     const isPublic = seg0 === 'drop' || seg0 === 'terms-of-service' || seg0 === 'privacy-policy'; // public — no login
     if (isPublic) return;
-    if (!user && !inAuthGroup) {
-      router.replace('/login');
-    } else if (user && (seg0 === 'login' || seg0 === 'index' || seg0 === undefined)) {
+    if (!user) {
+      if (!langChosen && seg0 !== 'choose-language') router.replace('/choose-language' as any);
+      else if (langChosen && seg0 !== 'login' && seg0 !== 'choose-language') router.replace('/login');
+    } else if (!user.user_type && seg0 !== 'user-type') {
+      router.replace('/user-type' as any);
+    } else if (entry) {
       router.replace('/(tabs)');
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, langChosen]);
 
   // Push: register token on login / app open (tokens rotate)
   useEffect(() => {

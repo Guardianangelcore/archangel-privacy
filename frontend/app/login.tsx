@@ -20,7 +20,7 @@ export default function Login() {
   const { signIn, signInDev, signInPassword, registerPassword, authError } = useAuth();
   const router = useRouter();
   // Shared i18n context: the pick here is remembered and applied to the account on sign-in.
-  const { lang, setLang, t, rtl } = useI18n();
+  const { lang, t, rtl } = useI18n();
   const [busy, setBusy] = useState<'google' | 'dev' | 'pw' | null>(null);
   const [showBypass, setShowBypass] = useState(false);
   const [bypassEmail, setBypassEmail] = useState(FOUNDER_EMAIL);
@@ -136,22 +136,9 @@ export default function Login() {
           <View style={styles.divider} />
           <Text style={[styles.tagline, rtl && styles.rtl]}>{t('tagline')}</Text>
 
-          <Text style={[styles.langLabel, rtl && styles.rtl]}>{t('choose_language').toUpperCase()}</Text>
-          <View style={styles.langRow}>
-            {(Object.keys(LANG_NAMES) as Lang[]).map(l => {
-              const active = l === lang;
-              return (
-                <Pressable
-                  testID={`lang-${l}`}
-                  key={l}
-                  onPress={() => setLang(l)}
-                  style={[styles.langChip, active && styles.langChipActive]}
-                >
-                  <Text style={[styles.langChipText, active && styles.langChipTextActive]}>{LANG_NAMES[l]}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Pressable testID="change-language" onPress={() => router.replace('/choose-language' as any)} style={styles.langLink} hitSlop={8}>
+            <Text style={styles.langLinkText}>{LANG_NAMES[lang]} · {t('choose_language').toUpperCase()}</Text>
+          </Pressable>
         </ScrollView>
 
         <View style={styles.bottom}>
@@ -383,7 +370,8 @@ const styles = StyleSheet.create({
   hero2: { color: C.fg, fontSize: 28, fontWeight: '900', letterSpacing: 1, marginTop: -4 },
   divider: { height: 3, backgroundColor: C.fg, width: 64, marginTop: S.lg },
   tagline: { color: C.fg, opacity: 0.9, fontSize: 16, marginTop: S.lg, lineHeight: 22 },
-  langLabel: { color: C.fg, marginTop: S.xxl, fontSize: 11, letterSpacing: 2 },
+  langLink: { alignSelf: 'flex-start', marginTop: S.xl, minHeight: 40, justifyContent: 'center' },
+  langLinkText: { color: C.brand, fontSize: 11, letterSpacing: 2, fontWeight: '800' },
   langRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: S.md, gap: S.sm },
   langChip: { paddingHorizontal: S.lg, paddingVertical: S.md, borderWidth: 1.5, borderColor: C.fg, backgroundColor: 'transparent' },
   langChipActive: { backgroundColor: C.inverse },
