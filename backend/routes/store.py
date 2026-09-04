@@ -37,11 +37,90 @@ ADDONS = {
                            "desc": "Offline messages via nearby Archangel devices."},
     "bioscan_credits_10": {"name": "BioScan · 10 extra scans", "kind": "one_time", "price_eur": 2.99, "gat": 30, "credits": {"bioscan_credits": 10},
                            "desc": "Ten additional BioScan analyses."},
+    # RECURRING add-ons are RevenueCat SUBSCRIPTIONS (package → product id `pro.<package>`), never GA-T.
     "perplexity_ultra":   {"name": "Perplexity Ultra Search", "kind": "recurring", "price_eur": 5.00, "gat": 50,
+                           "rc_package": "addon_perplexity_ultra_monthly",
                            "desc": "Unlimited Sonar web search with citations, every month."},
     "premium_voice":      {"name": "Premium Voice Pack", "kind": "recurring", "price_eur": 3.00, "gat": 30,
+                           "rc_package": "addon_premium_voice_monthly",
                            "desc": "Studio-grade Jarvis voices (ElevenLabs) in your language."},
 }
+ADDON_BY_RC_PRODUCT = {f"pro.{a['rc_package']}": k for k, a in ADDONS.items() if a.get("rc_package")}
+ADDON_GRACE_H = 72          # renewal grace: the device re-syncs on launch; billing retries can lag a few days
+
+
+def is_addon_product(product_identifier: Optional[str]) -> bool:
+    return (product_identifier or "").lower() in ADDON_BY_RC_PRODUCT
+
+
+def _parse_iso(v: Optional[str]) -> Optional[datetime]:
+    if not v:
+        return None
+    try:
+        d = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def addon_active(user_doc: dict, addon_id: str) -> bool:
+    """SERVER-SIDE lifecycle check — an add-on is active only while its synced expiry (plus grace) is ahead."""
+    until = _parse_iso(((user_doc or {}).get("addons_active") or {}).get(addon_id))
+    return bool(until and until + timedelta(hours=ADDON_GRACE_H) > datetime.now(timezone.utc))
+
+
+async def sync_addon_subscriptions(uid: str, active_subs: list, store: Optional[str], now: datetime) -> dict:
+    """Mirror RevenueCat add-on subscriptions (from CustomerInfo.activeSubscriptions + expiration dates).
+    Active → addons_active[id] = expires_date, addon_subs[id] = {status: active…}.
+    Provisioned add-on missing from the active list → status expired (renewal lapsed / cancelled)."""
+    fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "addon_subs": 1, "addons_active": 1}) or {}
+    prev = fresh.get("addon_subs") or {}
+    seen: dict = {}
+    for sub in active_subs:
+        pid = (sub.get("product_identifier") or "").lower()
+        aid = ADDON_BY_RC_PRODUCT.get(pid)
+        if not aid:
+            continue
+        exp = _parse_iso(sub.get("expires_date"))
+        if exp and exp <= now:
+            continue
+        seen[aid] = {"product_identifier": pid, "expires_date": sub.get("expires_date"), "will_renew": sub.get("will_renew"),
+                     "store": sub.get("store") or store, "status": "active", "source": "iap", "synced_at": now,
+                     "started_at": (prev.get(aid) or {}).get("started_at") or now}
+    sets, unsets, changes = {}, {}, []
+    for aid, rec in seen.items():
+        old = prev.get(aid) or {}
+        if old.get("status") != "active" or old.get("expires_date") != rec["expires_date"]:
+            changes.append({"addon": aid, "event": "renewed" if old.get("status") == "active" else "activated", "expires": rec["expires_date"]})
+        sets[f"addon_subs.{aid}"] = rec
+        sets[f"addons_active.{aid}"] = rec["expires_date"] or (now + timedelta(days=30)).isoformat()
+    for aid, old in prev.items():
+        if aid in seen or old.get("source") != "iap" or old.get("status") != "active":
+            continue
+        sets[f"addon_subs.{aid}.status"] = "expired"
+        sets[f"addon_subs.{aid}.expired_at"] = now
+        unsets[f"addons_active.{aid}"] = ""
+        changes.append({"addon": aid, "event": "expired"})
+    upd: dict = {}
+    if sets:
+        upd["$set"] = sets
+    if unsets:
+        upd["$unset"] = unsets
+    if upd:
+        await db.users.update_one({"user_id": uid}, upd)
+    return {"active": sorted(seen), "changes": changes}
+
+
+def addon_status(user_doc: dict) -> dict:
+    out = {}
+    for k, a in ADDONS.items():
+        if a["kind"] != "recurring":
+            continue
+        sub = ((user_doc or {}).get("addon_subs") or {}).get(k) or {}
+        out[k] = {"active": addon_active(user_doc, k), "until": ((user_doc or {}).get("addons_active") or {}).get(k),
+                  "will_renew": sub.get("will_renew"), "status": sub.get("status") or "none", "rc_package": a["rc_package"],
+                  "product_identifier": f"pro.{a['rc_package']}"}
+    return out
 GAT_PER_EUR = 10.0   # add-on GA-T price = EUR price × 10 (same ratio as the pay-per-feature catalog)
 
 
@@ -57,7 +136,7 @@ async def store_catalog(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     tier = await get_active_tier(uid)
-    fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "features_owned": 1, "addons_active": 1, "family_plan": 1, "promo_used": 1}) or {}
+    fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "features_owned": 1, "addons_active": 1, "addon_subs": 1, "family_plan": 1, "promo_used": 1}) or {}
     owned = set(fresh.get("features_owned") or [])
     active = fresh.get("addons_active") or {}
     now = datetime.now(timezone.utc)
@@ -71,9 +150,13 @@ async def store_catalog(authorization: Optional[str] = Header(None)):
     for k, a in ADDONS.items():
         until = active.get(k)
         owned_now = (a.get("feature") in owned) if a["kind"] == "one_time" and a.get("feature") else \
-                    (bool(until) and datetime.fromisoformat(until) > now) if a["kind"] == "recurring" else False
-        addons.append({"id": k, "name": a["name"], "kind": a["kind"], "price_eur": a["price_eur"], "price_gat": addon_price_gat(a),
-                       "desc": a["desc"], "owned": owned_now, "until": until if a["kind"] == "recurring" else None})
+                    addon_active(fresh, k) if a["kind"] == "recurring" else False
+        sub = (fresh.get("addon_subs") or {}).get(k) or {}
+        addons.append({"id": k, "name": a["name"], "kind": a["kind"], "price_eur": a["price_eur"],
+                       "price_gat": addon_price_gat(a) if a["kind"] == "one_time" else None,
+                       "rc_package": a.get("rc_package"), "desc": a["desc"], "owned": owned_now,
+                       "until": until if a["kind"] == "recurring" else None,
+                       "will_renew": sub.get("will_renew"), "status": sub.get("status") or ("active" if owned_now else "none")})
     return {"tier": tier, "tiers": tiers, "family": family, "addons": addons, "promo_used": fresh.get("promo_used") or []}
 
 
@@ -115,6 +198,9 @@ async def store_addon_buy(body: AddonBuyIn, authorization: Optional[str] = Heade
     a = ADDONS.get(body.addon_id)
     if not a:
         raise HTTPException(400, f"addon_id must be one of {list(ADDONS)}")
+    if a["kind"] == "recurring":
+        raise HTTPException(400, f"subscription_only: {a['name']} is a monthly RevenueCat subscription "
+                                 f"(package {a['rc_package']}) — subscribe through the store button")
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     price = addon_price_gat(a)
@@ -140,6 +226,13 @@ async def store_addon_buy(body: AddonBuyIn, authorization: Optional[str] = Heade
     royalty = await creator_royalty("addon", price, "gat", uid, {"addon": body.addon_id, "purchase_id": purchase["purchase_id"]})
     acct = await db.token_accounts.find_one({"user_id": uid}, {"_id": 0, "balance": 1}) or {}
     return {"ok": True, "purchase": clean(purchase), "tx": clean(tx), "balance": acct.get("balance", 0.0), "creator_royalty": royalty}
+
+
+@api.get("/store/addons/status")
+async def store_addons_status(authorization: Optional[str] = Header(None)):
+    """Server-side add-on subscription lifecycle (active / expired / renewal) as enforced by the backend."""
+    user = await get_current_user(authorization)
+    return {"addons": addon_status(user), "grace_hours": ADDON_GRACE_H}
 
 
 class TransferIn(BaseModel):

@@ -10,20 +10,34 @@ import { useAuth } from './auth';
 import { rcEnabled, REVENUECAT_ENTITLEMENT_IDENTIFIER, useSubscription } from './revenuecat';
 
 export type IapSyncResult = {
-  status: 'synced' | 'unchanged' | 'downgraded' | 'noop' | 'kept_higher_tier';
+  status: 'synced' | 'unchanged' | 'downgraded' | 'noop' | 'kept_higher_tier' | 'addons_synced';
   tier: string;
+  addons?: Record<string, { active: boolean; until?: string | null; will_renew?: boolean | null; status: string }>;
   tier_until?: string | null;
   gat_allocation?: { eligible: boolean; credited_now?: number; credited_txs?: { amount: number }[]; next_amount?: number; next_at?: string | null; reason?: string };
 };
 
 /** POST the entitlement state to the backend. Returns null when the user never had the entitlement.
  *  Concurrent callers with the same entitlement snapshot (buy button + useIapMirror) share ONE request. */
+export const isAddonProduct = (pid?: string | null) => (pid || '').toLowerCase().includes('addon_');
+
+export function activeSubs(info: CustomerInfo) {
+  return (info.activeSubscriptions || []).map(pid => ({
+    product_identifier: pid,
+    expires_date: info.allExpirationDates?.[pid] ?? null,
+    store: info.entitlements.all[REVENUECAT_ENTITLEMENT_IDENTIFIER]?.store,
+  }));
+}
+
 const inflight = new Map<string, Promise<IapSyncResult | null>>();
 export function syncIapEntitlement(info: CustomerInfo, appUserId: string | null): Promise<IapSyncResult | null> {
   const ent = info.entitlements.all[REVENUECAT_ENTITLEMENT_IDENTIFIER];
   if (!ent) return Promise.resolve(null);
   const active = info.entitlements.active[REVENUECAT_ENTITLEMENT_IDENTIFIER] !== undefined;
-  const sig = `${appUserId}|${active}|${ent.expirationDate}|${ent.productIdentifier}`;
+  // ONE entitlement aggregates tier plans AND add-on subscriptions → send every active product with its
+  // own expiry so the backend can run separate lifecycles (tier vs Perplexity Ultra / Premium Voice).
+  const active_subscriptions = activeSubs(info);
+  const sig = `${appUserId}|${active}|${ent.expirationDate}|${ent.productIdentifier}|${active_subscriptions.map(s => s.product_identifier + s.expires_date).join(',')}`;
   const existing = inflight.get(sig);
   if (existing) return existing;
   const p = api<IapSyncResult>('/subscription/iap-sync', {
@@ -37,6 +51,7 @@ export function syncIapEntitlement(info: CustomerInfo, appUserId: string | null)
       period_type: ent.periodType,
       app_user_id: appUserId,
       will_renew: ent.willRenew,
+      active_subscriptions,
     }),
   }).finally(() => { setTimeout(() => inflight.delete(sig), 3000); });
   inflight.set(sig, p);
@@ -58,7 +73,7 @@ export function useIapMirror() {
     if (!rcEnabled || !user?.user_id || !customerInfo || !identityReady) return;
     const ent = customerInfo.entitlements.all[REVENUECAT_ENTITLEMENT_IDENTIFIER];
     if (!ent) return;
-    const sig = `${user.user_id}|${ent.isActive}|${ent.expirationDate}|${ent.productIdentifier}`;
+    const sig = `${user.user_id}|${ent.isActive}|${ent.expirationDate}|${ent.productIdentifier}|${(customerInfo.activeSubscriptions || []).join(',')}`;
     if (lastSig.current === sig) return;
     lastSig.current = sig;
     syncIapEntitlement(customerInfo, appUserId).catch(e => console.log('[IAP mirror] sync failed:', errMsg(e)));

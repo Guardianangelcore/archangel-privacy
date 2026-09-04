@@ -23,12 +23,11 @@ def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 
 
 def _set_balance(u: dict, amount: float):
-    """Fund a wallet deterministically via the founder's transfer (founder has genesis-scale funds)."""
-    f = _bypass(FOUNDER)
-    cur = requests.get(f"{BASE}/token/wallet", headers=_h(u), timeout=15).json()["balance"]
-    if amount > cur:
-        r = requests.post(f"{BASE}/store/transfer", headers=_h(f), json={"to_email": u["email"], "amount": amount - cur}, timeout=15)
-        assert r.status_code == 200, r.text
+    from pymongo import MongoClient
+    from dotenv import load_dotenv
+    load_dotenv("/app/backend/.env")
+    db = MongoClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]]
+    db.token_accounts.update_one({"user_id": u["user_id"]}, {"$set": {"balance": float(amount)}, "$setOnInsert": {"earned_total": 0.0, "spent_total": 0.0}}, upsert=True)
 
 
 # ---------- ChatGPT AI MODELS ----------

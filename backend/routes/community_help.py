@@ -97,11 +97,43 @@ async def _push(user_id: str, title: str, message: str, key: str):
         logger.warning(f"help push skipped: {e}")
 
 
-def _view(req: dict, uid: str) -> dict:
+# HELPER REPUTATION — counts only help CONFIRMED by the requester (the peer-verified flow).
+BADGES = (("gold", 20), ("silver", 5), ("bronze", 1))
+
+
+def badge_for(completed: int) -> Optional[str]:
+    for name, need in BADGES:
+        if completed >= need:
+            return name
+    return None
+
+
+async def helper_reputation(helper_ids: list) -> dict:
+    ids = [h for h in set(helper_ids) if h]
+    if not ids:
+        return {}
+    rows = await db.help_requests.aggregate([
+        {"$match": {"helper_id": {"$in": ids}, "status": "confirmed"}},
+        {"$group": {"_id": "$helper_id", "completed": {"$sum": 1}, "earned": {"$sum": {"$add": ["$reserved.wallet", "$reserved.fund"]}},
+                    "last_at": {"$max": "$confirmed_at"}}},
+    ]).to_list(len(ids))
+    stats = {r["_id"]: r for r in rows}
+    out = {}
+    for h in ids:
+        r = stats.get(h) or {}
+        n = int(r.get("completed", 0))
+        out[h] = {"completed": n, "badge": badge_for(n), "earned_gat": round(float(r.get("earned", 0.0)), 2),
+                  "last_at": r["last_at"].isoformat() if r.get("last_at") else None,
+                  "next_badge": next(({"badge": b, "need": need - n} for b, need in reversed(BADGES) if n < need), None)}
+    return out
+
+
+def _view(req: dict, uid: str, rep: Optional[dict] = None) -> dict:
     req = clean(req)
     req["mine"] = req["requester_id"] == uid
     req["helping"] = req.get("helper_id") == uid
     req["reward"] = round(req["reserved"]["wallet"] + req["reserved"]["fund"], 2)
+    req["helper_reputation"] = (rep or {}).get(req.get("helper_id")) if req.get("helper_id") else None
     return req
 
 
@@ -127,13 +159,22 @@ async def help_list(scope: str = "open", authorization: Optional[str] = Header(N
     else:
         q = {"$or": [{"requester_id": uid}, {"helper_id": uid}, {"status": "open"}]}
     rows = await db.help_requests.find(q, {"_id": 0}).sort("created_at", -1).to_list(100)
+    rep = await helper_reputation([r.get("helper_id") for r in rows] + [uid])
     day = _day_start()
     made = await db.help_requests.count_documents({"requester_id": uid, "created_at": {"$gte": day}})
     confirmed = await db.help_requests.count_documents({"requester_id": uid, "confirmed_at": {"$gte": day}})
     supply = await _get_supply()
-    return {"requests": [_view(r, uid) for r in rows], "reward": HELP_REWARD,
+    return {"requests": [_view(r, uid, rep) for r in rows], "reward": HELP_REWARD, "my_reputation": rep.get(uid),
+            "badges": {b: need for b, need in BADGES},
             "limits": {"requests_today": made, "confirms_today": confirmed, "daily_max": DAILY_MAX_REQUESTS},
             "community_fund": round(float(supply.get("treasury", 0.0)), 2), "categories": list(CATEGORIES)}
+
+
+@api.get("/help/reputation/{user_id}")
+async def help_reputation(user_id: str, authorization: Optional[str] = Header(None)):
+    await get_current_user(authorization)
+    rep = await helper_reputation([user_id])
+    return {"user_id": user_id, **rep[user_id], "badges": {b: need for b, need in BADGES}}
 
 
 @api.post("/help/requests", status_code=201)
@@ -176,7 +217,7 @@ async def help_accept(req_id: str, authorization: Optional[str] = Header(None)):
     if res.modified_count == 0:
         raise HTTPException(409, "This request was already taken")
     await _push(req["requester_id"], "🤝 Someone is coming to help", f"{user.get('name') or 'A Guardian'} accepted: {req['title']}", f"help-acc-{req_id}")
-    return {"ok": True, "request": _view(await _load(req_id), uid)}
+    return {"ok": True, "request": _view(await _load(req_id), uid, await helper_reputation([uid]))}
 
 
 @api.post("/help/requests/{req_id}/done")
@@ -210,7 +251,7 @@ async def help_confirm(req_id: str, authorization: Optional[str] = Header(None))
     req = await _load(req_id)
     await _release(req, to_helper=True)
     await _push(req["helper_id"], "💎 Help confirmed", f"+{HELP_REWARD:.0f} GA-T for '{req['title']}' — thank you.", f"help-conf-{req_id}")
-    return {"ok": True, "request": _view(req, uid)}
+    return {"ok": True, "request": _view(req, uid, await helper_reputation([req["helper_id"]]))}
 
 
 @api.post("/help/requests/{req_id}/cancel")

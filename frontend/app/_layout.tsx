@@ -27,6 +27,7 @@ import { LaunchSequence } from "@/src/LaunchSequence";   // cinematic intro (eve
 import { OnboardingTour } from "@/src/onboarding-tour";
 import { startPanicGesture } from "@/src/panic-gesture";
 import { CrisisHUD } from "@/src/CrisisHUD";
+import { DeviceIntegrityGuard } from "@/src/DeviceIntegrity";   // root / jailbreak warning + report
 
 
 LogBox.ignoreAllLogs(true);
@@ -174,6 +175,7 @@ function RootNav() {
   return (
     <>
       <GuardianMonitor />
+      <DeviceIntegrityGuard />
       <DemoBanner />
       <BiometricGate>
         <Stack screenOptions={{

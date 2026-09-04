@@ -917,3 +917,7 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
   dev-bypass host gate (localhost spoof), login+tts 429, atomic spend/feature/transfer, addon GA-T, iap-sync whitelist).
 - Pre-existing unrelated failures: test_password_auth register (missing tos fields), phase15 wallet earn-rule count / royalty-to-self, iter66 creator 403.
 - Live verified: gpt-5.6-luna + gpt-5.6-terra reply through /agent/chat; Jarvis pill switches GPT-5.4 → GPT-5.6 Luna on web.
+
+## Iter 79 — add-on RC subscriptions · helper reputation · SecureStore/remove-console/root detection
+- pytest tests/test_iter79_addon_subs_reputation.py 5/5 + tests/test_iter79_light_backend.py 3/3; testing agent iteration_69.json all green (frontend store RC buttons, addon lifecycle via iap-sync, reputation badges, boot with babel.config.js, secure cache web fallback).
+- Known: RC Test Store in-dialog purchase not drivable in headless Playwright (works on device); founder has perplexity_ultra active.

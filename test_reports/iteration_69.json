@@ -1,0 +1,46 @@
+{
+  "summary": "Iter 79 — Recurring add-on RC subscriptions + helper reputation + P0 security hardening: FRONTEND (390x844) + light backend fully VERIFIED. Backend regression 8/8 passing (5/5 test_iter79_addon_subs_reputation.py re-run + 3/3 new test_iter79_light_backend.py: /security/device-integrity reports rooted=true and produces a 'rooted_device' event in /security/events; POST /store/addon/buy premium_voice → 400 subscription_only; POST /voice/tts → 200 for a fresh user). FRONTEND: (1) /store ADD-ONS tab renders MONTHLY BOOSTS with addon-perplexity_ultra + addon-premium_voice cards (no GA-T price), RC buttons iap-buy-addon_perplexity_ultra_monthly ('APP STORE / GOOGLE PLAY · €5.00/mo') and iap-buy-addon_premium_voice_monthly ('€3.00/mo'); one-time add-ons addon-buy-ghost_mode/analyst_agent/bioscan_credits_10 still show '30 GA-T' / '40 GA-T'. (2) Simulated Premium Voice purchase: RC Test Store dialog opened via iap-confirm → iap-confirm-yes but the RC HTML browser dialog did NOT surface iap-ok/iap-error in headless (RC 'branding info not available for Test Store' warning) — as spec permits, fell back to POST /api/subscription/iap-sync with active_subscriptions=[{pro.addon_premium_voice_monthly}] → 200, tier remained 'sovereign', addons.premium_voice.active=true. After refresh the card shows iap-active-addon_premium_voice_monthly AND addon-until-premium_voice='Renews 2026-10-04' ✓; /store/addons/status confirms premium_voice.active=true, perplexity_ultra.active=false; /auth/me tier NOT elevated. (3) /community-help reputation: two fresh dev-bypass users (requester + helper). Pre-confirm card shows help-badge-<req_id>='NEW HELPER · 0 confirmed'; GET /help/reputation/<helper>=0/None. Confirm → response includes helper_reputation {completed:1, badge:'bronze', earned_gat:10, next_badge:{silver,4}}. Second request (helper accepted) shows help-badge-<req_id2>='BRONZE · 1 confirmed'; helper HELPING tab shows help-my-badge='BRONZE · 1 confirmed'. (4) App boots normally with new babel.config.js — /(tabs) and /jarvis load, title='Archangel OS', no red screen, no console errors about babel/transform, device-integrity-warning NOT visible on web. (5) SecureStore fallback in web localStorage: 'ga.user.cache.v1' NOT present, 'ga.user.cache.v2.n' + 'ga.user.cache.v2.0' present ✓; /blackout and /compass load without errors. Console noise limited to pre-existing deprecation warnings (shadow*, textShadow*, pointerEvents, useNativeDriver) and one benign 'play() failed' from autoplay video — no functional bugs. Language note: fresh dev-bypass user reputation labels render in ENGLISH ('NEW HELPER · 0 confirmed', 'BRONZE · 1 confirmed') rather than the Slovak variants ('NOVÝ POMOCNÍK · 0 potvrdených', 'BRONZ · 1 potvrdených') from spec — matches user locale, not a defect.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "RevenueCat Test Store simulated purchase in Playwright headless", "issue": "RC Test Store HTML dialog opens after iap-confirm-yes but the in-dialog 'Test valid purchase' button is inside RC's own iframe/browser modal — headless Playwright cannot dispatch its click reliably; iap-ok / iap-error never surface. Server-side POST /subscription/iap-sync fallback works and the UI correctly reflects active state after reload (iap-active-addon_premium_voice_monthly + addon-until-premium_voice='Renews 2026-10-04'). Not blocking on device — this is a headless testing limitation, not a product bug.", "affected_testIDs": ["iap-buy-addon_premium_voice_monthly", "iap-confirm", "iap-confirm-yes", "iap-ok", "iap-error"]}
+    ],
+    "design_issues": [
+      {"screen": "onboarding tour overlay (pre-existing)", "issues": ["'SOVEREIGN TOUR 1/4' modal still pops on top of some screens after seeding onboarding flags, same as iter68 — dismissible, non-blocking."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter79_addon_subs_reputation.py (5/5 re-run passing)",
+    "/app/backend/tests/test_iter79_light_backend.py (3/3 new)",
+    "/app/test_reports/pytest/pytest_iter79_re.xml",
+    "/app/test_reports/pytest/pytest_iter79_light.xml"
+  ],
+  "action_items": [
+    "Optional: seed a dev flag to auto-dismiss the SOVEREIGN TOUR overlay for freshly-bypassed sessions used in headless testing (carried over from iter68 — still applicable).",
+    "Optional (i18n only): confirm whether fresh dev-bypass users should default to 'sk' — the reputation badges rendered in English on this run (\"NEW HELPER · 0 confirmed\", \"BRONZE · 1 confirmed\"). Spec mentioned Slovak strings; testIDs are correct so this is language-selection tuning, not a bug."
+  ],
+  "critical_code_review_comments": [
+    "app/store.tsx (188 lines): recurring vs one-time branching in AddonRow is clean; testID scheme (`addon-<id>`, `addon-until-<id>`, `addon-expired-<id>`, `iap-buy-<pkgId>`, `iap-active-<pkgId>`) matches spec exactly. onSynced callback correctly re-loads catalog + refreshes wallet after RC lifecycle events.",
+    "src/IapPurchase.tsx: reuse of tier and addon pkgId under the same component avoided duplicate paywall UI; key = pkgId || `${tier}-${period}` gives stable testIDs for both flows.",
+    "src/secure-cache.ts (34 lines): 1800-char chunking under a single namespace is safe for the ~2 KB iOS Keychain cap; secureCacheRemove is idempotent (reads current chunk count first). Web fallback via storage.secureSet reuses AsyncStorage — verified by localStorage showing ga.user.cache.v2.n/v2.0 and no v1 key.",
+    "babel.config.js: transform-remove-console only fires under NODE_ENV=production, preserves console.error for crash diagnostics — dev/preview builds untouched (verified: /(tabs) + /jarvis boot with no red screen).",
+    "routes/community_help.py helper_reputation projection in /help/requests?scope=mine returns full {completed, badge, earned_gat, last_at, next_badge} — enables the card badge without a second call. Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter79_light_backend.py (new; 3 tests, 3 pass)"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8: 5/5 iter79 addon+reputation + 3/3 new light backend)",
+    "frontend": "100% of testable flows on web preview — only RC in-dialog tap cannot fire in headless (documented; spec permits iap-sync fallback which works)"
+  },
+  "seed_data_creation": "Fresh dev-bypass users created: (a) store: iter79ui-store-29bc4191@example.com → user_cb9dcd40d00d (premium_voice active until 2026-10-04); (b) reputation: iter79ui-req-<rand>@example.com → user_b60a06dacae2 (requester, created 2 help requests) + iter79ui-helper-<rand>@example.com → user_988811f41ad5 (helper, completed=1, badge=bronze, earned_gat=10). Backend pytest creates its own iter79-* users each run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "1) react-native-web Pressable still requires the PointerEvent(pointerdown)+MouseEvent(mousedown)+PointerEvent(pointerup)+MouseEvent(mouseup)+MouseEvent(click) dispatch via page.evaluate for taps — plain page.click(force=True) does NOT reliably fire onPress (iter67 trick, confirmed working again). 2) Dev-bypass path unchanged: POST /api/auth/dev-bypass (preview host only), then POST /api/legal/accept {version:'2026-06.1'} + PUT /api/me/user-type {user_type:'adult'}, then seed localStorage flags: gh_session_token, ga.lang.chosen.v1=1, ga.first_launch.done.v1=1, ga.disclaimer.seen.2026-06.1=1, intro='intro-enter'. 3) Simulate a RC subscription entirely server-side: POST /api/subscription/iap-sync with body.active_subscriptions=[{product_identifier:'pro.addon_premium_voice_monthly', expires_date:<ISO+30d>, will_renew:true}] and top-level product_identifier=same; the UI iap-active-<pkg> + addon-until-<id> populate after a page reload. 4) The founder guardian.angel.core@proton.me already has perplexity_ultra active (RC subscription) so for a fresh purchase test always spin up a new dev-bypass user. 5) The RC HTML Test Store dialog cannot be tapped in headless — fallback to iap-sync is the reliable path. 6) Backend test file test_iter79_light_backend.py reads /security/events as a list (not wrapped in {events:[]}) — mind this if you expand security-events coverage.",
+  "rca_of_issue": "N/A — no defects found. All iter 79 iteration deliverables (recurring add-ons as RC subscriptions, helper reputation badges, secure cache fallback, babel console-strip, root/jailbreak modal suppressed on web) verified in code and at runtime."
+}

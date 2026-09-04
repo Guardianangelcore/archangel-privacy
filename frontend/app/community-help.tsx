@@ -13,10 +13,28 @@ import { C, S, R } from '@/src/theme';
 
 type Req = {
   req_id: string; title: string; details: string; category: string; status: string; reward: number;
-  requester_name: string; helper_name?: string | null; mine: boolean; helping: boolean;
+  requester_name: string; helper_name?: string | null; mine: boolean; helping: boolean; helper_reputation?: Rep | null;
   created_at: string; expires_at: string; reserved: { wallet: number; fund: number };
 };
+type Rep = { completed: number; badge: 'bronze' | 'silver' | 'gold' | null; earned_gat: number; next_badge?: { badge: string; need: number } | null };
 type Scope = 'open' | 'mine' | 'helping';
+const BADGE_COLOR: Record<string, string> = { bronze: '#CD7F32', silver: '#C0C0C0', gold: '#D4AF37' };
+
+/** Trust badge + confirmed-help count — driven only by requester-confirmed GA-T help flows. */
+function HelperBadge({ rep, testID, big }: { rep?: Rep | null; testID: string; big?: boolean }) {
+  const { t: tt } = useI18n();
+  const n = rep?.completed ?? 0;
+  const badge = rep?.badge;
+  const color = badge ? BADGE_COLOR[badge] : C.info;
+  return (
+    <View testID={testID} style={[st.badge, { borderColor: color }, big && { paddingVertical: 6 }]}>
+      <Ionicons name={badge ? 'shield-checkmark' : 'shield-outline'} size={big ? 16 : 12} color={color} />
+      <Text style={[st.badgeText, { color }, big && { fontSize: 11 }]}>
+        {badge ? tt(`help.badge_${badge}`) : tt('help.badge_none')} · {tt('help.completed').replace('{0}', String(n))}
+      </Text>
+    </View>
+  );
+}
 const CAT_ICON: Record<string, string> = { errand: 'walk-outline', medication: 'medkit-outline', transport: 'car-outline', companionship: 'chatbubbles-outline', household: 'home-outline', tech: 'phone-portrait-outline', other: 'hand-right-outline' };
 const STATUS_COLOR: Record<string, string> = { open: C.accent, accepted: C.primary, done: C.warn, confirmed: C.brand, expired: C.info, cancelled: C.info };
 
@@ -77,6 +95,13 @@ export default function CommunityHelp() {
           <View style={st.reward}><Ionicons name="diamond" size={12} color={C.brand} /><Text style={st.rewardText}>{r.reward} GA-T</Text></View>
         </View>
         {!!r.details && <Text style={st.details}>{r.details}</Text>}
+        {!!r.helper_name && (
+          <View style={st.helperRow}>
+            <Ionicons name="person-circle-outline" size={16} color={C.onS3} />
+            <Text style={st.helperName}>{r.helping ? tt('help.you') : r.helper_name}</Text>
+            <HelperBadge rep={r.helper_reputation} testID={`help-badge-${r.req_id}`} />
+          </View>
+        )}
         <View style={st.foot}>
           <View style={[st.status, { borderColor: color }]}><Text style={[st.statusText, { color }]}>{tt(`help.status_${r.status}`)}</Text></View>
           <View style={st.actions}>
@@ -134,6 +159,15 @@ export default function CommunityHelp() {
       </View>
 
       {!!msg && <Text testID="help-msg" style={[st.msg, { color: msg.ok ? C.accent : C.error }]}>{msg.text}</Text>}
+      {data?.my_reputation && (
+        <View style={st.myRep}>
+          <Text style={st.myRepLabel}>{tt('help.my_reputation')}</Text>
+          <HelperBadge rep={data.my_reputation} testID="help-my-badge" big />
+          {!!data.my_reputation.next_badge && (
+            <Text style={st.nextBadge}>{tt('help.next_badge').replace('{0}', String(data.my_reputation.next_badge.need)).replace('{1}', tt(`help.badge_${data.my_reputation.next_badge.badge}`))}</Text>
+          )}
+        </View>
+      )}
       {data?.limits && (
         <Text style={st.limits}>{tt('help.limits').split('{1}').join(String(data.limits.daily_max)).replace('{0}', String(data.limits.requests_today)).replace('{2}', String(data.limits.confirms_today))}</Text>
       )}
@@ -198,6 +232,13 @@ const st = StyleSheet.create({
   details: { color: C.onS3, fontSize: 12, lineHeight: 17 },
   reward: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: C.borderStrong, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 4 },
   rewardText: { color: C.brand, fontWeight: '900', fontSize: 11 },
+  helperRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  helperName: { color: C.onS3, fontSize: 12, fontWeight: '700' },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6 },
+  myRep: { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingHorizontal: S.lg, marginTop: S.sm, flexWrap: 'wrap' },
+  myRepLabel: { color: C.info, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
+  nextBadge: { color: C.info, fontSize: 10.5, width: '100%' },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm, flexWrap: 'wrap' },
   status: { borderWidth: 1, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
   statusText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },

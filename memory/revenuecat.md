@@ -15,6 +15,10 @@ This file is supposed to serve as a memory to you if you have to interact with u
   - sentinel_annual   -> prod8f5bf13a41  (pro.sentinel_annual,   €1490 / P1Y)
   - archangel_monthly -> prod0f64cd08e6  (pro.archangel_monthly, €499 / P1M)
   - archangel_annual  -> prod8f12402bd8  (pro.archangel_annual,  €4990 / P1Y)
+  - ADD-ON SUBSCRIPTIONS (Iter 79, same "pro" entitlement, grant NO tier — backend routes/store.py ADDON_BY_RC_PRODUCT):
+    - addon_perplexity_ultra_monthly -> prod74c8bb3982 (pro.addon_perplexity_ultra_monthly, €5 / P1M)
+    - addon_premium_voice_monthly    -> prodfa6faead38 (pro.addon_premium_voice_monthly,    €3 / P1M)
+    Client sends CustomerInfo.activeSubscriptions (+allExpirationDates) as `active_subscriptions` in /subscription/iap-sync; tier = best non-addon product, add-ons → users.addon_subs/addons_active (72 h grace, status active/expired). GET /store/addons/status.
   - LEGACY: $rc_monthly (pro.monthly, USD 9.99) could not be deleted (has test transactions) but is no longer in the offering; $rc_annual deleted. Never re-add USD packages.
 - Tier mapping (one entitlement "pro" for all tiers): product id containing "archangel" → archangel, "sentinel" → sentinel, else guardian (backend routes/subscription.py iap_tier(), frontend src/revenuecat.tsx iapTierOf() + IAP_PACKAGES). Sovereign = free default, no product.
 - entitlement_products.pro: prod88faf8e237, prod6547915e81, prodb7e5fb979b, prod9a550d12a1, prod54feb91c3d, prod842d5b8add (Test Store + Apple/Play mirrors)

@@ -7,7 +7,7 @@ CZK / GA-T. GA-T payments live via the internal token engine; card billing is
 a placeholder until the real Stripe key is provided (user's decision)."""
 from fastapi import HTTPException, Header, Request
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 
 from core import api, db, clean, get_current_user, _aml_ledger_append, rate_limit, client_ip
@@ -188,6 +188,14 @@ def iap_family_plan(product_identifier: Optional[str]) -> Optional[str]:
     return "family_xl" if "family_xl" in pid else "family" if "family" in pid else "duo" if "duo" in pid else None
 
 
+class ActiveSubIn(BaseModel):
+    product_identifier: str
+    expires_date: Optional[str] = None
+    will_renew: Optional[bool] = None
+    store: Optional[str] = None
+    period_type: Optional[str] = None
+
+
 class IapSyncIn(BaseModel):
     entitlement: str = "pro"
     active: bool
@@ -197,6 +205,9 @@ class IapSyncIn(BaseModel):
     period_type: Optional[str] = None        # NORMAL | TRIAL | INTRO
     app_user_id: Optional[str] = None        # current RevenueCat app user id (must equal our user_id)
     will_renew: Optional[bool] = None
+    # Full list of active product subscriptions (CustomerInfo.activeSubscriptions + allExpirationDates).
+    # Needed because ONE entitlement ("pro") aggregates tier plans AND add-on subscriptions.
+    active_subscriptions: Optional[List[ActiveSubIn]] = None
 
 
 @api.post("/subscription/iap-sync")
@@ -221,19 +232,47 @@ async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization
             raise HTTPException(422, "unknown store")
         if not body.app_user_id:
             raise HTTPException(422, "app_user_id required")
-    tier = iap_tier(body.product_identifier)
     if body.app_user_id and body.app_user_id != uid:
         raise HTTPException(409, "RevenueCat identity does not match the signed-in user")
+
+    # ---- ADD-ON SUBSCRIPTIONS (Perplexity Ultra, Premium Voice) — same entitlement, separate lifecycle ----
+    from routes.store import is_addon_product, sync_addon_subscriptions, addon_status
+    subs = [s.model_dump() for s in (body.active_subscriptions or [])]
+    if body.active_subscriptions is None and body.active and is_addon_product(body.product_identifier):
+        subs = [{"product_identifier": body.product_identifier, "expires_date": body.expires_date,
+                 "will_renew": body.will_renew, "store": body.store, "period_type": body.period_type}]
+    addon_sync = None
+    if body.active_subscriptions is not None or is_addon_product(body.product_identifier):
+        addon_sync = await sync_addon_subscriptions(uid, subs if body.active else [], body.store, now)
+        if addon_sync["changes"]:
+            await _aml_ledger_append(uid, "iap_addon_sync", {"changes": addon_sync["changes"], "store": body.store, "ip": client_ip(request)})
+
+    # ---- TIER: choose the best NON-add-on active product ----
+    tier_subs = [s for s in subs if not is_addon_product(s.get("product_identifier"))]
+    if body.active_subscriptions is None and is_addon_product(body.product_identifier):
+        # Legacy single-product payload about an add-on: never infer anything about the tier from it.
+        fresh0 = await db.users.find_one({"user_id": uid}, {"_id": 0, "tier": 1, "tier_until": 1, "addon_subs": 1, "addons_active": 1}) or {}
+        return {"status": "addons_synced", "tier": current_tier(fresh0), "addons": addon_status(fresh0)}
+    if body.active_subscriptions is not None:
+        if body.active and tier_subs:
+            best = max(tier_subs, key=lambda s: TIERS[iap_tier(s["product_identifier"])]["order"])
+            body.product_identifier, body.expires_date = best["product_identifier"], best.get("expires_date") or body.expires_date
+        elif body.active:
+            # Only add-on subscriptions are active → the entitlement grants no tier (lapse an IAP-granted tier)
+            body.active = False
+    tier = iap_tier(body.product_identifier)
     fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1,
-                                                       "gat_alloc_anchor": 1, "iap": 1, "tier_started_at": 1, "inner_circle": 1})
+                                                       "gat_alloc_anchor": 1, "iap": 1, "tier_started_at": 1, "inner_circle": 1,
+                                                       "addon_subs": 1, "addons_active": 1})
     iap_paid = (fresh.get("tier_paid_with") or "").lower() == "iap"
+    addons_out = addon_status(fresh) if addon_sync is not None else None
     if not body.active:
         # Entitlement lapsed: only downgrade what IAP granted; never touch card/GA-T/trial/inner-circle tiers.
         if iap_paid and fresh.get("tier") in ("guardian", "sentinel", "archangel"):
             await db.users.update_one({"user_id": uid}, {"$set": {"tier": "sovereign", "tier_until": None,
                                                                   "iap.active": False, "iap.synced_at": now}})
-            return {"status": "downgraded", "tier": "sovereign"}
-        return {"status": "noop", "tier": current_tier(fresh)}
+            return {"status": "downgraded", "tier": "sovereign", "addons": addons_out}
+        return {"status": "addons_synced" if addon_sync and addon_sync["changes"] else "noop", "tier": current_tier(fresh), "addons": addons_out}
 
     until = None
     if body.expires_date:
@@ -257,7 +296,7 @@ async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization
         # A tier paid through the store always follows the store (upgrade AND downgrade between IAP products).
         if not iap_paid and TIERS[current_tier(fresh)]["order"] > TIERS[tier]["order"]:
             await db.users.update_one({"user_id": uid}, {"$set": {"iap": iap}})
-            return {"status": "kept_higher_tier", "tier": current_tier(fresh)}
+            return {"status": "kept_higher_tier", "tier": current_tier(fresh), "addons": addons_out}
         await db.users.update_one({"user_id": uid}, {"$set": {
             "tier": tier, "tier_until": until, "tier_paid_with": "iap", "iap": iap,
             "family_plan": iap_family_plan(body.product_identifier),
@@ -272,7 +311,7 @@ async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization
     else:
         alloc = {"eligible": False, "reason": "trial_or_intro_period"}
     return {"status": "synced" if not same else "unchanged", "tier": tier,
-            "tier_until": until.isoformat() if until else None, "gat_allocation": alloc}
+            "tier_until": until.isoformat() if until else None, "gat_allocation": alloc, "addons": addons_out}
 
 
 

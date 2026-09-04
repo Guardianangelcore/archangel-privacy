@@ -174,7 +174,9 @@ async def _fetch_live(lang: str, country: str, focus: Optional[list], n: int,
     now = datetime.now(timezone.utc)
     for it in items:
         await db.medical_news.update_one({"news_id": it["news_id"]}, {"$set": it}, upsert=True)
-    await db.medical_news.delete_many({"live": True, "published_at": {"$lt": now - timedelta(days=LIVE_KEEP_DAYS)}})
+    # Non-destructive retention: stale live items are ARCHIVED (soft flag), never hard-deleted by background work.
+    await db.medical_news.update_many({"live": True, "archived": {"$ne": True}, "published_at": {"$lt": now - timedelta(days=LIVE_KEEP_DAYS)}},
+                                      {"$set": {"live": False, "archived": True, "archived_at": now}})
     return items
 
 
@@ -304,7 +306,7 @@ async def news_feed(force: bool = False, authorization: Optional[str] = Header(N
         seen: set = set()
         items = [n for n in personal + general if not (n["news_id"] in seen or seen.add(n["news_id"]))]
     else:
-        items = await db.medical_news.find({"live": {"$ne": True}}, {"_id": 0}).to_list(50)
+        items = await db.medical_news.find({"live": {"$ne": True}, "archived": {"$ne": True}}, {"_id": 0}).to_list(50)
     matched, other = [], []
     for n in items:
         hit = [tg for tg in n.get("tags", []) if tg and tg in corpus]
@@ -330,7 +332,7 @@ async def tech_tracker(authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     await ensure_news_seed()
     items = await db.medical_news.find(
-        {"tech": {"$in": list(HIGH_TECH)}, "region": {"$regex": "CZ|SK"}}, {"_id": 0}).to_list(20)
+        {"tech": {"$in": list(HIGH_TECH)}, "region": {"$regex": "CZ|SK"}, "archived": {"$ne": True}}, {"_id": 0}).to_list(20)
     return {"deployments": items, "regions": ["CZ", "SK"],
             "hunter_note": "Waitlist Hunter prioritizes these high-tech locations when making reservations."}
 

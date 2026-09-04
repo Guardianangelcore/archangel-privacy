@@ -69,7 +69,10 @@ async def ensure_arb_seed():
     if count >= 10000:
         _seeded = True
         return
-    await db.arb_clinics.delete_many({})
+    # Idempotent, NON-destructive seed: deterministic clinic_ids are upserted; a partial index is completed
+    # in place instead of being wiped (no hard deletes on the startup/background path).
+    from pymongo import ReplaceOne
+    existing = set(d["clinic_id"] async for d in db.arb_clinics.find({}, {"_id": 0, "clinic_id": 1}))
     rng = random.Random(2026)
     codes = list(PROCEDURES.keys())
     batch, total = [], 0
@@ -96,11 +99,15 @@ async def ensure_arb_seed():
             "languages": sorted(set(["en"] + rng.sample(["de", "sk", "cs", "hu", "pl", "es", "fr", "it", "ru"], k=2))),
         })
         if len(batch) >= 1000:
-            await db.arb_clinics.insert_many(batch)
+            ops = [ReplaceOne({"clinic_id": b["clinic_id"]}, b, upsert=True) for b in batch if b["clinic_id"] not in existing]
+            if ops:
+                await db.arb_clinics.bulk_write(ops, ordered=False)
             total += len(batch)
             batch = []
     if batch:
-        await db.arb_clinics.insert_many(batch)
+        ops = [ReplaceOne({"clinic_id": b["clinic_id"]}, b, upsert=True) for b in batch if b["clinic_id"] not in existing]
+        if ops:
+            await db.arb_clinics.bulk_write(ops, ordered=False)
         total += len(batch)
     await db.arb_clinics.create_index([("procedures.code", 1), ("country", 1)])
     logger.info(f"Arbitrage index seeded: {total} clinics")

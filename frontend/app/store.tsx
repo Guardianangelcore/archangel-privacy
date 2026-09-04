@@ -109,7 +109,7 @@ export default function Store() {
             <Text style={st.section}>ONE-TIME UNLOCKS</Text>
             {cat.addons.filter((a: any) => a.kind === 'one_time').map((a: any) => <AddonRow key={a.id} a={a} busy={busy} onBuy={buyAddon} />)}
             <Text style={st.section}>MONTHLY BOOSTS</Text>
-            {cat.addons.filter((a: any) => a.kind === 'recurring').map((a: any) => <AddonRow key={a.id} a={a} busy={busy} onBuy={buyAddon} />)}
+            {cat.addons.filter((a: any) => a.kind === 'recurring').map((a: any) => <AddonRow key={a.id} a={a} busy={busy} onBuy={buyAddon} onSynced={() => { load(); refresh?.(); }} />)}
             {!!msg && <Text testID="addon-msg" style={[st.msg, { color: msg.startsWith('✓') ? C.accent : C.error }]}>{msg}</Text>}
           </>
         )}
@@ -118,17 +118,32 @@ export default function Store() {
   );
 }
 
-function AddonRow({ a, busy, onBuy }: { a: any; busy: string | null; onBuy: (id: string, name: string) => void }) {
+function AddonRow({ a, busy, onBuy, onSynced }: { a: any; busy: string | null; onBuy: (id: string, name: string) => void; onSynced?: () => void }) {
+  if (a.kind === 'recurring') {
+    // MONTHLY ADD-ON = RevenueCat subscription (renewal / expiry enforced server-side via iap-sync)
+    return (
+      <View testID={`addon-${a.id}`} style={[st.addon, { flexDirection: 'column', alignItems: 'stretch' }]}>
+        <Text style={st.addonName}>{a.name}</Text>
+        <Text style={st.addonDesc}>{a.desc}</Text>
+        {a.owned && a.until && (
+          <Text testID={`addon-until-${a.id}`} style={st.until}>
+            {a.will_renew === false ? 'Expires' : 'Renews'} {String(a.until).slice(0, 10)}
+          </Text>
+        )}
+        {a.status === 'expired' && !a.owned && <Text testID={`addon-expired-${a.id}`} style={st.until}>Subscription expired — renew below</Text>}
+        <IapBuyButton pkgId={a.rc_package} label={a.name} period="monthly" active={!!a.owned} accent={C.brand} onSynced={onSynced} />
+      </View>
+    );
+  }
   return (
     <View testID={`addon-${a.id}`} style={st.addon}>
       <View style={{ flex: 1 }}>
         <Text style={st.addonName}>{a.name}</Text>
         <Text style={st.addonDesc}>{a.desc}</Text>
-        {a.owned && a.until && <Text style={st.until}>Active until {String(a.until).slice(0, 10)}</Text>}
       </View>
-      {a.owned && a.kind === 'one_time' ? <Text style={st.owned}>✓ OWNED</Text> : (
+      {a.owned ? <Text style={st.owned}>✓ OWNED</Text> : (
         <Pressable testID={`addon-buy-${a.id}`} onPress={() => onBuy(a.id, a.name)} disabled={!!busy} style={st.buy}>
-          {busy === a.id ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.buyText}>{a.price_gat} GA-T{a.kind === 'recurring' ? '/mo' : ''}</Text>}
+          {busy === a.id ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.buyText}>{a.price_gat} GA-T</Text>}
         </Pressable>
       )}
     </View>

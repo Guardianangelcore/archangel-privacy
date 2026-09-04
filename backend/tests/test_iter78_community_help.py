@@ -18,9 +18,12 @@ def _bal(u): return requests.get(f"{BASE}/token/wallet", headers=_h(u), timeout=
 
 
 def _fund(u, amount):
-    f = _bypass(FOUNDER)
-    r = requests.post(f"{BASE}/store/transfer", headers=_h(f), json={"to_email": u["email"], "amount": amount}, timeout=15)
-    assert r.status_code == 200, r.text
+    """Deterministic wallet funding straight in Mongo (test-only; the founder wallet may be drained by other suites)."""
+    from pymongo import MongoClient
+    from dotenv import load_dotenv
+    load_dotenv("/app/backend/.env")
+    db = MongoClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]]
+    db.token_accounts.update_one({"user_id": u["user_id"]}, {"$inc": {"balance": float(amount)}, "$setOnInsert": {"earned_total": 0.0, "spent_total": 0.0}}, upsert=True)
 
 
 def _create(u, title="Buy my medication"):

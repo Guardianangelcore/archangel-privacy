@@ -6,7 +6,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platf
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureCacheGet, secureCacheSet } from '@/src/secure-cache';
 import * as Location from 'expo-location';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
@@ -15,7 +15,7 @@ import { C, S } from '@/src/theme';
 import { Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
 
-const KEY = 'gh_compass_pack';
+const KEY = 'gh_compass_pack_v2';   // Keychain/Keystore (contains bunker coordinates + contacts)
 
 async function getLoc(): Promise<{ lat: number | null; lng: number | null }> {
   try {
@@ -56,12 +56,12 @@ export default function Compass() {
     try {
       const p: any = await api('/compass/pack');
       setPack(p); setOffline(false);
-      await AsyncStorage.setItem(KEY, JSON.stringify(p));
+      await secureCacheSet(KEY, p);
       const [b, q] = await Promise.all([api('/bio-beacon/status'), api('/satellite/queue')]);
       setBeacon((b as any).beacon); setSat((q as any).queue || []);
     } catch {
-      const cached = await AsyncStorage.getItem(KEY);
-      if (cached) { setPack(JSON.parse(cached)); setOffline(true); }
+      const cached = await secureCacheGet<any>(KEY);
+      if (cached) { setPack(cached); setOffline(true); }
     }
   }, []);
   useEffect(() => { load(); loadBearing(); }, [load, loadBearing]);

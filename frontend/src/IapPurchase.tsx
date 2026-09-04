@@ -19,6 +19,11 @@ type BuyProps = {
   tier?: IapTier;
   period: 'monthly' | 'annual';
   accent?: string;
+  /** ADD-ON subscription mode: RevenueCat package identifier (e.g. addon_premium_voice_monthly) + display label. */
+  pkgId?: string;
+  label?: string;
+  /** Add-on already active per the backend (server-side lifecycle) → shows the active state. */
+  active?: boolean;
   /** Called after the backend tier mirror; `message` is the human-readable confirmation (the button may unmount once the tier flips). */
   onSynced?: (r: IapSyncResult | null, message: string) => void;
 };
@@ -26,17 +31,19 @@ type BuyProps = {
 /** RevenueCat cancel = PURCHASE_CANCELLED_ERROR ("1" native, numeric 1 in Browser Mode). */
 const isUserCancelled = (e: any) => !!e?.userCancelled || String(e?.code) === '1';
 
-export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynced }: BuyProps) {
+export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynced, pkgId, label, active }: BuyProps) {
   const { t: tt, tx } = useI18n();
   const { offerings, offeringsError, purchase, isPurchasing, identityReady, identityError, isLoading, activeTier, appUserId } = useSubscription();
-  const TIER = tier.toUpperCase();
+  const TIER = (label || tier).toUpperCase();
+  const key = pkgId || `${tier}-${period}`;
+  const isActive = pkgId ? !!active : activeTier === tier;
   const [confirm, setConfirm] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
 
   if (!rcEnabled) return null;
   const current = offerings?.current;
-  const wanted = IAP_PACKAGES[tier][period];
+  const wanted = pkgId || IAP_PACKAGES[tier][period];
   const pkg: PurchasesPackage | undefined = current?.availablePackages.find(p => p.identifier === wanted);
 
   if (isLoading && !pkg) return <ActivityIndicator testID="iap-loading" size="small" color={accent} style={{ marginTop: S.md }} />;
@@ -68,10 +75,10 @@ export function IapBuyButton({ tier = 'guardian', period, accent = GOLD, onSynce
   const disabled = !identityReady || isPurchasing;
   return (
     <View style={st.wrap}>
-      {activeTier === tier ? (
-        <Text testID={`iap-active-${tier}`} style={[st.active, { color: accent }]}>✓ {TIER} {tt('c_IapPurchase.active_via')} {STORE_LABEL}</Text>
+      {isActive ? (
+        <Text testID={`iap-active-${pkgId || tier}`} style={[st.active, { color: accent }]}>✓ {TIER} {tt('c_IapPurchase.active_via')} {STORE_LABEL}</Text>
       ) : (
-        <Pressable testID={`iap-buy-${tier}-${period}`} onPress={() => setConfirm(true)} disabled={disabled}
+        <Pressable testID={`iap-buy-${key}`} onPress={() => setConfirm(true)} disabled={disabled}
           style={[st.buyBtn, { borderColor: accent, opacity: disabled ? 0.5 : 1 }]}>
           {isPurchasing ? <ActivityIndicator size="small" color={accent} /> : (
             <View style={st.row}>

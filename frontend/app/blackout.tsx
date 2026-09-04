@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platf
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureCacheGet, secureCacheSet } from '@/src/secure-cache';
 import { api } from '@/src/api';
 import { useAuth } from '@/src/auth';
 import { C, S } from '@/src/theme';
@@ -12,7 +12,7 @@ import { t, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
 import Paywall from '@/src/Paywall';
 
-const KEY = 'gh_blackout_snapshot';
+const KEY = 'gh_blackout_snapshot_v2';   // Keychain/Keystore — medical + contact data never sit in plain storage
 
 export default function Blackout() {
   const { t: tt, tx } = useI18n();
@@ -26,8 +26,8 @@ export default function Blackout() {
 
   useEffect(() => {
     (async () => {
-      const cached = await AsyncStorage.getItem(KEY);
-      if (cached) { setSnap(JSON.parse(cached)); setSaved(JSON.parse(cached).generated_at); }
+      const cached = await secureCacheGet<any>(KEY);
+      if (cached) { setSnap(cached); setSaved(cached.generated_at); }
     })();
   }, []);
 
@@ -36,7 +36,7 @@ export default function Blackout() {
     try {
       const s = await api('/blackout/snapshot');
       setSnap(s); setSaved((s as any).generated_at);
-      await AsyncStorage.setItem(KEY, JSON.stringify(s));
+      await secureCacheSet(KEY, s);
     } catch (e: any) { if (/^402:/.test(String(e?.message || e))) setLocked(true); else console.log(e); }
     setLoading(false);
   };

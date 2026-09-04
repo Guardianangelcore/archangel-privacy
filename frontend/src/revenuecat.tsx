@@ -30,6 +30,7 @@ export const IAP_PACKAGES: Record<IapTier, { monthly: string; annual: string }> 
   family_xl: { monthly: 'family_xl_monthly', annual: 'family_xl_annual' },
 };
 /** One entitlement covers all tiers — the tier is derived from the store product identifier. */
+const TIER_ORDER: IapTier[] = ['duo', 'family', 'family_xl', 'guardian', 'sentinel', 'archangel'];
 export function iapTierOf(productIdentifier?: string | null): IapTier {
   const pid = (productIdentifier || '').toLowerCase();
   if (pid.includes('archangel')) return 'archangel';
@@ -143,14 +144,22 @@ function useSubscriptionContext() {
   });
 
   const entitlement = customerInfoQuery.data?.entitlements.active?.[REVENUECAT_ENTITLEMENT_IDENTIFIER];
-  const isSubscribed = entitlement !== undefined;
-  const activeTier: IapTier | null = entitlement ? iapTierOf(entitlement.productIdentifier) : null;
+  // Add-on subscriptions (addon_*) share the "pro" entitlement but grant NO tier.
+  const activeProducts = customerInfoQuery.data?.activeSubscriptions || [];
+  const tierProducts = activeProducts.filter(p => !p.toLowerCase().includes('addon_'));
+  const activeAddonPackages = activeProducts.filter(p => p.toLowerCase().includes('addon_')).map(p => p.replace(/^pro\./, ''));
+  const activeTier: IapTier | null = !entitlement ? null
+    : tierProducts.length ? tierProducts.map(iapTierOf).sort((a, b) => TIER_ORDER.indexOf(b) - TIER_ORDER.indexOf(a))[0]
+    : entitlement.productIdentifier.toLowerCase().includes('addon_') ? null : iapTierOf(entitlement.productIdentifier);
+  const isSubscribed = activeTier !== null;   // add-on-only subscribers are NOT tier subscribers
+
   const identityReady = !isAnonymous(appUserId) && (!user?.user_id || appUserId === user.user_id) && !identityError;
 
   return {
     customerInfo: customerInfoQuery.data,
     entitlement,
     activeTier,
+    activeAddonPackages,
     offerings: offeringsQuery.data,
     offeringsError: offeringsQuery.error,
     isSubscribed,

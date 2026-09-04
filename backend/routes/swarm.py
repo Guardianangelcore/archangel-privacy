@@ -10,6 +10,7 @@ loops here are fully functional inside this deployment.
 """
 from fastapi import HTTPException, Header
 from typing import Optional
+from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 import uuid, hashlib, json, random, asyncio
 
@@ -627,6 +628,30 @@ async def depin_safe_migration(authorization: Optional[str] = Header(None)):
                                          "at": report["at"]})
     await bus_publish("depin.safe_migration", "founder", {"from": old, "to": new_ids})
     return clean(report)
+
+class DeviceIntegrityIn(BaseModel):
+    rooted: bool
+    platform: Optional[str] = None
+    model: Optional[str] = None
+    os_version: Optional[str] = None
+    is_device: Optional[bool] = None
+
+
+@api.post("/security/device-integrity")
+async def security_device_integrity(body: DeviceIntegrityIn, authorization: Optional[str] = Header(None)):
+    """Startup root/jailbreak self-report (expo-device isRootedExperimentalAsync). Stored on the user
+    (`device_integrity`) + security_events; sensitive server flows can consult `device_integrity.rooted`.
+    Hardware attestation (Play Integrity / App Attest) needs a native build + store credentials — see PRD."""
+    user = await get_current_user(authorization)
+    now = datetime.now(timezone.utc)
+    rec = {"rooted": body.rooted, "platform": body.platform, "model": body.model, "os_version": body.os_version,
+           "is_device": body.is_device, "checked_at": now, "attestation": "none"}
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"device_integrity": rec}})
+    if body.rooted:
+        await db.security_events.insert_one({"event_id": uuid.uuid4().hex, "kind": "rooted_device", "severity": "warning",
+                                             "user_id": user["user_id"], "detail": f"{body.platform} {body.model} rooted/jailbroken", "at": now})
+    return {"ok": True, "device_integrity": clean(rec)}
+
 
 @api.get("/security/events")
 async def security_events(authorization: Optional[str] = Header(None)):

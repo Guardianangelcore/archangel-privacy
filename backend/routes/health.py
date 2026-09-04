@@ -457,6 +457,13 @@ async def tts_generate(body: TTSIn, request: Request, authorization: Optional[st
         raise HTTPException(400, "Empty text")
     speed = min(1.3, max(0.7, body.speed or DEFAULT_TTS_SPEED))
     engine, voice = _resolve_voice(user, body)
+    if engine == "elevenlabs":
+        # PREMIUM VOICE PACK — studio voices need the add-on subscription (server-side lifecycle check)
+        # or Sentinel+; otherwise silently fall back to the OpenAI JARVIS preset.
+        from routes.store import addon_active
+        from routes.subscription import get_active_tier, TIER_RANK
+        if not addon_active(user, "premium_voice") and TIER_RANK.get(await get_active_tier(user["user_id"]), 0) < TIER_RANK["sentinel"]:
+            engine, voice = "openai", (user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE)
     model = ELEVEN_MODEL if engine == "elevenlabs" else "tts-1"
     key = hashlib.sha256(f"{text}|{engine}|{voice}|{speed}|{model}|mp3".encode()).hexdigest()
     if key in _tts_cache:
