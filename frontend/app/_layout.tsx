@@ -26,26 +26,7 @@ import { LaunchSequence } from "@/src/LaunchSequence";   // cinematic intro (eve
 import { OnboardingTour } from "@/src/onboarding-tour";
 import { startPanicGesture } from "@/src/panic-gesture";
 import { CrisisHUD } from "@/src/CrisisHUD";
-import { useDemoMode } from "@/src/demo-mode";
 
-// COMPETITION DEMO BADGE — small pill, top-right, on all screens (toggle in Settings)
-function DemoBadge() {
-  const on = useDemoMode();
-  if (!on) return null;
-  return (
-    <View
-      testID="demo-badge"
-      pointerEvents="none"
-      style={{
-        position: "absolute", top: Platform.OS === "web" ? 8 : 52, right: 10, zIndex: 9999,
-        backgroundColor: "rgba(212,175,55,0.16)", borderColor: "rgba(212,175,55,0.6)",
-        borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3,
-      }}
-    >
-      <Text style={{ color: "#D4AF37", fontSize: 9, fontWeight: "900", letterSpacing: 2 }}>DEMO</Text>
-    </View>
-  );
-}
 
 LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
@@ -204,7 +185,6 @@ function RootNav() {
         <CrisisHUD />
       </BiometricGate>
       {/* COMPETITION DEMO BADGE — toggle in Settings → Demo Mode */}
-      <DemoBadge />
       {/* Hidden digital watermark — original Guardian Angel build fingerprint */}
       <Text
         accessibilityElementsHidden

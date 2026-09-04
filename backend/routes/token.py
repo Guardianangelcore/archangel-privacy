@@ -343,6 +343,12 @@ async def token_spend(body: SpendIn, authorization: Optional[str] = Header(None)
     price = item["price"]
     burn = round(price * BURN_RATE, 4)
     now = datetime.now(timezone.utc)
+    # CREATOR ROYALTY — 5 % of every GA-T sale goes to the Guardian Angel creator account
+    try:
+        from routes.features import creator_royalty
+        await creator_royalty("gat_sale", price, "gat", user["user_id"], {"item": body.item})
+    except Exception as _e:
+        logger.warning(f"creator royalty skipped: {_e}")
     await db.token_accounts.update_one(
         {"user_id": user["user_id"]},
         {"$inc": {"balance": -price, "spent_total": price}, "$set": {"updated_at": now}})

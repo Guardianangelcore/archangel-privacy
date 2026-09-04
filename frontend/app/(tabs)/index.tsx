@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { useAuth } from '@/src/auth';
+import { SpiderHub } from '@/src/SpiderHub';
 import { api } from '@/src/api';
 import { useAcousticGuard } from '@/src/acoustic';
 import { C, S, R, GOLD } from '@/src/theme';
@@ -39,7 +40,23 @@ async function fireBeacon() {
   await api('/beacon/trigger', { method: 'POST', body: JSON.stringify({ lat, lng, note: 'stealth' }) });
 }
 
+// SPIDER HUB is the main screen (A). The classic dashboard stays one tap away ("Classic Home"
+// node) and is remembered for the session. Users without a profile type pick one first (B).
 export default function Home() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [classic, setClassic] = useState(false);
+  useEffect(() => { if (user && !user.user_type) router.replace('/user-type' as any); }, [user, router]);
+  if (!classic) return (
+    <SafeAreaView testID="hub-home" style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
+      <FirstLaunchDisclaimer />
+      <SpiderHub onClassic={() => setClassic(true)} />
+    </SafeAreaView>
+  );
+  return <ClassicHome onHub={() => setClassic(false)} />;
+}
+
+function ClassicHome({ onHub }: { onHub: () => void }) {
   const { t: tt, tx } = useI18n();
   const { user, setUser } = useAuth();
   const router = useRouter();
@@ -120,6 +137,9 @@ export default function Home() {
     <SafeAreaView testID="standard-home" style={styles.root} edges={['top']}>
       {/* First-launch legal notice (not a medical device · does not replace 112) — once per device */}
       <FirstLaunchDisclaimer />
+      <Pressable testID="back-to-hub" onPress={onHub} style={{ alignSelf: 'center', marginTop: 6, minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(212,175,55,0.5)', justifyContent: 'center' }}>
+        <Text style={{ color: '#D4AF37', fontWeight: '900', fontSize: 10, letterSpacing: 2 }}>◉ SPIDER HUB</Text>
+      </Pressable>
       {/* Freeze toast — appears when the user long-presses the streak chip to protect their series */}
       {!!freezeMsg && (
         <View testID="home-freeze-toast" style={styles.freezeToast}>

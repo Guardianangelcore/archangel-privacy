@@ -18,7 +18,6 @@ import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
 import { getPanicTaps, setPanicTaps } from '@/src/panic-gesture';
-import { useDemoMode, setDemoMode } from '@/src/demo-mode';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Profile() {
@@ -37,7 +36,6 @@ export default function Profile() {
   const [geoMsg, setGeoMsg] = useState('');
   const [cityPick, setCityPick] = useState(false);
   const [langSuggest, setLangSuggest] = useState<any>(null);
-  const demoBadge = useDemoMode();
 
   const applyLangSuggestion = async () => {
     if (!langSuggest) return;
@@ -277,19 +275,6 @@ export default function Profile() {
           </View>
           <Ionicons name="chevron-forward" size={18} color="#0B0B0D" />
         </Pressable>
-        <View style={styles.guardRow}>
-          <Ionicons name="pricetag-outline" size={22} color={C.brand} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.guardTitle}>{tt('tabs_profile.demo_badge')}</Text>
-            <Text style={styles.guardSub}>{tt('tabs_profile.shows_a_demo_badge_in_the_top_right')}</Text>
-          </View>
-          <Switch
-            testID="prof-demo-badge"
-            value={demoBadge}
-            onValueChange={v => setDemoMode(v)}
-            trackColor={{ true: C.brand, false: C.surface3 }}
-          />
-        </View>
 
         <Text testID="prof-lang-title" style={styles.section}>{t('language', lang)}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
@@ -601,6 +586,20 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{tt('privacy_policy.privacy_policy')}</Text>
         </Pressable>
 
+        <Pressable testID="user-type-btn" onPress={() => router.push('/user-type')} style={styles.qrBtn}>
+          <Ionicons name="people-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>Who uses the app · {String(user?.user_type || 'adult').toUpperCase()}</Text>
+        </Pressable>
+        <Pressable testID="health-card-btn" onPress={() => router.push('/health-card')} style={styles.qrBtn}>
+          <Ionicons name="id-card-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>Health Card · documents, insurance, claims</Text>
+        </Pressable>
+        {!!(user?.creator_account || user?.is_admin) && (
+          <Pressable testID="creator-earnings-btn" onPress={() => router.push('/creator-earnings')} style={styles.qrBtn}>
+            <Ionicons name="cash-outline" size={18} color={C.brand} />
+            <Text style={[styles.qrBtnText, { color: C.brand }]}>Creator Earnings · 5% royalty dashboard</Text>
+          </Pressable>
+        )}
         <Pressable testID="eternal-vault-btn" onPress={() => router.push('/eternal-vault')} style={styles.qrBtn}>
           <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>{tt('tabs_profile.eternal_vault_legacy_last_will')}</Text>

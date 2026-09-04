@@ -1,0 +1,39 @@
+{
+  "summary": "MEGA-BATCH regression (Spider Hub, User Type, Health Card, Multi-Agent, Bunker, Mesh, Pay-per-Feature, Creator Royalty, Golden Supernova intro, no DEMO badge). Backend pytest 13/14 pass; the single 'fail' is not a code bug but seeded-data drift (smoketest-user-1 already has creator_account:true in this DB, so /api/creator/earnings returns 200 with 2 royalty rows instead of the 403 expected by the review). Frontend flows verified on mobile viewport (375x667): Cinematic intro renders 'ARCHANGEL OS' → intro-enter dismisses, Spider Hub with all 4 modules + rail + active-agents 5/5 (priority) renders, no DEMO pill anywhere, node-survival→(node-crisis/bunker/mesh/ghost) and node-health→node-card→Health Card tabs+back all work, Bunker 72h checklist toggles (0/19→1/19) with map+list tabs, Offline Mesh shows '2 nearby devices' SIMULATION and mesh-send produces mesh-msg-mine bubble with 'delivered to 0/2' meta, hub-input+hub-send auto-navigates to /jarvis?q=... and Sovereign watermark appears within ~3s, /user-type has all 5 cards ut-adult/senior/clinician/responder/child (selection PUT /me/user-type returns 200 and router.replaces to /(tabs) — see caveat below), Profile tab has user-type-btn + health-card-btn and no prof-demo-badge switch. No React Native red screens. Mocked-by-design: Offline Mesh peers on web, EUR feature purchase (no card sheet). No new deprecated packages detected in the batch under review.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/creator/earnings",
+       "issue": "Review expected 403 for smoketok (non-creator), but this environment already has users.creator_account=true on user_ac98119726d0 (smoketest-user-1) and 2 royalty rows credited to it (bunker gat 1.0 + mesh_sms eur 0.0745). Returned 200 with real earnings payload. The endpoint gate logic itself is correct (checks creator_account/is_admin/role==admin) — only test-env DB state drifted. Either (a) unset creator_account on user_ac98119726d0, or (b) update the review expectation. Verified by inspecting response JSON: creator_id == smoketok user_id."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter66_mega_batch.py",
+    "/app/test_reports/pytest/pytest_iter66.xml"
+  ],
+  "action_items": [
+    "Decide creator/earnings state: either strip creator_account:true from users.user_ac98119726d0 to keep smoketok as a plain user (matches review expectation), or update the review/spec since this user is already the creator account and the endpoint is behaving correctly. No code change needed either way.",
+    "Optional: consider making the Golden Supernova intro dismissible sooner or persist 'seen' so navigating back into /(tabs)/profile does not re-trigger the enter gate (observed intro re-appearing after a fresh navigation to /(tabs)/profile — not required by the review, just UX)."
+  ],
+  "critical_code_review_comments": [
+    "routes/features.py (270 lines): well-scoped, no _id leaks (uses clean/projections). Prices, tier gating and 5% royalty logic are consistent with the review spec.",
+    "agents/run pipeline correctly threads LENS→SCRIBE→ANALYST→GUARDIAN→JARVIS with per-agent tier gating; guardian trigger is keyword-based (evacuation/bunker/etc). Ibuprofen+warfarin prompt in the test correctly produced scribe+analyst+jarvis done trace (guardian not triggered — expected).",
+    "health-card PUT reflects insurance_number/insurer/contracts on subsequent GET.",
+    "nearby/care rejects unknown kinds with 400 and returns 200+results[] for shelter as spec'd."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter66_mega_batch.py (new pytest suite for this batch)"
+  ],
+  "success_rate": {"backend": "93% (13/14 — one failure is env-state drift, not code)", "frontend": "100% of testable flows"},
+  "seed_data_creation": "None. Tests use the pre-seeded smoketest-user-1 (token smoketok-fresh-2026). Verified that /api/me/user-type was left at 'adult' at end of run (curl PUT adult → 200).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Playwright note: react-native-web Pressable in this build does NOT respond to page.click(force=True) alone — it requires a full pointerdown/mousedown/pointerup/mouseup/click sequence. If you get 'no navigation / no API call' after clicking a Pressable, dispatch the full sequence via page.evaluate. Real mouse/touch users are unaffected. Confirmed by testing ut-clinician: page.click → no-op; full pointer sequence → PUT /api/me/user-type 200 + router.replace('/'). Web preview also has an unrelated 429 log-line from a Sonar/perplexity cache poll; harmless. Intro autoplay triggers a benign 'play() failed' PAGEERR — expected on web.",
+  "rca_of_issue": "N/A — no functional bugs found in this iteration. The single test failure (creator/earnings expecting 403) is a seeded-data drift, not a defect."
+}

@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Switch, Modal, Platform, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
 import { startWakeWord, stopWakeWord } from '@/src/wake-word';
 import { watchBargeIn, watchEndOfTurn } from '@/src/duplex';
@@ -416,6 +416,21 @@ export default function Jarvis() {
     } catch (e) { console.log('rec err', e); setRecording(false); }
   };
   startListeningRef.current = startListening;
+
+  // DEEP-LINK from the Spider Hub unified input: ?q=<text> auto-sends, ?voice=1 opens the mic.
+  const params = useLocalSearchParams<{ q?: string; voice?: string }>();
+  const consumedRef = useRef('');
+  useEffect(() => {
+    const key = `${params.q || ''}|${params.voice || ''}`;
+    if (!key.replace('|', '') || consumedRef.current === key) return;
+    consumedRef.current = key;
+    const t = setTimeout(() => {
+      if (params.q) sendMessage(String(params.q), false);
+      else if (params.voice === '1' && Platform.OS !== 'web') startListening(false);
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.q, params.voice]);
 
   // Nobody spoke → close the mic quietly (wake-word re-arms).
   const cancelListening = async () => {

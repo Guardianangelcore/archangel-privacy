@@ -26,12 +26,14 @@ _KIND_FILTERS = {
     "pharmacy": ['["amenity"="pharmacy"]'],
     "doctor":   ['["amenity"="doctors"]', '["healthcare"="doctor"]', '["amenity"="clinic"]'],
     "emergency": ['["amenity"="hospital"]', '["healthcare"="hospital"]', '["emergency"="yes"]'],
+    "shelter":   ['["amenity"="shelter"]', '["emergency"="bunker"]', '["military"="bunker"]', '["building"="bunker"]', '["emergency"="assembly_point"]'],
 }
 # kind -> Nominatim special-phrase queries (fallback when every Overpass mirror is down)
 _KIND_NOMINATIM = {
     "pharmacy": ["pharmacy"],
     "doctor": ["doctors", "clinic"],
     "emergency": ["hospital"],
+    "shelter": ["shelter", "bunker"],
 }
 
 _CACHE: dict = {}          # (kind, latq, lngq) -> (ts, results)
@@ -92,7 +94,7 @@ async def _nominatim(kind: str, lat: float, lng: float, radius: int) -> Optional
 
 def _name_of(tags: dict, kind: str) -> str:
     return (tags.get("name") or tags.get("operator") or tags.get("brand")
-            or {"pharmacy": "Pharmacy", "doctor": "Doctor / Clinic", "emergency": "Hospital / ER"}[kind])
+            or {"pharmacy": "Pharmacy", "doctor": "Doctor / Clinic", "emergency": "Hospital / ER", "shelter": "Shelter / Bunker"}.get(kind, "Place"))
 
 
 @api.get("/nearby/care")
@@ -101,9 +103,15 @@ async def nearby_care(request: Request, kind: str = "pharmacy",
                       radius: int = 5000, authorization: Optional[str] = Header(None)):
     """Nearby pharmacies / doctors / emergency via OpenStreetMap. Guardian+ only."""
     user = await get_current_user(authorization)
-    await require_tier(user, "guardian", "Nearby Care Locator")
+    if kind == "shelter":
+        from routes.features import has_feature
+        if not await has_feature(user, "bunker"):
+            raise HTTPException(402, "sentinel_required: Bunker Locator requires the Sentinel Plan — or buy the Bunker Module once (€1.99).")
+    else:
+        await require_tier(user, "guardian", "Nearby Care Locator")
     if kind not in _KIND_FILTERS:
-        raise HTTPException(400, "kind must be pharmacy | doctor | emergency")
+        raise HTTPException(400, "kind must be pharmacy | doctor | emergency | shelter")
+    radius = min(radius, 20000)
 
     # Resolve position: explicit GPS coords win; else the user's stored geo (GPS/IP).
     if lat is None or lng is None:

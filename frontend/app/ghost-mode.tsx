@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
 import { useI18n } from '@/src/i18n-context';
-import Paywall from '@/src/Paywall';
+import FeatureGate from '@/src/FeatureGate';
 
 export default function GhostMode() {
   const { t: tt, tx } = useI18n();
@@ -69,7 +69,7 @@ export default function GhostMode() {
         <Text style={st.section}>{tt('ghost_mode.ghost_mode')}</Text>
         {locked && (
           <View testID="gh-paywall" style={{ marginBottom: S.md }}>
-            <Paywall tier="sentinel" message={tt('ghost_mode.ghost_mode') + ' — Sentinel'} onUnlocked={() => setLocked(false)} />
+            <FeatureGate feature="ghost_mode" message={tt('ghost_mode.ghost_mode') + ' — Sentinel'}><></></FeatureGate>
           </View>
         )}
         <View style={st.card}>
