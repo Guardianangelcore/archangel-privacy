@@ -20,7 +20,7 @@ export default function CreatorEarnings() {
   }, []);
   useEffect(() => { load(); }, [load]);
   return (
-    <SafeAreaView style={st.root} edges={['top']}>
+    <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       <View style={st.head}>
         <Pressable testID="ce-back" onPress={() => router.back()} hitSlop={10} style={st.back}><Ionicons name="chevron-back" size={22} color={C.brand} /></Pressable>
         <Text style={st.title}>CREATOR EARNINGS</Text>

@@ -112,7 +112,7 @@ export default function ChildGrowth() {
   const curves = data?.curves?.[measure] || [];
 
   return (
-    <SafeAreaView testID="child-growth-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="child-growth-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="gr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

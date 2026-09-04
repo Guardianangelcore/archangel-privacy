@@ -154,7 +154,7 @@ export default function SilentWitness() {
   };
 
   return (
-    <SafeAreaView testID="silent-witness-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="silent-witness-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="sw-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

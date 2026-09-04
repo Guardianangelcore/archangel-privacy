@@ -137,7 +137,7 @@ export default function Healing() {
   const meta = state?.steps_meta || {};
 
   return (
-    <SafeAreaView testID="healing-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="healing-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="healing-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

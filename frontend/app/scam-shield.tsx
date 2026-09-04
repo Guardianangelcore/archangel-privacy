@@ -68,7 +68,7 @@ export default function ScamShield() {
   };
 
   return (
-    <SafeAreaView testID="scam-shield-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="scam-shield-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="ss-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

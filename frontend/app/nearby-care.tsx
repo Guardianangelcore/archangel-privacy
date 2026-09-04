@@ -90,7 +90,7 @@ export default function NearbyCare() {
   };
 
   return (
-    <SafeAreaView testID="nearby-care-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="nearby-care-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="nc-back" onPress={() => { tap(); router.back(); }} hitSlop={12}><Ionicons name="chevron-back" size={24} color={C.fg} /></Pressable>
         <Text style={st.title}>{tt('nearby_care.find_care_nearby')}</Text>

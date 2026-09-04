@@ -79,7 +79,7 @@ export default function Solidarity() {
   };
 
   return (
-    <SafeAreaView testID="solidarity-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="solidarity-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="sol-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

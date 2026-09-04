@@ -46,7 +46,7 @@ export default function HealthTrends() {
   const maxTotal = Math.max(1, ...years.map((y: any) => y.total));
 
   return (
-    <SafeAreaView testID="health-trends-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="health-trends-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="tr-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

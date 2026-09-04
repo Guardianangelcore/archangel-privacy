@@ -101,7 +101,7 @@ export default function AngelPulse() {
   }));
 
   return (
-    <SafeAreaView testID="angel-pulse-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="angel-pulse-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="ap-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

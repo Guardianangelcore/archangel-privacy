@@ -25,7 +25,7 @@ export default function PrivacyPolicy() {
   const router = useRouter();
   const { t, rtl } = useI18n();
   return (
-    <SafeAreaView testID="privacy-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="privacy-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="privacy-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

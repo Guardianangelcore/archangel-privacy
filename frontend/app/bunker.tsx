@@ -27,7 +27,7 @@ const CHECKLIST: { cat: string; icon: string; items: string[] }[] = [
 
 export default function Bunker() {
   return (
-    <SafeAreaView style={st.root} edges={['top']}>
+    <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       <Head title="BUNKER" />
       <ScrollView contentContainerStyle={st.body}>
         <FeatureGate feature="bunker" message="Bunker Locator & 72-hour checklist are part of the Sentinel plan.">

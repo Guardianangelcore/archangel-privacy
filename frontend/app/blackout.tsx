@@ -42,7 +42,7 @@ export default function Blackout() {
   };
 
   return (
-    <SafeAreaView testID="blackout-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="blackout-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="bo-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

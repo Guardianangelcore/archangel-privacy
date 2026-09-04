@@ -68,7 +68,7 @@ export default function VideoLegacy() {
   };
 
   return (
-    <SafeAreaView testID="video-legacy-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="video-legacy-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="vl-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

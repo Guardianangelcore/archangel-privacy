@@ -557,6 +557,9 @@ async def swarm_loop():
             # GA-T loyalty allocations for fiat subscribers (every 6 h, idempotent)
             from routes.token import sweep_subscription_allocations
             await sweep_subscription_allocations()
+            # Community Help escrow: expire unconfirmed requests (24 h after done / 7 d open) + refund
+            from routes.community_help import expire_help_requests
+            await expire_help_requests()
         except Exception as e:
             logger.warning(f"swarm loop tick failed: {e}")
         await asyncio.sleep(15)

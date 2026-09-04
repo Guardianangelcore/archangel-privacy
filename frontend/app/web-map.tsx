@@ -54,7 +54,7 @@ export default function WebMap() {
   const glow = 0.35 + 0.35 * Math.sin(shimmer * Math.PI * 2);
 
   return (
-    <SafeAreaView style={st.root} edges={['top']}>
+    <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       <View style={st.head}>
         <Pressable testID="web-back" onPress={() => router.back()} hitSlop={10} style={st.back}><Ionicons name="chevron-back" size={22} color={GOLD} /></Pressable>
         <Text style={st.title}>PAVUČINA · WEB VIEW</Text>

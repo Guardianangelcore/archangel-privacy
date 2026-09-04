@@ -61,7 +61,7 @@ export default function Marketplace() {
   const togglePay = (m: string) => setF(v => ({ ...v, payment_methods: v.payment_methods.includes(m) ? v.payment_methods.filter(x => x !== m) : [...v.payment_methods, m] }));
 
   return (
-    <SafeAreaView testID="marketplace-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="marketplace-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="mk-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

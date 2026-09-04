@@ -16,7 +16,7 @@ import * as Mesh from '@/src/mesh-radio';
 export default function OfflineMesh() {
   const router = useRouter();
   return (
-    <SafeAreaView style={st.root} edges={['top']}>
+    <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       <View style={st.head}>
         <Pressable testID="mesh-back" onPress={() => router.back()} hitSlop={10} style={st.back}><Ionicons name="chevron-back" size={22} color={C.brand} /></Pressable>
         <Text style={st.title}>OFFLINE MESH</Text>

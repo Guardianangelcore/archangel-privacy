@@ -90,7 +90,7 @@ export default function Dignity() {
   const released = fund?.status === 'released';
 
   return (
-    <SafeAreaView testID="dignity-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="dignity-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="dg-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

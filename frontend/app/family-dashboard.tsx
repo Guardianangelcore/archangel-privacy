@@ -72,7 +72,7 @@ export default function FamilyDashboard() {
   const maxSteps = Math.max(1, ...(dash?.vitals || []).map(v => v.steps || 0));
 
   return (
-    <SafeAreaView testID="family-dashboard-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="family-dashboard-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="fd-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

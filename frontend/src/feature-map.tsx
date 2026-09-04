@@ -35,6 +35,7 @@ export const ARMS: Arm[] = [
     { id: 'mental', label: 'Mental Fortress', icon: 'flower-outline', route: '/mental-fortress' },
   ] },
   { id: 'community', label: 'Community', icon: 'people-outline', color: '#7C6CFF', subs: [
+    { id: 'help', label: 'Community Help', icon: 'hand-left-outline', route: '/community-help' },
     { id: 'family', label: 'Family', icon: 'people-circle-outline', route: '/(tabs)/family' },
     { id: 'solidarity', label: 'Solidarity', icon: 'hand-left-outline', route: '/solidarity' },
     { id: 'circle', label: 'Guardian Circle', icon: 'sync-outline', route: '/guardian-circle-sync' },

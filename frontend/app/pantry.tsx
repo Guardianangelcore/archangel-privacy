@@ -174,7 +174,7 @@ export default function Pantry() {
   };
 
   return (
-    <SafeAreaView testID="pantry-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="pantry-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="pantry-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

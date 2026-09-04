@@ -40,7 +40,7 @@ export default function Mosaic() {
   const stressTest = () => run('stress', async () => { setStress(await api('/mosaic/stress-test', { method: 'POST' })); });
 
   return (
-    <SafeAreaView testID="mosaic-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="mosaic-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="mo-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color="#E5E4E2" />

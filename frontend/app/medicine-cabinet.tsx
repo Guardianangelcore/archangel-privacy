@@ -81,7 +81,7 @@ export default function MedicineCabinet() {
       : { text: 'OK', bg: C.brandTer, fg: C.brand };
 
   return (
-    <SafeAreaView testID="cabinet-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="cabinet-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="mc-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

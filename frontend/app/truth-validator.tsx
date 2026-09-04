@@ -60,7 +60,7 @@ export default function TruthValidator() {
   };
 
   return (
-    <SafeAreaView testID="truth-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="truth-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="tv-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

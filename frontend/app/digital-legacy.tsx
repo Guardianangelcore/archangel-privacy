@@ -57,7 +57,7 @@ export default function DigitalLegacy() {
   const cats: string[] = list ? Object.keys(list.categories) : [];
 
   return (
-    <SafeAreaView testID="digital-legacy-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="digital-legacy-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="dl-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

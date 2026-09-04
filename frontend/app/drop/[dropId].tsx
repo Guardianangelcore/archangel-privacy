@@ -87,7 +87,7 @@ export default function DropPortal() {
   };
 
   return (
-    <SafeAreaView testID="drop-portal" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="drop-portal" style={styles.root} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={{ padding: S.xl, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         <Text style={styles.brand}>{tt('drop_dropId_.guardian_health_drop')}</Text>
         <Text style={styles.h1}>{tt('drop_dropId_.provider_portal')}</Text>

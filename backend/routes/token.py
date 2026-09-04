@@ -22,10 +22,13 @@ FOUNDER_RESERVE = 25_000_000.0          # 25% — time-locked for the founder
 FOUNDER_LOCK_YEARS = 4
 BURN_RATE = 0.02                         # 2% of every spend is burned forever
 
+# SELF-CLAIM BLOCKED: help rewards are paid only through the peer-verified Community Help flow
+# (routes/community_help.py — requester confirms, escrow released). No "I helped" button credits.
+SELF_CLAIM_BLOCKED = {"proof_of_help", "community_support"}
 EARN_RULES = {
-    "proof_of_help":     {"amount": 10.0, "daily_max": 5,  "label": "Proof-of-Help — helping a senior (Family Shield)"},
+    "proof_of_help":     {"amount": 10.0, "daily_max": 5,  "label": "Proof-of-Help — helping a senior (Family Shield)", "verified_only": True},
     "proof_of_health":   {"amount": 5.0,  "daily_max": 10, "label": "Proof-of-Health — anonymous health insight"},
-    "community_support": {"amount": 5.0,  "daily_max": 5,  "label": "Community support (Solidarity / Barter)"},
+    "community_support": {"amount": 5.0,  "daily_max": 5,  "label": "Community support (Solidarity / Barter)", "verified_only": True},
     "document_scan":     {"amount": 2.0,  "daily_max": 10, "label": "Document scan — Life Card enrichment (Magic Lens)"},
 }
 SPEND_ITEMS = {
@@ -330,6 +333,9 @@ async def token_earn(body: EarnIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     if body.activity not in EARN_RULES:
         raise HTTPException(400, f"activity must be one of {list(EARN_RULES)}")
+    if body.activity in SELF_CLAIM_BLOCKED:
+        raise HTTPException(403, "verified_only: help rewards are paid through Community Help — "
+                                 "the person you helped must confirm it.")
     tx = await award_tokens(user["user_id"], body.activity, body.note or "manual claim")
     if not tx:
         raise HTTPException(429, "daily_limit: Daily limit for this activity reached — try again tomorrow.")

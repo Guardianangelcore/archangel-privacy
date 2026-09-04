@@ -82,7 +82,7 @@ export default function RecoverySuite() {
   const score = status?.security_score ?? 0;
 
   return (
-    <SafeAreaView testID="recovery-suite-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="recovery-suite-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="rs-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

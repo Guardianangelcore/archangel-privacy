@@ -46,7 +46,7 @@ export default function RespectMap() {
   const toggleTag = (tg: string) => setF(v => ({ ...v, tags: v.tags.includes(tg) ? v.tags.filter(x => x !== tg) : [...v.tags, tg] }));
 
   return (
-    <SafeAreaView testID="respect-map-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="respect-map-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="rm-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

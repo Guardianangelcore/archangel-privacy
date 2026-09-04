@@ -86,7 +86,7 @@ export default function HealthCard() {
   );
 
   return (
-    <SafeAreaView style={st.root} edges={['top']}>
+    <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       <View style={st.head}>
         <Pressable testID="hc-back" onPress={() => router.back()} hitSlop={10} style={st.back}><Ionicons name="chevron-back" size={22} color={C.brand} /></Pressable>
         <Text style={[st.title, { fontSize: fs(16) }]}>HEALTH CARD</Text>

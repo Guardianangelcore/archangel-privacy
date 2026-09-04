@@ -109,7 +109,7 @@ export default function GuardianCircleSync() {
   }, [phoneContacts, q]);
 
   return (
-    <SafeAreaView testID="gcs-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="gcs-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="gcs-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

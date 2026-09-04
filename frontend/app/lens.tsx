@@ -136,7 +136,7 @@ export default function Lens() {
   const has = (a: string) => (scan?.suggested_actions || []).includes(a);
 
   return (
-    <SafeAreaView testID="lens-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="lens-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="ln-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

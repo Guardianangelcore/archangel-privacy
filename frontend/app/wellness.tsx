@@ -61,7 +61,7 @@ export default function Wellness() {
   };
 
   return (
-    <SafeAreaView testID="wellness-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="wellness-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="wl-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

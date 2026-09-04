@@ -43,7 +43,7 @@ export default function EternalVault() {
   };
 
   return (
-    <SafeAreaView testID="eternal-vault" style={st.root} edges={['top']}>
+    <SafeAreaView testID="eternal-vault" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="ev-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

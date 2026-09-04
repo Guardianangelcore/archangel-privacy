@@ -130,7 +130,7 @@ export default function Meds() {
   const pending = today.filter(i => !i.taken).length;
 
   return (
-    <SafeAreaView testID="meds-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="meds-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="md-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={30} color={C.onInverse} />

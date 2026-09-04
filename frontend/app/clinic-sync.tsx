@@ -67,7 +67,7 @@ export default function ClinicSync() {
   const docs = session?.received_docs || [];
 
   return (
-    <SafeAreaView testID="clinic-sync-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="clinic-sync-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="csy-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

@@ -170,7 +170,7 @@ export default function Monolith() {
   const bandColor = (b: string) => b === 'critical' ? C.error : b === 'elevated' ? '#FFC53D' : C.brand;
 
   return (
-    <SafeAreaView testID="monolith-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="monolith-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="mono-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

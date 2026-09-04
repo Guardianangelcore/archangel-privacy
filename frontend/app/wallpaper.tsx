@@ -32,7 +32,7 @@ export default function Wallpaper() {
   };
 
   return (
-    <SafeAreaView testID="wallpaper-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="wallpaper-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="wp-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

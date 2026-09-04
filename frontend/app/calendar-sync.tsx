@@ -199,7 +199,7 @@ export default function CalendarSync() {
   const remaining = items.filter(i => !synced[i.key]).length;
 
   return (
-    <SafeAreaView testID="cal-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="cal-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="cal-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

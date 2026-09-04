@@ -83,7 +83,7 @@ export default function CrisisProtocols() {
   };
 
   return (
-    <SafeAreaView testID="crisis-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="crisis-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="cp-back" onPress={() => { tap(); router.back(); }} hitSlop={12}><Ionicons name="chevron-back" size={24} color={C.fg} /></Pressable>
         <Text style={st.title}>{tt('crisis.crisis_protocols')}</Text>

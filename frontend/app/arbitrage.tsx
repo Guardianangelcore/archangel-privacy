@@ -46,7 +46,7 @@ export default function Arbitrage() {
   const countries = data?.countries || {};
 
   return (
-    <SafeAreaView testID="arbitrage-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="arbitrage-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="ar-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

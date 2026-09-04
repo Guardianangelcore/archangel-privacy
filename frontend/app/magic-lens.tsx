@@ -108,7 +108,7 @@ export default function MagicLens() {
   };
 
   return (
-    <SafeAreaView style={st.root} edges={['top']}>
+    <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       {locked && (
         <View testID="ml-paywall" style={{ padding: S.lg }}>
           <Paywall tier="guardian" message={tt('magic_lens.magic_lens') + ' — Guardian Plan'} onUnlocked={() => setLocked(false)} />

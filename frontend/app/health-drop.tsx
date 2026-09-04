@@ -97,7 +97,7 @@ export default function HealthDrop() {
   };
 
   return (
-    <SafeAreaView testID="health-drop-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="health-drop-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="hd-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

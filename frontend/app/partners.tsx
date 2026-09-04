@@ -82,7 +82,7 @@ export default function Partners() {
   };
 
   return (
-    <SafeAreaView testID="partners-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="partners-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="pt-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

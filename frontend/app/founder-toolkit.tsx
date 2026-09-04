@@ -45,7 +45,7 @@ export default function FounderToolkit() {
   const a = data?.forecast?.assumptions;
 
   return (
-    <SafeAreaView testID="founder-toolkit-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="founder-toolkit-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="ft-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

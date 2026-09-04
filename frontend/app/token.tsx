@@ -65,7 +65,7 @@ export default function TokenWallet() {
   const vipActive = wallet?.vip_until && new Date(wallet.vip_until) > new Date();
 
   return (
-    <SafeAreaView testID="token-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="token-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="tk-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
@@ -133,11 +133,17 @@ export default function TokenWallet() {
             <Ionicons name={(EARN_META[k]?.icon || 'add') as any} size={20} color={C.brand} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{tx(r.label)}</Text>
-              <Text style={styles.rowSub}>{EARN_META[k]?.hint} {tt('token.max')} {r.daily_max}{tt('token.day')}</Text>
+              <Text style={styles.rowSub}>{r.verified_only ? tt('token.verified_only') : `${EARN_META[k]?.hint} ${tt('token.max')} ${r.daily_max}${tt('token.day')}`}</Text>
             </View>
-            <Pressable testID={`tk-earn-${k}`} onPress={() => earn(k)} disabled={busy === `e-${k}`} style={styles.earnBtn}>
-              {busy === `e-${k}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.earnText}>+{r.amount}</Text>}
-            </Pressable>
+            {r.verified_only ? (
+              <Pressable testID={`tk-help-${k}`} onPress={() => router.push('/community-help')} style={[styles.earnBtn, { backgroundColor: C.primary }]}>
+                <Text style={styles.earnText}>{tt('token.open_community_help')}</Text>
+              </Pressable>
+            ) : (
+              <Pressable testID={`tk-earn-${k}`} onPress={() => earn(k)} disabled={busy === `e-${k}`} style={styles.earnBtn}>
+                {busy === `e-${k}` ? <ActivityIndicator size="small" color={C.onInverse} /> : <Text style={styles.earnText}>+{r.amount}</Text>}
+              </Pressable>
+            )}
           </View>
         ))}
 

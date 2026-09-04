@@ -63,7 +63,7 @@ export default function SurvivalAuditor() {
   const overallColor = overall < 3 ? C.error : overall < 7 ? C.warn : C.brand;
 
   return (
-    <SafeAreaView testID="survival-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="survival-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="sa-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

@@ -61,7 +61,7 @@ export default function TacticalMedic() {
   };
 
   return (
-    <SafeAreaView testID="medic-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="medic-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="md-back" onPress={() => (active ? setActive(null) : router.back())} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onError} />

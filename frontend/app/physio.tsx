@@ -412,7 +412,7 @@ export default function Physio() {
   };
 
   return (
-    <SafeAreaView testID="physio-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="physio-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="ph-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

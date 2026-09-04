@@ -54,7 +54,7 @@ export default function Humanitarian() {
   const profile = status?.profile;
 
   return (
-    <SafeAreaView testID="humanitarian-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="humanitarian-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="hu-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

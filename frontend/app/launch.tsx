@@ -57,7 +57,7 @@ export default function Launch() {
   useEffect(() => { runChecks(); }, [runChecks]);
 
   return (
-    <SafeAreaView testID="launch-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="launch-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="lc-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={PLATINUM} />

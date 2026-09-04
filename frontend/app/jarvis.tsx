@@ -568,7 +568,7 @@ export default function Jarvis() {
   const nextAbility = state?.abilities?.find((a: any) => !a.unlocked);
 
   return (
-    <SafeAreaView testID="jarvis-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="jarvis-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="jv-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

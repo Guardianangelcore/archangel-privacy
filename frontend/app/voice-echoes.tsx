@@ -140,7 +140,7 @@ export default function VoiceEchoes() {
   };
 
   return (
-    <SafeAreaView testID="voice-echoes" style={st.root} edges={['top']}>
+    <SafeAreaView testID="voice-echoes" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="ve-back" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={28} color={C.fg} />

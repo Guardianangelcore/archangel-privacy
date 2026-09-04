@@ -58,7 +58,7 @@ export default function PulseCheck() {
   const pending = inbox.filter(r => r.status === 'pending');
 
   return (
-    <SafeAreaView testID="pulse-check-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="pulse-check-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="pc-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

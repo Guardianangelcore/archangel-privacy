@@ -100,7 +100,7 @@ export default function FamilyContacts() {
   };
 
   return (
-    <SafeAreaView testID="family-contacts-screen" style={st.root} edges={['top']}>
+    <SafeAreaView testID="family-contacts-screen" style={st.root} edges={['top', 'bottom']}>
       <View style={st.header}>
         <Pressable testID="fc-back" onPress={() => { tap(); if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)/family'); } }} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />

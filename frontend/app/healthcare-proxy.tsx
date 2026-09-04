@@ -57,7 +57,7 @@ export default function HealthcareProxy() {
   };
 
   return (
-    <SafeAreaView testID="proxy-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="proxy-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="hp-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

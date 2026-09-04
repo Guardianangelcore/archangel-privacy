@@ -51,7 +51,7 @@ export default function Impact() {
 
   if (loading || !data) {
     return (
-      <SafeAreaView style={styles.root} edges={['top']}>
+      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
         <View style={styles.center}><ActivityIndicator color={C.brand} size="large" /></View>
       </SafeAreaView>
     );
@@ -60,7 +60,7 @@ export default function Impact() {
   const maxWeek = Math.max(1, ...data.timeline_weeks.map((w) => w.contributions));
 
   return (
-    <SafeAreaView testID="impact-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="impact-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="impact-back" onPress={() => { tap(); router.back(); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.fg} />

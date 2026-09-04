@@ -8,11 +8,15 @@ import { tap } from '@/src/ui/glass';
 import { useAuth } from '@/src/auth';
 import { GuardianEyeFAB } from '@/src/GuardianEye';
 import { useI18n } from '@/src/i18n-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const { user } = useAuth();
   const { t } = useI18n();
   const angel = !!user?.angel_mode;
+  const insets = useSafeAreaInsets();
+  // Tab bar never sits under the home indicator / Android gesture bar.
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 10);
 
   return (
     <View style={{ flex: 1 }}>
@@ -26,8 +30,9 @@ export default function TabsLayout() {
               backgroundColor: 'rgba(10,10,15,0.96)',
               borderTopColor: 'rgba(212,175,55,0.28)',
               borderTopWidth: 1,
-              height: Platform.OS === 'ios' ? 88 : 70,
+              height: 60 + bottomPad,
               paddingTop: 8,
+              paddingBottom: bottomPad,
             },
         tabBarActiveTintColor: C.brand,
         tabBarInactiveTintColor: C.info,
@@ -65,7 +70,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
     {/* GUARDIAN EYE — the always-on camera "eye", visible on every tab */}
-    {!angel && <GuardianEyeFAB bottom={Platform.OS === 'ios' ? 96 : 78} />}
+    {!angel && <GuardianEyeFAB bottom={68 + bottomPad - insets.bottom} />}
     </View>
   );
 }

@@ -101,7 +101,7 @@ export default function Legal() {
   const isCommonLaw = region?.testament_format && region.testament_format !== 'civil_law_holograph';
 
   return (
-    <SafeAreaView testID="legal-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="legal-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="lg-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={C.onInverse} />

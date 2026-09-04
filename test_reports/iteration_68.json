@@ -1,0 +1,43 @@
+{
+  "summary": "Iter 78 — GA-T Community Help peer-verified Proof-of-Help flow VERIFIED end-to-end on mobile web preview (390x844). Backend regression 3/3 passing + pre-existing test_iter78_community_help.py 5/5 re-run passing. FRONTEND full two-user flow succeeded: Founder (dev-bypass guardian.angel.core@proton.me) creates a request via help-new → help-new-sheet → help-new-title + help-cat-errand + help-new-submit → success 'Žiadosť zverejnená — odmena je rezervovaná.' → MINE tab shows card with status OTVORENÁ, '10 GA-T' badge and help-cancel-<id> button; no '{0/1/2}' placeholder leaked in limits line ('Dnes: 3/5 žiadostí · 1/5 potvrdení'). Fresh helper (dev-bypass helper-ui-<rand>@example.com) sees the request in OPEN with help-accept-<id> → status flips to ACCEPTED; HELPING tab shows help-done-<id> and no help-confirm-<id> for helper; tapping DONE flips status to AWAITING CONFIRMATION with 'Waiting for confirmation (24 h)' text. Back as Founder MINE tab, help-confirm-<id> reads 'ÁNO, POMOHLI MI' → tap → status VYPLATENÁ + success 'Ďakujeme — odmena bola odoslaná pomocníkovi.'; GET /api/token/wallet (helper) confirms balance 0 → 10 and ledger[0].kind == 'help_reward' amount 10.0. /token screen: verified-only earn rows use testID tk-help-proof_of_help + tk-help-community_support (NOT tk-earn-…) with sub-text 'Len overené — vypláca sa cez Komunitnú pomoc'; tapping tk-help-proof_of_help navigates to /community-help; tk-earn-proof_of_health + tk-earn-document_scan remain. /web-map renders without errors and contains 'Community Help' node label. Safe-area screenshots taken (tabs/jarvis/store showed onboarding/intro overlay on top — see notes). Note for main agent: react-native-web Pressable requires PointerEvent dispatch (from iter67 context) — used successfully throughout. Founder UI is currently Slovak (label 'Dnes:', 'ÁNO, POMOHLI MI', 'VYPLATENÁ') despite iter67 note that founder language is 'en' — worth verifying.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/(tabs), /jarvis, /store safe-area screenshots", "issues": ["Onboarding/tour overlay (Archangel intro + 'SOVEREIGN TOUR 1/4' modal) appears on top of many screens for freshly-seeded localStorage sessions even with ga.first_launch.done.v1=1 + intro=intro-enter. Not a Community Help bug — pre-existing tour flow; note that safe-area screenshots therefore captured the intro overlay, not the actual tab bar. Founder localStorage sessions on iOS Safari-style preview may need an additional 'tour_seen' style flag to skip in test contexts."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter78_community_help.py (5/5 pre-existing, re-run passing)",
+    "/app/backend/tests/test_iter78_light_regression.py (3/3 new)",
+    "/app/test_reports/pytest/pytest_iter78_reg.xml"
+  ],
+  "action_items": [
+    "Optional: consider dismissing the 'SOVEREIGN TOUR' overlay automatically when localStorage flags indicate the user has already onboarded — it currently pops on /community-help for fresh dev-bypass users but they can still tap through it (proven in this run).",
+    "Optional: confirm founder language default — iter67 noted 'founder language is en' but Community Help + limits currently render in Slovak for guardian.angel.core@proton.me. May just be a locale preference on the account; not a bug per iter 78 spec."
+  ],
+  "critical_code_review_comments": [
+    "routes/community_help.py (227 lines): atomic escrow via debit_balance() + treasury conditional update is race-safe; roll-back on treasury short-supply is correct. _release() upserts helper token_account with earned_total/help_total increments and appends a help_reward ledger entry. Good.",
+    "routes/community_help.py: expire_help_requests() flips status atomically before _release() to avoid double-refund on concurrent sweeps. Idempotent by construction.",
+    "app/community-help.tsx (226 lines): all Pressables have testIDs; SafeAreaView uses edges=[top,bottom] as required; limits template uses split('{1}').join() plus .replace() chain which correctly resolves all three placeholders (verified 'Dnes: 3/5 žiadostí · 1/5 potvrdení').",
+    "app/token.tsx: verified-only earn rows correctly render tk-help-<k> instead of tk-earn-<k>, and navigate to /community-help. Sub-text 'Len overené — vypláca sa cez Komunitnú pomoc' present.",
+    "No _id leak observed in /help/requests responses (clean() applied)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter78_light_regression.py (new, 3 tests, 3 pass)"
+  ],
+  "success_rate": {
+    "backend": "100% (3/3 light regression + 5/5 pre-existing iter78 = 8/8)",
+    "frontend": "100% of the requested Community Help flow (create → accept → done → confirm → paid); /token tk-help testIDs + /web-map node all pass"
+  },
+  "seed_data_creation": "Reused founder guardian.angel.core@proton.me (dev-bypass). Created two fresh helper users during frontend testing: helper-ui-d118a58c@example.com (user_ac98119726d0 flow #1, request 55530b9feb1847a4 left as OPEN/cancellable) and helper-ui-<rand>@example.com (user_613da5f4d2b3 flow #2, request fa887d871f974323 fully confirmed → helper received +10 GA-T, ledger help_reward). Founder daily counters after run: requests_today=3, confirms_today=1. Backend test suite creates its own iter78-* users each run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "1) react-native-web Pressable does NOT respond to page.click(force=True) — you MUST dispatch PointerEvent(pointerdown)+MouseEvent(mousedown)+PointerEvent(pointerup)+MouseEvent(mouseup)+MouseEvent(click) via page.evaluate (iter67 trick, still required). 2) Dev-bypass path: POST /api/auth/dev-bypass works from preview host, then POST /api/legal/accept {version:'2026-06.1'} and PUT /api/me/user-type {user_type:'adult'} to clear the two onboarding gates BEFORE navigating to feature screens. 3) Seed localStorage flags before any goto: gh_session_token, ga.lang.chosen.v1=1, ga.first_launch.done.v1=1, ga.disclaimer.seen.2026-06.1=1, intro='intro-enter'. 4) To switch between users in the same context: setItem('gh_session_token', <other>) then page.goto(target) — no cookie state needed since api.ts reads token from localStorage. 5) Founder currently has daily_max=5 requests and today's counter was 3/5 at end of this run — subsequent iterations may run into daily cap. 6) test_iter78_community_help.py uses pymongo direct write to simulate 24h expiry (rewinds expires_at) — expected. 7) 'SOVEREIGN TOUR' overlay on /community-help for fresh sessions is dismissible but does not block Pressable dispatch. 8) The community fund treasury is critical for zero-balance requesters — verify it stays positive if you run a lot of tests.",
+  "rca_of_issue": "N/A — no defects. Iteration 78 backend + frontend implementation matches spec exactly. Only observations documented in action_items."
+}

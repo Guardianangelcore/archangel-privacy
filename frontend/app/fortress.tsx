@@ -63,7 +63,7 @@ export default function Fortress() {
   };
 
   return (
-    <SafeAreaView testID="fortress-screen" style={styles.root} edges={['top']}>
+    <SafeAreaView testID="fortress-screen" style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable testID="ft-back" onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={C.fg} />
