@@ -84,3 +84,73 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     client.close()
+
+
+# ---------------------------------------------------------------------------
+# TEMPORARY SOURCE EXPORT (remove before publishing). Founder session required —
+# the codebase must never be downloadable anonymously from the public URL.
+# ---------------------------------------------------------------------------
+from fastapi import Header, HTTPException
+from typing import Optional as _Opt
+from core import get_current_user as _export_current_user
+
+_EXPORT_SKIP_DIRS = {'node_modules', '.expo', '.metro-cache', 'dist', '__pycache__', '.pytest_cache', 'test_reports', '.git', 'export'}
+_EXPORT_SKIP_FILES = {'memory/test_credentials.md', 'frontend/google-services.json'}   # credentials never leave the server
+
+
+async def _require_founder(authorization: _Opt[str]):
+    user = await _export_current_user(authorization)
+    if (user.get("email") or "").lower() != "guardian.angel.core@proton.me" and not user.get("inner_circle"):
+        raise HTTPException(403, "founder only")
+    return user
+
+
+@app.get("/api/export/files")
+async def export_files(authorization: _Opt[str] = Header(None)):
+    """Temporary endpoint to export source file contents (founder only)."""
+    await _require_founder(authorization)
+    import os
+    files = {}
+    for root, dirs, filenames in os.walk("/app"):
+        dirs[:] = [d for d in dirs if d not in _EXPORT_SKIP_DIRS]
+        for fn in filenames:
+            if fn.endswith(('.py', '.tsx', '.ts', '.json', '.js', '.md', '.txt', '.cfg')):
+                filepath = os.path.join(root, fn)
+                relpath = os.path.relpath(filepath, "/app")
+                if relpath in _EXPORT_SKIP_FILES:
+                    continue
+                try:
+                    files[relpath] = open(filepath, 'r').read()
+                except Exception:
+                    pass
+    return {"files": files, "count": len(files)}
+
+
+@app.get("/api/export/key-files")
+async def export_key_files(authorization: _Opt[str] = Header(None)):
+    """Export only the most important files (founder only)."""
+    await _require_founder(authorization)
+    import os
+    key_paths = [
+        "frontend/app.json", "frontend/package.json", "frontend/babel.config.js",
+        "frontend/tsconfig.json", "frontend/app/_layout.tsx", "frontend/app/index.tsx",
+        "frontend/app/(tabs)/_layout.tsx",
+        "backend/server.py", "backend/requirements.txt", "backend/models.py",
+        "backend/core.py", "backend/content.py", "backend/emailer.py",
+        "backend/perplexity.py", "backend/db_indexes.py",
+        "README.md", "PROOF_OF_ORIGIN.md", "design_guidelines.json",
+    ]
+    routes_dir = "/app/backend/routes"
+    if os.path.isdir(routes_dir):
+        for f in sorted(os.listdir(routes_dir)):
+            if f.endswith('.py'):
+                key_paths.append(f"backend/routes/{f}")
+    files = {}
+    for rp in key_paths:
+        fp = os.path.join("/app", rp)
+        if os.path.isfile(fp):
+            try:
+                files[rp] = open(fp, 'r').read()
+            except Exception:
+                pass
+    return {"files": files, "count": len(files)}
