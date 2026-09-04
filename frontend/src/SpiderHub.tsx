@@ -39,10 +39,10 @@ const MODULES: Module[] = [
   ] },
   { id: 'market', label: 'Market', icon: 'storefront', color: '#7C6CFF', subs: [
     { id: 'mkt', label: 'Data', icon: 'stats-chart', route: '/marketplace' },
-    { id: 'wallet', label: 'Wallet', icon: 'diamond', route: '/token' },
+    { id: 'insurance', label: 'Insurance', icon: 'shield-checkmark', route: '/insurance' },
     { id: 'gigs', label: 'Gigs', icon: 'briefcase', route: '/gigs' },
     { id: 'barter', label: 'Barter', icon: 'swap-horizontal', route: '/barter' },
-    { id: 'plans', label: 'Plans', icon: 'ribbon', route: '/subscription' },
+    { id: 'store', label: 'Plans & Store', icon: 'ribbon', route: '/store' },
     { id: 'partners', label: 'Partners', icon: 'business', route: '/partners' },
   ] },
   { id: 'jarvis', label: 'Jarvis', icon: 'planet', color: '#D4AF37', subs: [

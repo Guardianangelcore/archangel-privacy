@@ -178,7 +178,11 @@ def iap_tier(product_identifier: Optional[str]) -> str:
         return "archangel"
     if "sentinel" in pid:
         return "sentinel"
-    return "guardian"
+    return "guardian"   # incl. family plans (Duo / Family / Family XL = Guardian seats)
+
+def iap_family_plan(product_identifier: Optional[str]) -> Optional[str]:
+    pid = (product_identifier or "").lower()
+    return "family_xl" if "family_xl" in pid else "family" if "family" in pid else "duo" if "duo" in pid else None
 
 
 class IapSyncIn(BaseModel):
@@ -239,6 +243,7 @@ async def subscription_iap_sync(body: IapSyncIn, authorization: Optional[str] = 
             return {"status": "kept_higher_tier", "tier": current_tier(fresh)}
         await db.users.update_one({"user_id": uid}, {"$set": {
             "tier": tier, "tier_until": until, "tier_paid_with": "iap", "iap": iap,
+            "family_plan": iap_family_plan(body.product_identifier),
             "tier_started_at": fresh.get("tier_started_at") or now}})
         await _aml_ledger_append(uid, "iap_entitlement_sync", {
             "entitlement": body.entitlement, "tier": tier, "product": body.product_identifier, "store": body.store,

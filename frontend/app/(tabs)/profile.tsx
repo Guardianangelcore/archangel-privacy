@@ -23,6 +23,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 export default function Profile() {
   const { t: tt, tx } = useI18n();
   const { user, signOut, setUser, refresh } = useAuth();
+  const [advanced, setAdvanced] = useState(false);
   const router = useRouter();
   const { lang, setLang } = useI18n();   // instant, app-wide re-render on change
   const [profile, setProfile] = useState<any>({});
@@ -586,6 +587,10 @@ export default function Profile() {
           <Text style={styles.qrBtnText}>{tt('privacy_policy.privacy_policy')}</Text>
         </Pressable>
 
+        <Pressable testID="store-btn" onPress={() => router.push('/store' as any)} style={[styles.qrBtn, { borderColor: C.brand }]}>
+          <Ionicons name="ribbon-outline" size={18} color={C.brand} />
+          <Text style={[styles.qrBtnText, { color: C.brand }]}>Plans & Store · subscriptions, family plans, add-ons</Text>
+        </Pressable>
         <Pressable testID="user-type-btn" onPress={() => router.push('/user-type')} style={styles.qrBtn}>
           <Ionicons name="people-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>Who uses the app · {String(user?.user_type || 'adult').toUpperCase()}</Text>
@@ -598,6 +603,17 @@ export default function Profile() {
           <Pressable testID="creator-earnings-btn" onPress={() => router.push('/creator-earnings')} style={styles.qrBtn}>
             <Ionicons name="cash-outline" size={18} color={C.brand} />
             <Text style={[styles.qrBtnText, { color: C.brand }]}>Creator Earnings · 5% royalty dashboard</Text>
+          </Pressable>
+        )}
+        {/* ADVANCED — hidden crypto layer; only for those who look for it */}
+        <Pressable testID="advanced-toggle" onPress={() => setAdvanced(v => !v)} style={styles.qrBtn}>
+          <Ionicons name={advanced ? 'chevron-down' : 'chevron-forward'} size={18} color={C.info} />
+          <Text style={[styles.qrBtnText, { color: C.info }]}>Advanced</Text>
+        </Pressable>
+        {advanced && (
+          <Pressable testID="blockchain-btn" onPress={() => router.push('/blockchain' as any)} style={[styles.qrBtn, { marginLeft: S.lg }]}>
+            <Ionicons name="cube-outline" size={18} color={C.fg} />
+            <Text style={styles.qrBtnText}>Blockchain & Tokens · balance, history, transfer</Text>
           </Pressable>
         )}
         <Pressable testID="eternal-vault-btn" onPress={() => router.push('/eternal-vault')} style={styles.qrBtn}>

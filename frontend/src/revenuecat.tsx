@@ -18,18 +18,25 @@ const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_AP
 
 export const REVENUECAT_ENTITLEMENT_IDENTIFIER = 'pro'; // from /setup: entitlement_lookup_key
 
-export type IapTier = 'guardian' | 'sentinel' | 'archangel';
+export type IapTier = 'guardian' | 'sentinel' | 'archangel' | 'duo' | 'family' | 'family_xl';
 /** Offering packages per tier (provisioned via the integration proxy — see memory/revenuecat.md). */
 export const IAP_PACKAGES: Record<IapTier, { monthly: string; annual: string }> = {
   guardian: { monthly: 'guardian_monthly', annual: 'guardian_annual' },
   sentinel: { monthly: 'sentinel_monthly', annual: 'sentinel_annual' },
   archangel: { monthly: 'archangel_monthly', annual: 'archangel_annual' },
+  // Family plans (RevenueCat products provisioned alongside the tiers)
+  duo: { monthly: 'duo_monthly', annual: 'duo_annual' },
+  family: { monthly: 'family_monthly', annual: 'family_annual' },
+  family_xl: { monthly: 'family_xl_monthly', annual: 'family_xl_annual' },
 };
 /** One entitlement covers all tiers — the tier is derived from the store product identifier. */
 export function iapTierOf(productIdentifier?: string | null): IapTier {
   const pid = (productIdentifier || '').toLowerCase();
   if (pid.includes('archangel')) return 'archangel';
   if (pid.includes('sentinel')) return 'sentinel';
+  if (pid.includes('family_xl')) return 'family_xl';
+  if (pid.includes('family')) return 'family';
+  if (pid.includes('duo')) return 'duo';
   return 'guardian';
 }
 

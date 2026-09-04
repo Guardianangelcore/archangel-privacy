@@ -307,3 +307,9 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 
 ## Entry-flow fix (June 2026)
 - 4 standalone screens: `app/choose-language.tsx` (step 1, `markLangChosen` in `src/entry-flow.ts`, persisted `ga.lang.chosen.v1`) → `/login` (language chips removed; `change-language` link) → `/user-type` (guard in `_layout.tsx` when `user.user_type` missing) → `/(tabs)` Spider Hub. Router guard in `_layout.tsx` RootNav uses `useLangChosen()` (in-memory + AsyncStorage, no race).
+
+## Plans & Store (June 2026)
+- `app/store.tsx` (PLANS: 4 tiers + Duo/Family/Family XL with monthly/yearly toggle, RevenueCat `IapBuyButton` per plan — packages `duo_monthly`… added to `IAP_PACKAGES`/`iapTierOf`; backend `iap_family_plan()` sets `users.family_plan` on sync; promo `ARCHANGEL2026` → 1 month Sentinel via `POST /store/promo` (no downgrade of higher tiers); ADD-ONS: one-time + monthly boosts `POST /store/addon/buy` → unlock + hidden GA-T mint + revenue + creator royalty). No Stripe.
+- Hidden crypto layer: Settings → Advanced → Blockchain & Tokens (`app/blockchain.tsx`: balance, ledger, transfer `POST /store/transfer`, link to /token marketplace).
+- Navigation: hub Market node "Plans & Store", profile row `store-btn`. Catalog hides GA-T bullets.
+- Note: family packages appear as "unavailable" until they exist in the RevenueCat current offering.
