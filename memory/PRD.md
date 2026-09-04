@@ -313,3 +313,10 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - Hidden crypto layer: Settings → Advanced → Blockchain & Tokens (`app/blockchain.tsx`: balance, ledger, transfer `POST /store/transfer`, link to /token marketplace).
 - Navigation: hub Market node "Plans & Store", profile row `store-btn`. Catalog hides GA-T bullets.
 - Note: family packages appear as "unavailable" until they exist in the RevenueCat current offering.
+
+## Spider → Cascade → Pavučina + visual lift (June 2026)
+- `src/feature-map.tsx`: single source of 5 arms (Health, Safety, AI, Community, Store × 6 sub-features) + `AngelMark` SVG (halo + wings). `src/ui/Cascade.tsx`: `Cascade` (staggered fall-in 560 ms, 90 ms step) + `Breathe` (slow glow loop).
+- `src/SpiderHub.tsx` rewritten: Guardian Angel centre with breathing halo, glass nodes (`expo-blur` BlurView, rgba fallback on web), arms grow from centre on focus change, sub-features cascade in; rail includes "WEB VIEW". Unified Jarvis input + agents sheets kept.
+- `app/web-map.tsx` (Pavučina): fullscreen 720px+ scrollable golden web — centre, 5 arms on inner ring, 30 sub-features on outer ring by sector, concentric polygons, shimmer glow loop, cascade entrance; tap = open. Centred on load.
+- Theme already midnight (#050510) + gold; hub/web use #03030A deep-space bg.
+- PENDING user answer: GA-T on-chain deploy (deployer key, Base Sepolia vs mainnet, supply, migration) — asked, no reply yet.
