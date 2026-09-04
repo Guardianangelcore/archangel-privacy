@@ -47,7 +47,7 @@ export default function Lens() {
     if (!text) return;
     setSpeaking(true);
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1500), voice: 'nova', speed: 0.92, language: user?.language || 'en' }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 1500), voice: 'onyx', speed: 0.92, language: user?.language || 'en' }) });
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       const src = await cachedAudioUri(res.url.replace(/^\/api/, ''));
       try { playerRef.current?.remove?.(); } catch {}

@@ -39,7 +39,7 @@ export default function ScamShield() {
 
   const speak = async (msg: string) => {
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: msg, voice: 'nova', language: lang }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: msg, voice: 'onyx', language: lang }) });
       const token = await getToken();
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       try { playerRef.current?.remove?.(); } catch {}

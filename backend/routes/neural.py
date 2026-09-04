@@ -6,7 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
-import uuid, json, re
+import uuid, json, re, asyncio
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -28,24 +28,30 @@ async def _gather_context(user: dict) -> dict:
     week_ago = now - timedelta(days=7)
     today = now.date().isoformat()
 
-    prof = await db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}) or {}
-    recovery = await db.recovery.find_one({"user_id": uid}, {"_id": 0}) or {}
-    drops = await db.health_drops.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).to_list(10)
-    waitlist = await db.waitlist.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).to_list(10)
-    cal = await db.calendar_events.find({"user_id": uid}, {"_id": 0}).sort("date", -1).to_list(50)
-    meds = await db.med_reminders.find({"user_id": uid}, {"_id": 0}).to_list(20)
-    cabinet = await db.cabinet.find({"user_id": uid}, {"_id": 0}).to_list(50)
-    campaigns = await db.campaigns.find({"user_id": uid}, {"_id": 0}).to_list(5)
-    dignity = await db.dignity_funds.find_one({"user_id": uid}, {"_id": 0}) or {}
-    falls = await db.fall_events.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20)
-    acoustic = await db.acoustic_events.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20)
-    beacons = await db.beacon_events.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20)
-    testament = await db.legal_testaments.find_one({"user_id": uid}, {"_id": 0}) or {}
-    proxy = await db.proxy_directives.find_one({"user_id": uid}, {"_id": 0}) or {}
-    bio = await db.biometric_wills.find_one({"user_id": uid}, {"_id": 0}) or {}
-    journey = await db.healing_journeys.find_one({"user_id": uid, "status": "active"}, {"_id": 0})
+    # LATENCY: all independent snapshot queries run concurrently (was 17 sequential awaits).
+    (prof, recovery, drops, waitlist, cal, meds, cabinet, campaigns, dignity, falls, acoustic,
+     beacons, testament, proxy, bio, journey, comp) = await asyncio.gather(
+        db.emergency_profiles.find_one({"user_id": uid}, {"_id": 0}),
+        db.recovery.find_one({"user_id": uid}, {"_id": 0}),
+        db.health_drops.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).to_list(10),
+        db.waitlist.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).to_list(10),
+        db.calendar_events.find({"user_id": uid}, {"_id": 0}).sort("date", -1).to_list(50),
+        db.med_reminders.find({"user_id": uid}, {"_id": 0}).to_list(20),
+        db.cabinet.find({"user_id": uid}, {"_id": 0}).to_list(50),
+        db.campaigns.find({"user_id": uid}, {"_id": 0}).to_list(5),
+        db.dignity_funds.find_one({"user_id": uid}, {"_id": 0}),
+        db.fall_events.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20),
+        db.acoustic_events.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20),
+        db.beacon_events.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).to_list(20),
+        db.legal_testaments.find_one({"user_id": uid}, {"_id": 0}),
+        db.proxy_directives.find_one({"user_id": uid}, {"_id": 0}),
+        db.biometric_wills.find_one({"user_id": uid}, {"_id": 0}),
+        db.healing_journeys.find_one({"user_id": uid, "status": "active"}, {"_id": 0}),
+        db.companion_checkins.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).sort("created_at", 1).to_list(30),
+    )
+    prof, recovery, dignity = prof or {}, recovery or {}, dignity or {}
+    testament, proxy, bio = testament or {}, proxy or {}, bio or {}
     claim = await db.insurance_claims.find_one({"journey_id": journey["journey_id"]}, {"_id": 0}) if journey else None
-    comp = await db.companion_checkins.find({"user_id": uid, "created_at": {"$gte": week_ago}}, {"_id": 0}).sort("created_at", 1).to_list(30)
     comp_moods = [c["mood"] for c in comp]
 
     upcoming = sorted([e for e in cal if e["category"] == "exam" and e["date"] >= today], key=lambda e: e["date"])[:5]

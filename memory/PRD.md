@@ -279,3 +279,9 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 
 ## Iter 76 — Expo Go startup freeze fix (Sept 2026)
 - Root cause (Expo Go only): RootLayout returned null until `useIconFonts()` downloaded ~20 icon TTFs from cdn.jsdelivr.net (StoreClient path) — slow/blocked CDN = splash forever. Web never runs that path (hence worked). Fix: `ready = loaded || error || timedOut(3 s)` then SplashScreen.hideAsync().catch. Also isFirstLaunch() 3 s AsyncStorage race → false; LaunchSequence treats unknown flag as not-first (never null-locks). No Lottie/expo-av anywhere. testing_agent iteration_64.json: all startup scenarios pass, no regressions.
+
+## Fork physio-lang-fix — Jarvis voice + latency (June 2026)
+- **ONE voice preset app-wide**: OpenAI TTS-1 `onyx`, speed 0.9 (deep, slow, authoritative). Backend `_resolve_voice` now ignores per-screen `voice` hints (only Settings preview `override` wins); founder's DB pref reset sage→onyx. ElevenLabs settings tuned (stability 0.7, style 0.1, timeout 15s). Frontend `JARVIS_PRESET` in `src/voice.ts`; `jarvis.tsx` MOOD_VOICE removed (uses `mood` pacing from voice.ts); remaining hardcoded `nova` callers switched to `onyx`.
+- **Streaming TTS**: `speakStream()` in `src/voice.ts` — sentences cut from the SSE token stream, audio prefetched in parallel, played in order; used for voice turns in `jarvis.tsx`.
+- **Latency**: `_gather_context` (17 queries) + `_chat_system` (4 lookups) now `asyncio.gather`; LLM stream timeout 12s first token / 20s per token; 5-min in-memory reply cache for identical questions (`/agent/chat/stream`, `cached: true`); "JARVIS is processing… Ns" liveness status after 1s in `jarvis.tsx`.
+- Pending (user deferred): expo-notifications static imports still crash Expo Go (6 files) — NOT touched per user instruction.

@@ -49,7 +49,7 @@ export default function TacticalMedic() {
   const speak = async (text: string) => {
     setSpeaking(true);
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text, voice: 'nova', language: lang }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text, voice: 'onyx', language: lang }) });
       const token = await getToken();
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       try { playerRef.current?.remove?.(); } catch {}

@@ -22,7 +22,7 @@ import { useAuth } from '@/src/auth';
 import { sharePdf } from '@/src/pdf';
 import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
-import { speak as jarvisSpeak, stopSpeaking, onSpeakingChange } from '@/src/voice';
+import { speak as jarvisSpeak, speakStream, stopSpeaking, onSpeakingChange } from '@/src/voice';
 
 type Mood = 'calm' | 'thinking' | 'alert' | 'energetic' | 'concerned';
 
@@ -33,15 +33,8 @@ const MOOD_CFG: Record<Mood, { color: string; glow: string; dur: number; label: 
   concerned: { color: '#4A90D9', glow: 'rgba(74,144,217,0.4)', dur: 2000, label: 'CARING' },
   alert: { color: '#FF453A', glow: 'rgba(255,69,58,0.45)', dur: 700, label: 'POPLACH' },
 };
-// Emotional voice coloring — Jarvis has ONE voice ('onyx' — deep, human, Tony Stark).
-// Speed alone modulates emotion (soothing under stress, brisk in the morning).
-const MOOD_VOICE: Record<Mood, { voice: string; speed: number }> = {
-  calm: { voice: 'onyx', speed: 0.95 },
-  concerned: { voice: 'onyx', speed: 0.9 },
-  energetic: { voice: 'onyx', speed: 1.05 },
-  thinking: { voice: 'onyx', speed: 1.0 },
-  alert: { voice: 'onyx', speed: 1.1 },
-};
+// Emotional voice coloring lives in src/voice.ts (ONE app-wide JARVIS preset — 'onyx', deep and
+// slow; mood only modulates pacing).
 
 const ORB = 190;
 const RING_R = ORB / 2 + 14;
@@ -188,14 +181,25 @@ export default function Jarvis() {
   const speak = useCallback(async (text: string, m: Mood) => {
     if (!text) return;
     try {
-      const v = MOOD_VOICE[m] || MOOD_VOICE.calm;
-      await jarvisSpeak(text.slice(0, 2000), {
-        voice: v.voice as any,
-        speed: v.speed,
-        language: (user?.language as any) || 'en',
-      });
+      await jarvisSpeak(text.slice(0, 2000), { mood: m, language: (user?.language as any) || 'en' });
     } catch (e) { console.log('tts err', e); }
   }, [user?.language]);
+
+  // LIVENESS — if Jarvis has not answered within 1 s, tell the user the system is alive
+  // ("JARVIS is processing… 3s"). Cleared on the first token / final response.
+  const slowTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clearSlow = useCallback(() => {
+    if (slowTimer.current) { clearInterval(slowTimer.current); slowTimer.current = null; }
+  }, []);
+  const armSlow = useCallback(() => {
+    clearSlow();
+    const t0 = Date.now();
+    slowTimer.current = setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      if (s >= 1) setStatus(`JARVIS is processing… ${s}s`);
+    }, 1000);
+  }, [clearSlow]);
+  useEffect(() => () => clearSlow(), [clearSlow]);
 
   // Stop any ongoing narration when Jarvis unmounts.
   useEffect(() => () => { stopSpeaking(); }, []);
@@ -207,9 +211,11 @@ export default function Jarvis() {
     setMsgs(prev => [...prev.slice(-8), { role: 'user', text: mode === 'imagine' ? `🎨 ${q}` : q }]);
     setMood('thinking');
     setStatus(mode === 'sonar' ? 'Searching the web (Sonar)…' : mode === 'imagine' ? 'Painting your image… (can take up to a minute)' : 'Thinking…');
+    armSlow();
     try {
       if (mode === 'imagine') {
         const res: any = await api('/agent/imagine', { method: 'POST', body: JSON.stringify({ prompt: q }) });
+        clearSlow();
         setMsgs(prev => [...prev.slice(-8), {
           role: 'agent',
           text: res.saved_to_vault ? 'Your image is ready and stored in the Vault, Guardian Angel.' : 'Your image is ready, Guardian Angel.',
@@ -223,6 +229,7 @@ export default function Jarvis() {
         if (viaVoice) speak('Your image is ready and stored in the Vault.', 'energetic');
       } else if (mode === 'sonar') {
         const res: any = await api('/agent/search', { method: 'POST', body: JSON.stringify({ query: q, language: user?.language || 'en' }) });
+        clearSlow();
         const note = res.degraded ? '\n\n⚠️ Live search is offline (Perplexity key missing) — answering from internal knowledge.' : '';
         setMsgs(prev => [...prev.slice(-8), { role: 'agent', text: res.reply + note, citations: res.citations }]);
         setMood('calm'); setStatus('');
@@ -248,6 +255,9 @@ export default function Jarvis() {
         let acc = '';
         const ctl = new AbortController();
         abortRef.current = ctl;
+        // STREAMING TTS — when the turn came by voice, Jarvis starts speaking the first
+        // sentence while the rest of the answer is still being generated.
+        const voiceOut = viaVoice ? speakStream({ mood: 'calm', language: (user?.language as any) || 'en' }) : null;
         try {
           const token = await getToken();
           const resp = await expoFetch(`${API_BASE}/api/agent/chat/stream`, {
@@ -270,7 +280,9 @@ export default function Jarvis() {
               if (!line.startsWith('data:')) continue;
               let d: any; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
               if (d.t) {
+                if (!acc) { clearSlow(); setStatus(''); }
                 acc += d.t;
+                voiceOut?.push(d.t);
                 const text = acc;
                 setMsgs(prev => {
                   const last = prev[prev.length - 1];
@@ -284,17 +296,19 @@ export default function Jarvis() {
             }
           }
           if (!acc) throw new Error('empty stream');
+          voiceOut?.end();
           // Stream finished → mark the bubble final so the EU AI Act label renders.
           setMsgs(prev => {
             const last = prev[prev.length - 1];
             return last && last.role === 'agent' && last.streaming ? [...prev.slice(0, -1), { ...last, streaming: false }] : prev;
           });
           if (meta) { applyMeta(meta); } else { setStatus(''); setMood('calm'); loadState(); loadMems(); }
-          if (viaVoice) speak(acc, (meta?.mood as Mood) || 'calm');
         } catch (streamErr) {
+          voiceOut?.cancel();
           if (ctl.signal.aborted) throw streamErr;   // user pressed STOP → no fallback call
           console.log('stream fallback', streamErr);
           const res: any = await api('/agent/chat', { method: 'POST', body: JSON.stringify({ message: q, language: user?.language || 'en' }) });
+          clearSlow();
           setMsgs(prev => {
             const last = prev[prev.length - 1];
             const base = last && last.role === 'agent' && last.streaming ? prev.slice(0, -1) : prev;
@@ -305,6 +319,7 @@ export default function Jarvis() {
         }
       }
     } catch (e: any) {
+      clearSlow();
       if (abortRef.current?.signal.aborted) {
         // STOP pressed — keep whatever streamed so far, mark bubble final, stay quiet.
         setMsgs(prev => prev.map(m => (m.streaming ? { ...m, streaming: false } : m)).filter(m => m.text));
@@ -313,9 +328,10 @@ export default function Jarvis() {
       setMood('calm'); setStatus('');
     }
     abortRef.current = null;
+    clearSlow();
     setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, mode, user?.language, speak, loadState, loadMems, loadHist]);
+  }, [busy, mode, user?.language, speak, loadState, loadMems, loadHist, armSlow, clearSlow]);
 
   // SONAR HISTORY — return to a past web answer (re-injects it into the chat).
   const openHist = (h: any) => {

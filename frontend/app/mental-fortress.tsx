@@ -34,7 +34,7 @@ export default function MentalFortress() {
   const speak = async (t: any) => {
     setSpeaking(t.id); setErr('');
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: t.tts_text, voice: 'nova', language: lang }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: t.tts_text, voice: 'onyx', language: lang }) });
       const token = await getToken();
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
       try { playerRef.current?.remove?.(); } catch {}

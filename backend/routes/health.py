@@ -358,7 +358,8 @@ OPENAI_VOICES = {
     "echo": "Smooth, calm", "fable": "Expressive, storytelling", "nova": "Energetic, upbeat",
     "onyx": "Deep, authoritative", "sage": "Wise, measured", "shimmer": "Bright, cheerful",
 }
-DEFAULT_OPENAI_VOICE = "onyx"
+DEFAULT_OPENAI_VOICE = "onyx"       # JARVIS PRESET — deep, authoritative (Tony Stark's JARVIS)
+DEFAULT_TTS_SPEED = 0.9             # slow, measured delivery
 ELEVEN_MODEL = "eleven_multilingual_v2"     # native pronunciation for sk/cs/de/… (29 languages)
 
 def _eleven_key() -> str:
@@ -369,14 +370,15 @@ def get_eleven():
     global _eleven_client
     if _eleven_client is None:
         from elevenlabs.client import AsyncElevenLabs
-        _eleven_client = AsyncElevenLabs(api_key=_eleven_key(), timeout=30.0)
+        _eleven_client = AsyncElevenLabs(api_key=_eleven_key(), timeout=15.0)
     return _eleven_client
 
 async def _eleven_speech(text: str, voice_id: str, speed: float) -> bytes:
     from elevenlabs import VoiceSettings
+    # High stability + low style = calm, authoritative, even delivery (JARVIS preset).
     stream = get_eleven().text_to_speech.convert(
         text=text, voice_id=voice_id, model_id=ELEVEN_MODEL, output_format="mp3_44100_128",
-        voice_settings=VoiceSettings(stability=0.5, similarity_boost=0.75, style=0.0,
+        voice_settings=VoiceSettings(stability=0.7, similarity_boost=0.8, style=0.1,
                                      use_speaker_boost=True, speed=min(1.2, max(0.7, speed))),
     )
     buf = b""
@@ -418,26 +420,26 @@ _tts_cache: dict = {}  # in-memory {hash: bytes}
 
 class TTSIn(BaseModel):
     text: str
-    voice: Optional[str] = None       # OpenAI voice — request default; the user's Settings choice wins unless override
+    voice: Optional[str] = None       # OpenAI voice — honoured ONLY with override (Settings preview)
     language: str = "sk"
-    speed: float = 1.0  # emotional pacing: 0.9 calm/soothing · 1.05 energetic
+    speed: float = DEFAULT_TTS_SPEED  # emotional pacing: 0.85 soothing · 0.9 default · 1.0 alert
     engine: Optional[str] = None      # "openai" | "elevenlabs" (preview / explicit)
     eleven_voice_id: Optional[str] = None
     override: bool = False            # True = use exactly the requested engine/voice (Settings preview)
 
 def _resolve_voice(user: dict, body: TTSIn) -> tuple[str, str]:
-    """→ (engine, voice). Settings preference beats the caller's hardcoded default; `override`
-    (used by the Settings preview) beats everything. ElevenLabs silently falls back to OpenAI
-    when no key / no voice is configured."""
+    """→ (engine, voice). ONE unified JARVIS preset app-wide: the user's Settings voice, else
+    'onyx'. Per-screen `voice` hints are ignored (only `override` — the Settings preview — wins).
+    ElevenLabs silently falls back to OpenAI when no key / no voice is configured."""
     if body.override:
         engine = body.engine or "openai"
         voice = body.eleven_voice_id if engine == "elevenlabs" else (body.voice or DEFAULT_OPENAI_VOICE)
     else:
-        engine = user.get("voice_engine") or body.engine or "openai"
-        voice = (user.get("eleven_voice_id") or body.eleven_voice_id) if engine == "elevenlabs" \
-            else (user.get("jarvis_voice") or body.voice or DEFAULT_OPENAI_VOICE)
+        engine = user.get("voice_engine") or "openai"
+        voice = user.get("eleven_voice_id") if engine == "elevenlabs" \
+            else (user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE)
     if engine == "elevenlabs" and (not _eleven_key() or not voice):
-        engine, voice = "openai", (user.get("jarvis_voice") or body.voice or DEFAULT_OPENAI_VOICE)
+        engine, voice = "openai", (user.get("jarvis_voice") or DEFAULT_OPENAI_VOICE)
     if engine == "openai" and voice not in OPENAI_VOICES:
         voice = DEFAULT_OPENAI_VOICE
     return engine, voice
@@ -450,7 +452,7 @@ async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None))
     text = clean_for_tts(body.text)
     if not text:
         raise HTTPException(400, "Empty text")
-    speed = min(1.3, max(0.7, body.speed or 1.0))
+    speed = min(1.3, max(0.7, body.speed or DEFAULT_TTS_SPEED))
     engine, voice = _resolve_voice(user, body)
     model = ELEVEN_MODEL if engine == "elevenlabs" else "tts-1"
     key = hashlib.sha256(f"{text}|{engine}|{voice}|{speed}|{model}|mp3".encode()).hexdigest()

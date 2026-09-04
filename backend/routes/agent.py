@@ -415,11 +415,14 @@ CHAT_PLAIN_RULE = (
 
 async def _chat_system(user: dict, uid: str, level: int, json_mode: bool):
     """Shared system-prompt builder for /agent/chat (JSON) and /agent/chat/stream (plain)."""
-    ctx = await _gather_context(user)
-    memories = await _recall_memories(uid)
-    history = await db.agent_conversations.find({"user_id": uid}, {"_id": 0}).sort("at", -1).to_list(6)
+    # LATENCY: the four independent context lookups run concurrently.
+    ctx, memories, history, anomalies = await asyncio.gather(
+        _gather_context(user),
+        _recall_memories(uid),
+        db.agent_conversations.find({"user_id": uid}, {"_id": 0}).sort("at", -1).to_list(6),
+        _detect_anomalies(uid),
+    )
     history.reverse()
-    anomalies = await _detect_anomalies(uid)
     convo = "\n".join(f"{'USER' if h['role'] == 'user' else 'JARVIS'}: {h['text'][:300]}" for h in history)
     mem_block = "\n".join(f"- {m['text']} ({m['topic']}, {str(m['created_at'])[:10]})" for m in memories) or "-"
     sys = (
@@ -1030,6 +1033,16 @@ async def agent_imagine(body: AgentImagineIn, authorization: Optional[str] = Hea
 # =========================================================================
 from fastapi.responses import StreamingResponse
 from emergentintegrations.llm.chat import TextDelta, StreamDone
+import time
+
+LLM_FIRST_TOKEN_TIMEOUT = 12.0
+LLM_TOKEN_TIMEOUT = 20.0
+REPLY_CACHE_TTL = 300.0
+_reply_cache: dict = {}   # {(uid, lang, normalized question): {"at", "reply", "mood"}}
+
+
+def _reply_cache_key(uid: str, user: dict, q: str) -> tuple:
+    return (uid, (user.get("language") or "en")[:2], re.sub(r"\s+", " ", q.strip().lower()))
 
 
 @api.post("/agent/chat/stream")
@@ -1055,6 +1068,16 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
 
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
+
+    # REPLY CACHE — identical question repeated within 5 min → instant replay (no LLM round-trip).
+    ck = _reply_cache_key(uid, user, q)
+    hit = _reply_cache.get(ck)
+    if hit and time.time() - hit["at"] < REPLY_CACHE_TTL:
+        async def gen_cached():
+            yield f"data: {json.dumps({'t': hit['reply']}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'done': True, 'mood': hit['mood'], 'cached': True, 'xp_gained': 0, 'level': level, 'level_up': False, 'level_name': LEVEL_NAMES[level - 1], 'alerts': []}, ensure_ascii=False)}\n\n"
+        return StreamingResponse(gen_cached(), media_type="text/event-stream", headers=sse_headers)
+
     sys, anomalies = await _chat_system(user, uid, level, json_mode=False)
     mood = "concerned" if anomalies else "calm"
     chat = LlmChat(
@@ -1065,13 +1088,24 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
 
     async def gen():
         full = ""
+        # LLM TIMEOUT — 12 s to first token, 20 s between tokens (was unbounded).
+        stream = chat.stream_message(UserMessage(text=q)).__aiter__()
         try:
-            async for ev in chat.stream_message(UserMessage(text=q)):
+            while True:
+                try:
+                    ev = await asyncio.wait_for(stream.__anext__(), timeout=LLM_FIRST_TOKEN_TIMEOUT if not full else LLM_TOKEN_TIMEOUT)
+                except StopAsyncIteration:
+                    break
                 if isinstance(ev, TextDelta) and ev.content:
                     full += ev.content
                     yield f"data: {json.dumps({'t': ev.content}, ensure_ascii=False)}\n\n"
                 elif isinstance(ev, StreamDone):
                     break
+        except asyncio.TimeoutError:
+            logger.error("agent stream timeout")
+            if not full:
+                yield f"data: {json.dumps({'error': 'Jarvis is taking too long — please try again.'})}\n\n"
+                return
         except Exception as e:
             logger.error(f"agent stream error: {e}")
             if not full:
@@ -1081,6 +1115,10 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
         tail = reply[len(full):]
         if tail:
             yield f"data: {json.dumps({'t': tail}, ensure_ascii=False)}\n\n"
+        _reply_cache[ck] = {"at": time.time(), "reply": reply, "mood": mood}
+        if len(_reply_cache) > 500:
+            for k in list(_reply_cache)[:100]:
+                _reply_cache.pop(k, None)
         now = datetime.now(timezone.utc)
         await db.agent_conversations.insert_many([
             {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": q, "at": now},

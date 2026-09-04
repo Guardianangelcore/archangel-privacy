@@ -40,7 +40,7 @@ export default function Translate() {
     if (!out) return;
     setSpeaking(true);
     try {
-      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: out, voice: 'nova', language: lang }) });
+      const res: any = await api('/voice/tts', { method: 'POST', body: JSON.stringify({ text: out, voice: 'onyx', language: lang }) });
       const token = await getToken();
       const url = `${API_BASE}${res.url}`;
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false } as any);
