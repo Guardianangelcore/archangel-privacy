@@ -5,7 +5,7 @@ import os, time, uuid, requests
 from concurrent.futures import ThreadPoolExecutor
 
 BASE = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/") + "/api"
-FOUNDER = "guardian.angel.core@proton.me"
+FOUNDER = "guardianangel.core@proton.me"
 
 
 def _bypass(email: str, name: str = "T") -> dict:

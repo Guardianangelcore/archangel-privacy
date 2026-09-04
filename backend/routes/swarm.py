@@ -561,6 +561,9 @@ async def swarm_loop():
             # Community Help escrow: expire unconfirmed requests (24 h after done / 7 d open) + refund
             from routes.community_help import expire_help_requests
             await expire_help_requests()
+            # GA-T on-chain bridge: drain queued mints when Base L2 credentials are configured
+            from routes.chain import process_mint_queue
+            await process_mint_queue()
         except Exception as e:
             logger.warning(f"swarm loop tick failed: {e}")
         await asyncio.sleep(15)

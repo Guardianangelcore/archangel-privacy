@@ -158,7 +158,7 @@ class TestKeepHigherTier:
     def test_founder_archangel_kept_on_iap_activate(self):
         # founder bypass — inner_circle=True, tier archangel
         r = requests.post(f"{API}/auth/dev-bypass",
-                          json={"email": "guardian.angel.core@proton.me", "name": "Founder"},
+                          json={"email": "guardianangel.core@proton.me", "name": "Founder"},
                           timeout=30)
         assert r.status_code == 200, r.text
         d = r.json()

@@ -30,7 +30,7 @@ def _delete(path, h=H1):
 class TestFoundationIdentity:
     def test_hardcoded_protonmail(self):
         d = _get("/foundation/identity").json()
-        assert d["official_email"] == "guardian.angel.core@proton.me"
+        assert d["official_email"] == "guardianangel.core@proton.me"
         assert d["immutable"] is True
         assert "ProtonMail" in d["provider"]
 

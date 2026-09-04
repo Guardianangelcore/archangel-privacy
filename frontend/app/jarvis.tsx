@@ -18,6 +18,7 @@ import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } fr
 import { fetch as expoFetch } from 'expo/fetch';
 import { api, API_BASE, getToken, errMsg } from '@/src/api';
 import Paywall from '@/src/Paywall';
+import { nativeSttAvailable, ensureSttPermission, startLiveStt } from '@/src/live-stt';
 import { ModelPill } from '@/src/ModelPicker';
 import { useI18n } from '@/src/i18n-context';
 import { locateDevice } from '@/src/geo';
@@ -112,7 +113,11 @@ function ThinkStep({ step, detail, active, done }: { step: string; detail: strin
 }
 
 export default function Jarvis() {
-  const { t: tt, tx } = useI18n();
+  const { t: tt, tx, lang } = useI18n();
+  // LIVE STT — on-device recognition streams words under the orb (native build / web); Expo Go → Whisper path.
+  const [liveText, setLiveText] = useState('');
+  const sttRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
+  const sttFinalRef = useRef('');
   const router = useRouter();
   const { user } = useAuth();
   const [state, setState] = useState<any>(null);
@@ -395,6 +400,29 @@ export default function Jarvis() {
   // detected from silence, so no second tap is needed.
   const startListening = async (auto: boolean) => {
     if (recording) return;
+    if (nativeSttAvailable()) {
+      const perm = await ensureSttPermission();
+      if (perm !== 'granted') { setMicDenied(perm === 'blocked' || auto); return; }
+      setMicDenied(false); setRecording(true); setLiveText(''); sttFinalRef.current = '';
+      setStatus(tt('jarvis.live_stt_listening'));
+      sttRef.current = startLiveStt(lang, {
+        onPartial: setLiveText,
+        onFinal: (t) => { sttFinalRef.current = t; setLiveText(t); },
+        onEnd: () => {
+          sttRef.current = null;
+          const text = (sttFinalRef.current || '').trim();
+          setRecording(false); setLiveText('');
+          if (text) { sendMessage(text, true); } else { setStatus(''); setMood('calm'); }
+        },
+        onError: (code) => {
+          sttRef.current = null; setRecording(false); setLiveText('');
+          if (code === 'no-speech' || code === 'aborted') { setStatus(''); setMood('calm'); return; }
+          if (code === 'not-allowed' || code === 'service-not-allowed') { setMicDenied(true); setStatus(''); return; }
+          setStatus(''); setErr(tt('jarvis.live_stt_error'));
+        },
+      });
+      return;
+    }
     try {
       let perm = await AudioModule.getRecordingPermissionsAsync();
       if (!perm.granted) {
@@ -427,7 +455,7 @@ export default function Jarvis() {
     consumedRef.current = key;
     const t = setTimeout(() => {
       if (params.q) sendMessage(String(params.q), false);
-      else if (params.voice === '1' && Platform.OS !== 'web') startListening(false);
+      else if (params.voice === '1' && (Platform.OS !== 'web' || nativeSttAvailable())) startListening(false);
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -436,6 +464,7 @@ export default function Jarvis() {
   // Nobody spoke → close the mic quietly (wake-word re-arms).
   const cancelListening = async () => {
     eotStopRef.current?.(); eotStopRef.current = null;
+    if (sttRef.current) { sttRef.current.abort(); sttRef.current = null; setLiveText(''); }
     setRecording(false); setStatus(''); setMood('calm');
     try { await recorder.stop(); } catch {}
   };
@@ -471,6 +500,7 @@ export default function Jarvis() {
     stopSpeaking();
     abortRef.current?.abort();
     stopWakeWord();
+    if (sttRef.current) { sttRef.current.abort(); sttRef.current = null; setLiveText(''); }
     if (recording) {
       setRecording(false);
       try { await recorder.stop(); } catch {}
@@ -480,6 +510,11 @@ export default function Jarvis() {
 
   const stopVoice = async () => {
     eotStopRef.current?.(); eotStopRef.current = null;
+    if (sttRef.current) {           // live STT: let the recognizer flush its final result → onEnd sends it
+      setStatus(tt('jarvis.live_stt_finishing')); setMood('thinking');
+      sttRef.current.stop();
+      return;
+    }
     setRecording(false); setStatus('Transcribing your voice…'); setMood('thinking');
     try {
       await recorder.stop();
@@ -597,6 +632,12 @@ export default function Jarvis() {
           <Text style={st.levelName}>{tt('jarvis.level')} {state?.level ?? 1} · {state?.level_name ?? tt('jarvis.iskra')}</Text>
           <Text style={st.xpText}>{state?.xp ?? 0} / {state?.xp_next ?? 100} {tt('jarvis.xp')} {state?.memories_count ?? 0} {tt('jarvis.spomienok')}</Text>
           {!!nextAbility && <Text style={st.nextAbility}>{tt('jarvis.next_unlock_lvl')} {nextAbility.level}): {nextAbility.name}</Text>}
+          {recording && !!liveText && (
+            <View testID="jv-live-transcript" style={[st.liveBox, { borderColor: cfg.color }]}>
+              <Ionicons name="mic" size={14} color={cfg.color} />
+              <Text style={st.liveText}>{liveText}</Text>
+            </View>
+          )}
           {!!status && <Text style={st.status}>{status}</Text>}
           {(speaking || !!busy || recording) && (
             <Pressable testID="jv-stop" onPress={stopAll} style={st.stopBtn} hitSlop={8}>
@@ -932,6 +973,8 @@ const st = StyleSheet.create({
   xpText: { color: C.info, fontSize: 12, marginTop: 2, fontWeight: '700' },
   nextAbility: { color: C.onS3, fontSize: 10, marginTop: 6, textAlign: 'center', letterSpacing: 0.5 },
   status: { color: '#9B6DFF', fontWeight: '800', fontSize: 12, marginTop: S.sm },
+  liveBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 8, marginTop: S.sm, maxWidth: '100%', backgroundColor: C.surface2 },
+  liveText: { color: C.fg, fontSize: 15, fontStyle: 'italic', flexShrink: 1 },
   stopBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: S.sm, minHeight: 44, paddingHorizontal: S.lg, borderWidth: 1, borderColor: '#FF6B6B', borderRadius: R.pill, backgroundColor: 'rgba(255,107,107,0.10)' },
   stopText: { color: '#FF6B6B', fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
   orbHint: { color: C.info, fontSize: 11, marginTop: S.md, textAlign: 'center' },

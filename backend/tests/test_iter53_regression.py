@@ -53,7 +53,7 @@ def test_login_wrong_password():
 def test_dev_bypass_founder():
     r = requests.post(
         f"{BASE_URL}/api/auth/dev-bypass",
-        json={"email": "guardian.angel.core@proton.me", "name": "Guardian Angel"},
+        json={"email": "guardianangel.core@proton.me", "name": "Guardian Angel"},
         timeout=15,
     )
     assert r.status_code == 200, f"expected 200 got {r.status_code} body={r.text}"
@@ -63,5 +63,5 @@ def test_dev_bypass_founder():
     me = requests.get(f"{BASE_URL}/api/auth/me", headers={"Authorization": f"Bearer {tok}"}, timeout=15)
     assert me.status_code == 200
     mj = me.json().get("user", me.json())
-    assert mj.get("email") == "guardian.angel.core@proton.me"
+    assert mj.get("email") == "guardianangel.core@proton.me"
     assert mj.get("tier") in ("archangel", "sentinel", "guardian", "sovereign"), mj.get("tier")

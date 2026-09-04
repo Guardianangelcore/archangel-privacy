@@ -59,7 +59,7 @@ async def auth_session(body: SessionExchangeIn):
         user_doc = User(user_id=user_id, email=email, name=name, picture=picture, did=did).model_dump()
         await db.users.insert_one(user_doc.copy())
         # Inner Circle whitelist — permanent Archangel status on first login
-        # (Founder email guardian.angel.core@proton.me is auto-provisioned.)
+        # (Founder email guardianangel.core@proton.me is auto-provisioned.)
         wl = await db.inner_circle.find_one({"email": email.lower()})
         is_founder = (email.lower() == FOUNDER_EMAIL)
         if wl or is_founder:
@@ -100,7 +100,7 @@ async def logout(authorization: Optional[str] = Header(None)):
 # --------- FOUNDER / DEV BYPASS ---------
 # Guardian Angel's canonical sovereign email. First login with this email is
 # auto-provisioned as the Foundation founder (inner_circle=true, tier=archangel).
-FOUNDER_EMAIL = os.environ.get("FOUNDER_EMAIL", "guardian.angel.core@proton.me").lower()
+FOUNDER_EMAIL = os.environ.get("FOUNDER_EMAIL", "guardianangel.core@proton.me").lower()
 
 
 async def _ensure_founder_whitelist():

@@ -255,6 +255,12 @@ async def settle_subscription_allocations(user_id: str) -> dict:
             "period_start": period_start.isoformat(), "bonus_pct": alloc["bonus_pct"],
             "note": f"Premium loyalty — month {i} ({tier}), +{alloc['bonus_pct']}% bonus"})
         txs.append(clean(tx))
+        # ON-CHAIN BRIDGE — verified subscription GA-T is minted on Base L2 for wallet-linked users
+        try:
+            from routes.chain import queue_mint
+            await queue_mint(user_id, alloc["amount"], tx["tx_id"], f"subscription_allocation:{tier}:{i}")
+        except Exception as _e:
+            logger.warning(f"on-chain mint queue skipped: {_e}")
         credited, credited_now = i, credited_now + 1
     if credited != int(u.get("gat_alloc_count") or 0):
         await db.users.update_one({"user_id": user_id}, {"$set": {"gat_alloc_count": credited}})

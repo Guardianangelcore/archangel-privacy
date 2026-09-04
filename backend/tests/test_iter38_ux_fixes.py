@@ -17,7 +17,7 @@ BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://physio-lang-fix.pr
 @pytest.fixture(scope="module")
 def token():
     r = requests.post(f"{BASE_URL}/api/auth/dev-bypass",
-                      json={"email": "guardian.angel.core@proton.me", "name": "Guardian Angel"},
+                      json={"email": "guardianangel.core@proton.me", "name": "Guardian Angel"},
                       timeout=15)
     assert r.status_code == 200, r.text
     return r.json()["session_token"]

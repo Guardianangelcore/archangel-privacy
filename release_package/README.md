@@ -56,4 +56,4 @@ Hidden watermarks exist in the UI bundle and in every API response header (`X-Gu
 
 ## Contact
 
-Guardian Angel Sovereign Foundation (DAO) — `guardian.angel.core@proton.me`
+Guardian Angel Sovereign Foundation (DAO) — `guardianangel.core@proton.me`

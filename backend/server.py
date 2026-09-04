@@ -9,7 +9,7 @@ import asyncio
 from core import api, db, client, logger, init_storage
 from db_indexes import ensure_indexes
 # Importing route modules registers their endpoints on the shared `api` router.
-from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension, founder, geo, billing, healing, physio_media, streaks, pantry, impact, silent_witness, triage, family_contacts, nearby, loyalty, demo_mode, features, store, ai_models, community_help  # noqa: F401
+from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension, founder, geo, billing, healing, physio_media, streaks, pantry, impact, silent_witness, triage, family_contacts, nearby, loyalty, demo_mode, features, store, ai_models, community_help, chain  # noqa: F401
 from routes.origin import ORIGIN
 
 app = FastAPI(title="Archangel OS API")
@@ -100,7 +100,7 @@ _EXPORT_SKIP_FILES = {'memory/test_credentials.md', 'frontend/google-services.js
 
 async def _require_founder(authorization: _Opt[str]):
     user = await _export_current_user(authorization)
-    if (user.get("email") or "").lower() != "guardian.angel.core@proton.me" and not user.get("inner_circle"):
+    if (user.get("email") or "").lower() != "guardianangel.core@proton.me" and not user.get("inner_circle"):
         raise HTTPException(403, "founder only")
     return user
 

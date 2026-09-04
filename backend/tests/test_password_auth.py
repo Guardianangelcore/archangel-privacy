@@ -12,7 +12,7 @@ API = f"{BASE_URL}/api"
 
 DEMO_EMAIL = "demo.judge@guardian.app"
 DEMO_PASSWORD = "guardian-demo-2026"
-FOUNDER_EMAIL = "guardian.angel.core@proton.me"
+FOUNDER_EMAIL = "guardianangel.core@proton.me"
 
 
 @pytest.fixture(scope="module")

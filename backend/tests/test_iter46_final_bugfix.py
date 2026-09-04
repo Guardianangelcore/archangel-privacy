@@ -20,7 +20,7 @@ API = f"{BASE_URL}/api"
 def founder_token():
     r = requests.post(
         f"{API}/auth/dev-bypass",
-        json={"email": "guardian.angel.core@proton.me", "name": "Guardian Angel"},
+        json={"email": "guardianangel.core@proton.me", "name": "Guardian Angel"},
         timeout=20,
     )
     assert r.status_code == 200, f"dev-bypass failed: {r.status_code} {r.text}"
@@ -44,7 +44,7 @@ class TestAuth:
         assert r.status_code == 200
         data = r.json()
         user = data.get("user") or data
-        assert user.get("email") == "guardian.angel.core@proton.me"
+        assert user.get("email") == "guardianangel.core@proton.me"
         # Founder is EN per iter 44
         assert user.get("language") == "en", f"language should be en, got: {user.get('language')}"
 

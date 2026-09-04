@@ -19,7 +19,7 @@ OVERPASS_URLS = [
     "https://overpass-api.de/api/interpreter",
 ]
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-_UA = {"User-Agent": "ArchangelOS/1.0 (health locator; contact: guardian.angel.core@proton.me)"}
+_UA = {"User-Agent": "ArchangelOS/1.0 (health locator; contact: guardianangel.core@proton.me)"}
 
 # kind -> Overpass tag filters
 _KIND_FILTERS = {

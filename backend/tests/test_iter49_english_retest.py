@@ -10,7 +10,7 @@ import os, json, re, requests, pytest
 
 BASE_URL = (os.environ.get("EXPO_PUBLIC_BACKEND_URL")
             or "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
-FOUNDER_EMAIL = "guardian.angel.core@proton.me"
+FOUNDER_EMAIL = "guardianangel.core@proton.me"
 
 # Slovak diacritic set — canary for un-translated strings
 DIACRITICS = re.compile(r"[áäčďéíĺľňóôřšťúýžÁÄČĎÉÍĹĽŇÓÔŘŠŤÚÝŽ]")

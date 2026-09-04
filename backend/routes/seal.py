@@ -4,7 +4,7 @@
 """OMNIPOTENT ARCHANGEL FINAL SEAL — Part II.
 
 1. OFFICIAL FOUNDATION IDENTITY: hard-coded ProtonMail anchor
-   guardian.angel.core@proton.me + GHOST MODE (temporary anonymized Patient
+   guardianangel.core@proton.me + GHOST MODE (temporary anonymized Patient
    Tokens for cross-border medical arbitrage).
 2. INNER CIRCLE: founder-managed whitelist → permanent Archangel status for
    the founder's family (lifetime, never expires).
@@ -24,7 +24,7 @@ from core import api, db, logger, clean, get_current_user, send_push, _aml_ledge
 # ============================================================
 # OFFICIAL FOUNDATION IDENTITY — hard-coded, immutable
 # ============================================================
-FOUNDATION_EMAIL = "guardian.angel.core@proton.me"
+FOUNDATION_EMAIL = "guardianangel.core@proton.me"
 FOUNDATION_IDENTITY = {
     "official_email": FOUNDATION_EMAIL,
     "provider": "ProtonMail (E2E encrypted mail, Switzerland)",

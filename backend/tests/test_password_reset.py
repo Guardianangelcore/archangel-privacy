@@ -26,7 +26,7 @@ DB_NAME = "guardian_health"
 RESET_EMAIL = "delivered@resend.dev"
 INITIAL_PASSWORD = "reset-password-2026-01"  # current password on entry (set by set_known_pw.py)
 NEW_PASSWORD = f"reset-password-2026-{uuid.uuid4().hex[:6]}"  # 12+ chars, set during test
-FOUNDER_EMAIL = "guardian.angel.core@proton.me"
+FOUNDER_EMAIL = "guardianangel.core@proton.me"
 DEMO_EMAIL = "demo.judge@guardian.app"
 DEMO_PASSWORD = "guardian-demo-2026"
 

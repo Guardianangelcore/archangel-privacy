@@ -21,7 +21,8 @@
         "NSContactsUsageDescription": "Pick trusted people for your Guardian Circle",
         "NSCalendarsUsageDescription": "Sync meds and appointments with your calendar",
         "NSCalendarsFullAccessUsageDescription": "Add meds and appointments to your calendar",
-        "NSRemindersUsageDescription": "Create local medication reminders"
+        "NSRemindersUsageDescription": "Create local medication reminders",
+        "NSSpeechRecognitionUsageDescription": "Show your words live while you speak to Jarvis"
       }
     },
     "android": {
@@ -88,7 +89,17 @@
       "expo-web-browser",
       "expo-asset",
       "@react-native-vector-icons/ionicons",
-      "@react-native-vector-icons/material-design-icons"
+      "@react-native-vector-icons/material-design-icons",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Talk to Jarvis and dictate messages hands-free",
+          "speechRecognitionPermission": "Show your words live while you speak to Jarvis",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

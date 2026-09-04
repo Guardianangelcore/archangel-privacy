@@ -35,7 +35,7 @@ export default function TermsOfService() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 80 }}>
         <Text style={st.meta}>{tt('terms_of_service.version')} {VERSION} {tt('terms_of_service.effective')} {EFFECTIVE}</Text>
-        <Text style={st.meta}>Guardian Angel Sovereign Foundation (DAO) · guardian.angel.core@proton.me</Text>
+        <Text style={st.meta}>Guardian Angel Sovereign Foundation (DAO) · guardianangel.core@proton.me</Text>
 
         {/* CONSOLIDATED LEGAL DISCLAIMER — single clause, localized (key disclaimer.general) */}
         <View testID="tos-disclaimer" style={st.discBox}>

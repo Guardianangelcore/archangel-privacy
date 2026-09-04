@@ -218,7 +218,7 @@ Backend fully tested: 52/52 new tests (test_phase17_masterseal.py, test_phase18_
 ## Iteration 19 (GRAND FINALE): routes/demo.py (founder-only Investor Demo Mode: GET /api/demo/status, POST /api/demo/toggle — seeds/wipes demo:true docs in waitlist/jarvis_actions/pulse_requests), /app/frontend/app/onboarding.tsx (3-step senior guide), /app/frontend/app/launch.tsx (Launch Control checklist + DEPLOY card), profile.tsx FOUNDER ADMIN box (demo-toggle, launch-btn, onboarding-btn), family hub fs-onboarding. server.py indexes → db_indexes.py. Tests: test_phase19_grand_finale.py; FULL suite 346/346; frontend iteration_18.json 10/10 green. Demo mode left OFF (clean state).
 
 ## Iteration 20 (OMNIPOTENT ARCHANGEL FINAL SEAL, June 2026)
-NEW backend: routes/wealth.py (Video Legacy Vault: POST/GET /api/legacy/video, /{id}/release, /{id}/file, DELETE; Sovereign Wealth Vault: GET /api/wealth/vault, POST /api/wealth/assets (crypto sealed zero-knowledge / bank IBAN-validated), POST /api/wealth/anchor (Mosaic), POST /api/wealth/payout (Instant Card Payout SIMULATED)), routes/seal.py (GET /api/foundation/identity hardcoded guardian.angel.core@proton.me; /api/ghost/toggle|status 24h patient tokens; founder-only /api/inner-circle CRUD → permanent archangel via user.inner_circle checked in subscription.current_tier + auth signup whitelist; /api/arbitrage/procedures|quote|quotes PL/HU/TR; /api/bioidentity + PUT /api/bioidentity/genomic; /api/duress/pin|verify|status (decoy → silent alarm); /api/mesh/status|messages; /api/power-saver).
+NEW backend: routes/wealth.py (Video Legacy Vault: POST/GET /api/legacy/video, /{id}/release, /{id}/file, DELETE; Sovereign Wealth Vault: GET /api/wealth/vault, POST /api/wealth/assets (crypto sealed zero-knowledge / bank IBAN-validated), POST /api/wealth/anchor (Mosaic), POST /api/wealth/payout (Instant Card Payout SIMULATED)), routes/seal.py (GET /api/foundation/identity hardcoded guardianangel.core@proton.me; /api/ghost/toggle|status 24h patient tokens; founder-only /api/inner-circle CRUD → permanent archangel via user.inner_circle checked in subscription.current_tier + auth signup whitelist; /api/arbitrage/procedures|quote|quotes PL/HU/TR; /api/bioidentity + PUT /api/bioidentity/genomic; /api/duress/pin|verify|status (decoy → silent alarm); /api/mesh/status|messages; /api/power-saver).
 Frontend NEW screens: /video-legacy, /wealth-vault, /arbitrage (+genomic), /inner-circle, /duress, /mesh, /ghost-mode (foundation identity + ghost + power-saver). Hubs wired: legacy(lw-video-legacy, lw-wealth, lw-inner-circle), hunter(ht-arbitrage, ht-mesh, ht-ghost), family(fs-duress).
 Backend tests: test_phase20_final_seal.py 30/30; FULL suite 376/376 PASS. NOTE for future agents: pytest runs with xdist `-n 2 --dist loadscope` → classes of the SAME module can land on DIFFERENT workers; never write cross-class shared-state tests (phase5/phase7 were fixed to be self-sufficient after adding phase20 reshuffled worker assignment).
 Frontend smoke: login screen renders OK. Auth for frontend testing: seed session per /app/memory/test_credentials.md (insert users + user_sessions in Mongo, set token in AsyncStorage key used by src/api.ts).
@@ -580,7 +580,7 @@ FIXED (full 661-test suite → all green):
 - DB cleanup: test users named 'Smoke*' renamed to 'Guardian Test' (tokens unchanged).
 
 Auth for FE testing: login screen → founder-bypass-btn (POST /api/auth/dev-bypass,
-guardian.angel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.
+guardianangel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.
 
 ## Iteration 40 (Phase 49.1 — Vault Art Gallery + Voice Sonar, Jun 2026)
 BACKEND (routes/agent.py /agent/imagine enhanced):
@@ -652,7 +652,7 @@ BUG 5 (duplicates removed on Home): header 'home-jarvis' sparkles (dup of Home O
 header 'angel-toggle' SENIOR chip (dup of hub-guardian-gold tile) REMOVED. Audited
 health/family/legacy hubs — no same-screen duplicates found. No TODO/Lorem placeholders exist.
 
-Auth: founder-bypass-btn / POST /api/auth/dev-bypass guardian.angel.core@proton.me.
+Auth: founder-bypass-btn / POST /api/auth/dev-bypass guardianangel.core@proton.me.
 
 ## Iteration 43 (Phase 50.1 — Twilio SOS SMS ready + GPS in SOS, Jun 2026)
 - routes/family_contacts.py /sos: when TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_FROM_NUMBER
@@ -705,7 +705,7 @@ SELF-TESTED via curl: lifecard GET/PUT, add surgery, invalid category 400, count
 voice log (kiahne→disease today), question not logged, predictions (2 SK suggestions),
 accept (source jarvis + pulled from cache), SSE stream intent. Screenshots: hub hero +
 full Life Card screen render correctly.
-Auth: founder-bypass (guardian.angel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.
+Auth: founder-bypass (guardianangel.core@proton.me). Backend tests: Bearer smoketok-fresh-2026.
 
 ## Iteration 45 (Phase 51.1 — Life Card Extensions, Jun 2026)
 4 features on top of Karta života:
@@ -921,3 +921,6 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 ## Iter 79 — add-on RC subscriptions · helper reputation · SecureStore/remove-console/root detection
 - pytest tests/test_iter79_addon_subs_reputation.py 5/5 + tests/test_iter79_light_backend.py 3/3; testing agent iteration_69.json all green (frontend store RC buttons, addon lifecycle via iap-sync, reputation badges, boot with babel.config.js, secure cache web fallback).
 - Known: RC Test Store in-dialog purchase not drivable in headless Playwright (works on device); founder has perplexity_ultra active.
+
+## Iter 81 — founder e-mail rename · live STT · GA-T on-chain bridge
+- pytest tests/test_iter81_chain_stt_email.py 3/3; testing-agent light backend 4/5 (5th = strict assertion on /auth/me lacking `tier` for free users — pre-existing shape, frontend defaults to sovereign). Frontend verified by main agent via Playwright: /blockchain wallet link (checksummed) / unlink, queued mode text; /jarvis renders with live-STT wiring (web Speech API path needs mic → device/dev-build test).

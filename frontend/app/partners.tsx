@@ -77,7 +77,7 @@ export default function Partners() {
   };
 
   const contact = () => {
-    const url = 'mailto:guardian.angel.core@proton.me?subject=UHP%20Partner%20Onboarding';
+    const url = 'mailto:guardianangel.core@proton.me?subject=UHP%20Partner%20Onboarding';
     Linking.openURL(url).catch(() => {});
   };
 
@@ -188,7 +188,7 @@ export default function Partners() {
           </Text>
           <Pressable testID="pt-contact" onPress={() => { tap('light'); contact(); }} style={st.contactBtn}>
             <Ionicons name="mail-outline" size={16} color={C.brand} />
-            <Text style={st.contactBtnText}>guardian.angel.core@proton.me</Text>
+            <Text style={st.contactBtnText}>guardianangel.core@proton.me</Text>
           </Pressable>
         </View>
 

@@ -126,7 +126,7 @@ c.setFillColor(CARD); c.rect(0, 0, W, 26, stroke=0, fill=1)
 c.setFillColor(MUT); c.setFont("Helvetica", 6.8)
 c.drawString(36, 10, "© 2026 Guardian Angel. All Rights Reserved. Proprietary — competition evaluation only. Proof of Origin: /api/origin.")
 c.setFillColor(GOLD)
-c.drawRightString(W - 36, 10, "guardian.angel.core@proton.me")
+c.drawRightString(W - 36, 10, "guardianangel.core@proton.me")
 
 # ============================ PAGE 2 — INVESTOR ONE-PAGER ============================
 c.showPage()
@@ -243,7 +243,7 @@ c.setFillColor(CARD); c.rect(0, 0, W, 26, stroke=0, fill=1)
 c.setFillColor(MUT); c.setFont("Helvetica", 6.8)
 c.drawString(36, 10, "© 2026 Guardian Angel. All Rights Reserved. Forward-looking projections — not investment advice. Live model: /api/founder/toolkit.")
 c.setFillColor(GOLD)
-c.drawRightString(W - 36, 10, "guardian.angel.core@proton.me")
+c.drawRightString(W - 36, 10, "guardianangel.core@proton.me")
 
 c.save()
 print("PDF written")

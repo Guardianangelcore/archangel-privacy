@@ -13,7 +13,7 @@ import requests
 
 BASE_URL = os.environ.get("EXPO_BACKEND_URL") or "https://physio-lang-fix.preview.emergentagent.com"
 BASE_URL = BASE_URL.rstrip("/")
-FOUNDER_EMAIL = "guardian.angel.core@proton.me"
+FOUNDER_EMAIL = "guardianangel.core@proton.me"
 PROTECTED_ART_DOC = "f1b50e9e705042fe92005b801de2cfc7"
 
 

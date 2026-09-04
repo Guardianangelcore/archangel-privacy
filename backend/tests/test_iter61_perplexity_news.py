@@ -3,7 +3,7 @@ import os, time, uuid, requests, pytest
 
 BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/")
 API = f"{BASE}/api"
-FOUNDER_EMAIL = "guardian.angel.core@proton.me"
+FOUNDER_EMAIL = "guardianangel.core@proton.me"
 
 
 def _bypass(email, name="X"):

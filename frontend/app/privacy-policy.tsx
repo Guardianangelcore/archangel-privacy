@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
       </View>
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 80 }}>
         <Text style={st.meta}>{tt('privacy_policy.version')} {VERSION} {tt('privacy_policy.effective')} {EFFECTIVE} {tt('privacy_policy.gdpr_eu_2016_679')}</Text>
-        <Text style={st.meta}>Data Controller: Guardian Angel Sovereign Foundation (DAO) · guardian.angel.core@proton.me</Text>
+        <Text style={st.meta}>Data Controller: Guardian Angel Sovereign Foundation (DAO) · guardianangel.core@proton.me</Text>
 
         {/* LOCAL-FIRST PROMISE */}
         <View testID="privacy-local-first" style={st.promiseBox}>
@@ -86,7 +86,7 @@ export default function PrivacyPolicy() {
           <B>{tt('privacy_policy.data_portability_export_your_life_ca')}</B>
           <B>{tt('privacy_policy.withdraw_consent_at_any_time_without')}</B>
           <B>{tt('privacy_policy.object_to_processing_and_lodge_a_com')}</B>
-          <P>Exercise these rights in-app or by writing to guardian.angel.core@proton.me.
+          <P>Exercise these rights in-app or by writing to guardianangel.core@proton.me.
             We respond within 30 days.</P>
         </Section>
 

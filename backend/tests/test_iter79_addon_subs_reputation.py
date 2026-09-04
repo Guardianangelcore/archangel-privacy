@@ -3,7 +3,7 @@ import os, uuid, requests
 from datetime import datetime, timezone, timedelta
 
 BASE = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/") + "/api"
-FOUNDER = "guardian.angel.core@proton.me"
+FOUNDER = "guardianangel.core@proton.me"
 
 
 def _bypass(email, name="T"):

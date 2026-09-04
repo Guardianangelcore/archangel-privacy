@@ -13,7 +13,7 @@ import { LANG_NAMES, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
 
 const BG = 'https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=1200&w=940';
-const FOUNDER_EMAIL = 'guardian.angel.core@proton.me';
+const FOUNDER_EMAIL = 'guardianangel.core@proton.me';
 
 export default function Login() {
   const { t: tt, tx } = useI18n();

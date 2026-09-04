@@ -26,7 +26,7 @@ LONG_TIMEOUT = 120  # AI can take 10-60s
 def session_token():
     r = requests.post(
         f"{API}/auth/dev-bypass",
-        json={"email": "guardian.angel.core@proton.me", "name": "Guardian Angel"},
+        json={"email": "guardianangel.core@proton.me", "name": "Guardian Angel"},
         timeout=30,
     )
     assert r.status_code == 200, f"dev-bypass failed: {r.status_code} {r.text}"
