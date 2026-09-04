@@ -10,7 +10,7 @@ import uuid
 
 from core import api, db, logger, clean, get_current_user
 from routes.subscription import TIERS, get_active_tier
-from routes.token import _ledger_append, _get_supply
+from routes.token import _ledger_append, _get_supply, debit_balance, BURN_RATE
 from routes.features import FEATURES, creator_royalty
 
 # Payments: RevenueCat (App Store / Google Play) — see frontend IAP_PACKAGES. Sovereign = free default.
@@ -42,22 +42,14 @@ ADDONS = {
     "premium_voice":      {"name": "Premium Voice Pack", "kind": "recurring", "price_eur": 3.00, "gat": 30,
                            "desc": "Studio-grade Jarvis voices (ElevenLabs) in your language."},
 }
+GAT_PER_EUR = 10.0   # add-on GA-T price = EUR price × 10 (same ratio as the pay-per-feature catalog)
+
+
+def addon_price_gat(a: dict) -> float:
+    return float(round(a["price_eur"] * GAT_PER_EUR))
+
+
 PROMO_CODES = {"ARCHANGEL2026": {"tier": "sentinel", "days": 30, "label": "1 month of Sentinel — free"}}
-
-
-async def _mint_gat(user_id: str, amount: float, meta: dict) -> Optional[dict]:
-    """Hidden token layer: every EUR purchase mints GA-T from the treasury to the buyer."""
-    if amount <= 0:
-        return None
-    supply = await _get_supply()
-    amount = min(amount, supply.get("treasury", 0.0))
-    if amount <= 0:
-        return None
-    await db.token_supply.update_one({"key": "gat"}, {"$inc": {"treasury": -amount, "circulating": amount}})
-    await db.token_accounts.update_one({"user_id": user_id},
-                                       {"$inc": {"balance": amount, "earned_total": amount},
-                                        "$set": {"updated_at": datetime.now(timezone.utc)}}, upsert=True)
-    return clean(await _ledger_append("purchase_grant", user_id, amount, meta))
 
 
 @api.get("/store/catalog")
@@ -80,8 +72,8 @@ async def store_catalog(authorization: Optional[str] = Header(None)):
         until = active.get(k)
         owned_now = (a.get("feature") in owned) if a["kind"] == "one_time" and a.get("feature") else \
                     (bool(until) and datetime.fromisoformat(until) > now) if a["kind"] == "recurring" else False
-        addons.append({"id": k, "name": a["name"], "kind": a["kind"], "price_eur": a["price_eur"], "desc": a["desc"],
-                       "owned": owned_now, "until": until if a["kind"] == "recurring" else None})
+        addons.append({"id": k, "name": a["name"], "kind": a["kind"], "price_eur": a["price_eur"], "price_gat": addon_price_gat(a),
+                       "desc": a["desc"], "owned": owned_now, "until": until if a["kind"] == "recurring" else None})
     return {"tier": tier, "tiers": tiers, "family": family, "addons": addons, "promo_used": fresh.get("promo_used") or []}
 
 
@@ -117,13 +109,20 @@ class AddonBuyIn(BaseModel):
 
 @api.post("/store/addon/buy")
 async def store_addon_buy(body: AddonBuyIn, authorization: Optional[str] = Header(None)):
-    """Card purchase (Stripe link) → unlock + hidden GA-T grant + 5 % creator royalty."""
+    """Add-on purchase paid in GA-T (ATOMIC debit) → unlock + 2 % burn + 5 % creator royalty.
+    SEC: there is no unverified fiat path — subscriptions go through RevenueCat, add-ons through GA-T."""
     user = await get_current_user(authorization)
     a = ADDONS.get(body.addon_id)
     if not a:
         raise HTTPException(400, f"addon_id must be one of {list(ADDONS)}")
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
+    price = addon_price_gat(a)
+    await _get_supply()
+    if not await debit_balance(uid, price, spent_total=price):
+        raise HTTPException(402, f"insufficient_balance: You need {price:.0f} GA-T.")
+    burn = round(price * BURN_RATE, 4)
+    await db.token_supply.update_one({"key": "gat"}, {"$inc": {"circulating": -price, "burned": burn, "treasury": price - burn}})
     upd: dict = {}
     if a.get("feature"):
         upd["$addToSet"] = {"features_owned": a["feature"]}
@@ -134,16 +133,13 @@ async def store_addon_buy(body: AddonBuyIn, authorization: Optional[str] = Heade
     if upd:
         await db.users.update_one({"user_id": uid}, upd)
     purchase = {"purchase_id": uuid.uuid4().hex, "user_id": uid, "addon_id": body.addon_id, "kind": a["kind"],
-                "amount_eur": a["price_eur"], "at": now}
+                "amount_gat": price, "currency": "gat", "at": now}
     await db.addon_purchases.insert_one(purchase.copy())
-    grant = await _mint_gat(uid, float(a["gat"]), {"addon": body.addon_id, "eur": a["price_eur"], "purchase_id": purchase["purchase_id"]})
-    try:
-        from routes.subscription import record_revenue
-        await record_revenue("addon", a["price_eur"], uid, {"addon": body.addon_id})
-    except Exception as e:
-        logger.warning(f"record_revenue failed: {e}")
-    royalty = await creator_royalty("addon", a["price_eur"], "eur", uid, {"addon": body.addon_id, "purchase_id": purchase["purchase_id"]})
-    return {"ok": True, "purchase": clean(purchase), "gat_granted": (grant or {}).get("amount", 0), "creator_royalty": royalty}
+    tx = await _ledger_append("spend", uid, -price, {"item": f"addon:{body.addon_id}", "burned": burn, "purchase_id": purchase["purchase_id"]})
+    await _ledger_append("burn", "burn-address", burn, {"source_tx": tx["tx_id"], "item": f"addon:{body.addon_id}"})
+    royalty = await creator_royalty("addon", price, "gat", uid, {"addon": body.addon_id, "purchase_id": purchase["purchase_id"]})
+    acct = await db.token_accounts.find_one({"user_id": uid}, {"_id": 0, "balance": 1}) or {}
+    return {"ok": True, "purchase": clean(purchase), "tx": clean(tx), "balance": acct.get("balance", 0.0), "creator_royalty": royalty}
 
 
 class TransferIn(BaseModel):
@@ -160,11 +156,10 @@ async def gat_transfer(body: TransferIn, authorization: Optional[str] = Header(N
     to = await db.users.find_one({"email": body.to_email.strip().lower()}, {"_id": 0, "user_id": 1})
     if not to or to["user_id"] == user["user_id"]:
         raise HTTPException(404, "Recipient not found")
-    acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
-    if acct.get("balance", 0.0) < body.amount:
-        raise HTTPException(402, f"insufficient_balance: you have {acct.get('balance', 0.0):.2f} GA-T")
     now = datetime.now(timezone.utc)
-    await db.token_accounts.update_one({"user_id": user["user_id"]}, {"$inc": {"balance": -body.amount}, "$set": {"updated_at": now}})
+    if not await debit_balance(user["user_id"], body.amount):
+        acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0, "balance": 1}) or {}
+        raise HTTPException(402, f"insufficient_balance: you have {acct.get('balance', 0.0):.2f} GA-T")
     await db.token_accounts.update_one({"user_id": to["user_id"]}, {"$inc": {"balance": body.amount}, "$set": {"updated_at": now}}, upsert=True)
     out = await _ledger_append("transfer_out", user["user_id"], -body.amount, {"to": to["user_id"], "note": body.note[:120]})
     await _ledger_append("transfer_in", to["user_id"], body.amount, {"from": user["user_id"], "note": body.note[:120]})

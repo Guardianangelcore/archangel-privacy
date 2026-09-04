@@ -128,7 +128,7 @@ function AddonRow({ a, busy, onBuy }: { a: any; busy: string | null; onBuy: (id:
       </View>
       {a.owned && a.kind === 'one_time' ? <Text style={st.owned}>✓ OWNED</Text> : (
         <Pressable testID={`addon-buy-${a.id}`} onPress={() => onBuy(a.id, a.name)} disabled={!!busy} style={st.buy}>
-          {busy === a.id ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.buyText}>{eur(a.price_eur)}{a.kind === 'recurring' ? '/mo' : ''}</Text>}
+          {busy === a.id ? <ActivityIndicator color={C.onInverse} /> : <Text style={st.buyText}>{a.price_gat} GA-T{a.kind === 'recurring' ? '/mo' : ''}</Text>}
         </Pressable>
       )}
     </View>

@@ -92,9 +92,13 @@ def get_object_sync(path: str):
 
 # --------- HELPERS ---------
 def clean(doc):
-    if isinstance(doc, dict) and "_id" in doc:
+    if isinstance(doc, dict):
         doc.pop("_id", None)
+        doc.pop("password_hash", None)   # SEC: credential material never leaves the server
     return doc
+
+# Fields of a `users` document that must never be returned to a client.
+USER_PRIVATE_PROJECTION = {"_id": 0, "password_hash": 0}
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -108,10 +112,49 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         exp = exp.replace(tzinfo=timezone.utc)
     if exp < datetime.now(timezone.utc):
         raise HTTPException(401, "Session expired")
-    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    user = await db.users.find_one({"user_id": session["user_id"]}, USER_PRIVATE_PROJECTION)
     if not user:
         raise HTTPException(401, "User not found")
     return user
+
+
+# --------- IP RATE LIMITING (in-memory sliding window, per worker) ---------
+# Protects public / expensive endpoints (login brute force, TTS abuse). Limits are
+# generous for real users and tunable via RATE_LIMIT_<BUCKET>_PER_MIN env vars.
+from collections import deque as _deque
+import time as _time
+from fastapi import Request
+
+_rate_buckets: dict = {}
+RATE_LIMITS_PER_MIN = {"login": 20, "register": 10, "dev_bypass": 30, "forgot_password": 5,
+                       "reset_password": 10, "tts": 30, "tts_intro": 10, "iap_sync": 60}
+
+
+def client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def rate_limit(request: Request, bucket: str, key: Optional[str] = None, window_s: int = 60):
+    """Raise 429 when `bucket` saw more than its per-minute limit from this IP (or `key`)."""
+    limit = int(os.environ.get(f"RATE_LIMIT_{bucket.upper()}_PER_MIN", RATE_LIMITS_PER_MIN.get(bucket, 60)))
+    if limit <= 0:
+        return
+    ident = key or client_ip(request)
+    now = _time.monotonic()
+    q = _rate_buckets.setdefault((bucket, ident), _deque())
+    while q and now - q[0] > window_s:
+        q.popleft()
+    if len(q) >= limit:
+        retry = int(window_s - (now - q[0])) + 1
+        raise HTTPException(429, f"rate_limited: too many requests — try again in {retry}s",
+                            headers={"Retry-After": str(retry)})
+    q.append(now)
+    if len(_rate_buckets) > 20000:   # bound memory: drop idle buckets
+        for k in [k for k, v in _rate_buckets.items() if not v or now - v[-1] > window_s][:5000]:
+            _rate_buckets.pop(k, None)
 
 
 # --------- AI COMPLIANCE (EU AI Act Art. 50 — applicable 2 Aug 2026) ---------

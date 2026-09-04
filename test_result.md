@@ -911,3 +911,9 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 
 ## Iter 64 (fork physio-lang-fix) — startup freeze fix
 - iteration_64.json: intro/onboarding/second-launch/logged-in/slow-CDN all pass on web; static review: all startup async paths time-boxed. Expo Go path (CDN fonts) now unblocked by 3 s RootLayout timeout.
+
+## Iter 77 (fork physio-lang-fix) — ChatGPT AI models + P0 security
+- Backend pytest tests/test_iter77_models_security.py 15/15 (models catalog/select/gates, chat+stream report model, password_hash never returned,
+  dev-bypass host gate (localhost spoof), login+tts 429, atomic spend/feature/transfer, addon GA-T, iap-sync whitelist).
+- Pre-existing unrelated failures: test_password_auth register (missing tos fields), phase15 wallet earn-rule count / royalty-to-self, iter66 creator 403.
+- Live verified: gpt-5.6-luna + gpt-5.6-terra reply through /agent/chat; Jarvis pill switches GPT-5.4 → GPT-5.6 Luna on web.

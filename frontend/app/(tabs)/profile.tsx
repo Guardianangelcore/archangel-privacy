@@ -17,6 +17,7 @@ import { startJudgeTour } from '@/src/judge-tour';   // DEMO_ONLY
 import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
+import { ModelChips } from '@/src/ModelPicker';
 import { getPanicTaps, setPanicTaps } from '@/src/panic-gesture';
 import * as LocalAuthentication from 'expo-local-authentication';
 
@@ -312,6 +313,15 @@ export default function Profile() {
             );
           })}
         </View>
+        {/* JARVIS AI MODEL — ChatGPT model powering chat / stream / briefing / agents */}
+        <View style={[styles.guardRow, { marginTop: S.sm }]}>
+          <Ionicons name="hardware-chip-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>{tt('ai_models.title')}</Text>
+            <Text style={styles.guardSub}>{tt('ai_models.subtitle')}</Text>
+          </View>
+        </View>
+        <ModelChips />
         {/* ELEVENLABS — native Slovak/Czech/… pronunciation (needs ELEVENLABS_API_KEY on the server) */}
         <View style={[styles.guardRow, { marginTop: S.sm }]}>
           <Ionicons name="language-outline" size={22} color={C.fg} />

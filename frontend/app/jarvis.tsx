@@ -18,6 +18,7 @@ import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } fr
 import { fetch as expoFetch } from 'expo/fetch';
 import { api, API_BASE, getToken, errMsg } from '@/src/api';
 import Paywall from '@/src/Paywall';
+import { ModelPill } from '@/src/ModelPicker';
 import { useI18n } from '@/src/i18n-context';
 import { locateDevice } from '@/src/geo';
 import { useAuth } from '@/src/auth';
@@ -717,6 +718,7 @@ export default function Jarvis() {
             </Pressable>
           ))}
         </View>
+        {mode === 'chat' && <ModelPill accent={cfg.color} />}
 
         <View style={st.askRow}>
           <TextInput testID="jv-input" style={st.input}

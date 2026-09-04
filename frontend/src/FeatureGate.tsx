@@ -30,10 +30,10 @@ export function useFeature(feature: FeatureId) {
 export default function FeatureGate({ feature, message, children }: { feature: FeatureId; message: string; children: React.ReactNode }) {
   const { loading, unlocked, cat, reload } = useFeature(feature);
   const { refresh } = useAuth() as any;
-  const [busy, setBusy] = useState<'gat' | 'eur' | null>(null);
+  const [busy, setBusy] = useState<'gat' | null>(null);
   const [err, setErr] = useState('');
 
-  const buy = async (currency: 'gat' | 'eur') => {
+  const buy = async (currency: 'gat') => {
     tap('medium'); setBusy(currency); setErr('');
     try {
       await api('/features/buy', { method: 'POST', body: JSON.stringify({ feature, currency }) });
@@ -56,9 +56,6 @@ export default function FeatureGate({ feature, message, children }: { feature: F
             <Pressable testID={`buy-gat-${feature}`} onPress={() => buy('gat')} disabled={!!busy} style={[st.btn, st.gat]}>
               {busy === 'gat' ? <ActivityIndicator color={C.brand} /> : <><Ionicons name="diamond" size={14} color={C.brand} /><Text style={st.gatText}>{cat.gat.toFixed(0)} GA-T</Text></>}
             </Pressable>
-            <Pressable testID={`buy-eur-${feature}`} onPress={() => buy('eur')} disabled={!!busy} style={[st.btn, st.eur]}>
-              {busy === 'eur' ? <ActivityIndicator color={C.onInverse} /> : <><Ionicons name="card" size={14} color={C.onInverse} /><Text style={st.eurText}>€{cat.eur.toFixed(2)}</Text></>}
-            </Pressable>
           </View>
           {!!err && <Text style={st.err}>{err}</Text>}
         </View>
@@ -74,8 +71,6 @@ const st = StyleSheet.create({
   row: { flexDirection: 'row', gap: S.sm, alignSelf: 'stretch' },
   btn: { flex: 1, minHeight: 48, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm },
   gat: { borderWidth: 1, borderColor: C.brand },
-  eur: { backgroundColor: C.brand },
   gatText: { color: C.brand, fontWeight: '900', letterSpacing: 1 },
-  eurText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1 },
   err: { color: C.error, fontSize: 11, fontWeight: '800', textAlign: 'center' },
 });

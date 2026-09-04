@@ -109,6 +109,17 @@ async def _get_supply() -> dict:
     return await ensure_genesis()
 
 
+async def debit_balance(user_id: str, amount: float, **inc_extra) -> bool:
+    """ATOMIC GA-T debit — a single conditional update (`balance >= amount`) so concurrent
+    spends can never drive a wallet below zero. Returns False when funds are insufficient."""
+    if amount <= 0:
+        return True
+    res = await db.token_accounts.update_one(
+        {"user_id": user_id, "balance": {"$gte": amount}},
+        {"$inc": {"balance": -amount, **inc_extra}, "$set": {"updated_at": datetime.now(timezone.utc)}})
+    return res.matched_count == 1
+
+
 # ---------------- CORE OPERATIONS ----------------
 async def award_tokens(user_id: str, activity: str, note: str = "") -> Optional[dict]:
     """Award GA-T for a verified activity. Returns tx or None when the daily cap is hit."""
@@ -120,11 +131,11 @@ async def award_tokens(user_id: str, activity: str, note: str = "") -> Optional[
         {"kind": "earn", "account": user_id, "meta.activity": activity, "at": {"$gte": day_start}})
     if today >= rule["daily_max"]:
         return None
-    supply = await _get_supply()
-    if supply["treasury"] < rule["amount"]:
+    await _get_supply()
+    res = await db.token_supply.update_one({"key": "gat", "treasury": {"$gte": rule["amount"]}},
+                                           {"$inc": {"treasury": -rule["amount"], "circulating": rule["amount"]}})
+    if res.matched_count == 0:          # treasury exhausted — never mint from nothing
         return None
-    await db.token_supply.update_one({"key": "gat"},
-                                     {"$inc": {"treasury": -rule["amount"], "circulating": rule["amount"]}})
     await db.token_accounts.update_one(
         {"user_id": user_id},
         {"$inc": {"balance": rule["amount"], "earned_total": rule["amount"]},
@@ -141,15 +152,10 @@ async def charge_tokens(user_id: str, item: str, note: str = "") -> Optional[dic
     it = SPEND_ITEMS.get(item)
     if not it:
         return None
-    acct = await db.token_accounts.find_one({"user_id": user_id}, {"_id": 0})
-    if not acct or acct.get("balance", 0) < it["price"]:
+    if not await debit_balance(user_id, it["price"], spent_total=it["price"]):
         return None
     burn = round(it["price"] * BURN_RATE, 4)
     to_treasury = it["price"] - burn
-    await db.token_accounts.update_one(
-        {"user_id": user_id},
-        {"$inc": {"balance": -it["price"], "spent_total": it["price"]},
-         "$set": {"updated_at": datetime.now(timezone.utc)}})
     await db.token_supply.update_one({"key": "gat"},
                                      {"$inc": {"treasury": to_treasury,
                                                "circulating": -it["price"], "burned": burn}})
@@ -337,21 +343,18 @@ async def token_spend(body: SpendIn, authorization: Optional[str] = Header(None)
     if not item:
         raise HTTPException(400, f"item must be one of {list(SPEND_ITEMS)}")
     await _get_supply()
-    acct = await db.token_accounts.find_one({"user_id": user["user_id"]}, {"_id": 0})
-    if not acct or acct.get("balance", 0.0) < item["price"]:
-        raise HTTPException(402, f"insufficient_balance: You need {item['price']} GA-T.")
     price = item["price"]
     burn = round(price * BURN_RATE, 4)
     now = datetime.now(timezone.utc)
+    # ATOMIC debit first — nothing (royalty, effects, ledger) happens unless the wallet covered it.
+    if not await debit_balance(user["user_id"], price, spent_total=price):
+        raise HTTPException(402, f"insufficient_balance: You need {price} GA-T.")
     # CREATOR ROYALTY — 5 % of every GA-T sale goes to the Guardian Angel creator account
     try:
         from routes.features import creator_royalty
         await creator_royalty("gat_sale", price, "gat", user["user_id"], {"item": body.item})
     except Exception as _e:
         logger.warning(f"creator royalty skipped: {_e}")
-    await db.token_accounts.update_one(
-        {"user_id": user["user_id"]},
-        {"$inc": {"balance": -price, "spent_total": price}, "$set": {"updated_at": now}})
     await db.token_supply.update_one(
         {"key": "gat"},
         {"$inc": {"circulating": -price, "burned": burn, "treasury": price - burn}})

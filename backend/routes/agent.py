@@ -22,6 +22,7 @@ from core import (
     AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY, apply_watermark, ai_http_error, ai_error_message,
 )
 from routes.subscription import require_tier
+from routes.ai_models import resolve_model
 
 # PAID-ONLY AI — Jarvis chat + Morning Briefing consume LLM budget, so they are
 # exclusive to the Guardian tier and above (Sovereign = free tier sees an upgrade prompt).
@@ -520,11 +521,12 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     st = await _get_state(uid)
     level = _level_for(st.get("xp", 0))
     sys, anomalies = await _chat_system(user, uid, level, json_mode=True)
+    model = await resolve_model(user)
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
         session_id=f"agent-{uid[:8]}-{uuid.uuid4().hex[:6]}",
         system_message=sys,
-    ).with_model("openai", "gpt-5.4")
+    ).with_model("openai", model)
     try:
         resp = await chat.send_message(UserMessage(text=body.message[:1000]))
     except Exception as e:
@@ -557,7 +559,7 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     xp = await award_xp(uid, 5, "chat")
     return {"reply": reply, "mood": mood, "xp_gained": xp["gained"],
             "level": xp["level"], "level_up": xp["level_up"],
-            "level_name": LEVEL_NAMES[xp["level"] - 1], "alerts": anomalies}
+            "level_name": LEVEL_NAMES[xp["level"] - 1], "alerts": anomalies, "model": model}
 
 # =========================================================================
 # MORNING BRIEFING — proactive daily soul (weather · meds · memory follow-up)
@@ -701,7 +703,7 @@ async def agent_briefing(request: Request, language: str = "sk", force: bool = F
         api_key=EMERGENT_LLM_KEY,
         session_id=f"agent-brief-{uid[:8]}-{uuid.uuid4().hex[:6]}",
         system_message=sys,
-    ).with_model("openai", "gpt-5.4")
+    ).with_model("openai", await resolve_model(user))
     try:
         text = await chat.send_message(UserMessage(text=json.dumps(payload, ensure_ascii=False, default=str)))
     except Exception as e:
@@ -1070,12 +1072,13 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
     level = _level_for(st.get("xp", 0))
 
     # REPLY CACHE — identical question repeated within 5 min → instant replay (no LLM round-trip).
-    ck = _reply_cache_key(uid, user, q)
+    model = await resolve_model(user)
+    ck = _reply_cache_key(uid, user, q) + (model,)
     hit = _reply_cache.get(ck)
     if hit and time.time() - hit["at"] < REPLY_CACHE_TTL:
         async def gen_cached():
             yield f"data: {json.dumps({'t': hit['reply']}, ensure_ascii=False)}\n\n"
-            yield f"data: {json.dumps({'done': True, 'mood': hit['mood'], 'cached': True, 'xp_gained': 0, 'level': level, 'level_up': False, 'level_name': LEVEL_NAMES[level - 1], 'alerts': []}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'done': True, 'mood': hit['mood'], 'cached': True, 'model': model, 'xp_gained': 0, 'level': level, 'level_up': False, 'level_name': LEVEL_NAMES[level - 1], 'alerts': []}, ensure_ascii=False)}\n\n"
         return StreamingResponse(gen_cached(), media_type="text/event-stream", headers=sse_headers)
 
     sys, anomalies = await _chat_system(user, uid, level, json_mode=False)
@@ -1084,7 +1087,7 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
         api_key=EMERGENT_LLM_KEY,
         session_id=f"agent-s-{uid[:8]}-{uuid.uuid4().hex[:6]}",
         system_message=sys,
-    ).with_model("openai", "gpt-5.4")
+    ).with_model("openai", model)
 
     async def gen():
         full = ""
@@ -1127,7 +1130,7 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
         await db.agent_state.update_one({"user_id": uid}, {"$set": {"mood": mood}})
         asyncio.create_task(_extract_memories(uid, q, reply))
         xp = await award_xp(uid, 5, "chat")
-        meta = {"done": True, "mood": mood, "xp_gained": xp["gained"], "level": xp["level"],
+        meta = {"done": True, "mood": mood, "model": model, "xp_gained": xp["gained"], "level": xp["level"],
                 "level_up": xp["level_up"], "level_name": LEVEL_NAMES[xp["level"] - 1],
                 "alerts": anomalies}
         yield f"data: {json.dumps(meta, ensure_ascii=False, default=str)}\n\n"

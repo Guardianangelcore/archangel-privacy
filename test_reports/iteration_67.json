@@ -1,0 +1,36 @@
+{
+  "summary": "Iter77 (Jarvis ChatGPT model picker + P0 security hardening) — FRONTEND focus verified end-to-end on mobile viewport (390x844) plus a light backend regression (7/7 passing). Founder dev-bypass (testID founder-bypass-btn) logs in from the preview host and lands on the tabbed hub. Profile screen shows 4 model cards (prof-model-gpt-5.4-mini/.4/.6-luna/.6-terra); founder (archangel) sees none locked; tapping prof-model-gpt-5.6-luna flips the card to inverse background + checkmark and PUT /api/ai/models/select persists (GET selected=gpt-5.6-luna after reload); restoring to gpt-5.4 also works. Jarvis screen shows jv-model pill 'GPT-5.4' below the mode chips in CHAT mode only (hidden in SONAR and IMAGE — confirmed); tapping it opens jv-model-sheet with 4 jv-model-<id> rows; picking jv-model-gpt-5.6-terra closes the sheet, pill reads 'GPT-5.6 Terra', /ai/models selected=gpt-5.6-terra. Chat message via jv-input+jv-ask received a reply bubble. Free-tier user (via dev-bypass, sovereign tier) sees luna/terra with lock icon + 'Requires the Guardian/Sentinel Plan'; tapping locked luna surfaces prof-model-msg with the 402 guardian_required copy and prof-model-upgrade navigates to /store; prof-model-gpt-5.4-mini selects fine. Store /store ADD-ONS tab renders GA-T pricing only (addon-buy-ghost_mode='30 GA-T', addon-buy-perplexity_ultra='50 GA-T/mo', no € on add-ons); buying ghost_mode with 0 GA-T returns 402 with addon-msg='insufficient_balance: You need 30 GA-T.'. FeatureGate on /bunker shows gate-bunker with buy-gat-bunker and NO buy-eur-bunker. Backend: /auth/me returns no password_hash for password account, POST /features/buy currency=eur → 400 (gat only), POST /auth/dev-bypass from preview host → 200. Web preview logs a benign PAGEERR 'play() failed' from an autoplay video and a single 429 log-line from a background Sonar cache poll — not blocking. No React Native red screens or deprecated packages surfaced in the code paths under review.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter77_ui_regression.py",
+    "/app/test_reports/pytest/pytest_iter77_ui.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/ai_models.py (74 lines): resolve_model() correctly falls back to DEFAULT_MODEL when tier lapses — silently, without failing the request. Good.",
+    "routes/features.py (265 lines): currency EUR path is blocked with 400 before any wallet debit; already_owned short-circuit sits before the check, which is fine (owned features are idempotent). No _id leak observed.",
+    "src/ModelPicker.tsx: shared ModelChips (Settings) + ModelPill (Jarvis) both react to useAiModels().select which handles 402 by setting locked=true and surfacing msg + upgrade button — clean single source of truth for both UIs.",
+    "jarvis.tsx pill is scoped to CHAT mode only (hides on SONAR/IMAGE) — matches spec."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter77_ui_regression.py (new; 7 tests, 7 pass)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7)",
+    "frontend": "100% of testable flows"
+  },
+  "seed_data_creation": "Reused pre-seeded founder (guardian.angel.core@proton.me → session gs-12e6ac23…). Created one free-tier dev-bypass user free-model-test@example.com (user_id=user_3b8431cef1f1, session gs-6c3a60f5…) — set user_type=adult + accepted TOS to bypass onboarding gates. Restored founder jarvis_model=gpt-5.4 at end of run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "react-native-web Pressable in this build does NOT respond to Playwright's page.click(force=True) or a bare mouse.down/up — you MUST dispatch a full PointerEvent(pointerdown)+MouseEvent(mousedown)+PointerEvent(pointerup)+MouseEvent(mouseup)+MouseEvent(click) sequence via page.evaluate for Pressables (this was the fix used across all tap actions in this run). Same trick worked on Settings model cards, Jarvis pill/sheet rows, store tabs and the FeatureGate buttons. Preview host is gated for dev-bypass (env DEV_BYPASS_ENABLED=true), works fine from https://physio-lang-fix.preview.emergentagent.com. When testing a fresh dev-bypass user, expect a /user-type gate (PUT /api/me/user-type body {user_type:'adult'|'senior'|'clinician'|'responder'|'child'}) and a TOS gate (POST /api/legal/accept {version:'2026-06.1'}) before profile is reachable. Video autoplay PAGEERR and one 429 line from background Sonar poll are pre-existing and benign.",
+  "rca_of_issue": "N/A — no defects found in this iteration; only test-fixture drift caught during red-green: initial test_features_buy_eur_rejected used founder_token who already owned 'bunker' and hit the idempotent already_owned:true short-circuit before the currency check, returning 200 instead of 400. Switched fixture to a fresh free-tier user → 400 as expected. Code behaviour is correct; the fixture was wrong."
+}

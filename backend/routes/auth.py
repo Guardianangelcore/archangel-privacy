@@ -17,7 +17,7 @@ from core import (
     AML_UNVERIFIED_DAILY, AML_VERIFIED_DAILY, AML_MAX_TX_PER_DAY,
     _FONT_R, _FONT_B, _make_pdf, _auth_pdf, _pdf_footer, _pdf_response,
     APP_NAME, put_object_sync, get_object_sync, init_storage,
-    EMERGENT_LLM_KEY, AUTH_SESSION_URL, TOS_VERSION,
+    EMERGENT_LLM_KEY, AUTH_SESSION_URL, TOS_VERSION, rate_limit, USER_PRIVATE_PROJECTION,
 )
 from models import User, EmergencyProfile, Document, WaitlistItem, FallEvent
 
@@ -82,7 +82,7 @@ async def auth_session(body: SessionExchangeIn):
         await notify_login_handshake(user_doc, session_token)
     except Exception as e:
         logger.warning(f"social 2fa handshake: {e}")
-    return {"session_token": session_token, "user": user_doc}
+    return {"session_token": session_token, "user": clean(user_doc)}
 
 @api.get("/auth/me", name="me")
 async def me(authorization: Optional[str] = Header(None)):
@@ -147,19 +147,36 @@ class DevBypassIn(BaseModel):
     name: Optional[str] = None
 
 
+# SEC-001 — the bypass is a PREVIEW/TEST convenience only. It is OFF unless the backend
+# .env explicitly sets DEV_BYPASS_ENABLED=true AND the request reaches a preview/local
+# host. The Founder e-mail is NOT exempt (anyone could otherwise mint an Archangel session).
+DEV_BYPASS_HOSTS = tuple(h.strip().lower() for h in os.environ.get(
+    "DEV_BYPASS_HOSTS", "preview.emergentagent.com,preview.emergentcf.cloud,localhost,127.0.0.1").split(",") if h.strip())
+
+
+def dev_bypass_allowed(request: Request) -> bool:
+    if os.environ.get("DEV_BYPASS_ENABLED", "false").strip().lower() not in ("1", "true", "yes"):
+        return False
+    # The ingress rewrites Host to the internal cluster name and keeps the public one in
+    # X-Forwarded-Host — both must belong to a preview/local domain.
+    hosts = [(request.headers.get(k) or "").split(",")[0].split(":")[0].strip().lower()
+             for k in ("host", "x-forwarded-host")]
+    hosts = [h for h in hosts if h]
+    return bool(hosts) and all(any(h == a or h.endswith("." + a) for a in DEV_BYPASS_HOSTS) for h in hosts)
+
+
 @api.post("/auth/dev-bypass")
-async def auth_dev_bypass(body: DevBypassIn):
+async def auth_dev_bypass(body: DevBypassIn, request: Request):
     """SOVEREIGN BYPASS — creates a Guardian session without Google OAuth.
 
-    Always allowed for the Founder email (guardian.angel.core@proton.me).
-    Also allowed for any email when DEV_BYPASS_ENABLED=true (preview builds).
-    Returns the same shape as /auth/session for a drop-in on the login screen."""
+    Preview / local builds ONLY (see dev_bypass_allowed). Disabled in production:
+    set DEV_BYPASS_ENABLED=false (or remove it) before publishing."""
+    rate_limit(request, "dev_bypass")
+    if not dev_bypass_allowed(request):
+        raise HTTPException(403, "dev bypass disabled — use e-mail/password or Google Sign-In")
     email_l = body.email.strip().lower()
     if not email_l or "@" not in email_l:
         raise HTTPException(400, "invalid email")
-    dev_enabled = os.environ.get("DEV_BYPASS_ENABLED", "true").lower() in ("1", "true", "yes")
-    if email_l != FOUNDER_EMAIL and not dev_enabled:
-        raise HTTPException(403, "dev bypass disabled — use Google Sign-In")
     await _ensure_founder_whitelist()
     user_doc = await _provision_user(email_l, body.name)
     session_token = f"gs-{uuid.uuid4().hex}"
@@ -233,6 +250,7 @@ async def _issue_password_session(user_doc: dict) -> dict:
 
 @api.post("/auth/register", status_code=201)
 async def auth_register(body: RegisterIn, request: Request):
+    rate_limit(request, "register")
     email_l = body.email.strip().casefold()
     if "@" not in email_l or "." not in email_l.split("@")[-1]:
         raise HTTPException(422, "invalid email")
@@ -297,8 +315,10 @@ async def auth_consent_receipt(authorization: Optional[str] = Header(None)):
 
 
 @api.post("/auth/login")
-async def auth_login(body: LoginIn):
+async def auth_login(body: LoginIn, request: Request):
+    rate_limit(request, "login")                       # per IP
     email_l = body.email.strip().casefold()
+    rate_limit(request, "login", key=f"email:{email_l}")   # per account (credential stuffing)
     _validate_password_bytes(body.password)
     user = await db.users.find_one({"email": email_l}, {"_id": 0})
     ok = await _verify_password(body.password, user.get("password_hash") if user else None)
@@ -355,7 +375,8 @@ def _reset_email_html(code: str) -> str:
 
 
 @api.post("/auth/forgot-password")
-async def auth_forgot_password(body: ForgotPasswordIn):
+async def auth_forgot_password(body: ForgotPasswordIn, request: Request):
+    rate_limit(request, "forgot_password")
     email_l = body.email.strip().casefold()
     if "@" not in email_l:
         raise HTTPException(422, "invalid email")
@@ -390,7 +411,8 @@ async def auth_forgot_password(body: ForgotPasswordIn):
 
 
 @api.post("/auth/reset-password")
-async def auth_reset_password(body: ResetPasswordIn):
+async def auth_reset_password(body: ResetPasswordIn, request: Request):
+    rate_limit(request, "reset_password")
     email_l = body.email.strip().casefold()
     _validate_password_bytes(body.new_password)
     now = datetime.now(timezone.utc)
@@ -461,7 +483,7 @@ async def update_prefs(body: PrefIn, authorization: Optional[str] = Header(None)
         upd["birth_year"] = by
     if upd:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": upd})
-    return clean(await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0}))
+    return clean(await db.users.find_one({"user_id": user["user_id"]}, USER_PRIVATE_PROJECTION))
 
 
 # --------- ACCOUNT DELETION (App Store requirement) ---------

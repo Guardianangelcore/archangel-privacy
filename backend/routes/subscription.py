@@ -5,12 +5,12 @@
 (€149) / Archangel (€499). Monthly or annual (−20 %). Multi-currency EUR /
 CZK / GA-T. GA-T payments live via the internal token engine; card billing is
 a placeholder until the real Stripe key is provided (user's decision)."""
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Header, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from core import api, db, clean, get_current_user, _aml_ledger_append
+from core import api, db, clean, get_current_user, _aml_ledger_append, rate_limit, client_ip
 
 CZK_RATE = 25.0
 ANNUAL_DISCOUNT = 0.20
@@ -170,6 +170,9 @@ async def subscription_upgrade(body: UpgradeIn, authorization: Optional[str] = H
 # store product identifier: pro.monthly / pro.annual → guardian, pro.sentinel_* → sentinel,
 # pro.archangel_* → archangel (provisioned via the integration proxy, see memory/revenuecat.md).
 IAP_ENTITLEMENTS = {"pro"}
+# Product ids provisioned in RevenueCat (memory/revenuecat.md) — anything else is rejected.
+IAP_PRODUCT_PREFIXES = ("pro.",)
+IAP_STORES = {"APP_STORE", "MAC_APP_STORE", "PLAY_STORE", "AMAZON", "STRIPE", "PROMOTIONAL", "TEST_STORE", "RC_BILLING", "UNKNOWN_STORE"}
 
 
 def iap_tier(product_identifier: Optional[str]) -> str:
@@ -197,13 +200,27 @@ class IapSyncIn(BaseModel):
 
 
 @api.post("/subscription/iap-sync")
-async def subscription_iap_sync(body: IapSyncIn, authorization: Optional[str] = Header(None)):
-    """Mirror the device's RevenueCat entitlement into the tier system (idempotent)."""
+async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization: Optional[str] = Header(None)):
+    """Mirror the device's RevenueCat entitlement into the tier system (idempotent).
+
+    SECURITY NOTE: the Emergent-managed RevenueCat integration exposes no secret API key or
+    webhook to this backend, so the SDK's CustomerInfo on the device is the source of truth
+    (per playbook). Hardening applied here: rate limit per user, strict payload whitelist
+    (entitlement, provisioned product ids, store), identity match and an AML ledger entry."""
     user = await get_current_user(authorization)
     uid = user["user_id"]
+    rate_limit(request, "iap_sync", key=f"user:{uid}")
     now = datetime.now(timezone.utc)
     if body.entitlement not in IAP_ENTITLEMENTS:
         raise HTTPException(400, f"unknown entitlement {body.entitlement}")
+    if body.active:
+        pid = (body.product_identifier or "").lower()
+        if not pid.startswith(IAP_PRODUCT_PREFIXES):
+            raise HTTPException(422, "unknown product identifier")
+        if body.store and body.store.upper() not in IAP_STORES:
+            raise HTTPException(422, "unknown store")
+        if not body.app_user_id:
+            raise HTTPException(422, "app_user_id required")
     tier = iap_tier(body.product_identifier)
     if body.app_user_id and body.app_user_id != uid:
         raise HTTPException(409, "RevenueCat identity does not match the signed-in user")
@@ -247,7 +264,7 @@ async def subscription_iap_sync(body: IapSyncIn, authorization: Optional[str] = 
             "tier_started_at": fresh.get("tier_started_at") or now}})
         await _aml_ledger_append(uid, "iap_entitlement_sync", {
             "entitlement": body.entitlement, "tier": tier, "product": body.product_identifier, "store": body.store,
-            "expires": body.expires_date, "period_type": body.period_type})
+            "expires": body.expires_date, "period_type": body.period_type, "ip": client_ip(request)})
     # LOYALTY LOOP — fiat subscription → monthly GA-T (trial periods are excluded by the allocator).
     from routes.token import start_subscription_allocation, settle_subscription_allocations
     if (body.period_type or "NORMAL").upper() == "NORMAL":

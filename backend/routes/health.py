@@ -1,7 +1,7 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-from fastapi import HTTPException, Header, UploadFile, File, Form
+from fastapi import HTTPException, Header, UploadFile, File, Form, Request
 from fastapi.responses import Response, StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ from core import (
     AML_UNVERIFIED_DAILY, AML_VERIFIED_DAILY, AML_MAX_TX_PER_DAY,
     _FONT_R, _FONT_B, _make_pdf, _auth_pdf, _pdf_footer, _pdf_response,
     APP_NAME, put_object_sync, get_object_sync, init_storage,
-    EMERGENT_LLM_KEY, AUTH_SESSION_URL,
+    EMERGENT_LLM_KEY, AUTH_SESSION_URL, rate_limit,
 )
 from models import User, EmergencyProfile, Document, WaitlistItem, FallEvent
 
@@ -446,8 +446,10 @@ def _resolve_voice(user: dict, body: TTSIn) -> tuple[str, str]:
     return engine, voice
 
 @api.post("/voice/tts")
-async def tts_generate(body: TTSIn, authorization: Optional[str] = Header(None)):
+async def tts_generate(body: TTSIn, request: Request, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    rate_limit(request, "tts")                                  # per IP
+    rate_limit(request, "tts", key=f"user:{user['user_id']}")   # per account
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "TTS key not configured")
     text = clean_for_tts(body.text)
@@ -595,8 +597,9 @@ INTRO_SCRIPT = {
 
 
 @api.get("/voice/intro.mp3")
-async def voice_intro(lang: str = "en"):
+async def voice_intro(request: Request, lang: str = "en"):
     """PUBLIC (pre-login) — the cinematic intro narration in the app language, JARVIS preset."""
+    rate_limit(request, "tts_intro")
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "TTS key not configured")
     lk = (lang or "en")[:2].lower()

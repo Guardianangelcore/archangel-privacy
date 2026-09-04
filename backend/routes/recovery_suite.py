@@ -261,7 +261,7 @@ async def social_recovery_poll(req_id: str):
     out = {"status": req["status"], "approvals": len(req["approvals"]), "needed": req["needed"]}
     if req["status"] == "approved" and not req.get("token_delivered"):
         await db.recovery_requests.update_one({"req_id": req_id}, {"$set": {"token_delivered": True}})
-        user = await db.users.find_one({"user_id": req["user_id"]}, {"_id": 0})
+        user = await db.users.find_one({"user_id": req["user_id"]}, {"_id": 0, "password_hash": 0})
         out.update({"session_token": req["recovery_token"], "user": user})
     return out
 
@@ -286,7 +286,7 @@ class TalismanRedeemIn(BaseModel):
 
 @api.post("/recovery-suite/talisman/redeem")
 async def talisman_redeem(body: TalismanRedeemIn):
-    user = await db.users.find_one({"did": body.did.strip()}, {"_id": 0})
+    user = await db.users.find_one({"did": body.did.strip()}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(404, "Account not found.")
     tal = await db.talismans.find_one({"user_id": user["user_id"]}, {"_id": 0})

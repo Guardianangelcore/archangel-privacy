@@ -10,6 +10,7 @@ import uuid, asyncio
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import api, db, logger, clean, get_current_user, EMERGENT_LLM_KEY, AI_COMPLIANCE_NOTE, apply_watermark
 from routes.subscription import get_active_tier, TIER_RANK
+from routes.ai_models import resolve_model, FAST_MODEL
 
 # ------------------------------------------------------------------ B. USER TYPE
 USER_TYPES = ("adult", "senior", "clinician", "responder", "child")
@@ -111,22 +112,14 @@ async def features_buy(body: BuyIn, authorization: Optional[str] = Header(None))
     if body.feature in (fresh.get("features_owned") or []):
         return {"ok": True, "already_owned": True, "feature": body.feature}
     now = datetime.now(timezone.utc)
-    if body.currency == "gat":
-        acct = await db.token_accounts.find_one({"user_id": uid}, {"_id": 0})
-        if not acct or acct.get("balance", 0.0) < f["gat"]:
-            raise HTTPException(402, f"insufficient_balance: You need {f['gat']:.0f} GA-T.")
-        await db.token_accounts.update_one({"user_id": uid}, {"$inc": {"balance": -f["gat"]}})
-        amount, cur = f["gat"], "gat"
-    elif body.currency == "eur":
-        # One-off EUR purchase — recorded as a pay-per-use revenue event (card flow handled by the store / Stripe sheet).
-        from routes.subscription import record_revenue
-        try:
-            await record_revenue("pay_per_feature", f["eur"], uid, {"feature": body.feature})
-        except Exception as e:
-            logger.warning(f"record_revenue failed: {e}")
-        amount, cur = f["eur"], "eur"
-    else:
-        raise HTTPException(400, "currency must be gat | eur")
+    if body.currency != "gat":
+        # SEC: no unverified fiat path — card/IAP unlocks are only granted through a verified
+        # store purchase (RevenueCat), never by a plain API call.
+        raise HTTPException(400, "currency must be gat — features are bought with GA-T")
+    from routes.token import debit_balance
+    if not await debit_balance(uid, float(f["gat"]), spent_total=float(f["gat"])):
+        raise HTTPException(402, f"insufficient_balance: You need {f['gat']:.0f} GA-T.")
+    amount, cur = f["gat"], "gat"
     purchase = {"purchase_id": uuid.uuid4().hex, "user_id": uid, "feature": body.feature, "currency": cur,
                 "amount": amount, "at": now}
     await db.feature_purchases.insert_one(purchase.copy())
@@ -179,9 +172,9 @@ class AgentRunIn(BaseModel):
     doc_id: Optional[str] = None    # vault document (photo path)
     language: str = "sk"
 
-def _llm(tag: str, system: str, strong: bool):
+def _llm(tag: str, system: str, model: str):
     return LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"agents-{tag}-{uuid.uuid4().hex[:6]}", system_message=system)\
-        .with_model("openai", "gpt-5.4" if strong else "gpt-5.4-mini")
+        .with_model("openai", model)
 
 @api.post("/agents/run")
 async def agents_run(body: AgentRunIn, authorization: Optional[str] = Header(None)):
@@ -192,6 +185,8 @@ async def agents_run(body: AgentRunIn, authorization: Optional[str] = Header(Non
     acc = await _agent_access(user)
     lang = LANG_NAMES.get((body.language or user.get("language") or "sk")[:2], "English")
     strong = acc["priority"]
+    # Priority tiers answer with the user's chosen ChatGPT model; others get the fast model.
+    model = (await resolve_model(user)) if strong else FAST_MODEL
     ctx = {"input_type": body.input_type, "user_text": (body.text or "")[:3000], "extracted_text": "", "archived": None,
            "analysis": "", "crisis": ""}
     trace = []
@@ -228,7 +223,7 @@ async def agents_run(body: AgentRunIn, authorization: Optional[str] = Header(Non
     if acc["access"]["analyst"] and source:
         try:
             resp = await _llm("analyst", f"You are ANALYST, a careful medical & crisis analyst. Assess the text (medications, interactions, red flags, "
-                              f"what matters). Bullet points, max 120 words, in {lang}. Never invent data." + AI_COMPLIANCE_NOTE, strong)\
+                              f"what matters). Bullet points, max 120 words, in {lang}. Never invent data." + AI_COMPLIANCE_NOTE, model)\
                 .send_message(UserMessage(text=source[:6000]))
             ctx["analysis"] = str(resp)
             trace.append({"agent": "analyst", "status": "done", "detail": "Assessment ready"})
@@ -243,7 +238,7 @@ async def agents_run(body: AgentRunIn, authorization: Optional[str] = Header(Non
         if acc["access"]["guardian"]:
             try:
                 resp = await _llm("guardian", f"You are GUARDIAN, a survival & evacuation protocol agent. Give a numbered, calm 5-step action plan "
-                                  f"for the situation, max 100 words, in {lang}." + AI_COMPLIANCE_NOTE, strong).send_message(UserMessage(text=ctx["user_text"][:2000]))
+                                  f"for the situation, max 100 words, in {lang}." + AI_COMPLIANCE_NOTE, model).send_message(UserMessage(text=ctx["user_text"][:2000]))
                 ctx["crisis"] = str(resp)
                 trace.append({"agent": "guardian", "status": "done", "detail": "Protocol prepared"})
             except Exception as e:
@@ -257,7 +252,7 @@ async def agents_run(body: AgentRunIn, authorization: Optional[str] = Header(Non
     brief = (f"USER INPUT ({body.input_type}): {ctx['user_text'] or '-'}\n\nLENS OCR TEXT: {ctx['extracted_text'][:3000] or '-'}\n\n"
              f"ANALYST: {ctx['analysis'] or '-'}\n\nGUARDIAN: {ctx['crisis'] or '-'}\n\nTRACE: {trace}")
     try:
-        reply = apply_watermark(str(await _llm("jarvis", sys, strong).send_message(UserMessage(text=brief))))
+        reply = apply_watermark(str(await _llm("jarvis", sys, model).send_message(UserMessage(text=brief))))
     except Exception as e:
         logger.error(f"jarvis orchestrator failed: {e}")
         raise HTTPException(502, "AI unavailable")
@@ -265,5 +260,5 @@ async def agents_run(body: AgentRunIn, authorization: Optional[str] = Header(Non
     await db.agent_conversations.insert_many([
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "user", "text": (ctx["user_text"] or f"[{body.input_type}]")[:1000], "at": now},
         {"conv_id": uuid.uuid4().hex, "user_id": uid, "role": "agent", "text": reply[:2000], "mood": "calm", "at": now}])
-    return {"reply": reply, "trace": trace, "extracted_text": ctx["extracted_text"][:1500], "analysis": ctx["analysis"],
+    return {"reply": reply, "trace": trace, "extracted_text": ctx["extracted_text"][:1500], "analysis": ctx["analysis"], "model": model,
             "crisis": ctx["crisis"], "archived_event_id": ctx["archived"], "tier": acc["tier"]}
