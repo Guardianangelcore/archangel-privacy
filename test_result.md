@@ -941,3 +941,7 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 - Fixed SEC-001 (iap-sync trusted client) + SEC-002 (secrets in .env / export zip). tests/test_iter86_security.py 6/6 (run with FOUNDER_TEST_PASSWORD env if founder tests are needed; the file itself doesn't need it).
 - Positive path verified manually: Playwright Test Store purchase (iap-buy-guardian-monthly → iap-confirm-yes → "Test valid purchase") → CURRENT TIER: GUARDIAN, users.iap mirrors RC data (expires 5 min later on Test Store).
 - Old forged-payload IAP tests skipped by design (see skip reasons). Dev-bypass rate limit causes 429 noise when running many test files in parallel — use `-n 0`.
+
+## Iter 88 — Jarvis mic + gating; health check
+- tests/test_iter88_gating.py 4/4; web preview (free user): /bunker, /mesh, /monolith Twin gated (no one-off, Twin = Archangel paywall without trial), Jarvis chat free with IDLE badge.
+- deployment_agent: only "BLOCKER" = react-native-purchases config plugin → FALSE POSITIVE (v10.8.1 has no app.plugin.js; official RevenueCat Expo guide requires no plugin — autolinking only). All other checks pass; warnings = Firebase placeholders + integration constants.
