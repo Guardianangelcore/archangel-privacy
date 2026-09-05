@@ -25,8 +25,10 @@ MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ['DB_NAME']
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
-# Emergent managed Google Auth session-exchange endpoint (env-configurable)
-AUTH_SESSION_URL = os.environ.get('AUTH_SESSION_URL', 'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data')
+# Emergent managed Google Auth session-exchange endpoint — configured EXCLUSIVELY via backend/.env (no fallback in source)
+AUTH_SESSION_URL = os.environ.get('AUTH_SESSION_URL', '').strip()
+if not AUTH_SESSION_URL:
+    logging.getLogger("guardian").warning("AUTH_SESSION_URL is not set — Google sign-in session exchange will fail until backend/.env provides it")
 
 # Emergent managed push (SuprSend relay) — key injected by deployment pipeline
 PUSH_BASE_URL = "https://integrations.emergentagent.com"

@@ -932,3 +932,7 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 ## Iter 84 — Price update
 - pytest tests/test_iter62_iap_tiers.py 6/6 (new prices). test_iter60 `test_founder_archangel_kept_on_iap_activate` fails for a PRE-EXISTING reason (uses removed dev-bypass for founder) — unrelated.
 - Web preview verified: /store Sentinel €99 (backend) + RC button €99.00 monthly / €950.00 yearly; /subscription Sentinel 99 €/mo · 2475 Kč · 250 GA-T, Archangel 299 €; no stale 149/499 anywhere (only a DID hash contains "149").
+
+## Iter 85 — Deployment health check
+- deployment_agent final: stack_supported=true, blockchain_usage_detected=false, compilation_passed=true, env OK, port 8001 OK. Remaining "BLOCKER" = react-native-purchases config plugin → FALSE POSITIVE (v10.8.1 ships no app.plugin.js; RevenueCat playbook: "auto-configures via Expo prebuild — no plugin entry needed"). WARN: Firebase placeholder files (user input pending).
+- Worker delivered as export/gat-mint-worker.zip; external/ removed; .dockerignore excludes export/.

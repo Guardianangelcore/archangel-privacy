@@ -89,7 +89,7 @@ export default function Blockchain() {
                   <Text style={st.chainLine}>{chain.token.name} ({chain.token.symbol}) · ERC-20 · cap {Number(chain.token.cap).toLocaleString()} · {chain.token.genesis_founder_pct}% genesis → Founder</Text>
                   <Text style={st.chainLine}>{chain.network} · contract {chain.contract_address ? `${chain.contract_address.slice(0, 8)}…` : 'not deployed yet'}</Text>
                   <Text testID="bc-chain-mode" style={[st.chainMode, { color: chain.configured ? C.accent : C.warn }]}>
-                    {chain.configured ? '● LIVE — mints are sent to Base' : '◌ QUEUED — mints wait until the contract is deployed'}
+                    {chain.configured ? '● LIVE — queued mints are settled on Base by the Foundation mint worker' : '◌ QUEUED — mints wait until the contract is deployed'}
                   </Text>
                   {chain.wallet_address ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, flexWrap: 'wrap' }}>
