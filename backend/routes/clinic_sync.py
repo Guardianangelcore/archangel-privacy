@@ -7,15 +7,16 @@ A doctor beams a report straight into the patient's Vault via a secure
 one-time QR handshake. Bluetooth/NFC proximity radar is SIMULATED (real BLE
 requires a native build); the QR handshake + server relay are fully real.
 """
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Header, Request
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime, timezone, timedelta
-import uuid, hashlib, random
+import uuid
+import secrets, hashlib, random
 
 from core import (
-    api, db, logger, clean, get_current_user, send_push,
+    api, db, logger, clean, get_current_user, send_push, rate_limit,
     APP_NAME, put_object_sync,
 )
 from models import Document
@@ -26,7 +27,7 @@ SYNC_TTL_MIN = 10
 async def clinic_sync_create(authorization: Optional[str] = Header(None)):
     """Creates a one-time handshake code (shown as QR to the doctor)."""
     user = await get_current_user(authorization)
-    code = uuid.uuid4().hex[:6].upper()
+    code = secrets.token_hex(6).upper()   # 48 bits — not brute-forceable within the 10-minute window
     now = datetime.now(timezone.utc)
     sess = {
         "sync_id": uuid.uuid4().hex, "code": code,
@@ -62,9 +63,10 @@ class BeamIn(BaseModel):
     report_text: str = Field(min_length=10, max_length=20000)
 
 @api.post("/clinic-sync/beam/{code}")
-async def clinic_sync_beam(code: str, body: BeamIn):
+async def clinic_sync_beam(code: str, body: BeamIn, request: Request):
     """PUBLIC doctor-side endpoint — the clinic scans the patient's QR and
     beams the report. No patient credentials ever leave the phone."""
+    rate_limit(request, "clinic_beam")          # 10/min per IP — code guessing is not feasible
     sess = await db.clinic_sync_sessions.find_one({"code": code.upper(), "status": "waiting"}, {"_id": 0})
     if not sess:
         raise HTTPException(404, "Invalid or expired sync code")

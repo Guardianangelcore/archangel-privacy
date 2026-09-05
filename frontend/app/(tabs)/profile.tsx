@@ -18,6 +18,7 @@ import { WATERMARK } from '@/src/watermark';
 import { AGE_LABEL_EN, ageFromBirthYear, stageFromAge } from '@/src/age';
 import { speak as jarvisSpeak } from '@/src/voice';
 import { ModelChips } from '@/src/ModelPicker';
+import { HealthPartnerConsents } from '@/src/HealthPartnerConsents';
 import { getPanicTaps, setPanicTaps } from '@/src/panic-gesture';
 import * as LocalAuthentication from 'expo-local-authentication';
 
@@ -322,6 +323,15 @@ export default function Profile() {
           </View>
         </View>
         <ModelChips />
+        {/* HEALTH PARTNERS — explicit patient consent per approved UHP partner (clinics, labs, insurers) */}
+        <View style={[styles.guardRow, { marginTop: S.sm }]}>
+          <Ionicons name="medkit-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardTitle}>{tt('uhp.consent_title')}</Text>
+            <Text style={styles.guardSub}>{tt('uhp.consent_sub')}</Text>
+          </View>
+        </View>
+        <HealthPartnerConsents />
         {/* ELEVENLABS — native Slovak/Czech/… pronunciation (needs ELEVENLABS_API_KEY on the server) */}
         <View style={[styles.guardRow, { marginTop: S.sm }]}>
           <Ionicons name="language-outline" size={22} color={C.fg} />

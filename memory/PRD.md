@@ -364,3 +364,10 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - **SEC-003 (Medium)**: `/register-push` requires a session and `user_id` must equal the caller (frontend push.ts sends the bearer). Notification hijack closed.
 - Hardening: CORS `allow_credentials=False` with wildcard origins (bearer-only API); social recovery requires ≥2 guardians and always 2 approvals.
 - Password-hash leakage (previous SEC-003) confirmed PASS by the audit.
+
+## Iter 82b — Second security audit (all previous findings PASS) → new findings fixed
+- **UHP partner injection (High)**: `/uhp/partners/register` now creates PENDING partners; ingest requires an ACTIVE partner (Foundation approves via `POST /uhp/partners/{id}/approve`, `GET /uhp/partners/pending`, `POST …/suspend`; founder/inner-circle only) AND explicit patient consent (`uhp_consents`: `GET/POST /uhp/consents`, `DELETE /uhp/consents/{partner_id}`); missing subject or consent → uniform 403 `consent_required` (no enumeration). UI: Settings → "HEALTH PARTNERS" (`src/HealthPartnerConsents.tsx`, `uhp-consent-<partner_id>`), partners.tsx shows `pt-pending` notice.
+- **Founder auto-assign (Medium)**: swarm janitor binds `is_founder`/`inner_circle`/archangel ONLY to FOUNDER_EMAIL and strips `is_founder` from any other account (DB cleaned).
+- **Clinic beam brute force (Low)**: code is now 12 hex (48 bit) + `rate_limit(..., "clinic_beam")` 10/min per IP.
+- Founder password is user-chosen; stored only as bcrypt in DB and as `FOUNDER_TEST_PASSWORD` in backend/.env (tests read via dotenv; no plaintext in memory/ files).
+- Tests: `tests/test_iter82_reaudit.py` 3/3.

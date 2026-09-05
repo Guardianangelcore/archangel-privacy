@@ -22,9 +22,15 @@ def _fresh(tag: str) -> dict:
 def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 
 
+def _founder_pw() -> str:
+    from dotenv import load_dotenv
+    load_dotenv("/app/backend/.env")
+    return os.environ["FOUNDER_TEST_PASSWORD"]
+
+
 def _founder():
     """Founder signs in with password (dev-bypass refuses privileged accounts since Iter 82)."""
-    r = requests.post(f"{BASE}/auth/login", json={"email": FOUNDER, "password": os.environ.get("FOUNDER_TEST_PASSWORD", "GA-v=#2!WKkktgyW1u7bdqt")}, timeout=15)
+    r = requests.post(f"{BASE}/auth/login", json={"email": FOUNDER, "password": _founder_pw()}, timeout=15)
     assert r.status_code == 200, f"founder login failed: {r.status_code} {r.text}"
     d = r.json(); return {"token": d["session_token"], "user_id": d["user"]["user_id"], "email": FOUNDER, "user": d["user"], "name": "Guardian Angel"}
 

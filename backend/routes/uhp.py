@@ -57,7 +57,8 @@ async def uhp_register(body: PartnerIn):
         "hmac_secret": secrets.token_hex(32),
         "org_name": body.org_name, "org_type": body.org_type,
         "country": body.country.upper(), "contact_email": body.contact_email,
-        "status": "active", "ingested_total": 0,
+        # SEC: self-registered partners start PENDING — the Foundation approves them before any ingest.
+        "status": "pending", "ingested_total": 0,
         "created_at": datetime.now(timezone.utc),
     }
     await db.uhp_partners.insert_one(partner.copy())
@@ -142,8 +143,11 @@ async def uhp_ingest(request: Request,
         user = await db.users.find_one({"email": subject["email"]}, {"_id": 0, "user_id": 1})
     elif subject.get("did"):
         user = await db.users.find_one({"did": subject["did"]}, {"_id": 0, "user_id": 1})
-    if kind in ("vitals", "lab_result", "document", "insurance_claim") and not user:
-        raise HTTPException(404, "Subject not found — patient must have a Guardian sovereign ID")
+    if kind in ("vitals", "lab_result", "document", "insurance_claim"):
+        # SEC: uniform error (no account enumeration) + explicit PATIENT CONSENT for this partner.
+        consent = user and await db.uhp_consents.find_one({"user_id": user["user_id"], "partner_id": partner["partner_id"], "active": True}, {"_id": 1})
+        if not user or not consent:
+            raise HTTPException(403, "consent_required: the patient has not linked this partner in Guardian (Settings → Health partners)")
     event = {
         "event_id": f"uhpe_{uuid.uuid4().hex[:16]}",
         "partner_id": partner["partner_id"], "partner_name": partner["org_name"],
@@ -222,3 +226,72 @@ async def uhp_feed(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     rows = await db.uhp_events.find({"user_id": user["user_id"]}, {"_id": 0}).sort("at", -1).to_list(30)
     return {"events": clean(rows)}
+
+
+
+# ---------------------------------------------------------------- vetting & consent (SEC re-audit)
+async def _require_foundation(authorization: Optional[str]) -> dict:
+    user = await get_current_user(authorization)
+    if not (user.get("is_founder") or user.get("inner_circle")):
+        raise HTTPException(403, "foundation only")
+    return user
+
+
+@api.get("/uhp/partners/pending")
+async def uhp_partners_pending(authorization: Optional[str] = Header(None)):
+    await _require_foundation(authorization)
+    rows = await db.uhp_partners.find({"status": "pending"}, {"_id": 0, "api_key": 0, "hmac_secret": 0}).sort("created_at", -1).to_list(100)
+    return {"partners": rows}
+
+
+@api.post("/uhp/partners/{partner_id}/approve")
+async def uhp_partner_approve(partner_id: str, authorization: Optional[str] = Header(None)):
+    admin = await _require_foundation(authorization)
+    res = await db.uhp_partners.update_one({"partner_id": partner_id, "status": "pending"},
+                                           {"$set": {"status": "active", "approved_at": datetime.now(timezone.utc), "approved_by": admin["user_id"]}})
+    if not res.modified_count:
+        raise HTTPException(404, "no pending partner with this id")
+    return {"ok": True, "partner_id": partner_id, "status": "active"}
+
+
+@api.post("/uhp/partners/{partner_id}/suspend")
+async def uhp_partner_suspend(partner_id: str, authorization: Optional[str] = Header(None)):
+    await _require_foundation(authorization)
+    res = await db.uhp_partners.update_one({"partner_id": partner_id}, {"$set": {"status": "suspended", "suspended_at": datetime.now(timezone.utc)}})
+    if not res.matched_count:
+        raise HTTPException(404, "partner not found")
+    return {"ok": True, "partner_id": partner_id, "status": "suspended"}
+
+
+class ConsentIn(BaseModel):
+    partner_id: str
+
+
+@api.get("/uhp/consents")
+async def uhp_consents_list(authorization: Optional[str] = Header(None)):
+    """Patient view: which approved partners may write into my health record."""
+    user = await get_current_user(authorization)
+    rows = await db.uhp_consents.find({"user_id": user["user_id"], "active": True}, {"_id": 0}).to_list(50)
+    partners = await db.uhp_partners.find({"status": "active"}, {"_id": 0, "partner_id": 1, "org_name": 1, "org_type": 1, "country": 1}).to_list(200)
+    return {"consents": rows, "partners": partners}
+
+
+@api.post("/uhp/consents", status_code=201)
+async def uhp_consent_grant(body: ConsentIn, authorization: Optional[str] = Header(None)):
+    """Patient explicitly links an APPROVED partner — only then may that partner ingest data for them."""
+    user = await get_current_user(authorization)
+    partner = await db.uhp_partners.find_one({"partner_id": body.partner_id, "status": "active"}, {"_id": 0, "org_name": 1})
+    if not partner:
+        raise HTTPException(404, "partner not found or not approved")
+    now = datetime.now(timezone.utc)
+    await db.uhp_consents.update_one({"user_id": user["user_id"], "partner_id": body.partner_id},
+                                     {"$set": {"active": True, "granted_at": now, "partner_name": partner["org_name"]}}, upsert=True)
+    return {"ok": True, "partner_id": body.partner_id, "partner_name": partner["org_name"]}
+
+
+@api.delete("/uhp/consents/{partner_id}")
+async def uhp_consent_revoke(partner_id: str, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await db.uhp_consents.update_one({"user_id": user["user_id"], "partner_id": partner_id},
+                                     {"$set": {"active": False, "revoked_at": datetime.now(timezone.utc)}})
+    return {"ok": True}

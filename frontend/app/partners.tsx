@@ -169,6 +169,7 @@ export default function Partners() {
         {!!err && <Text style={st.err}>{err}</Text>}
         {creds && (
           <View testID="pt-creds" style={st.credsCard}>
+            <Text testID="pt-pending" style={[st.credsLbl, { color: C.warn }]}>{tt('partners.pending_note')}</Text>
             <Text style={st.credsLbl}>{tt('partners.partner_id')}</Text>
             <Text style={st.credsVal}>{creds.partner_id}</Text>
             <Text style={st.credsLbl}>{tt('partners.api_key')}</Text>

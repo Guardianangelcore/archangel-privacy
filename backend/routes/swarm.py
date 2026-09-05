@@ -455,14 +455,17 @@ async def _agent_system_janitor() -> int:
     from routes.geo import DEFAULT_GEO
     res = await db.users.update_many({"geo": {"$exists": False}}, {"$set": {"geo": DEFAULT_GEO}})
     actions += res.modified_count
-    # 3. Founder entitlement — the first user of the system holds lifetime Archangel (Inner Circle)
-    first = await db.users.find_one({}, {"_id": 0, "user_id": 1, "inner_circle": 1, "is_founder": 1},
-                                    sort=[("created_at", 1)])
-    if first and not (first.get("inner_circle") and first.get("is_founder")):
-        await db.users.update_one({"user_id": first["user_id"]}, {"$set": {
+    # 3. Founder entitlement — bound to the VERIFIED founder identity only (never inferred from creation order)
+    from routes.auth import FOUNDER_EMAIL
+    founder = await db.users.find_one({"email": FOUNDER_EMAIL}, {"_id": 0, "user_id": 1, "inner_circle": 1, "is_founder": 1})
+    if founder and not (founder.get("inner_circle") and founder.get("is_founder")):
+        await db.users.update_one({"user_id": founder["user_id"]}, {"$set": {
             "inner_circle": True, "is_founder": True, "tier": "archangel",
             "tier_until": None, "tier_paid_with": "founder"}})
         actions += 1
+    # any other account carrying is_founder is a misconfiguration → strip it
+    res = await db.users.update_many({"is_founder": True, "email": {"$ne": FOUNDER_EMAIL}}, {"$set": {"is_founder": False}})
+    actions += res.modified_count
     # 4. Mosaic Blueprint autonomy — fork detection → autonomous GA-T contract redeploy
     #    + Wealth Hub payout verification (anchoring into Mosaic blocks)
     try:

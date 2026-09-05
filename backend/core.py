@@ -127,7 +127,7 @@ from fastapi import Request
 
 _rate_buckets: dict = {}
 RATE_LIMITS_PER_MIN = {"login": 20, "register": 10, "dev_bypass": 30, "forgot_password": 5,
-                       "reset_password": 10, "tts": 30, "tts_intro": 10, "iap_sync": 60}
+                       "reset_password": 10, "tts": 30, "tts_intro": 10, "iap_sync": 60, "clinic_beam": 10}
 
 
 def client_ip(request: Request) -> str:
