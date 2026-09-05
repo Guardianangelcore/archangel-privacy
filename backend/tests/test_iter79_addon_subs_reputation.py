@@ -1,3 +1,4 @@
+import pytest
 """Iteration 79 — Recurring add-ons as RevenueCat subscriptions (server-side lifecycle) + helper reputation."""
 import os, uuid, requests
 from datetime import datetime, timezone, timedelta
@@ -19,7 +20,10 @@ def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 def _founder_pw() -> str:
     from dotenv import load_dotenv
     load_dotenv("/app/backend/.env")
-    return os.environ["FOUNDER_TEST_PASSWORD"]
+    pw = os.environ.get("FOUNDER_TEST_PASSWORD", "").strip()   # SEC-002: never stored in the repo — export it before running
+    if not pw:
+        pytest.skip("FOUNDER_TEST_PASSWORD env not set (founder password is not stored in the repository)")
+    return pw
 
 
 def _founder():
@@ -49,6 +53,7 @@ def test_catalog_recurring_addons_are_rc_subscriptions():
     assert r.status_code == 400 and "subscription_only" in r.text
 
 
+@pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 def test_addon_subscription_lifecycle_activate_renew_expire():
     u = _fresh("life")
     voice = "pro.addon_premium_voice_monthly"
@@ -74,6 +79,7 @@ def test_addon_subscription_lifecycle_activate_renew_expire():
     assert next(a for a in cat["addons"] if a["id"] == "premium_voice")["owned"] is False
 
 
+@pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 def test_tier_and_addon_coexist_in_one_entitlement():
     u = _fresh("both")
     subs = [{"product_identifier": "pro.addon_perplexity_ultra_monthly", "expires_date": _iso(30), "will_renew": True},

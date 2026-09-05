@@ -9,8 +9,10 @@ from fastapi import HTTPException, Header, Request
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
+import os
+import httpx
 
-from core import api, db, clean, get_current_user, _aml_ledger_append, rate_limit, client_ip
+from core import api, db, clean, get_current_user, _aml_ledger_append, rate_limit, client_ip, logger
 
 CZK_RATE = 25.0
 ANNUAL_DISCOUNT = 0.20
@@ -210,14 +212,86 @@ class IapSyncIn(BaseModel):
     active_subscriptions: Optional[List[ActiveSubIn]] = None
 
 
+# ---- SERVER-SIDE ENTITLEMENT VERIFICATION (SEC-001) ----------------------------------------------
+# The device payload is only a TRIGGER. Before any tier / GA-T is granted the backend re-fetches the
+# subscriber from RevenueCat itself (GET /v1/subscribers/{app_user_id} — read-only, accepts the PUBLIC
+# SDK keys; no secret key, no provisioning, no webhook). Forged "active pro" payloads therefore grant nothing.
+RC_SUBSCRIBER_URL = "https://api.revenuecat.com/v1/subscribers/{app_user_id}"
+_RC_KEY_ENV = {"TEST_STORE": "REVENUECAT_PUBLIC_KEY_TEST", "APP_STORE": "REVENUECAT_PUBLIC_KEY_IOS", "MAC_APP_STORE": "REVENUECAT_PUBLIC_KEY_IOS",
+               "PLAY_STORE": "REVENUECAT_PUBLIC_KEY_ANDROID", "AMAZON": "REVENUECAT_PUBLIC_KEY_ANDROID"}
+_RC_ALL_KEY_ENVS = ("REVENUECAT_PUBLIC_KEY_TEST", "REVENUECAT_PUBLIC_KEY_IOS", "REVENUECAT_PUBLIC_KEY_ANDROID")
+
+
+def _rc_public_keys(store_hint: Optional[str]) -> List[str]:
+    order = [_RC_KEY_ENV.get((store_hint or "").upper())] + list(_RC_ALL_KEY_ENVS)
+    keys, seen = [], set()
+    for env_name in order:
+        k = os.environ.get(env_name or "", "").strip() if env_name else ""
+        if k and k not in seen:
+            keys.append(k); seen.add(k)
+    return keys
+
+
+def _rc_ts(v: Optional[str]) -> Optional[datetime]:
+    if not v:
+        return None
+    try:
+        return datetime.fromisoformat(v.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+async def rc_verified_subscriptions(app_user_id: str, store_hint: Optional[str], now: datetime) -> List[dict]:
+    """Ground truth from RevenueCat: currently ACTIVE subscriptions for this app user (provisioned `pro.*` ids only).
+    Raises 503 when RevenueCat cannot be reached — never falls back to the client's claim."""
+    keys = _rc_public_keys(store_hint)
+    if not keys:
+        logger.error("REVENUECAT_PUBLIC_KEY_* missing in backend/.env — IAP sync cannot be verified")
+        raise HTTPException(503, "iap_verification_unavailable")
+    subscriber, last_err = None, None
+    async with httpx.AsyncClient(timeout=6.0) as client:   # bounded outbound latency (≤ 3 keys × 6 s)
+        for key in keys:
+            try:
+                r = await client.get(RC_SUBSCRIBER_URL.format(app_user_id=app_user_id), headers={"Authorization": f"Bearer {key}"})
+            except Exception as e:  # network
+                last_err = str(e); continue
+            if r.status_code != 200:
+                last_err = f"rc {r.status_code}"; continue
+            s = (r.json() or {}).get("subscriber") or {}
+            subscriber = s
+            if s.get("subscriptions"):
+                break   # this key sees the purchases — stop
+    if subscriber is None:
+        logger.warning(f"RevenueCat verification failed for {app_user_id}: {last_err}")
+        raise HTTPException(503, "iap_verification_unavailable")
+    ent = (subscriber.get("entitlements") or {}).get("pro") or {}
+    ent_until = _rc_ts(ent.get("expires_date"))
+    entitlement_active = bool(ent) and (ent_until is None or ent_until > now)
+    out = []
+    for pid, sub in (subscriber.get("subscriptions") or {}).items():
+        pidl = str(pid).lower()
+        if not pidl.startswith(IAP_PRODUCT_PREFIXES):
+            continue
+        until = _rc_ts(sub.get("expires_date"))
+        if until is not None and until <= now:
+            continue
+        if not entitlement_active:
+            continue
+        out.append({"product_identifier": pidl, "expires_date": sub.get("expires_date"),
+                    "will_renew": not (sub.get("unsubscribe_detected_at") or sub.get("billing_issues_detected_at")),
+                    "store": str(sub.get("store") or store_hint or "UNKNOWN_STORE").upper(),
+                    "period_type": str(sub.get("period_type") or "normal").upper()})
+    return out
+
+
 @api.post("/subscription/iap-sync")
 async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization: Optional[str] = Header(None)):
-    """Mirror the device's RevenueCat entitlement into the tier system (idempotent).
+    """Mirror the RevenueCat entitlement into the tier system (idempotent).
 
-    SECURITY NOTE: the Emergent-managed RevenueCat integration exposes no secret API key or
-    webhook to this backend, so the SDK's CustomerInfo on the device is the source of truth
-    (per playbook). Hardening applied here: rate limit per user, strict payload whitelist
-    (entitlement, provisioned product ids, store), identity match and an AML ledger entry."""
+    SECURITY (SEC-001): the device payload only TRIGGERS a sync — the set of active subscriptions is
+    re-fetched server-side from RevenueCat (`rc_verified_subscriptions`) and the client's product /
+    expiry / store / period claims are discarded. Plus: rate limit per user, identity match
+    (app_user_id == signed-in user), provisioned-product whitelist, AML ledger entry."""
     user = await get_current_user(authorization)
     uid = user["user_id"]
     rate_limit(request, "iap_sync", key=f"user:{uid}")
@@ -235,44 +309,43 @@ async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization
     if body.app_user_id and body.app_user_id != uid:
         raise HTTPException(409, "RevenueCat identity does not match the signed-in user")
 
+    # ---- GROUND TRUTH: replace every client claim with what RevenueCat reports for this user ----
+    verified = await rc_verified_subscriptions(uid, body.store, now)
+    body.active_subscriptions = [ActiveSubIn(**s) for s in verified]
+    body.active = bool(verified)
+    body.product_identifier = body.expires_date = body.period_type = body.will_renew = None
+    if verified:
+        body.store = verified[0]["store"]
+
     # ---- ADD-ON SUBSCRIPTIONS (Perplexity Ultra, Premium Voice) — same entitlement, separate lifecycle ----
     from routes.store import is_addon_product, sync_addon_subscriptions, addon_status
-    subs = [s.model_dump() for s in (body.active_subscriptions or [])]
-    if body.active_subscriptions is None and body.active and is_addon_product(body.product_identifier):
-        subs = [{"product_identifier": body.product_identifier, "expires_date": body.expires_date,
-                 "will_renew": body.will_renew, "store": body.store, "period_type": body.period_type}]
-    addon_sync = None
-    if body.active_subscriptions is not None or is_addon_product(body.product_identifier):
-        addon_sync = await sync_addon_subscriptions(uid, subs if body.active else [], body.store, now)
-        if addon_sync["changes"]:
-            await _aml_ledger_append(uid, "iap_addon_sync", {"changes": addon_sync["changes"], "store": body.store, "ip": client_ip(request)})
+    subs = [s.model_dump() for s in body.active_subscriptions]
+    addon_sync = await sync_addon_subscriptions(uid, subs, body.store, now)
+    if addon_sync["changes"]:
+        await _aml_ledger_append(uid, "iap_addon_sync", {"changes": addon_sync["changes"], "store": body.store, "ip": client_ip(request)})
 
     # ---- TIER: choose the best NON-add-on active product ----
     tier_subs = [s for s in subs if not is_addon_product(s.get("product_identifier"))]
-    if body.active_subscriptions is None and is_addon_product(body.product_identifier):
-        # Legacy single-product payload about an add-on: never infer anything about the tier from it.
-        fresh0 = await db.users.find_one({"user_id": uid}, {"_id": 0, "tier": 1, "tier_until": 1, "addon_subs": 1, "addons_active": 1}) or {}
-        return {"status": "addons_synced", "tier": current_tier(fresh0), "addons": addon_status(fresh0)}
-    if body.active_subscriptions is not None:
-        if body.active and tier_subs:
-            best = max(tier_subs, key=lambda s: TIERS[iap_tier(s["product_identifier"])]["order"])
-            body.product_identifier, body.expires_date = best["product_identifier"], best.get("expires_date") or body.expires_date
-        elif body.active:
-            # Only add-on subscriptions are active → the entitlement grants no tier (lapse an IAP-granted tier)
-            body.active = False
+    if tier_subs:
+        best = max(tier_subs, key=lambda s: TIERS[iap_tier(s["product_identifier"])]["order"])
+        body.product_identifier, body.expires_date = best["product_identifier"], best.get("expires_date")
+        body.store, body.period_type, body.will_renew = best.get("store"), best.get("period_type"), best.get("will_renew")
+    else:
+        # No (or only add-on) subscriptions verified → the entitlement grants no tier (lapse an IAP-granted tier)
+        body.active = False
     tier = iap_tier(body.product_identifier)
     fresh = await db.users.find_one({"user_id": uid}, {"_id": 0, "tier": 1, "tier_until": 1, "tier_paid_with": 1,
                                                        "gat_alloc_anchor": 1, "iap": 1, "tier_started_at": 1, "inner_circle": 1,
                                                        "addon_subs": 1, "addons_active": 1})
     iap_paid = (fresh.get("tier_paid_with") or "").lower() == "iap"
-    addons_out = addon_status(fresh) if addon_sync is not None else None
+    addons_out = addon_status(fresh)
     if not body.active:
         # Entitlement lapsed: only downgrade what IAP granted; never touch card/GA-T/trial/inner-circle tiers.
         if iap_paid and fresh.get("tier") in ("guardian", "sentinel", "archangel"):
             await db.users.update_one({"user_id": uid}, {"$set": {"tier": "sovereign", "tier_until": None,
                                                                   "iap.active": False, "iap.synced_at": now}})
             return {"status": "downgraded", "tier": "sovereign", "addons": addons_out}
-        return {"status": "addons_synced" if addon_sync and addon_sync["changes"] else "noop", "tier": current_tier(fresh), "addons": addons_out}
+        return {"status": "addons_synced" if addon_sync["changes"] else "noop", "tier": current_tier(fresh), "addons": addons_out}
 
     until = None
     if body.expires_date:

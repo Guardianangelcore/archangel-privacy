@@ -1,3 +1,4 @@
+import pytest
 """Iteration 83 — Partner Approval Panel: founder-only admin listing + approve/suspend/reactivate.
 
 Follows the style of test_iter82_reaudit.py (password login helper).
@@ -11,7 +12,10 @@ FOUNDER = "guardianangel.core@proton.me"
 def _founder_pw() -> str:
     from dotenv import load_dotenv
     load_dotenv("/app/backend/.env")
-    return os.environ["FOUNDER_TEST_PASSWORD"]
+    pw = os.environ.get("FOUNDER_TEST_PASSWORD", "").strip()   # SEC-002: never stored in the repo — export it before running
+    if not pw:
+        pytest.skip("FOUNDER_TEST_PASSWORD env not set (founder password is not stored in the repository)")
+    return pw
 
 
 def _founder():

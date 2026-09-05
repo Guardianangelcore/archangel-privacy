@@ -1,5 +1,6 @@
 """Iteration 63 — Tier gates (Sovereign paywall) + IAP unlocks + Perplexity sonar-reasoning-pro."""
 import os, time, requests
+import pytest
 from datetime import datetime, timezone, timedelta
 
 BASE = os.environ.get("EXPO_BACKEND_URL", "https://physio-lang-fix.preview.emergentagent.com").rstrip("/") + "/api"
@@ -63,6 +64,7 @@ def _iap_sync(u, product):
     return requests.post(f"{BASE}/subscription/iap-sync", headers=_h(u), json=body, timeout=20)
 
 
+@pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 def test_iap_guardian_unlocks_waitlist():
     u = _fresh_user("g")
     r = _iap_sync(u, "pro.guardian_monthly")
@@ -82,6 +84,7 @@ def test_iap_guardian_unlocks_waitlist():
     assert pw.status_code in (200, 201), f"waitlist POST: {pw.status_code} {pw.text[:200]}"
 
 
+@pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 def test_iap_sentinel_unlocks_and_sonar():
     u = _fresh_user("s")
     r = _iap_sync(u, "pro.sentinel_monthly")
@@ -101,6 +104,7 @@ def test_iap_sentinel_unlocks_and_sonar():
     assert ac.status_code != 402, f"chat still gated: {ac.status_code} {ac.text[:200]}"
 
 
+@pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 def test_iap_archangel_unlocks():
     u = _fresh_user("a")
     r = _iap_sync(u, "pro.archangel_annual")

@@ -5,6 +5,7 @@ Tests POST /api/subscription/iap-sync end-to-end via dev-bypass users.
 import os
 import time
 import pytest
+pytestmark = pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 import requests
 from datetime import datetime, timezone, timedelta
 

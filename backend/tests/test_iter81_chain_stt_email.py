@@ -1,3 +1,4 @@
+import pytest
 """Iteration 81 — founder e-mail rename, GA-T on-chain bridge (queued mode), STT plumbing untouched server-side."""
 import os, uuid, requests
 from datetime import datetime, timezone, timedelta
@@ -18,7 +19,10 @@ def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 def _founder_pw() -> str:
     from dotenv import load_dotenv
     load_dotenv("/app/backend/.env")
-    return os.environ["FOUNDER_TEST_PASSWORD"]
+    pw = os.environ.get("FOUNDER_TEST_PASSWORD", "").strip()   # SEC-002: never stored in the repo — export it before running
+    if not pw:
+        pytest.skip("FOUNDER_TEST_PASSWORD env not set (founder password is not stored in the repository)")
+    return pw
 
 
 def _founder():
@@ -46,6 +50,7 @@ def test_chain_status_and_wallet_link():
     assert r.status_code == 200 and r.json()["wallet_address"] == "0x0E6693153961c01CEa3e73e4e9596aCF35315567"   # checksummed
 
 
+@pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 def test_verified_subscription_queues_onchain_mint_once():
     u = _bypass(f"iter81-mint-{uuid.uuid4().hex[:8]}@example.com")
     requests.post(f"{BASE}/chain/wallet", headers=_h(u), json={"address": "0x0E6693153961c01CEa3e73e4e9596aCF35315567"}, timeout=15)

@@ -11,24 +11,46 @@ from typing import Optional
 from datetime import datetime, timezone
 import uuid, os, re
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from core import api, db, logger, get_current_user, send_push
 
 RELATIONS = {"partner": "Partner", "rodic": "Parent", "surodenec": "Sibling",
              "dieta": "Child", "priatel": "Friend", "lekar": "Doctor", "ine": "Other"}
 _PHONE_RE = re.compile(r"^\+?[0-9 ()\-]{6,20}$")
 
-_fernet: Optional[Fernet] = None
+_fernet: Optional[MultiFernet] = None
 
 
-def _enc() -> Fernet:
+def _enc() -> MultiFernet:
+    """Primary key CONTACTS_ENC_KEY encrypts; CONTACTS_ENC_KEY_PREV (optional, rotation) only decrypts legacy tokens."""
     global _fernet
     if _fernet is None:
         key = os.environ.get("CONTACTS_ENC_KEY", "").strip()
         if not key:
             raise HTTPException(500, "CONTACTS_ENC_KEY missing")
-        _fernet = Fernet(key.encode())
+        keys = [Fernet(key.encode())]
+        prev = os.environ.get("CONTACTS_ENC_KEY_PREV", "").strip()
+        if prev and prev != key:
+            keys.append(Fernet(prev.encode()))
+        _fernet = MultiFernet(keys)
     return _fernet
+
+
+async def rotate_contact_keys() -> int:
+    """Startup task: re-encrypt every stored phone with the PRIMARY key (no-op unless CONTACTS_ENC_KEY_PREV is set)."""
+    if not os.environ.get("CONTACTS_ENC_KEY_PREV", "").strip():
+        return 0
+    enc = _enc()
+    n = 0
+    async for doc in db.family_contacts.find({"phone_enc": {"$exists": True}}, {"_id": 1, "phone_enc": 1}):
+        try:
+            rotated = enc.rotate(doc["phone_enc"].encode()).decode()
+        except Exception:
+            continue   # undecryptable token — left untouched, shows as "•••"
+        if rotated != doc["phone_enc"]:
+            await db.family_contacts.update_one({"_id": doc["_id"]}, {"$set": {"phone_enc": rotated, "key_rotated_at": datetime.now(timezone.utc)}})
+            n += 1
+    return n
 
 
 def _view(doc: dict) -> dict:

@@ -1,3 +1,4 @@
+import pytest
 """Iteration 78 — GA-T Community Help (peer-verified Proof-of-Help, escrow) + self-claim block."""
 import os, uuid, requests
 from datetime import datetime, timezone, timedelta
@@ -19,7 +20,10 @@ def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 def _founder_pw() -> str:
     from dotenv import load_dotenv
     load_dotenv("/app/backend/.env")
-    return os.environ["FOUNDER_TEST_PASSWORD"]
+    pw = os.environ.get("FOUNDER_TEST_PASSWORD", "").strip()   # SEC-002: never stored in the repo — export it before running
+    if not pw:
+        pytest.skip("FOUNDER_TEST_PASSWORD env not set (founder password is not stored in the repository)")
+    return pw
 
 
 def _founder():

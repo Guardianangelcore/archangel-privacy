@@ -71,3 +71,6 @@ Needed ONLY for REAL purchases in published store builds. Test Store (Expo Go / 
   - https://support.google.com/googleplay/android-developer/answer/140504
 - Step 4 — Release build → TestFlight / Play internal testing → submit for review.
 All the steps needed to integrate RevenueCat in their production app are present in FAQ section of payments panel.
+
+## 2026-09-05 — server-side verification (security audit SEC-001)
+- Backend `/subscription/iap-sync` re-fetches `GET https://api.revenuecat.com/v1/subscribers/{app_user_id}` with the PUBLIC SDK keys (backend/.env REVENUECAT_PUBLIC_KEY_TEST/IOS/ANDROID) before granting any tier/GA-T. Read-only; still no secret key, no webhook, no provisioning via REST (all provisioning stays on the integration proxy).

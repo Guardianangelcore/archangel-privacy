@@ -936,3 +936,8 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 ## Iter 85 — Deployment health check
 - deployment_agent final: stack_supported=true, blockchain_usage_detected=false, compilation_passed=true, env OK, port 8001 OK. Remaining "BLOCKER" = react-native-purchases config plugin → FALSE POSITIVE (v10.8.1 ships no app.plugin.js; RevenueCat playbook: "auto-configures via Expo prebuild — no plugin entry needed"). WARN: Firebase placeholder files (user input pending).
 - Worker delivered as export/gat-mint-worker.zip; external/ removed; .dockerignore excludes export/.
+
+## Iter 86 — Security audit round 3
+- Fixed SEC-001 (iap-sync trusted client) + SEC-002 (secrets in .env / export zip). tests/test_iter86_security.py 6/6 (run with FOUNDER_TEST_PASSWORD env if founder tests are needed; the file itself doesn't need it).
+- Positive path verified manually: Playwright Test Store purchase (iap-buy-guardian-monthly → iap-confirm-yes → "Test valid purchase") → CURRENT TIER: GUARDIAN, users.iap mirrors RC data (expires 5 min later on Test Store).
+- Old forged-payload IAP tests skipped by design (see skip reasons). Dev-bypass rate limit causes 429 noise when running many test files in parallel — use `-n 0`.

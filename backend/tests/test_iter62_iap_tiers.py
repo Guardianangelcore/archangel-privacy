@@ -5,6 +5,8 @@ pro.archangel_* → archangel (legacy pro.monthly → guardian). Store-paid tier
 (upgrade AND downgrade between IAP products); GA-T loyalty allocation follows the tier
 (Guardian 100 · Sentinel 300 · Archangel 1000)."""
 import os
+import pytest
+pytestmark = pytest.mark.skip(reason="SEC-001 (Iter 86): /subscription/iap-sync now verifies entitlements server-side with RevenueCat — forged payloads grant nothing; see tests/test_iter86_security.py")
 import time
 import requests
 from datetime import datetime, timezone, timedelta

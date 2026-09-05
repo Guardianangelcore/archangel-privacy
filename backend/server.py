@@ -80,6 +80,13 @@ async def startup():
         await run_in_threadpool(init_storage)
     except Exception as e:
         logger.warning(f"storage init at startup failed (non-fatal): {e}")
+    # SEC-002: contacts-at-rest key rotation (re-encrypts legacy tokens while CONTACTS_ENC_KEY_PREV is present)
+    try:
+        n = await family_contacts.rotate_contact_keys()
+        if n:
+            logger.info(f"contacts key rotation: {n} phone(s) re-encrypted with the primary key")
+    except Exception as e:
+        logger.warning(f"contacts key rotation failed (non-fatal): {e}")
 
 @app.on_event("shutdown")
 async def shutdown():
