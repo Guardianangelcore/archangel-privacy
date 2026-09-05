@@ -22,6 +22,7 @@ import uuid, hashlib, json, statistics, re
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import api, db, clean, get_current_user, send_push, logger, AI_COMPLIANCE_NOTE, EMERGENT_LLM_KEY
+from routes.features import require_feature
 
 def _llm(session: str, system: str) -> LlmChat:
     return LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session,
@@ -77,6 +78,7 @@ async def _twin_profile(uid: str) -> dict:
 @api.get("/twin/profile")
 async def twin_profile(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_feature(user, "twin")   # Archangel exclusive · 14-day grace after expiry
     return {"twin": await _twin_profile(user["user_id"]),
             "fidelity_pct": min(100, (await db.bioscan_results.count_documents({"user_id": user["user_id"]})) * 5
                                 + (await db.agent_memories.count_documents({"user_id": user["user_id"]})) * 2)}
@@ -89,6 +91,7 @@ class TwinSimIn(BaseModel):
 @api.post("/twin/simulate")
 async def twin_simulate(body: TwinSimIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_feature(user, "twin")   # Archangel exclusive · 14-day grace after expiry
     uid = user["user_id"]
     twin = await _twin_profile(uid)
     sys = (
@@ -118,6 +121,7 @@ async def twin_trajectory(authorization: Optional[str] = Header(None)):
     """Predictive Health Trajectories — deterministic linear projection of vitals
     (6/12/24 months) with risk bands. Pure math, auditable."""
     user = await get_current_user(authorization)
+    await require_feature(user, "twin")   # Archangel exclusive · 14-day grace after expiry
     uid = user["user_id"]
     scans = await db.bioscan_results.find({"user_id": uid}, {"_id": 0}).sort("at", 1).to_list(60)
     series = {"systolic": [], "glucose": []}

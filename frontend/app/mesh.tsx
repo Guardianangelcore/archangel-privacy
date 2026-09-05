@@ -1,13 +1,14 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // MESH-MESSENGER — P2P store-and-forward messaging (BLE mesh radio in native build)
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, FlatList, RefreshControl, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S } from '@/src/theme';
 import { useI18n } from '@/src/i18n-context';
+import FeatureGate, { useFeature } from '@/src/FeatureGate';
 
 export default function Mesh() {
   const { t: tt, tx } = useI18n();
@@ -20,15 +21,19 @@ export default function Mesh() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  // TIER GATE — Mesh SMS (offline P2P) is Sentinel+ (or a one-off feature purchase). Free users see the
+  // screen and get the upgrade prompt instead of the messenger; nothing is fetched while locked.
+  const mesh = useFeature('mesh_sms');
 
   const load = useCallback(async () => {
+    if (!mesh.unlocked) return;
     setLoading(true);
     try {
       const [s, m]: any[] = await Promise.all([api('/mesh/status'), api('/mesh/messages')]);
       setStatus(s); setMessages(m.messages || []); setMyDid(m.my_did || '');
     } catch (e: any) { setErr(String(e.message || e)); }
     setLoading(false);
-  }, []);
+  }, [mesh.unlocked]);
   useEffect(() => { load(); }, [load]);
 
   const send = async () => {
@@ -50,6 +55,12 @@ export default function Mesh() {
         <Text style={st.title}>{tt('mesh.mesh_messenger')}</Text>
         <View style={{ width: 26 }} />
       </View>
+      {!mesh.loading && !mesh.unlocked ? (
+        <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }}>
+          <Text style={st.intro}>{tt('mesh.p2p_communication_independent_of_car')}</Text>
+          <FeatureGate feature="mesh_sms" message="Mesh SMS — offline P2P messages via nearby Archangel devices — is part of the Sentinel plan and above."><></></FeatureGate>
+        </ScrollView>
+      ) : (
       <FlatList
         data={messages}
         keyExtractor={m => m.msg_id}
@@ -94,6 +105,7 @@ export default function Mesh() {
           );
         }}
       />
+      )}
     </SafeAreaView>
   );
 }

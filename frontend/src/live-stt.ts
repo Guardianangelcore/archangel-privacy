@@ -53,7 +53,12 @@ export function startLiveStt(lang: string, h: LiveSttHandlers): { stop: () => vo
     if (!text) return;
     if (ev.isFinal) h.onFinal(text); else h.onPartial(text);
   }));
-  subs.push(Mod.addListener('error', (ev: any) => { h.onError(String(ev?.error || 'unknown')); }));
+  subs.push(Mod.addListener('error', (ev: any) => {
+    // An error terminates the session: drop listeners so a late 'end' can't double-fire onEnd, then report.
+    if (ended) return;
+    ended = true; cleanup();
+    h.onError(String(ev?.error || 'unknown'));
+  }));
   subs.push(Mod.addListener('end', end));
   try {
     Mod.start({
@@ -65,9 +70,15 @@ export function startLiveStt(lang: string, h: LiveSttHandlers): { stop: () => vo
       addsPunctuation: true,
       androidIntentOptions: { EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 1500 },
     });
-  } catch (e: any) { cleanup(); h.onError(String(e?.message || e)); }
+  } catch (e: any) { ended = true; cleanup(); h.onError(String(e?.message || e)); }
+  const hardStop = () => { try { Mod.abort(); } catch {} end(); };
   return {
-    stop: () => { try { Mod.stop(); } catch { end(); } },
-    abort: () => { try { Mod.abort(); } catch {} end(); },
+    // stop(): let the recognizer flush its final result — but NEVER leave the mic open: if the engine
+    // does not emit 'end' within 3 s (some Android engines), abort and release it.
+    stop: () => {
+      try { Mod.stop(); } catch { hardStop(); return; }
+      setTimeout(() => { if (!ended) hardStop(); }, 3000);
+    },
+    abort: hardStop,
   };
 }

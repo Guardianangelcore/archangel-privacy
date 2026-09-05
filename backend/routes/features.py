@@ -4,12 +4,12 @@
 from fastapi import HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid, asyncio
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import api, db, logger, clean, get_current_user, EMERGENT_LLM_KEY, AI_COMPLIANCE_NOTE, apply_watermark
-from routes.subscription import get_active_tier, TIER_RANK
+from routes.subscription import get_active_tier, current_tier, TIER_RANK
 from routes.ai_models import resolve_model, FAST_MODEL
 
 # ------------------------------------------------------------------ B. USER TYPE
@@ -58,13 +58,76 @@ async def health_card_put(body: HealthCardIn, authorization: Optional[str] = Hea
     return await health_card_get(authorization)
 
 # ------------------------------------------------------------------ H+I. PAY-PER-FEATURE · CREATOR ROYALTY
+# One-off purchasable features (GA-T, permanent). Bunker Mode and Mesh SMS are NOT here on purpose:
+# they are subscription-tier features (see TIER_FEATURES) and can never be bought one-off.
 FEATURES = {
     "ghost_mode": {"label": "Ghost Mode", "eur": 2.99, "gat": 30.0, "tier": "sentinel"},
-    "bunker":     {"label": "Bunker Module", "eur": 1.99, "gat": 20.0, "tier": "sentinel"},
     "analyst":    {"label": "Analyst Agent", "eur": 3.99, "gat": 40.0, "tier": "sentinel"},
-    "mesh_sms":   {"label": "Mesh SMS", "eur": 1.49, "gat": 15.0, "tier": "sentinel"},
+}
+# Subscription-only features with a GRACE PERIOD after the paid tier expires:
+#  • emergency core (Bunker Mode, Mesh SMS): Sentinel+, stay active 90 days after expiry, cached offline by the app
+#  • Bio-Digital Twin: Archangel only, standard 14-day grace
+# After grace → the user is simply a free (Sovereign) user again; the app itself is never locked.
+TIER_FEATURES = {
+    "bunker":   {"label": "Bunker Mode", "tier": "sentinel", "grace_days": 90, "emergency": True},
+    "mesh_sms": {"label": "Mesh SMS", "tier": "sentinel", "grace_days": 90, "emergency": True},
+    "twin":     {"label": "Bio-Digital Twin", "tier": "archangel", "grace_days": 14, "emergency": False},
 }
 CREATOR_CUT = 0.05
+
+
+def _as_dt(v) -> Optional[datetime]:
+    if not v:
+        return None
+    if isinstance(v, str):
+        try:
+            v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
+async def tier_feature_states(user_id: str) -> dict:
+    """{feature_id: {unlocked, in_grace, grace_until, offline_until, ...}} for every TIER_FEATURES entry.
+    `offline_until` tells the app how long it may honour the entitlement WITHOUT contacting the server
+    (active subscription → now + grace; lapsed but inside grace → grace end)."""
+    fresh = await db.users.find_one({"user_id": user_id}, {"_id": 0, "tier": 1, "tier_until": 1, "inner_circle": 1, "demo_until": 1,
+                                                          "features_owned": 1, "tier_last_paid": 1, "tier_last_until": 1}) or {}
+    now = datetime.now(timezone.utc)
+    active = current_tier(fresh)
+    owned = fresh.get("features_owned") or []
+    # last PAID tier + its expiry (kept after a downgrade so the grace period can be computed)
+    paid_tier = fresh.get("tier") if (fresh.get("tier") or "sovereign") != "sovereign" else fresh.get("tier_last_paid")
+    paid_until = _as_dt(fresh.get("tier_until")) if (fresh.get("tier") or "sovereign") != "sovereign" else _as_dt(fresh.get("tier_last_until"))
+    out = {}
+    for k, f in TIER_FEATURES.items():
+        need = TIER_RANK[f["tier"]]
+        unlocked = TIER_RANK.get(active, 0) >= need
+        grace_until = None
+        in_grace = False
+        if paid_tier and TIER_RANK.get(paid_tier, 0) >= need and paid_until:
+            grace_until = paid_until + timedelta(days=f["grace_days"])
+            if not unlocked and now <= grace_until:
+                unlocked, in_grace = True, True
+        if k in owned:                      # grandfathered one-off purchases from before the subscription-only rule
+            unlocked = True
+        offline_until = None
+        if unlocked:
+            offline_until = grace_until if in_grace else (now + timedelta(days=f["grace_days"]))
+        out[k] = {"id": k, **f, "unlocked": unlocked, "in_grace": in_grace, "purchasable": False,
+                  "grace_until": grace_until.isoformat() if grace_until else None,
+                  "offline_until": offline_until.isoformat() if offline_until else None}
+    return out
+
+
+async def require_feature(user: dict, feature: str) -> dict:
+    """402 `<tier>_required: …` unless the tier feature is active (paid tier, grace period or grandfathered)."""
+    st = (await tier_feature_states(user["user_id"]))[feature]
+    if not st["unlocked"]:
+        f = TIER_FEATURES[feature]
+        raise HTTPException(402, f"{f['tier']}_required: {f['label']} is part of the {f['tier'].capitalize()} plan"
+                                 f"{' and above' if f['tier'] != 'archangel' else ' (exclusive)'} — upgrade to unlock.")
+    return st
 
 async def creator_royalty(source: str, amount: float, currency: str, payer_id: str, meta: dict) -> Optional[dict]:
     """5 % of every GA-T sale / pay-per-feature purchase → the creator account (users.creator_account=True).
@@ -87,10 +150,13 @@ async def features_catalog(authorization: Optional[str] = Header(None)):
     fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "features_owned": 1}) or {}
     tier = await get_active_tier(user["user_id"])
     owned = fresh.get("features_owned") or []
-    return {"tier": tier, "owned": owned,
-            "features": [{"id": k, **v, "unlocked": k in owned or TIER_RANK.get(tier, 0) >= TIER_RANK[v["tier"]]} for k, v in FEATURES.items()]}
+    one_off = [{"id": k, **v, "purchasable": True, "unlocked": k in owned or TIER_RANK.get(tier, 0) >= TIER_RANK[v["tier"]]} for k, v in FEATURES.items()]
+    tier_feats = list((await tier_feature_states(user["user_id"])).values())
+    return {"tier": tier, "owned": owned, "features": one_off + tier_feats}
 
 async def has_feature(user: dict, feature: str) -> bool:
+    if feature in TIER_FEATURES:
+        return (await tier_feature_states(user["user_id"]))[feature]["unlocked"]
     f = FEATURES[feature]
     fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "features_owned": 1}) or {}
     if feature in (fresh.get("features_owned") or []):
@@ -104,6 +170,8 @@ class BuyIn(BaseModel):
 @api.post("/features/buy")
 async def features_buy(body: BuyIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    if body.feature in TIER_FEATURES:
+        raise HTTPException(400, f"{TIER_FEATURES[body.feature]['label']} is subscription-only ({TIER_FEATURES[body.feature]['tier'].capitalize()} plan) — it cannot be bought one-off.")
     f = FEATURES.get(body.feature)
     if not f:
         raise HTTPException(400, f"feature must be one of {list(FEATURES)}")

@@ -21,7 +21,7 @@ export default function OfflineMesh() {
         <Pressable testID="mesh-back" onPress={() => router.back()} hitSlop={10} style={st.back}><Ionicons name="chevron-back" size={22} color={C.brand} /></Pressable>
         <Text style={st.title}>OFFLINE MESH</Text>
       </View>
-      <FeatureGate feature="mesh_sms" message="Mesh SMS — messages without internet via nearby Archangel devices — is part of the Sentinel plan.">
+      <FeatureGate feature="mesh_sms" message="Mesh SMS — messages without internet via nearby Archangel devices — is part of the Sentinel plan and above.">
         <MeshChat />
       </FeatureGate>
     </SafeAreaView>

@@ -20,6 +20,7 @@ from datetime import datetime, timezone, timedelta
 import uuid, hashlib
 
 from core import api, db, logger, clean, get_current_user, send_push, _aml_ledger_append
+from routes.features import require_feature
 
 # ============================================================
 # OFFICIAL FOUNDATION IDENTITY — hard-coded, immutable
@@ -360,6 +361,7 @@ class MeshSendIn(BaseModel):
 @api.get("/mesh/status")
 async def mesh_status(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_feature(user, "mesh_sms")   # Sentinel+ · 90-day grace after expiry (emergency core)
     peers = await db.users.count_documents({"did": {"$exists": True}})
     queued = await db.mesh_messages.count_documents({"from_user_id": user["user_id"], "status": "queued"})
     return {"protocol": "Guardian Mesh v1 — store-and-forward · BLE/Wi-Fi Direct relay",
@@ -370,6 +372,7 @@ async def mesh_status(authorization: Optional[str] = Header(None)):
 @api.post("/mesh/messages")
 async def mesh_send(body: MeshSendIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_feature(user, "mesh_sms")   # Sentinel+ · 90-day grace after expiry (emergency core)
     to_did = body.to_did.strip()
     recipient = await db.users.find_one({"did": to_did}, {"_id": 0, "user_id": 1, "name": 1})
     msg = {
@@ -397,6 +400,7 @@ async def mesh_send(body: MeshSendIn, authorization: Optional[str] = Header(None
 @api.get("/mesh/messages")
 async def mesh_inbox(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
+    await require_feature(user, "mesh_sms")   # Sentinel+ · 90-day grace after expiry (emergency core)
     rows = await db.mesh_messages.find(
         {"$or": [{"from_user_id": user["user_id"]}, {"to_did": user["did"]}]},
         {"_id": 0}).sort("at", -1).to_list(100)

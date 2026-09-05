@@ -13,7 +13,7 @@ import { useI18n } from '@/src/i18n-context';
 
 type Props = {
   message: string;
-  tier?: 'guardian' | 'sentinel';   // minimum plan being advertised (default Sentinel)
+  tier?: 'guardian' | 'sentinel' | 'archangel';   // minimum plan being advertised (default Sentinel)
   gatLabel?: string;          // e.g. "PAY 5 GA-T PER SCAN"
   onPayGat?: () => void;      // retry with pay_gat
   onUnlocked: () => void;     // called after successful trial
@@ -22,6 +22,7 @@ type Props = {
 const TIER_UI = {
   guardian: { title: 'GUARDIAN PLAN', color: '#B8860B', icon: 'shield-checkmark' as const, tiers: 'VIEW PLANS (GUARDIAN €9 / SENTINEL €99)' },
   sentinel: { title: 'SENTINEL EXCLUSIVE', color: '#E5E4E2', icon: 'diamond' as const, tiers: 'VIEW TIERS (SENTINEL €99 / ARCHANGEL €299)' },
+  archangel: { title: 'ARCHANGEL EXCLUSIVE', color: '#B48CFF', icon: 'planet' as const, tiers: 'VIEW TIERS (ARCHANGEL €299 / MONTH · €2 990 / YEAR)' },
 };
 
 export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat, onUnlocked }: Props) {
@@ -51,9 +52,11 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
       <Text style={[st.title, { color: ui.color }]}>{tx(ui.title)}</Text>
       <Text style={st.msg}>{message}</Text>
       {!!err && <Text style={st.err}>{err}</Text>}
-      <Pressable testID="pw-trial" onPress={trial} disabled={busy} style={st.trialBtn}>
-        {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>{tt('c_Paywall.activate_a_free_7_day_trial')}</Text>}
-      </Pressable>
+      {tier !== 'archangel' && (   // the free 7-day trial grants Sentinel — it cannot unlock Archangel-only features
+        <Pressable testID="pw-trial" onPress={trial} disabled={busy} style={st.trialBtn}>
+          {busy ? <ActivityIndicator color="#0B0B0D" /> : <Text style={st.trialText}>{tt('c_Paywall.activate_a_free_7_day_trial')}</Text>}
+        </Pressable>
+      )}
       {/* Guardian plan → native App Store / Google Play subscription (RevenueCat); unlocks immediately after tier mirror */}
       <View style={{ alignSelf: 'stretch' }}>
         <IapBuyButton tier={tier} period="monthly" accent={ui.color} onSynced={(r) => { if (r && r.status !== 'noop' && r.status !== 'downgraded') onUnlocked(); }} />

@@ -2206,5 +2206,12 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN MAJETOK (ODHAD)",
   "wealth_vault.wallet_address": "Adresa peňaženky",
   "wealth_vault.wealth_vault": "TREZOR MAJETKU",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.state_listening": "POČÚVAM — MIKROFÓN ZAP",
+  "jarvis.state_processing": "SPRACÚVAM…",
+  "jarvis.state_speaking": "HOVORÍM",
+  "jarvis.state_idle": "NEČINNÝ — MIKROFÓN VYP",
+  "jarvis.wake_word_on": "BUDIACE SLOVO · ZAP",
+  "jarvis.wake_word_off": "BUDIACE SLOVO · VYP",
+  "jarvis.wake_word_hint": "Jarvis drží mikrofón otvorený aj v nečinnosti a zobudí sa na slovo „Jarvis“. Vypni, ak chceš mikrofón úplne uvoľniť."
 }

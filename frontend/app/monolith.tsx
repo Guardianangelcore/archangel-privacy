@@ -13,6 +13,7 @@ import { WheelField } from '@/src/ui/fields';
 import { tap } from '@/src/ui/glass';
 import { C, S, R } from '@/src/theme';
 import { useI18n } from '@/src/i18n-context';
+import FeatureGate from '@/src/FeatureGate';
 
 const PROCS = [
   { code: 'dental_implant', label: 'Dental implant' },
@@ -298,7 +299,9 @@ export default function Monolith() {
           )}
         </Section>
 
-        <Section id="twin" icon="body-outline" title={tt('monolith.bio_digital_twin')} sub="Simulate treatment BEFORE dosing · trajectories" open={open} onToggle={setOpen}>
+        <Section id="twin" icon="body-outline" title={tt('monolith.bio_digital_twin')} sub="Archangel exclusive · simulate treatment BEFORE dosing · trajectories" open={open} onToggle={setOpen}>
+          {/* TIER GATE — Bio-Digital Twin is Archangel-only (14-day grace after expiry). Free users see the section + upgrade prompt. */}
+          <FeatureGate feature="twin" message="Bio-Digital Twin — predictive trajectories and treatment simulation on your digital twin — is exclusive to the Archangel plan.">
           <Pressable testID="mono-traj" onPress={loadTraj} disabled={busy === 'traj'} style={st.ghost}>
             {busy === 'traj' ? <ActivityIndicator color={C.brand} /> : <Text style={st.ghostText}>{tt('monolith.predictive_trajectories_6_12_24_mo')}</Text>}
           </Pressable>
@@ -329,6 +332,7 @@ export default function Monolith() {
               {(sim.result.risks || []).map((x: string, i: number) => <Text key={i} style={st.cardLine}>• {x}</Text>)}
             </View>
           )}
+          </FeatureGate>
         </Section>
 
         <Section id="sentinel" icon="pulse-outline" title={tt('monolith.predictive_sentinel')} sub="Warns the Inner Circle BEFORE the event" open={open} onToggle={setOpen}>

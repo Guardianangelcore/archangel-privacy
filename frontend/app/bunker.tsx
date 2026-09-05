@@ -30,7 +30,7 @@ export default function Bunker() {
     <SafeAreaView style={st.root} edges={['top', 'bottom']}>
       <Head title="BUNKER" />
       <ScrollView contentContainerStyle={st.body}>
-        <FeatureGate feature="bunker" message="Bunker Locator & 72-hour checklist are part of the Sentinel plan.">
+        <FeatureGate feature="bunker" message="Bunker Mode — shelter locator & 72-hour checklist — is part of the Sentinel plan and above. Once active it works offline.">
           <BunkerBody />
         </FeatureGate>
       </ScrollView>

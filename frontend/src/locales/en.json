@@ -2206,5 +2206,12 @@
   "wealth_vault.sovereign_wealth_estimate": "SOVEREIGN WEALTH (ESTIMATE)",
   "wealth_vault.wallet_address": "Wallet address",
   "wealth_vault.wealth_vault": "WEALTH VAULT",
-  "wellness.jarvis": "JARVIS"
+  "wellness.jarvis": "JARVIS",
+  "jarvis.state_listening": "LISTENING — MIC ON",
+  "jarvis.state_processing": "PROCESSING…",
+  "jarvis.state_speaking": "SPEAKING",
+  "jarvis.state_idle": "IDLE — MIC OFF",
+  "jarvis.wake_word_on": "WAKE WORD · ON",
+  "jarvis.wake_word_off": "WAKE WORD · OFF",
+  "jarvis.wake_word_hint": "Jarvis keeps the microphone open while idle and wakes up when you say “Jarvis”. Turn off to release the mic completely."
 }

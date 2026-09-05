@@ -342,7 +342,10 @@ async def subscription_iap_sync(body: IapSyncIn, request: Request, authorization
     if not body.active:
         # Entitlement lapsed: only downgrade what IAP granted; never touch card/GA-T/trial/inner-circle tiers.
         if iap_paid and fresh.get("tier") in ("guardian", "sentinel", "archangel"):
+            # keep the last PAID tier + expiry → grace periods for Bunker / Mesh (90 d) and Twin (14 d)
+            lapsed_until = fresh.get("tier_until") or now
             await db.users.update_one({"user_id": uid}, {"$set": {"tier": "sovereign", "tier_until": None,
+                                                                  "tier_last_paid": fresh.get("tier"), "tier_last_until": lapsed_until,
                                                                   "iap.active": False, "iap.synced_at": now}})
             return {"status": "downgraded", "tier": "sovereign", "addons": addons_out}
         return {"status": "addons_synced" if addon_sync["changes"] else "noop", "tier": current_tier(fresh), "addons": addons_out}
@@ -416,6 +419,7 @@ async def subscription_cancel(authorization: Optional[str] = Header(None)):
     if current_tier(fresh) == "sovereign":
         raise HTTPException(409, "no_active_subscription: You have no active subscription.")
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
+        "tier_last_paid": fresh.get("tier"), "tier_last_until": datetime.now(timezone.utc),   # grace periods (Bunker/Mesh 90 d, Twin 14 d)
         "tier": "sovereign", "tier_until": None, "tier_paid_with": None,
         "tier_billing": None, "family_pack_owner": False}})
     return {"ok": True, "tier": "sovereign",

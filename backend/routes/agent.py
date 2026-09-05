@@ -24,9 +24,27 @@ from core import (
 from routes.subscription import require_tier
 from routes.ai_models import resolve_model
 
-# PAID-ONLY AI — Jarvis chat + Morning Briefing consume LLM budget, so they are
-# exclusive to the Guardian tier and above (Sovereign = free tier sees an upgrade prompt).
+# JARVIS ACCESS — basic Jarvis chat NEVER locks: the free Sovereign tier gets JARVIS_FREE_DAILY
+# messages per day (fast model). Premium Jarvis (voice, Sonar web search, Morning Briefing, premium
+# models, unlimited chat) stays Guardian and above.
 JARVIS_MIN_TIER = "guardian"
+JARVIS_FREE_DAILY = int(os.environ.get("JARVIS_FREE_DAILY", "10"))
+
+
+async def jarvis_access(user: dict) -> str:
+    """Guardian+ → unlimited. Sovereign → free daily quota; when exhausted → 402 guardian_required (paywall)."""
+    from routes.subscription import get_active_tier, TIER_RANK
+    tier = await get_active_tier(user["user_id"])
+    if TIER_RANK.get(tier, 0) >= TIER_RANK[JARVIS_MIN_TIER]:
+        return tier
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    row = await db.jarvis_free_quota.find_one_and_update(
+        {"user_id": user["user_id"], "day": day}, {"$inc": {"used": 1}, "$setOnInsert": {"created_at": datetime.now(timezone.utc)}},
+        upsert=True, return_document=True)
+    if (row or {}).get("used", 1) > JARVIS_FREE_DAILY:
+        raise HTTPException(402, f"guardian_required: Your {JARVIS_FREE_DAILY} free Jarvis messages for today are used up — "
+                                 f"the Guardian Plan (€9/mo) gives unlimited Jarvis, voice and Sonar. Basic SOS stays free forever.")
+    return tier
 from routes.neural import _gather_context
 
 # =========================================================================
@@ -450,7 +468,7 @@ async def agent_chat(body: AgentChatIn, authorization: Optional[str] = Header(No
     uid = user["user_id"]
     if not body.message.strip():
         raise HTTPException(400, "message required")
-    await require_tier(user, JARVIS_MIN_TIER, "Jarvis AI")
+    await jarvis_access(user)   # basic Jarvis is free (daily quota) — never fully locked
 
     # HANDS-FREE PAIN DIARY — deterministic intent, instant confirmation (no LLM round-trip)
     pain_lvl = _detect_pain_level(body.message)
@@ -1053,7 +1071,7 @@ async def agent_chat_stream(body: AgentChatIn, authorization: Optional[str] = He
     uid = user["user_id"]
     if not body.message.strip():
         raise HTTPException(400, "message required")
-    await require_tier(user, JARVIS_MIN_TIER, "Jarvis AI")
+    await jarvis_access(user)   # basic Jarvis is free (daily quota) — never fully locked
     q = body.message[:1000]
     sse_headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"}
 
