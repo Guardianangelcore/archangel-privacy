@@ -1,2 +1,8 @@
-# Downloadable tooling only (zip archives, GitHub export) — not part of the deployed app
+# Not part of the deployed app — downloadable tooling, caches, dev artifacts
 export/
+frontend/node_modules
+frontend/.metro-cache
+frontend/.expo
+**/__pycache__
+test_reports/
+*.whl
