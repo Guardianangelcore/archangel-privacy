@@ -15,8 +15,15 @@ def _bypass(email, name="T"):
 def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 
 
+def _founder():
+    """Founder signs in with password (dev-bypass refuses privileged accounts since Iter 82)."""
+    r = requests.post(f"{BASE}/auth/login", json={"email": FOUNDER, "password": os.environ.get("FOUNDER_TEST_PASSWORD", "GA-v=#2!WKkktgyW1u7bdqt")}, timeout=15)
+    assert r.status_code == 200, f"founder login failed: {r.status_code} {r.text}"
+    d = r.json(); return {"token": d["session_token"], "user_id": d["user"]["user_id"], "email": FOUNDER, "user": d["user"], "name": "Guardian Angel"}
+
+
 def test_founder_email_renamed_same_account():
-    f = _bypass(FOUNDER)
+    f = _founder()
     assert f["user"]["email"] == FOUNDER and f["user"]["tier"] == "archangel" and f["user"].get("inner_circle") is True
     old = requests.post(f"{BASE}/auth/dev-bypass", json={"email": "guardian.angel.core@proton.me", "name": "x"}, timeout=15).json()["user"]
     assert old["user_id"] != f["user_id"] and old.get("tier", "sovereign") != "archangel"   # old address is no longer the founder

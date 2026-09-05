@@ -90,7 +90,11 @@ class RegisterPushBody(BaseModel):
     device_token: str
 
 @api.post("/register-push", status_code=201)
-async def register_push(body: RegisterPushBody):
+async def register_push(body: RegisterPushBody, authorization: Optional[str] = Header(None)):
+    # SEC: a device token may only be registered for the signed-in user (prevents notification hijack)
+    user = await get_current_user(authorization)
+    if body.user_id != user["user_id"]:
+        raise HTTPException(403, "user_id must match the signed-in user")
     resp = await _push_client.post("/api/v1/push/users/register", json=body.model_dump())
     if resp.status_code == 401:
         raise HTTPException(500, "EMERGENT_PUSH_KEY missing or invalid")

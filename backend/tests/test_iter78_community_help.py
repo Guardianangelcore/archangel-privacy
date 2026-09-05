@@ -14,6 +14,13 @@ def _bypass(email, name="T"):
 
 def _fresh(tag): return _bypass(f"iter78-{tag}-{uuid.uuid4().hex[:8]}@example.com", f"Iter78 {tag}")
 def _h(u): return {"Authorization": f"Bearer {u['token']}"}
+
+
+def _founder():
+    """Founder signs in with password (dev-bypass refuses privileged accounts since Iter 82)."""
+    r = requests.post(f"{BASE}/auth/login", json={"email": FOUNDER, "password": os.environ.get("FOUNDER_TEST_PASSWORD", "GA-v=#2!WKkktgyW1u7bdqt")}, timeout=15)
+    assert r.status_code == 200, f"founder login failed: {r.status_code} {r.text}"
+    d = r.json(); return {"token": d["session_token"], "user_id": d["user"]["user_id"], "email": FOUNDER, "user": d["user"], "name": "Guardian Angel"}
 def _bal(u): return requests.get(f"{BASE}/token/wallet", headers=_h(u), timeout=15).json()["balance"]
 
 

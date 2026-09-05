@@ -22,6 +22,13 @@ def _fresh(tag: str) -> dict:
 def _h(u): return {"Authorization": f"Bearer {u['token']}"}
 
 
+def _founder():
+    """Founder signs in with password (dev-bypass refuses privileged accounts since Iter 82)."""
+    r = requests.post(f"{BASE}/auth/login", json={"email": FOUNDER, "password": os.environ.get("FOUNDER_TEST_PASSWORD", "GA-v=#2!WKkktgyW1u7bdqt")}, timeout=15)
+    assert r.status_code == 200, f"founder login failed: {r.status_code} {r.text}"
+    d = r.json(); return {"token": d["session_token"], "user_id": d["user"]["user_id"], "email": FOUNDER, "user": d["user"], "name": "Guardian Angel"}
+
+
 def _set_balance(u: dict, amount: float):
     from pymongo import MongoClient
     from dotenv import load_dotenv
@@ -60,7 +67,7 @@ def test_models_select_gate_and_validation():
 
 
 def test_founder_can_pick_terra_and_chat_reports_model():
-    f = _bypass(FOUNDER)
+    f = _founder()
     r = requests.put(f"{BASE}/ai/models/select", headers=_h(f), json={"model": "gpt-5.6-luna"}, timeout=15)
     assert r.status_code == 200
     try:
@@ -73,7 +80,7 @@ def test_founder_can_pick_terra_and_chat_reports_model():
 
 
 def test_stream_done_event_carries_model():
-    f = _bypass(FOUNDER)
+    f = _founder()
     r = requests.post(f"{BASE}/agent/chat/stream", headers=_h(f), json={"message": f"Say hi ({uuid.uuid4().hex[:4]})"}, timeout=90, stream=True)
     assert r.status_code == 200
     body = r.text
@@ -114,9 +121,10 @@ def test_dev_bypass_rejected_for_production_host():
     assert r.status_code == 403, r.text
 
 
-def test_dev_bypass_works_on_preview_host():
-    r = requests.post(f"{BASE}/auth/dev-bypass", json={"email": FOUNDER}, timeout=15)
-    assert r.status_code == 200
+def test_dev_bypass_works_on_preview_host_but_never_for_founder():
+    r = requests.post(f"{BASE}/auth/dev-bypass", json={"email": f"iter77-plain-{uuid.uuid4().hex[:6]}@example.com"}, timeout=15)
+    assert r.status_code == 200 and r.json()["user"].get("tier", "sovereign") == "sovereign"
+    assert requests.post(f"{BASE}/auth/dev-bypass", json={"email": FOUNDER}, timeout=15).status_code == 403
 
 
 # ---------- Rate limiting ----------
@@ -135,7 +143,7 @@ def test_login_rate_limited_per_ip():
 
 
 def test_tts_rate_limited_per_ip():
-    f = _bypass(FOUNDER)
+    f = _founder()
     ip = f"198.51.100.{uuid.uuid4().int % 250 + 1}"
     codes = [requests.post(f"{BASE}/voice/tts", headers={**_h(f), "X-Forwarded-For": ip}, json={"text": "hi"}, timeout=30).status_code
              for _ in range(35)]

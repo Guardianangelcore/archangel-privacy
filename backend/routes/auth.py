@@ -177,6 +177,11 @@ async def auth_dev_bypass(body: DevBypassIn, request: Request):
     email_l = body.email.strip().lower()
     if not email_l or "@" not in email_l:
         raise HTTPException(400, "invalid email")
+    # SEC-001: the bypass can NEVER produce a privileged session. Founder / inner-circle accounts
+    # sign in with password or Google only.
+    if email_l == FOUNDER_EMAIL or await db.inner_circle.find_one({"email": email_l}, {"_id": 1}) \
+            or await db.users.find_one({"email": email_l, "$or": [{"inner_circle": True}, {"tier": "archangel"}]}, {"_id": 1}):
+        raise HTTPException(403, "privileged accounts cannot use the dev bypass — sign in with password or Google")
     await _ensure_founder_whitelist()
     user_doc = await _provision_user(email_l, body.name)
     session_token = f"gs-{uuid.uuid4().hex}"

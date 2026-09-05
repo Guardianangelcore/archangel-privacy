@@ -59,11 +59,10 @@ export default function Login() {
     } catch (e: any) { setErr(String(e?.message || e)); setBusy(null); }
   };
 
-  const asFounder = async () => {
-    setBypassEmail(FOUNDER_EMAIL);
-    setBusy('dev'); setErr('');
-    try { await signInDev(FOUNDER_EMAIL, 'Guardian Angel'); }
-    catch (e: any) { setErr(String(e?.message || e)); setBusy(null); }
+  // SEC-001: the Founder never signs in through the dev bypass — the button only prefills the
+  // e-mail for the password form (Founder password / Google Sign-In).
+  const asFounder = () => {
+    setEmail(FOUNDER_EMAIL); setPwMode('login'); setShowPw(true); setErr('');
   };
 
   const onPassword = async () => {

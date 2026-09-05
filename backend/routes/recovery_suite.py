@@ -186,10 +186,10 @@ async def social_recovery_initiate(body: RecoveryInitIn):
     if not user:
         raise HTTPException(404, "Account not found.")
     guardians = await db.guardians.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(10)
-    if not guardians:
-        raise HTTPException(409, "no_guardians: The account has no guardians set — use QR Talizman or Passkey.")
+    if len(guardians) < 2:
+        raise HTTPException(409, "no_guardians: Social recovery needs at least 2 guardians — use QR Talizman or Passkey.")
     now = datetime.now(timezone.utc)
-    needed = min(2, len(guardians))
+    needed = 2   # a single guardian must never be able to take over an account
     req = {"req_id": uuid.uuid4().hex, "user_id": user["user_id"], "needed": needed,
            "approvals": [], "status": "pending", "token_delivered": False,
            "created_at": now, "expires_at": now + timedelta(hours=24)}
