@@ -116,7 +116,7 @@ export default function HealthCard() {
         )}
         {card && tab === 'records' && (
           <>
-            {picker && <Text style={st.pickHint}>Tap a document below → "USE AS …" to link it.</Text>}
+            {picker && <Text style={st.pickHint}>Tap a document below → “USE AS …” to link it.</Text>}
             <View style={st.summary}>
               <Text style={st.sumNum}>{docs.length}</Text><Text style={st.sumLabel}>documents</Text>
               <Text style={st.sumNum}>{docs.filter(d => d.has_text).length}</Text><Text style={st.sumLabel}>transcribed (OCR)</Text>
