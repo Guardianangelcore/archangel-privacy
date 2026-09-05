@@ -141,7 +141,7 @@ c.drawRightString(W - 36, H - 42, "Guardian Angel Sovereign Foundation (DAO)")
 c.drawRightString(W - 36, H - 54, "Deterministic tier-mix model — live at /api/founder/toolkit")
 
 # ---- Forecast (mirrors backend routes/founder.py exactly) ----
-TIER_MIX = {"guardian": (29.0, 0.80), "sentinel": (149.0, 0.17), "archangel": (499.0, 0.03)}
+TIER_MIX = {"guardian": (29.0, 0.80), "sentinel": (99.0, 0.17), "archangel": (299.0, 0.03)}
 ARPU = round(sum(p * w for p, w in TIER_MIX.values()), 2)
 YEARS = [(2026, 12_000, 0.05, 1.5), (2027, 85_000, 0.06, 2.5), (2028, 420_000, 0.07, 3.5),
          (2029, 1_600_000, 0.08, 4.5), (2030, 5_000_000, 0.09, 5.5)]
@@ -157,7 +157,7 @@ c.setFillColor(CARD); c.roundRect(36, ay - 40, W - 72, 40, 4, stroke=0, fill=1)
 c.setFillColor(GOLD); c.setFont("Helvetica-Bold", 8)
 c.drawString(46, ay - 12, "ASSUMPTIONS")
 c.setFillColor(FG); c.setFont("Helvetica", 8)
-c.drawString(46, ay - 24, f"Blended ARPU €{ARPU}/mo (Guardian €29 · Sentinel €149 · Archangel €499)   ·   Guardian Tax 15% of marketplace GMV")
+c.drawString(46, ay - 24, f"Blended ARPU €{ARPU}/mo (Guardian €29 · Sentinel €99 · Archangel €299)   ·   Guardian Tax 15% of marketplace GMV")
 c.drawString(46, ay - 34, "Gross margin 87%   ·   LTV/CAC 4.8   ·   Churn 2.1%/mo   ·   Paid conversion 5% → 9% (2026 → 2030)")
 
 # forecast table

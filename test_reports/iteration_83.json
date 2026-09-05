@@ -1,0 +1,53 @@
+{
+  "summary": "Iteration 83 — Partner Approval Panel. Backend: 5/5 pytest passing (register→pending, admin lists grouped by status w/ no secrets and consent counts, 401/403 auth guards, approve/suspend/reactivate lifecycle including 404 on already-active and unknown ids, ingest gated by status). Frontend (Slovak founder): partners-admin loads, tabs+counts render, search filters rows, nonsense search shows Slovak 'Hľadaniu nezodpovedá žiadny partner.', SCHVÁLIŤ moves partner Pending→Active (msg '✓ <org> → AKTÍVNI', counts −1/+1), POZASTAVIŤ moves Active→Suspended (only OBNOVIŤ button), OBNOVIŤ returns Suspended→Active, Profile 'partners-admin-btn' navigates to /partners-admin. UI test could not use the password login form because the initial language chooser (choose-language-screen with lang-sk/lang-en chips) does not advance to the login form on web preview when a chip is tapped — English stays highlighted and the cinematic 'ENTER THE SYSTEM' intro button re-appears on top. Session-seeding via localStorage 'gh_session_token' worked and allowed full UI validation. Non-founder full-UI forbidden walk was blocked by an additional persona-picker onboarding gate ('Who is using the app?') that appears on first launch — the 403 → pa-forbidden branch is verified by code inspection + confirmed backend 403 for non-founder tokens.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "login language chooser",
+        "issue": "On web preview the 'lang-sk' chip does not confirm/advance to the login form — 'English' remains highlighted regardless of taps and choose-language-screen persists. Users cannot reach the pw-email/pw-password login without going through onboarding cards later. Session-token seeding bypassed this to run the actual test. Reference: /app/frontend/app/login.tsx (initial mount with choose-language-screen).",
+        "testID": "lang-sk / intro-enter",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "partners-admin",
+        "issues": [
+          "Layout, contrast, spacing and mobile-friendly touch targets look good in Slovak (SCHVÁLIŤ / ZAMIETNUŤ / POZASTAVIŤ / OBNOVIŤ ≥46px). Tabs are compact but readable at 390x844. No overlap detected."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {"component": "web-only style warnings", "issue": "Non-blocking web console warnings: 'shadow*' → boxShadow, 'textShadow*' → textShadow, props.pointerEvents → style.pointerEvents, useNativeDriver missing. These are cosmetic on web preview but are widespread; the pointerEvents deprecation is suspected root cause of the language-chip regression above."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter83_partners_admin.py",
+    "/app/test_reports/pytest/pytest_iter83.xml"
+  ],
+  "action_items": [
+    "Investigate why lang-sk (and any other language chip except the default 'English') does not confirm the choice on web preview. Likely related to props.pointerEvents deprecation on Pressable/View — migrate to style.pointerEvents.",
+    "Consider dismissing/deferring the persona-picker onboarding for users whose profile.persona is already set (or for founder) so /partners-admin is reachable via a clean deep-link without seeding storage.",
+    "Migrate remaining web-deprecation props: shadow* → boxShadow, textShadow* → textShadow, remove/replace useNativeDriver on web."
+  ],
+  "critical_code_review_comments": [
+    "routes/uhp.py: uhp_partner_approve uses status:{$in:['pending','suspended']} — correct semantics (reactivate suspended, refuse already-active with 404). Admin list uses {_id:0, api_key:0, hmac_secret:0} projection — secrets never leak.",
+    "partners-admin.tsx: optimistic bucket move is safe (recomputes counts locally), but on error it calls load(true) to reconcile — good.",
+    "partners-admin.tsx: rows are filtered client-side via q; searching includes partner_id which could surprise founders (matches on internal ids). Minor UX polish only."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter83_partners_admin.py (new)",
+    "/app/test_reports/pytest/pytest_iter83.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% of founder flows; non-founder UI walk not completed due to persona-picker gate (backend 403 covered)"},
+  "seed_data_creation": "Registered fresh pending UHP partner uhp_9883f25b7331 (TEST_ui83_c409ed, clinic, SK). Left in suspended state at end of run after multiple approve/suspend/reactivate cycles.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Founder password login via /api/auth/login works (FOUNDER_TEST_PASSWORD in backend/.env). For UI tests on web preview, tapping lang chips other than the default English on the initial choose-language-screen does NOT advance to the intro/login — seed a session via localStorage.setItem('gh_session_token', <token>) after fetching one from POST /api/auth/login. New users hit an additional persona picker ('Who is using the app?').",
+  "rca_of_issue": "The web preview language chooser regression is very likely a consequence of props.pointerEvents deprecation warnings observed during testing. When React Native Web sees legacy pointerEvents props it may drop them, leaving overlaid elements catching taps — 'English' stays selected by default and lang-sk taps land on an overlay. Confirmed by three independent attempts (query_selector click, real mouse.click at bbox, real mouse.click with re-inspection) — none flipped the highlighted chip. Suggested mitigation: migrate to style.pointerEvents in login.tsx and the language chooser component."
+}

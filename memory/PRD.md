@@ -371,3 +371,17 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - **Clinic beam brute force (Low)**: code is now 12 hex (48 bit) + `rate_limit(..., "clinic_beam")` 10/min per IP.
 - Founder password is user-chosen; stored only as bcrypt in DB and as `FOUNDER_TEST_PASSWORD` in backend/.env (tests read via dotenv; no plaintext in memory/ files).
 - Tests: `tests/test_iter82_reaudit.py` 3/3.
+
+## Iter 83 — Partner Approval Panel (Founder)
+- New Founder-only screen `frontend/app/partners-admin.tsx` (route `/partners-admin`, entry: Profile → FOUNDER ADMIN box → `partners-admin-btn`). Loads `GET /uhp/partners/admin` (already Founder/inner-circle gated, secrets never returned; buckets pending/active/suspended + counts + consent counts).
+- Tabs `pa-tab-{pending|active|suspended}` with live counts (`pa-count-*`), search box `pa-search` (name / e-mail / country / type / id), pull-to-refresh, empty states (`pa-empty`), 403 → "FOUNDATION ONLY" (`pa-forbidden`).
+- One-tap actions per card `pa-row-<partner_id>`: pending → APPROVE (`pa-approve-<id>` → POST …/approve) / REJECT (`pa-suspend-<id>` → POST …/suspend); active → SUSPEND; suspended → REACTIVATE (approve endpoint). Optimistic bucket move + `pa-msg` confirmation; errors via `pa-err` and silent reload.
+- i18n `partners_admin.*` in en.json + sk.json (other languages fall back to English). Business rule confirmed by user: self-registered partners = PENDING until approved.
+- Backend unchanged (endpoints from Iter 82b). Note: handoff claimed `/api/export/*` still exist — they were already removed in Iter 82.
+
+## Iter 84 — Subscription price update (Sentinel €99/€950 · Archangel €299/€2990)
+- User request: Sentinel €149→€99/mo, €1,490→€950/yr; Archangel €499→€299/mo, €4,990→€2,990/yr. GA-T prices unchanged (250 / 800).
+- Backend: `routes/subscription.py` TIERS (`_prices(99,250,eur_year=950)`, `_prices(299,800,eur_year=2990)`; CZK derived), `recommend.py`, `bioscan.py` 402 text, `founder.py` TIER_MIX (forecast ARPU now €33). Tests updated: test_iter62_iap_tiers (6/6), test_phase18, test_iter25.
+- Frontend: `src/Paywall.tsx` tier strings; 14 locales `founder_toolkit.tier_mix_*` text; store/subscription/paywall prices come from `/subscription` + RevenueCat offerings (no other hardcodes). `release_package/tools/jury_pdf.py` text updated (PDF not regenerated).
+- RevenueCat: Test Store products are immutable → new packages `sentinel_monthly_v2 / sentinel_annual_v2 / archangel_monthly_v2 / archangel_annual_v2` (products `pro.*_v2`, EUR, attached to `pro`); old packages detached from the `default` offering (products with test transactions can't be deleted → 422, harmless). `src/revenuecat.tsx` IAP_PACKAGES → v2 keys. Verified in web preview: store buttons €99.00 / €950.00 (monthly / yearly).
+- Store-side (user, before real purchases): create App Store Connect / Google Play products with the NEW ids `pro.sentinel_monthly_v2`, `pro.sentinel_annual_v2`, `pro.archangel_monthly_v2`, `pro.archangel_annual_v2`.

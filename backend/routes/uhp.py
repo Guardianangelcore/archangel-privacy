@@ -244,13 +244,28 @@ async def uhp_partners_pending(authorization: Optional[str] = Header(None)):
     return {"partners": rows}
 
 
+@api.get("/uhp/partners/admin")
+async def uhp_partners_admin(authorization: Optional[str] = Header(None)):
+    """Foundation panel: every partner grouped by status (secrets never returned) + consent counts."""
+    await _require_foundation(authorization)
+    rows = await db.uhp_partners.find({}, {"_id": 0, "api_key": 0, "hmac_secret": 0}).sort("created_at", -1).to_list(500)
+    consents = {r["_id"]: r["n"] async for r in db.uhp_consents.aggregate([{"$match": {"active": True}}, {"$group": {"_id": "$partner_id", "n": {"$sum": 1}}}])}
+    for r in rows:
+        r["consents"] = consents.get(r["partner_id"], 0)
+    out = {"pending": [], "active": [], "suspended": []}
+    for r in rows:
+        out.setdefault(r.get("status") or "pending", []).append(r)
+    return {**out, "counts": {k: len(v) for k, v in out.items()}}
+
+
 @api.post("/uhp/partners/{partner_id}/approve")
 async def uhp_partner_approve(partner_id: str, authorization: Optional[str] = Header(None)):
     admin = await _require_foundation(authorization)
-    res = await db.uhp_partners.update_one({"partner_id": partner_id, "status": "pending"},
-                                           {"$set": {"status": "active", "approved_at": datetime.now(timezone.utc), "approved_by": admin["user_id"]}})
+    res = await db.uhp_partners.update_one({"partner_id": partner_id, "status": {"$in": ["pending", "suspended"]}},
+                                           {"$set": {"status": "active", "approved_at": datetime.now(timezone.utc), "approved_by": admin["user_id"]},
+                                            "$unset": {"suspended_at": ""}})
     if not res.modified_count:
-        raise HTTPException(404, "no pending partner with this id")
+        raise HTTPException(404, "no pending/suspended partner with this id")
     return {"ok": True, "partner_id": partner_id, "status": "active"}
 
 

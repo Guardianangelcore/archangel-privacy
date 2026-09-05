@@ -2,7 +2,7 @@
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
 """Elite 4-Tier Subscription — Sovereign (free) / Guardian (€9) / Sentinel
-(€149) / Archangel (€499). Monthly or annual (−20 %). Multi-currency EUR /
+(€99) / Archangel (€299). Monthly or annual (−20 %). Multi-currency EUR /
 CZK / GA-T. GA-T payments live via the internal token engine; card billing is
 a placeholder until the real Stripe key is provided (user's decision)."""
 from fastapi import HTTPException, Header, Request
@@ -43,7 +43,7 @@ TIERS = {
                      "Angel Mode (falls + safety)", "Complete Physio-AI encyclopedia"],
     },
     "sentinel": {
-        "name": "Sentinel", "order": 2, **_prices(149, 250, eur_year=1490),
+        "name": "Sentinel", "order": 2, **_prices(99, 250, eur_year=950),
         "tagline": "VIP survival — a hospital in your pocket",
         "accent": "#E5E4E2",
         "features": ["Everything in Guardian", "💎 300 GA-T credited every month",
@@ -53,7 +53,7 @@ TIERS = {
                      "Insurance Claim Recovery"],
     },
     "archangel": {
-        "name": "Archangel", "order": 3, **_prices(499, 800, eur_year=4990),
+        "name": "Archangel", "order": 3, **_prices(299, 800, eur_year=2990),
         "tagline": "Elite sovereignty — Zero-latency Swarm",
         "accent": "#8A2BE2",
         "features": ["Everything in Sentinel", "💎 1 000 GA-T credited every month",

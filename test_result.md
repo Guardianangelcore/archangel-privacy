@@ -924,3 +924,11 @@ UI: login lang-sk → SIGN IN → Angel home in Slovak; profile de/en switch ins
 
 ## Iter 81 — founder e-mail rename · live STT · GA-T on-chain bridge
 - pytest tests/test_iter81_chain_stt_email.py 3/3; testing-agent light backend 4/5 (5th = strict assertion on /auth/me lacking `tier` for free users — pre-existing shape, frontend defaults to sovereign). Frontend verified by main agent via Playwright: /blockchain wallet link (checksummed) / unlink, queued mode text; /jarvis renders with live-STT wiring (web Speech API path needs mic → device/dev-build test).
+
+## Iter 83 — Partner Approval Panel
+- Frontend-only addition: `/partners-admin` (Founder). Backend endpoints `GET /uhp/partners/admin`, `POST /uhp/partners/{id}/approve|suspend` pre-existing (Founder/inner-circle gate).
+- Main-agent smoke (Playwright, founder password login, Slovak): counts 2/102/1 → approve BioLab Praha → 1/103/1, `pa-msg` "BioLab Praha → AKTÍVNI". Web preview shows first-launch intro ("VSTÚPIŤ DO SYSTÉMU") + onboarding ("PRESKOČIŤ") overlays on fresh storage — dismiss before interacting.
+
+## Iter 84 — Price update
+- pytest tests/test_iter62_iap_tiers.py 6/6 (new prices). test_iter60 `test_founder_archangel_kept_on_iap_activate` fails for a PRE-EXISTING reason (uses removed dev-bypass for founder) — unrelated.
+- Web preview verified: /store Sentinel €99 (backend) + RC button €99.00 monthly / €950.00 yearly; /subscription Sentinel 99 €/mo · 2475 Kč · 250 GA-T, Archangel 299 €; no stale 149/499 anywhere (only a DID hash contains "149").

@@ -46,7 +46,7 @@ async def bioscan_measure(body: ScanIn, authorization: Optional[str] = Header(No
         access = "tier"
     else:
         if not body.pay_gat:
-            raise HTTPException(402, "payment_required: Bio-Scanner = 5 GA-T per scan, or unlimited with Sentinel (€149/mo.). Activate the free 7-day trial in Subscription.")
+            raise HTTPException(402, "payment_required: Bio-Scanner = 5 GA-T per scan, or unlimited with Sentinel (€99/mo.). Activate the free 7-day trial in Subscription.")
         from routes.token import token_spend, SpendIn
         await token_spend(SpendIn(item="bioscan_single"), authorization)  # raises 402 if insufficient
         await record_revenue("payperuse", 0.5, uid, {"item": "bioscan_single", "gat": 5})

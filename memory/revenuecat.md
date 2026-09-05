@@ -11,10 +11,15 @@ This file is supposed to serve as a memory to you if you have to interact with u
 - Packages (package -> product_id, current price) — ALL EUR-only Test Store products (single currency ⇒ SDK falls back to EUR in any locale; mixing USD+EUR made RC drop the EUR-only products in en-US previews):
   - guardian_monthly  -> proda0bf31c009  (pro.guardian_monthly,  €9 / P1M)
   - guardian_annual   -> prod1beb2d0696  (pro.guardian_annual,   €86 / P1Y)
-  - sentinel_monthly  -> prod698da21987  (pro.sentinel_monthly,  €149 / P1M)
-  - sentinel_annual   -> prod8f5bf13a41  (pro.sentinel_annual,   €1490 / P1Y)
-  - archangel_monthly -> prod0f64cd08e6  (pro.archangel_monthly, €499 / P1M)
-  - archangel_annual  -> prod8f12402bd8  (pro.archangel_annual,  €4990 / P1Y)
+  - sentinel_monthly_v2  -> prod5eade6865b  (pro.sentinel_monthly_v2,  €99 / P1M)   ← 2026-09-05 price update
+  - sentinel_annual_v2   -> prod4b0645a2e3  (pro.sentinel_annual_v2,   €950 / P1Y)
+  - archangel_monthly_v2 -> prod0fc2b47780  (pro.archangel_monthly_v2, €299 / P1M)
+  - archangel_annual_v2  -> prodb516e31007  (pro.archangel_annual_v2,  €2990 / P1Y)
+  - RETIRED (2026-09-05, NOT in the offering any more): sentinel_monthly prod698da21987 (€149), sentinel_annual prod8f5bf13a41 (€1490),
+    archangel_monthly prod0f64cd08e6 (€499), archangel_annual prod8f12402bd8 (€4990). Test Store products are IMMUTABLE — a /products
+    upsert with a new price returns 200 but the offering keeps the old price; DELETE detaches the package from the offering (the product
+    itself stays if it has test transactions → 422, harmless). Price changes ⇒ always create *_vN packages + DELETE the old ones + update
+    frontend/src/revenuecat.tsx IAP_PACKAGES. Backend iap_tier() matches by substring ("sentinel"/"archangel"), so v2 ids need no change.
   - ADD-ON SUBSCRIPTIONS (Iter 79, same "pro" entitlement, grant NO tier — backend routes/store.py ADDON_BY_RC_PRODUCT):
     - addon_perplexity_ultra_monthly -> prod74c8bb3982 (pro.addon_perplexity_ultra_monthly, €5 / P1M)
     - addon_premium_voice_monthly    -> prodfa6faead38 (pro.addon_premium_voice_monthly,    €3 / P1M)

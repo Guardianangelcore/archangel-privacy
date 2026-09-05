@@ -22,8 +22,10 @@ export type IapTier = 'guardian' | 'sentinel' | 'archangel' | 'duo' | 'family' |
 /** Offering packages per tier (provisioned via the integration proxy — see memory/revenuecat.md). */
 export const IAP_PACKAGES: Record<IapTier, { monthly: string; annual: string }> = {
   guardian: { monthly: 'guardian_monthly', annual: 'guardian_annual' },
-  sentinel: { monthly: 'sentinel_monthly', annual: 'sentinel_annual' },
-  archangel: { monthly: 'archangel_monthly', annual: 'archangel_annual' },
+  // v2 packages (Sept 2026 price update €99/€950 · €299/€2990) — Test Store products are immutable,
+  // so the old sentinel_*/archangel_* packages were detached from the offering and replaced.
+  sentinel: { monthly: 'sentinel_monthly_v2', annual: 'sentinel_annual_v2' },
+  archangel: { monthly: 'archangel_monthly_v2', annual: 'archangel_annual_v2' },
   // Family plans (RevenueCat products provisioned alongside the tiers)
   duo: { monthly: 'duo_monthly', annual: 'duo_annual' },
   family: { monthly: 'family_monthly', annual: 'family_annual' },

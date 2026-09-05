@@ -32,13 +32,13 @@ class TestEliteTiers:
         d = _get("/subscription").json()
         t = d["tiers"]
         assert set(t) == {"sovereign", "guardian", "sentinel", "archangel"}
-        assert t["guardian"]["price_eur"] == 29
-        assert t["sentinel"]["price_eur"] == 149
-        assert t["archangel"]["price_eur"] == 499
+        assert t["guardian"]["price_eur"] == 9
+        assert t["sentinel"]["price_eur"] == 99
+        assert t["archangel"]["price_eur"] == 299
         # annual −20 %
-        assert t["sentinel"]["price_eur_year"] == round(149 * 12 * 0.8, 0)
+        assert t["sentinel"]["price_eur_year"] == 950
         # multi-currency
-        assert t["guardian"]["price_czk"] == 29 * 25
+        assert t["guardian"]["price_czk"] == 9 * 25
         assert d["annual_discount_pct"] == 20
         assert set(d["currencies"]) == {"EUR", "CZK", "GA-T"}
         assert d["payperuse"]["bioscan_single"] == 5

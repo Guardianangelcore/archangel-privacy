@@ -655,6 +655,14 @@ export default function Profile() {
               )}
             </View>
             {!!demoMsg && <Text testID="demo-msg" style={styles.adminMsg}>{demoMsg}</Text>}
+            <Pressable testID="partners-admin-btn" onPress={() => router.push('/partners-admin' as any)} style={[styles.guardRow, { minHeight: 56 }]}>
+              <Ionicons name="shield-checkmark-outline" size={22} color="#B8860B" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.guardTitle}>{tt('partners_admin.title')}</Text>
+                <Text style={styles.guardSub}>{tt('partners_admin.profile_sub')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.info} />
+            </Pressable>
             <Pressable testID="launch-btn" onPress={() => router.push('/launch')} style={styles.launchBtn}>
               <Ionicons name="rocket-outline" size={18} color="#0B0B0D" />
               <Text style={styles.launchText}>{tt('tabs_profile.launch_control_deploy_to_production')}</Text>

@@ -36,8 +36,8 @@ def test_price_list_matches_store():
     t = requests.get(f"{API}/subscription", headers=_hdr(tok), timeout=30).json()["tiers"]
     assert (t["sovereign"]["price_eur"], t["sovereign"]["price_eur_year"]) == (0, 0)
     assert (t["guardian"]["price_eur"], t["guardian"]["price_eur_year"]) == (9, 86)
-    assert (t["sentinel"]["price_eur"], t["sentinel"]["price_eur_year"]) == (149, 1490)
-    assert (t["archangel"]["price_eur"], t["archangel"]["price_eur_year"]) == (499, 4990)
+    assert (t["sentinel"]["price_eur"], t["sentinel"]["price_eur_year"]) == (99, 950)
+    assert (t["archangel"]["price_eur"], t["archangel"]["price_eur_year"]) == (299, 2990)
 
 
 def test_sentinel_product_maps_to_sentinel_and_300_gat():

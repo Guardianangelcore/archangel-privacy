@@ -104,7 +104,7 @@ class TestBillingCheckout:
         d = r.json()
         assert "checkout.stripe.com" in d["checkout_url"], d["checkout_url"]
         assert d["session_id"]
-        assert d["amount_eur"] == 149.0, d      # server-fixed sentinel/monthly
+        assert d["amount_eur"] == 99.0, d       # server-fixed sentinel/monthly
         # stash for next tests
         pytest.sentinel_session_id = d["session_id"]
 

@@ -142,7 +142,7 @@ async def recommendations(authorization: Optional[str] = Header(None)):
         if TIER_RANK.get(current_tier(fresh), 0) < TIER_RANK["sentinel"]:
             recs.append(_rec("wealth", "rocket-outline",
                              "I found a hunted appointment — Sentinel will book it automatically",
-                             "Upgrade to Sentinel Tier (€149/mo): autonomous bookings, satellite emergency, Bio-Scanner, and Tactical Medic.",
+                             "Upgrade to Sentinel Tier (€99/mo): autonomous bookings, satellite emergency, Bio-Scanner, and Tactical Medic.",
                              "UPGRADE", "/subscription"))
     ins = await db.insurance_policies.find({"user_id": uid, "type": "health"}, {"_id": 0}).to_list(5)
     if ins and not any(_policy_status(p) == "paid" for p in ins):
@@ -162,7 +162,7 @@ async def recommendations(authorization: Optional[str] = Header(None)):
             ctx = f"After the document \"{(last_act.get('doc_title') or '')[:32]}…\" — "
         recs.append(_rec("wealth", "pulse-outline",
                          "Value Advisor: check your vitals",
-                         f"{ctx}Bio-Scanner measures heart rate, SpO2 and stress with the camera for 5 GA-T. Or Sentinel (€149/mo.) = unlimited monitoring + satellite + Tactical Medic.",
+                         f"{ctx}Bio-Scanner measures heart rate, SpO2 and stress with the camera for 5 GA-T. Or Sentinel (€99/mo.) = unlimited monitoring + satellite + Tactical Medic.",
                          "TRY BIO-SCAN", "/bioscan"))
 
     return {"generated_at": now.isoformat(), "count": len(recs), "recommendations": recs}
