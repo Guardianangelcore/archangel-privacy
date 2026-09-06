@@ -18,13 +18,11 @@ const FOUNDER_EMAIL = 'guardianangel.core@proton.me';
 
 export default function Login() {
   const { t: tt, tx } = useI18n();
-  const { signIn, signInDev, signInPassword, registerPassword, authError } = useAuth();
+  const { signIn, signInPassword, registerPassword, authError } = useAuth();
   const router = useRouter();
   // Shared i18n context: the pick here is remembered and applied to the account on sign-in.
   const { lang, t, rtl } = useI18n();
-  const [busy, setBusy] = useState<'google' | 'dev' | 'pw' | null>(null);
-  const [showBypass, setShowBypass] = useState(false);
-  const [bypassEmail, setBypassEmail] = useState(FOUNDER_EMAIL);
+  const [busy, setBusy] = useState<'google' | 'pw' | null>(null);
   const [err, setErr] = useState('');
   // Classic e-mail & password login/registration
   const [pwMode, setPwMode] = useState<'login' | 'register'>('login');
@@ -39,8 +37,8 @@ export default function Login() {
   const [newPassword, setNewPassword] = useState('');
   const [info, setInfo] = useState('');
 
-  // SECURITY — the dev/founder bypass is auto-disabled in production. It only
-  // renders on preview / localhost / native-dev builds, never on a public deploy.
+  // SECURITY — the Founder shortcut only prefills the e-mail for the password form. It renders
+  // on preview / localhost / native-dev builds only, never on a public deploy.
   const isDevEnv = __DEV__ || (Platform.OS === 'web' && typeof window !== 'undefined'
     && (window.location.hostname.includes('preview')
         || window.location.hostname === 'localhost'
@@ -53,15 +51,7 @@ export default function Login() {
     finally { setBusy(null); }
   };
 
-  const onDevBypass = async () => {
-    setBusy('dev'); setErr('');
-    try {
-      await signInDev(bypassEmail.trim(), bypassEmail === FOUNDER_EMAIL ? 'Guardian Angel' : undefined);
-    } catch (e: any) { setErr(String(e?.message || e)); setBusy(null); }
-  };
-
-  // SEC-001: the Founder never signs in through the dev bypass — the button only prefills the
-  // e-mail for the password form (Founder password / Google Sign-In).
+  // SEC-001: there is no passwordless bypass — the Founder signs in with password or Google only.
   const asFounder = () => {
     setEmail(FOUNDER_EMAIL); setPwMode('login'); setShowPw(true); setErr('');
   };
@@ -298,7 +288,7 @@ export default function Login() {
                 </>}
           </Pressable>
 
-          {/* SOVEREIGN BYPASS — Founder / preview access without Google OAuth.
+          {/* FOUNDER SHORTCUT — prefills the Founder e-mail for the password form.
               Auto-hidden in production (only preview / localhost / dev). */}
           {isDevEnv && (
           <Pressable
@@ -307,48 +297,9 @@ export default function Login() {
             disabled={busy !== null}
             style={styles.founderBtn}
           >
-            {busy === 'dev'
-              ? <ActivityIndicator color={C.brand} />
-              : <>
-                  <Ionicons name="key" size={18} color={C.brand} />
-                  <Text style={styles.founderText}>{tt('login.enter_as_guardian_angel_founder')}</Text>
-                </>}
+            <Ionicons name="key" size={18} color={C.brand} />
+            <Text style={styles.founderText}>{tt('login.enter_as_guardian_angel_founder')}</Text>
           </Pressable>
-          )}
-
-          {isDevEnv && (
-          <Pressable
-            testID="bypass-toggle"
-            onPress={() => setShowBypass(v => !v)}
-            hitSlop={8}
-            style={styles.linkBtn}
-          >
-            <Text style={styles.linkText}>{showBypass ? tt('login.close') : tt('login.other_email_developer_bypass')}</Text>
-          </Pressable>
-          )}
-
-          {isDevEnv && showBypass && (
-            <View style={styles.bypassBox}>
-              <TextInput
-                testID="bypass-email"
-                value={bypassEmail}
-                onChangeText={setBypassEmail}
-                placeholder={tt('login.email_guardian')}
-                placeholderTextColor="rgba(255,255,255,0.5)"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.bypassInput}
-              />
-              <Pressable
-                testID="bypass-submit"
-                onPress={onDevBypass}
-                disabled={busy !== null || !bypassEmail.includes('@')}
-                style={styles.bypassSubmit}
-              >
-                <Text style={styles.bypassSubmitText}>{busy === 'dev' ? '…' : tt('login.enter')}</Text>
-              </Pressable>
-            </View>
           )}
 
           {(!!err || !!authError) && <Text testID="login-err" style={styles.err}>{err || authError}</Text>}
@@ -398,10 +349,6 @@ const styles = StyleSheet.create({
   founderText: { color: C.brand, fontSize: 12.5, fontWeight: '900', letterSpacing: 1.5 },
   linkBtn: { alignItems: 'center', paddingVertical: 6 },
   linkText: { color: C.fg, opacity: 0.7, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
-  bypassBox: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  bypassInput: { flex: 1, borderWidth: 1.5, borderColor: 'rgba(212,175,55,0.5)', color: C.fg, paddingHorizontal: 12, minHeight: 48, fontSize: 13, backgroundColor: 'rgba(0,0,0,0.4)' },
-  bypassSubmit: { backgroundColor: C.brand, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
-  bypassSubmitText: { color: C.onInverse, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
   err: { color: C.error, fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   info: { color: '#7BE0AD', fontSize: 11, textAlign: 'center', marginTop: 6, fontWeight: '700' },
   resetTitle: { color: C.fg, fontSize: 12, fontWeight: '900', letterSpacing: 2, textAlign: 'center', paddingVertical: 6 },

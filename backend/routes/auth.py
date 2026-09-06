@@ -147,11 +147,12 @@ class DevBypassIn(BaseModel):
     name: Optional[str] = None
 
 
-# SEC-001 — the bypass is a PREVIEW/TEST convenience only. It is OFF unless the backend
-# .env explicitly sets DEV_BYPASS_ENABLED=true AND the request reaches a preview/local
-# host. The Founder e-mail is NOT exempt (anyone could otherwise mint an Archangel session).
+# SEC-001 — the bypass is a LOCAL-DEV convenience only. It is OFF unless the backend .env
+# explicitly sets DEV_BYPASS_ENABLED=true AND the request reaches a localhost host (public
+# preview / production hostnames are never accepted — a stranger could otherwise mint a
+# session for any e-mail). The Founder e-mail is NOT exempt.
 DEV_BYPASS_HOSTS = tuple(h.strip().lower() for h in os.environ.get(
-    "DEV_BYPASS_HOSTS", "preview.emergentagent.com,preview.emergentcf.cloud,localhost,127.0.0.1").split(",") if h.strip())
+    "DEV_BYPASS_HOSTS", "localhost,127.0.0.1").split(",") if h.strip())
 
 
 def dev_bypass_allowed(request: Request) -> bool:
@@ -169,8 +170,8 @@ def dev_bypass_allowed(request: Request) -> bool:
 async def auth_dev_bypass(body: DevBypassIn, request: Request):
     """SOVEREIGN BYPASS — creates a Guardian session without Google OAuth.
 
-    Preview / local builds ONLY (see dev_bypass_allowed). Disabled in production:
-    set DEV_BYPASS_ENABLED=false (or remove it) before publishing."""
+    Local development ONLY (see dev_bypass_allowed): requires DEV_BYPASS_ENABLED=true AND a
+    localhost Host header. Always 403 on preview / production hosts."""
     rate_limit(request, "dev_bypass")
     if not dev_bypass_allowed(request):
         raise HTTPException(403, "dev bypass disabled — use e-mail/password or Google Sign-In")

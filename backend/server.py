@@ -13,7 +13,8 @@ from reviewer_seed import seed_reviewer_account
 from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension, founder, geo, billing, healing, physio_media, streaks, pantry, impact, silent_witness, triage, family_contacts, nearby, loyalty, demo_mode, features, store, ai_models, community_help, chain  # noqa: F401
 from routes.origin import ORIGIN
 
-app = FastAPI(title="Archangel OS API")
+# API schema is not published (docs/redoc/openapi disabled) — no endpoint enumeration in production.
+app = FastAPI(title="Archangel OS API", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(api)
 
 @app.get("/health")

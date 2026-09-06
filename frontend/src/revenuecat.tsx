@@ -3,7 +3,7 @@
 // SDK init happens ONCE at module scope in app/_layout.tsx via initializeRevenueCat().
 // The SDK's customerInfo.entitlements.active["pro"] is the source of truth for paid status.
 // Expo Go / web preview run in Browser Mode against the RevenueCat Test Store (simulated).
-// Identity: Purchases.logIn(user_id) on every auth path (session restore, Google, e-mail, dev-bypass),
+// Identity: Purchases.logIn(user_id) on every auth path (session restore, Google, e-mail),
 // logOut on sign-out — handled here because this provider sits inside AuthProvider.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';

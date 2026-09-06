@@ -105,10 +105,10 @@ async def record_revenue(kind: str, amount_eur: float, user_id: str, meta: dict)
         "meta": meta, "at": datetime.now(timezone.utc)})
 
 async def _is_founder(user: dict) -> bool:
-    if user.get("is_founder"):
-        return True
-    first = await db.users.find_one({}, {"_id": 0, "user_id": 1}, sort=[("created_at", 1)])
-    return bool(first and first["user_id"] == user["user_id"])
+    # SEC-002: bound to the verified `is_founder` flag only (maintained by the swarm janitor from
+    # FOUNDER_EMAIL). No creation-order fallback — the oldest account (e.g. the store-reviewer
+    # seed on a fresh DB) must never inherit Founder/admin powers.
+    return bool(user.get("is_founder"))
 
 
 @api.get("/subscription")

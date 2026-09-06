@@ -34,7 +34,6 @@ type Ctx = {
   loading: boolean;
   authError: string | null;
   signIn: () => Promise<void>;
-  signInDev: (email: string, name?: string) => Promise<void>;
   signInPassword: (email: string, password: string) => Promise<void>;
   registerPassword: (email: string, password: string, tosAccepted: boolean, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -179,16 +178,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  // Sovereign Bypass — Founder / preview builds only. Skips Google OAuth.
-  const signInDev = useCallback(async (email: string, name?: string) => {
-    const res: any = await api('/auth/dev-bypass', {
-      method: 'POST',
-      body: JSON.stringify({ email, name }),
-    });
-    await saveToken(res.session_token);
-    setUser(res.user);
-  }, []);
-
   // Classic e-mail & password auth (coexists with Google OAuth).
   const signInPassword = useCallback(async (email: string, password: string) => {
     const res: any = await api('/auth/login', {
@@ -213,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthCtx.Provider value={{ user, loading, authError, signIn, signInDev, signInPassword, registerPassword, signOut, refresh, setUser }}>
+    <AuthCtx.Provider value={{ user, loading, authError, signIn, signInPassword, registerPassword, signOut, refresh, setUser }}>
       {children}
     </AuthCtx.Provider>
   );

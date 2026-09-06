@@ -450,3 +450,18 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 - The `com.guardianangelcore.archangelos` pair was NOT used (would only apply if the bundle/package ID is renamed later).
 - Push delivery still requires a native build via Emergent **Publish** (not testable in Expo Go / web preview).
 
+
+## Iter 92 — Security audit fixes (SEC-001 dev-bypass · SEC-002 founder fallback · /docs)
+- **SEC-001 (CRITICAL) fixed.** `backend/.env` → `DEV_BYPASS_ENABLED=false`; `routes/auth.py` default `DEV_BYPASS_HOSTS`
+  is now `localhost,127.0.0.1` only (preview domains removed) → `POST /api/auth/dev-bypass` is 403 from the preview
+  URL and from localhost while the flag is off. Frontend: the "other e-mail / developer bypass" form and `signInDev`
+  were removed (`app/login.tsx`, `src/auth.tsx`); the Founder key button only prefills the e-mail for the password form.
+- **SEC-002 (HIGH) fixed.** `routes/subscription.py::_is_founder` = `bool(user["is_founder"])` only — the
+  "oldest account is founder" fallback is gone (on this DB the oldest account was `smoke@test.sk`; on a fresh production
+  DB it would have been the store-reviewer seed). Guards: wealth dashboard, inner-circle, demo-mode, demo/seed, seal.
+  Verified: oldest account → 403 on all founder routes; Founder (flag) → 200; reviewer → 403 + tier archangel intact.
+- **Hardening.** `server.py` → `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)` (schema not published).
+- **Known consequence:** 34 backend test files mint sessions via `/auth/dev-bypass` and now fail with 403 against the
+  preview URL (`test_iter90_reviewer_demo.py` 7/7 still green). To run them locally: `DEV_BYPASS_ENABLED=true` +
+  hit `http://localhost:8001` — or migrate the tests to password registration (backlog).
+- SEC-003 (MEDIUM, GA-T earn farming / self-dealing Community Help) intentionally NOT changed — business-logic decision pending.
