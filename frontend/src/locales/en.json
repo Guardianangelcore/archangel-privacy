@@ -2213,5 +2213,6 @@
   "jarvis.state_idle": "IDLE — MIC OFF",
   "jarvis.wake_word_on": "WAKE WORD · ON",
   "jarvis.wake_word_off": "WAKE WORD · OFF",
-  "jarvis.wake_word_hint": "Jarvis keeps the microphone open while idle and wakes up when you say “Jarvis”. Turn off to release the mic completely."
+  "jarvis.wake_word_hint": "Jarvis keeps the microphone open while idle and wakes up when you say “Jarvis”. Turn off to release the mic completely.",
+  "privacy_policy.public_version": "PUBLIC VERSION · OPEN IN BROWSER"
 }

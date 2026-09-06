@@ -1,12 +1,12 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // PRIVACY POLICY — GDPR-compliant, public page (reachable without login)
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { C, S, R } from '@/src/theme';
-import { LEGAL_VERSION as VERSION, LEGAL_EFFECTIVE as EFFECTIVE } from '@/src/legal';
+import { LEGAL_VERSION as VERSION, LEGAL_EFFECTIVE as EFFECTIVE, PRIVACY_POLICY_URL } from '@/src/legal';
 import { useI18n } from '@/src/i18n-context';
 
 function Section({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
@@ -36,6 +36,14 @@ export default function PrivacyPolicy() {
       <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 80 }}>
         <Text style={st.meta}>{tt('privacy_policy.version')} {VERSION} {tt('privacy_policy.effective')} {EFFECTIVE} {tt('privacy_policy.gdpr_eu_2016_679')}</Text>
         <Text style={st.meta}>Data Controller: Guardian Angel Sovereign Foundation (DAO) · guardianangel.core@proton.me</Text>
+        <Pressable testID="privacy-public-link" onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} style={st.publicBtn}>
+          <Ionicons name="globe-outline" size={16} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={st.publicTitle}>{tt('privacy_policy.public_version')}</Text>
+            <Text style={st.publicUrl} numberOfLines={1}>{PRIVACY_POLICY_URL}</Text>
+          </View>
+          <Ionicons name="open-outline" size={16} color={C.info} />
+        </Pressable>
 
         {/* LOCAL-FIRST PROMISE */}
         <View testID="privacy-local-first" style={st.promiseBox}>
@@ -119,6 +127,9 @@ export default function PrivacyPolicy() {
 }
 
 const st = StyleSheet.create({
+  publicBtn: { flexDirection: 'row', alignItems: 'center', gap: S.sm, minHeight: 48, marginTop: S.sm, marginBottom: S.md, paddingHorizontal: S.md, paddingVertical: S.sm, borderWidth: 1, borderColor: 'rgba(212,175,55,0.45)', borderRadius: R.md, backgroundColor: 'rgba(212,175,55,0.06)' },
+  publicTitle: { color: C.brand, fontWeight: '900', fontSize: 11, letterSpacing: 1.5 },
+  publicUrl: { color: C.info, fontSize: 11, marginTop: 2 },
   root: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: S.lg, paddingVertical: S.md },
   title: { color: C.fg, fontWeight: '900', letterSpacing: 2, fontSize: 14 },

@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, ScrollView, Switch, Platform, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import { CityPicker, LanguageSuggestionBanner } from '@/src/CityPicker';
 import { C, S } from '@/src/theme';
 import { t, LANG_NAMES, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
+import { PRIVACY_POLICY_URL } from '@/src/legal';
 import { tap } from '@/src/ui/glass';
 import { startJudgeTour } from '@/src/judge-tour';   // DEMO_ONLY
 import { WATERMARK } from '@/src/watermark';
@@ -605,6 +606,10 @@ export default function Profile() {
         <Pressable testID="prof-privacy-btn" onPress={() => router.push('/privacy-policy')} style={styles.qrBtn}>
           <Ionicons name="lock-closed-outline" size={18} color={C.fg} />
           <Text style={styles.qrBtnText}>{tt('privacy_policy.privacy_policy')}</Text>
+        </Pressable>
+        <Pressable testID="prof-privacy-web" onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} style={[styles.qrBtn, { minHeight: 44 }]}>
+          <Ionicons name="globe-outline" size={18} color={C.info} />
+          <Text style={[styles.qrBtnText, { color: C.info }]}>guardianangelcore.github.io/archangel-privacy</Text>
         </Pressable>
 
         <Pressable testID="store-btn" onPress={() => router.push('/store' as any)} style={[styles.qrBtn, { borderColor: C.brand }]}>

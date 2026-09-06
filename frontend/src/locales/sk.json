@@ -2213,5 +2213,6 @@
   "jarvis.state_idle": "NEČINNÝ — MIKROFÓN VYP",
   "jarvis.wake_word_on": "BUDIACE SLOVO · ZAP",
   "jarvis.wake_word_off": "BUDIACE SLOVO · VYP",
-  "jarvis.wake_word_hint": "Jarvis drží mikrofón otvorený aj v nečinnosti a zobudí sa na slovo „Jarvis“. Vypni, ak chceš mikrofón úplne uvoľniť."
+  "jarvis.wake_word_hint": "Jarvis drží mikrofón otvorený aj v nečinnosti a zobudí sa na slovo „Jarvis“. Vypni, ak chceš mikrofón úplne uvoľniť.",
+  "privacy_policy.public_version": "VEREJNÁ VERZIA · OTVORIŤ V PREHLIADAČI"
 }

@@ -105,7 +105,8 @@
       "typedRoutes": true
     },
     "extra": {
-      "appStoreSubtitle": "Your sovereign health & safety companion"
+      "appStoreSubtitle": "Your sovereign health & safety companion",
+      "privacyPolicyUrl": "https://guardianangelcore.github.io/archangel-privacy/"
     }
   }
 }

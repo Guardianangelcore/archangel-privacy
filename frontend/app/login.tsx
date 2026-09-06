@@ -1,6 +1,6 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform, TextInput, ActivityIndicator, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { api as apiCall } from '@/src/api';
 import { C, S } from '@/src/theme';
 import { LANG_NAMES, Lang } from '@/src/i18n';
 import { useI18n } from '@/src/i18n-context';
+import { PRIVACY_POLICY_URL } from '@/src/legal';
 
 const BG = 'https://images.pexels.com/photos/18459247/pexels-photo-18459247.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=1200&w=940';
 const FOUNDER_EMAIL = 'guardianangel.core@proton.me';
@@ -225,6 +226,7 @@ export default function Login() {
                   <Text testID="reg-tos-link" style={styles.agreeLink} onPress={() => router.push('/terms-of-service')}>{t('tos_link')}</Text>
                   {' '}{t('agree_and')}{' '}
                   <Text testID="reg-privacy-link" style={styles.agreeLink} onPress={() => router.push('/privacy-policy')}>{t('privacy_link')}</Text>
+                  {' '}(<Text testID="reg-privacy-web" style={styles.agreeLink} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>web</Text>)
                 </Text>
                 {/* Consolidated legal disclaimer — the consent covers it (key disclaimer.general, 14 languages) */}
                 <Text testID="reg-disclaimer" style={[styles.agreeDisclaimer, rtl && styles.rtl]}>{t('disclaimer.general')}</Text>
