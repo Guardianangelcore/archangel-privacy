@@ -32,8 +32,15 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const { refresh } = useAuth();
-  // DEMO_ONLY — competition judges: 30-min full access without payment
+  // DEMO_ONLY — the 30-min full-access session is Foundation-only (backend returns 403 for
+  // everyone else). Store reviewers use the reviewer account's permanent entitlement instead.
   const demo = async () => { setBusy(true); const ok = await startDemoMode(refresh); setBusy(false); if (ok) onUnlocked(); else setErr('Demo mode unavailable'); };
+  const [isFounder, setIsFounder] = useState(false);
+  React.useEffect(() => {
+    let alive = true;
+    api('/demo/status').then((r: any) => { if (alive) setIsFounder(!!r?.is_founder); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const trial = async () => {
     setBusy(true); setErr('');
@@ -69,11 +76,13 @@ export default function Paywall({ message, tier = 'sentinel', gatLabel, onPayGat
       <Pressable testID="pw-upgrade" onPress={() => router.push('/subscription')} style={st.upBtn}>
         <Text style={st.upText}>{ui.tiers}</Text>
       </Pressable>
-      {/* DEMO_ONLY */}
-      <Pressable testID="pw-demo" onPress={demo} disabled={busy} style={st.demoBtn}>
-        <Ionicons name="flask-outline" size={14} color="#FFD60A" />
-        <Text style={st.demoText}>DEMO MODE · 30 MIN</Text>
-      </Pressable>
+      {/* DEMO_ONLY — Foundation only */}
+      {isFounder && (
+        <Pressable testID="pw-demo" onPress={demo} disabled={busy} style={st.demoBtn}>
+          <Ionicons name="flask-outline" size={14} color="#FFD60A" />
+          <Text style={st.demoText}>DEMO MODE · 30 MIN</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

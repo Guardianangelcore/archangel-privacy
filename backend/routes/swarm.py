@@ -697,11 +697,13 @@ async def stability_audit(authorization: Optional[str] = Header(None)):
     checks.append({"check": "token_ledger_chain", "ok": chain["intact"],
                    "detail": f"Hash-chain intact: {chain['intact']} ({chain['entries']} entries)"})
 
-    # 5. Supply invariant
+    # 5. Supply invariant — community_escrow is carved out of the treasury while a
+    #    Community Help reward is pending (routes/community_help.py), so it is part of supply.
     s = await db.token_supply.find_one({"key": "gat"}, {"_id": 0})
-    inv_ok = bool(s) and abs((s["treasury"] + s["circulating"] + s["burned"] + s["founder_reserve"]) - s["total_supply"]) < 0.01
+    inv_ok = bool(s) and abs((s["treasury"] + s["circulating"] + s["burned"] + s["founder_reserve"]
+                              + s.get("community_escrow", 0.0)) - s["total_supply"]) < 0.01
     checks.append({"check": "token_supply_invariant", "ok": inv_ok,
-                   "detail": "treasury + circulating + burned + reserve == total" if inv_ok else "INVARIANT BROKEN"})
+                   "detail": "treasury + circulating + escrow + burned + reserve == total" if inv_ok else "INVARIANT BROKEN"})
 
     # 6. DePIN quorum
     nodes = await db.depin_nodes.find({}, {"_id": 0}).to_list(20)

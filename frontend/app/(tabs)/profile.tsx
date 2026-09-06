@@ -269,16 +269,20 @@ export default function Profile() {
           )}
         </View>
 
-        {/* COMPETITION DEMO BADGE — global "DEMO" pill in the top-right corner */}
-        <Text style={styles.section}>{t('demo_mode', lang)}</Text>
-        <Pressable testID="prof-judge-tour" onPress={() => { tap('medium'); startJudgeTour(refresh); }} style={styles.tourBtn}>
-          <Ionicons name="play-circle" size={22} color="#0B0B0D" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tourTitle}>{tt('judge_tour.judge_quick_tour_3_min')}</Text>
-            <Text style={styles.tourSub}>{tt('judge_tour.guided_walkthrough_of_the_9_strongest')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#0B0B0D" />
-        </Pressable>
+        {/* DEMO_ONLY — Foundation walkthrough tool, hidden for every other account */}
+        {admin?.is_founder && (
+          <>
+            <Text style={styles.section}>{t('demo_mode', lang)}</Text>
+            <Pressable testID="prof-judge-tour" onPress={() => { tap('medium'); startJudgeTour(refresh); }} style={styles.tourBtn}>
+              <Ionicons name="play-circle" size={22} color="#0B0B0D" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tourTitle}>{tt('judge_tour.judge_quick_tour_3_min')}</Text>
+                <Text style={styles.tourSub}>{tt('judge_tour.guided_walkthrough_of_the_9_strongest')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#0B0B0D" />
+            </Pressable>
+          </>
+        )}
 
         <Text testID="prof-lang-title" style={styles.section}>{t('language', lang)}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>

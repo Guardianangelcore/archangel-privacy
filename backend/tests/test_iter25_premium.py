@@ -76,10 +76,13 @@ class TestSubscriptionPrices:
         assert tiers["sentinel"]["price_gat_year"] == 2400
         assert tiers["archangel"]["price_gat_year"] == 7680
 
-    def test_billing_note_mentions_stripe_test(self, founder_h):
+    def test_billing_note_is_production_safe(self, founder_h):
+        """Store reviewers must not see a Stripe TEST / test-card hint (Iter 90)."""
         r = requests.get(f"{API}/subscription", headers=founder_h, timeout=10)
         note = r.json().get("billing_note", "")
-        assert "Stripe" in note and "TEST" in note, note
+        assert note, note
+        low = note.lower()
+        assert "test" not in low and "4242" not in low, note
 
 
 # ---------- 2. Founder entitlement ----------

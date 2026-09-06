@@ -33,6 +33,38 @@ async def demo_status(authorization: Optional[str] = Header(None)):
     fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "demo_mode": 1}) or {}
     return {"is_founder": founder, "demo_mode": bool(fresh.get("demo_mode"))}
 
+async def seed_presentation_data(uid: str, did: str) -> dict:
+    """Seed the showcase dataset (slot hunt · €150 refund claim · answered family pulse).
+
+    Reversible — every document carries `demo: True` (see `_wipe_demo`). Shared by the
+    founder Demo Mode toggle and the store-reviewer account seed."""
+    now = datetime.now(timezone.utc)
+    # 1. Successful waitlist hunt (Kardiológia — slot found 14 days out)
+    await db.waitlist.insert_one({
+        "item_id": uuid.uuid4().hex, "user_id": uid,
+        "specialty": "Cardiology", "clinic": "NÚSCH Bratislava", "city": "Bratislava",
+        "current_date": (now + timedelta(days=210)).strftime("%Y-%m-%d"),
+        "target_before": (now + timedelta(days=60)).strftime("%Y-%m-%d"),
+        "priority": "high", "status": "slot_found",
+        "found_slot": (now + timedelta(days=14)).strftime("%Y-%m-%d"),
+        "last_check": now, "demo": True, "created_at": now})
+    # 2. €150 insurance refund claim source (dental invoice processed by Jarvis)
+    await db.jarvis_actions.insert_one({
+        "action_id": uuid.uuid4().hex, "user_id": uid,
+        "specialty": "Dentistry", "doc_title": "Invoice — Dental Premium Clinic (demo)",
+        "booked_slot": (now + timedelta(days=7)).strftime("%Y-%m-%d 09:00"),
+        "status": "done", "steps": [{"step": "OCR", "status": "ok", "detail": "demo"}],
+        "demo": True, "created_at": now})
+    # 3. Family safety pulse — Guardian answered 'V PORIADKU'
+    await db.pulse_requests.insert_one({
+        "req_id": uuid.uuid4().hex, "from_user": uid, "from_name": "Guardian",
+        "target_user": uid, "target_did": did, "status": "ok",
+        "responded_at": now, "demo": True, "created_at": now})
+    return {"waitlist_hunt": "Cardiology · slot_found +14d",
+            "refund_claim": "Dentistry → 150 € (Claim My Benefits)",
+            "family_pulse": "Guardian · OK"}
+
+
 @api.post("/demo/toggle")
 async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
@@ -40,34 +72,8 @@ async def demo_toggle(body: DemoToggleIn, authorization: Optional[str] = Header(
     if not await _is_founder(user):
         raise HTTPException(403, "founder_only: Demo Mode is available only in the founder admin view.")
     uid = user["user_id"]
-    now = datetime.now(timezone.utc)
     await _wipe_demo(uid)  # idempotent — clean slate either way
-    seeded = {}
-    if body.enabled:
-        # 1. Successful waitlist hunt (Kardiológia — slot found 14 days out)
-        await db.waitlist.insert_one({
-            "item_id": uuid.uuid4().hex, "user_id": uid,
-            "specialty": "Cardiology", "clinic": "NÚSCH Bratislava", "city": "Bratislava",
-            "current_date": (now + timedelta(days=210)).strftime("%Y-%m-%d"),
-            "target_before": (now + timedelta(days=60)).strftime("%Y-%m-%d"),
-            "priority": "high", "status": "slot_found",
-            "found_slot": (now + timedelta(days=14)).strftime("%Y-%m-%d"),
-            "last_check": now, "demo": True, "created_at": now})
-        # 2. €150 insurance refund claim source (dental invoice processed by Jarvis)
-        await db.jarvis_actions.insert_one({
-            "action_id": uuid.uuid4().hex, "user_id": uid,
-            "specialty": "Dentistry", "doc_title": "Invoice — Dental Premium Clinic (demo)",
-            "booked_slot": (now + timedelta(days=7)).strftime("%Y-%m-%d 09:00"),
-            "status": "done", "steps": [{"step": "OCR", "status": "ok", "detail": "demo"}],
-            "demo": True, "created_at": now})
-        # 3. Family safety pulse — Guardian answered 'V PORIADKU'
-        await db.pulse_requests.insert_one({
-            "req_id": uuid.uuid4().hex, "from_user": uid, "from_name": "Guardian",
-            "target_user": uid, "target_did": user["did"], "status": "ok",
-            "responded_at": now, "demo": True, "created_at": now})
-        seeded = {"waitlist_hunt": "Cardiology · slot_found +14d",
-                  "refund_claim": "Dentistry → 150 € (Claim My Benefits)",
-                  "family_pulse": "Guardian · OK"}
+    seeded = await seed_presentation_data(uid, user["did"]) if body.enabled else {}
     await db.users.update_one({"user_id": uid}, {"$set": {"demo_mode": body.enabled}})
     return {"demo_mode": body.enabled, "seeded": seeded}
 
@@ -89,10 +95,11 @@ DEMO_PREDICTION = {
     "reason": "Based on your history, your annual physical examination is due in September 2026.",
 }
 
-@api.post("/demo/seed")
-async def demo_seed_lifecard(authorization: Optional[str] = Header(None)):
-    """Seed the competition demo Life Card for the current user (idempotent)."""
-    user = await get_current_user(authorization)
+async def seed_lifecard(user: dict) -> dict:
+    """Seed the demo Life Card (identity + vaccines/surgeries/labs + Jarvis prediction).
+
+    Idempotent via a marker in `db.demo_seed`. Shared by POST /demo/seed and the
+    store-reviewer account seed."""
     uid = user["user_id"]
     if await db.demo_seed.find_one({"user_id": uid, "kind": "lifecard"}):
         return {"ok": True, "seeded": False, "reason": "already seeded"}
@@ -124,3 +131,10 @@ async def demo_seed_lifecard(authorization: Optional[str] = Header(None)):
         upsert=True)
     await db.demo_seed.insert_one({"user_id": uid, "kind": "lifecard", "at": now})
     return {"ok": True, "seeded": True, "records": len(docs)}
+
+
+@api.post("/demo/seed")
+async def demo_seed_lifecard(authorization: Optional[str] = Header(None)):
+    """Seed the competition demo Life Card for the current user (idempotent)."""
+    user = await get_current_user(authorization)
+    return await seed_lifecard(user)

@@ -414,3 +414,29 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
 
 ## Iter 89 — Public privacy policy URL
 - `src/legal.ts` `PRIVACY_POLICY_URL = https://guardianangelcore.github.io/archangel-privacy/` (single source). Linked: in-app Privacy Policy screen (`privacy-public-link` "PUBLIC VERSION · OPEN IN BROWSER"), Profile (`prof-privacy-web`), registration consent (`reg-privacy-web` "(web)"). `app.json` → `expo.extra.privacyPolicyUrl` for store metadata (enter the same URL in App Store Connect "Privacy Policy URL" and Play Console "Privacy policy").
+
+## Iter 90 — Lock Demo Mode · Store-reviewer account · Production billing note (user request)
+- **Lock Demo Mode (security).** `POST /api/demo-mode/start` was callable by ANY signed-in account → free 30-min Archangel.
+  It is now Founder-only (`_is_founder`) and returns a uniform 403 `not_available` (no role disclosure). Status + `/stop`
+  stay open (they can only reduce access). UI: the DEMO MODE / JUDGE TOUR entry points render only for the Founder —
+  `subscription.tsx` (`sb-judge-tour`, `sb-demo`, gated on the founder-only `/wealth/founder-dashboard` response),
+  `(tabs)/profile.tsx` (`prof-judge-tour`, gated on `admin.is_founder` from `/demo/status`), `src/Paywall.tsx`
+  (`pw-demo`, gated on a `/demo/status` lookup).
+- **Store-reviewer demo account.** New `backend/reviewer_seed.py`, called from the `server.py` startup hook (idempotent,
+  non-fatal). Env: `REVIEWER_EMAIL` (default `appreview@archangel-os.app`), `REVIEWER_PASSWORD` (≥16 chars, env only —
+  seed is skipped with a warning when unset), `REVIEWER_ROTATE_PASSWORD` (one-boot rotation, revokes reviewer sessions).
+  Grants a permanent server-side entitlement: `tier: archangel`, `tier_until` +10 y, `tier_paid_with: store_reviewer`,
+  `is_reviewer: true`, `trial_used: true`, TOS accepted, `language: en`. Explicitly holds `inner_circle`/`is_founder` false
+  so no Foundation admin surface (Partner Approval, Wealth Dashboard, Demo Mode) opens for it.
+  Sample data (full set, idempotent): `routes/demo.py` was refactored into reusable `seed_lifecard(user)` +
+  `seed_presentation_data(uid, did)` helpers (used by `/demo/seed` and `/demo/toggle` too) → Life Card identity
+  (DOB 1985-03-15, A+), 7 timeline records + Jarvis prediction, waitlist `slot_found`, €150 dental refund claim,
+  answered family pulse, plus one encrypted placeholder family contact.
+  Store submission copy: `memory/store_reviewer_access.md`.
+- **Production billing note.** `GET /api/subscription` → `billing_note` no longer mentions Stripe TEST mode or card
+  4242 ("Subscriptions renew automatically and can be cancelled anytime…"). `app/monolith.tsx` Liquidity Bank card field
+  no longer prefills `4242`. `tests/test_iter25_premium.py::test_billing_note_is_production_safe` asserts no test hints.
+- **Bonus fix:** `swarm.py` stability audit `token_supply_invariant` was RED because `community_escrow` (carved out of the
+  treasury by Community Help) was missing from the invariant → now included; `/swarm/audit` is 9/9 again.
+- Tests: `backend/tests/test_iter90_reviewer_demo.py` 8/8. Pre-existing stale assertions in `test_iter25_premium.py`
+  (old Guardian GA-T price 50 vs current 15) remain untouched.

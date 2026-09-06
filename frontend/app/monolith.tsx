@@ -68,7 +68,7 @@ export default function Monolith() {
   // liquidity
   const [bal, setBal] = useState<any>(null);
   const [amount, setAmount] = useState('50');
-  const [card, setCard] = useState('4242');
+  const [card, setCard] = useState('');
   const [network, setNetwork] = useState('visa');
   const [payout, setPayout] = useState<any>(null);
   const [credit, setCredit] = useState<any>(null);

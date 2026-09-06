@@ -135,7 +135,9 @@ async def subscription_info(authorization: Optional[str] = Header(None)):
             "tiers": TIERS, "annual_discount_pct": int(ANNUAL_DISCOUNT * 100),
             "currencies": ["EUR", "CZK", "GA-T"], "czk_rate": CZK_RATE,
             "payperuse": {"bioscan_single": 5, "ips_export_single": 10},
-            "billing_note": "Card payments: Stripe TEST mode — use test card 4242 4242 4242 4242. GA-T payments are fully live."}
+            "billing_note": "Subscriptions renew automatically and can be cancelled anytime. "
+                            "In-app purchases are managed by the App Store / Google Play; "
+                            "card and GA-T payments are processed by the Foundation."}
 
 
 class UpgradeIn(BaseModel):

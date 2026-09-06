@@ -11,8 +11,8 @@ import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { IapBuyButton, RestorePurchasesButton } from '@/src/IapPurchase';
 import { useI18n } from '@/src/i18n-context';
-import { startDemoMode } from '@/src/DemoMode';   // DEMO_ONLY
-import { startJudgeTour } from '@/src/judge-tour';   // DEMO_ONLY
+import { startDemoMode } from '@/src/DemoMode';   // DEMO_ONLY — founder walkthrough only
+import { startJudgeTour } from '@/src/judge-tour';   // DEMO_ONLY — founder walkthrough only
 import { useAuth } from '@/src/auth';
 
 const TIER_ICON: Record<string, string> = { sovereign: 'earth', guardian: 'shield-checkmark', sentinel: 'diamond', archangel: 'flame' };
@@ -183,14 +183,19 @@ export default function Subscription() {
             {busy === 'trial' ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.trialText}>{tt('subscription.free_7_day_sentinel_trial')}</Text>}
           </Pressable>
         )}
-        {/* DEMO_ONLY — competition judges */}
-        <Pressable testID="sb-judge-tour" onPress={() => startJudgeTour(refresh)} style={[styles.demoBtn, { backgroundColor: '#FFD60A', borderStyle: 'solid' }]}>
-          <Ionicons name="play-circle" size={16} color="#0B0B0D" /><Text style={[styles.demoText, { color: '#0B0B0D' }]}>{tt('judge_tour.judge_quick_tour_3_min')}</Text>
-        </Pressable>
-        {!data?.demo_active && (
-          <Pressable testID="sb-demo" onPress={demoStart} disabled={busy === 'demo'} style={styles.demoBtn}>
-            {busy === 'demo' ? <ActivityIndicator color="#FFD60A" /> : (<><Ionicons name="flask-outline" size={16} color="#FFD60A" /><Text style={styles.demoText}>DEMO MODE — 30 MIN FULL ACCESS (NO PAYMENT)</Text></>)}
-          </Pressable>
+        {/* DEMO_ONLY — Foundation walkthrough tools. Hidden for everyone else (the backend
+            also refuses /demo-mode/start for non-founders, so nobody can self-grant access). */}
+        {founder && (
+          <>
+            <Pressable testID="sb-judge-tour" onPress={() => startJudgeTour(refresh)} style={[styles.demoBtn, { backgroundColor: '#FFD60A', borderStyle: 'solid' }]}>
+              <Ionicons name="play-circle" size={16} color="#0B0B0D" /><Text style={[styles.demoText, { color: '#0B0B0D' }]}>{tt('judge_tour.judge_quick_tour_3_min')}</Text>
+            </Pressable>
+            {!data?.demo_active && (
+              <Pressable testID="sb-demo" onPress={demoStart} disabled={busy === 'demo'} style={styles.demoBtn}>
+                {busy === 'demo' ? <ActivityIndicator color="#FFD60A" /> : (<><Ionicons name="flask-outline" size={16} color="#FFD60A" /><Text style={styles.demoText}>DEMO MODE — 30 MIN FULL ACCESS (NO PAYMENT)</Text></>)}
+              </Pressable>
+            )}
+          </>
         )}
 
         <View style={styles.billingRow}>

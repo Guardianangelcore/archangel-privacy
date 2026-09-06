@@ -1,14 +1,19 @@
 # Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved.
 # This source code and its logic are the sole property of the Foundation.
 # Unauthorized duplication, modification, or distribution is strictly prohibited.
-"""DEMO_ONLY — PAYMENT DEMO MODE for competition judges.
+"""DEMO_ONLY — PAYMENT DEMO MODE for competition judges / investor walkthroughs.
 
 Starts a 30-minute session during which every tier gate is unlocked (effective tier =
 archangel, the highest plan) WITHOUT any real payment. Nothing is written to `tier`;
 `current_tier()` simply honours `demo_until` while it is in the future, so expiry is an
-automatic reset to the user's real (free) plan. Remove this module for production.
+automatic reset to the user's real (free) plan.
+
+SECURITY: starting a session is FOUNDER-ONLY. Any signed-in account could previously grant
+itself free Archangel access — the start endpoint now returns a uniform 403 for everybody
+else (no role disclosure). Reading the status and stopping early stay open to the caller
+(they can only reduce access, never grant it).
 """
-from fastapi import Header
+from fastapi import Header, HTTPException
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
@@ -51,8 +56,15 @@ async def demo_mode_status(authorization: Optional[str] = Header(None)):
 
 @api.post("/demo-mode/start")
 async def demo_mode_start(authorization: Optional[str] = Header(None)):
-    """DEMO_ONLY — 30-minute full-access session, no payment. Restarting extends to a fresh 30 min."""
+    """DEMO_ONLY — 30-minute full-access session, no payment. FOUNDER ONLY.
+
+    Restarting extends to a fresh 30 min. Non-founder accounts get a uniform 403 so nobody
+    can grant themselves free Archangel access (store reviewers use the reviewer account,
+    which holds a permanent server-side Archangel entitlement instead)."""
     user = await get_current_user(authorization)
+    from routes.subscription import _is_founder
+    if not await _is_founder(user):
+        raise HTTPException(403, "not_available: This action is not available for this account.")
     until = datetime.now(timezone.utc) + timedelta(minutes=DEMO_MINUTES)
     await db.users.update_one({"user_id": user["user_id"]},
                               {"$set": {"demo_until": until, "demo_started_at": datetime.now(timezone.utc)}})
