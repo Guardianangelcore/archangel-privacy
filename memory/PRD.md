@@ -440,3 +440,13 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
   treasury by Community Help) was missing from the invariant → now included; `/swarm/audit` is 9/9 again.
 - Tests: `backend/tests/test_iter90_reviewer_demo.py` 8/8. Pre-existing stale assertions in `test_iter25_premium.py`
   (old Guardian GA-T price 50 vs current 15) remain untouched.
+
+## Iter 91 — Real Firebase push config files (user upload)
+- User uploaded two pairs of Firebase files (project `archangelos-34c8a`, sender `351191506495`): one pair for
+  `com.guardianangelcore.archangelos`, one for `com.emergent.angelos.qvqss9`. The app's `bundleIdentifier`/`package` is
+  `com.emergent.angelos.qvqss9`, so that pair was installed:
+  - `frontend/google-services.json` — placeholder replaced (Android app id `…android:78518b262c3fb9e3eca28a`).
+  - `frontend/GoogleService-Info.plist` — NEW (iOS app id `…ios:4f9114c0d018a048eca28a`); `app.json` → `ios.googleServicesFile`.
+- The `com.guardianangelcore.archangelos` pair was NOT used (would only apply if the bundle/package ID is renamed later).
+- Push delivery still requires a native build via Emergent **Publish** (not testable in Expo Go / web preview).
+

@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.emergent.angelos.qvqss9",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSMotionUsageDescription": "Detect falls and inactivity to keep you safe",
         "NSFaceIDUsageDescription": "Unlock your private vault with Face ID",

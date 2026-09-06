@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "guardian-angel-placeholder",
-    "storage_bucket": "guardian-angel-placeholder.appspot.com"
+    "project_number": "351191506495",
+    "project_id": "archangelos-34c8a",
+    "storage_bucket": "archangelos-34c8a.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:351191506495:android:78518b262c3fb9e3eca28a",
         "android_client_info": {
           "package_name": "com.emergent.angelos.qvqss9"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_ME_WITH_REAL_FIREBASE_KEY"
+          "current_key": "AIzaSyBfMGzaTssIRBaFZROdyZqs_8B75J_iuvY"
         }
       ],
       "services": {
