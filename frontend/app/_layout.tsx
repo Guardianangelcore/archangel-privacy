@@ -68,7 +68,7 @@ function RootNav() {
     if (loading || langChosen === null) return;
     const seg0 = segments[0] as string | undefined;
     const entry = seg0 === 'login' || seg0 === 'choose-language' || seg0 === undefined || seg0 === 'index';
-    const isPublic = seg0 === 'drop' || seg0 === 'terms-of-service' || seg0 === 'privacy-policy'; // public — no login
+    const isPublic = seg0 === 'drop' || seg0 === 'terms-of-service' || seg0 === 'privacy-policy' || seg0 === 'delete-account'; // public — no login
     if (isPublic) return;
     if (!user) {
       if (!langChosen && seg0 !== 'choose-language') router.replace('/choose-language' as any);

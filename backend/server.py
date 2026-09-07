@@ -10,7 +10,7 @@ from core import api, db, client, logger, init_storage
 from db_indexes import ensure_indexes
 from reviewer_seed import seed_reviewer_account
 # Importing route modules registers their endpoints on the shared `api` router.
-from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension, founder, geo, billing, healing, physio_media, streaks, pantry, impact, silent_witness, triage, family_contacts, nearby, loyalty, demo_mode, features, store, ai_models, community_help, chain  # noqa: F401
+from routes import auth, health, family, hunter, legacy, neural, gateway, origin, token, swarm, orchestrator, insurance, recommend, news, subscription, paramedic, gigs, interactions, refunds, recovery_suite, compass, globalnet, medic, bioscan, longevity, enviro, mosaic, demo, wealth, seal, lens, clinic_sync, agent, uhp, arbitrage, liquidity, ascension, founder, geo, billing, healing, physio_media, streaks, pantry, impact, silent_witness, triage, family_contacts, nearby, loyalty, demo_mode, features, store, ai_models, community_help, chain, account_deletion  # noqa: F401
 from routes.origin import ORIGIN
 
 # API schema is not published (docs/redoc/openapi disabled) — no endpoint enumeration in production.

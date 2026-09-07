@@ -485,3 +485,28 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
   (route return only — video upload needs the selected guide). `magic-lens.tsx` uses in-app `CameraView` (unaffected).
 - Not reproducible on web (gate is pass-through without biometry hardware; camera button hidden on web) — needs a
   device check in Expo Go / build: Lens → camera → photo → still on Lens with the photo attached.
+
+## Iter 94 — Data Deletion page · GA-T Farming Guard · Wallet one-tap link (user picks: 1a, 2a, 3c)
+- **Data Deletion (Google Play "Data deletion" URL).** Public route `app/delete-account.tsx` (`isPublic` in
+  `_layout.tsx`, no login): Option 1 in-app steps, Option 2 e-mail (+reason) form → `POST /api/account/deletion-request`
+  (202, rate bucket `deletion_request` 5/min, 24 h de-dupe, never reveals whether the account exists), what-is-erased /
+  retained lists from `GET /api/account/deletion-policy`. Founder queue: `GET /api/account/deletion-requests`,
+  `POST …/{req_id}/process` (runs `routes.auth.purge_user_data` — same purge as in-app deletion; founder accounts are
+  never purged), `POST …/{req_id}/reject`. Links: login footer (`login-privacy-link` · `login-delete-link`), Profile
+  (`prof-delete-page`), Privacy Policy page (`privacy-delete-link`). i18n keys `delete_account.*` (en + sk; others fall
+  back to English). **Play Console URL:** `https://<your-deployed-domain>/delete-account`.
+- **GA-T Farming Guard.** `token.py`: `UNVERIFIED_DAILY_CAP_GAT = 20` — `proof_of_health` + `document_scan` share one
+  combined 20 GA-T/day ceiling (was 70) checked in `award_tokens`; `/token/wallet` exposes `unverified_daily_cap`.
+  `community_help.py`: `_touch_origin()` records `X-Device-Id` + IP (`users.device_ids`, `users.ip_log` ≤30, both hidden
+  from clients via `USER_PRIVATE_PROJECTION`) on create/accept/confirm; `_guard_pair()` → 403 `same_origin` when the two
+  accounts share a device id or an IP seen in the last 7 days, 429 `pair_limit` when the same two people already had a
+  confirmed help in the last 24 h (checked at accept AND confirm; either direction). `/help/requests` limits now carry
+  `pair_window_h`, `same_origin_blocked`. Frontend `src/api.ts` sends `X-Device-Id` (Android ID / iOS vendor ID /
+  persisted UUID via `getDeviceId()`) on every `api()`/`apiUpload()` call.
+- **Wallet one-tap link (no WalletConnect).** `src/WalletLink.tsx`: MetaMask / Coinbase Wallet buttons (deep link
+  `metamask://` / `cbwallet://`, fallback universal links → app or store), PASTE ADDRESS (expo-clipboard, extracts
+  `0x…40`), manual input, LINK WALLET → existing `POST /chain/wallet`. Used in `app/blockchain.tsx` (testIDs `bc-*`).
+  `app.json` ios `LSApplicationQueriesSchemes: [metamask, cbwallet]`. WalletConnect (Reown) deferred until the user
+  sends a Project ID.
+- Tests: `backend/tests/test_iter94_guard_deletion.py` 8/8 (runs against localhost with spoofed X-Forwarded-For /
+  X-Device-Id; founder test needs `FOUNDER_TEST_PASSWORD`). `/swarm/audit` 9/9 after the flows.

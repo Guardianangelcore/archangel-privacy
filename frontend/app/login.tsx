@@ -307,6 +307,16 @@ export default function Login() {
 
           <Text style={styles.footer}>{tt('login.2026_guardian_angel_sovereign_founda')}</Text>
           <Text style={styles.footerArt50}>{tt('login.eu_ai_act_art_50_ai_outputs_are_info')}</Text>
+          {/* PUBLIC LEGAL LINKS — privacy policy + data-deletion request page (Google Play requirement) */}
+          <View style={styles.legalRow}>
+            <Pressable testID="login-privacy-link" onPress={() => router.push('/privacy-policy')} hitSlop={8} style={styles.legalBtn}>
+              <Text style={styles.legalText}>{t('privacy_link')}</Text>
+            </Pressable>
+            <Text style={styles.legalDot}>·</Text>
+            <Pressable testID="login-delete-link" onPress={() => router.push('/delete-account' as any)} hitSlop={8} style={styles.legalBtn}>
+              <Text style={styles.legalText}>{tt('delete_account.link')}</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -359,5 +369,9 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 2 },
   footer: { color: C.fg, opacity: 0.6, fontSize: 10, letterSpacing: 2, textAlign: 'center', marginTop: 6 },
   footerArt50: { color: C.fg, opacity: 0.45, fontSize: 8, letterSpacing: 1, textAlign: 'center', marginTop: 2 },
+  legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 6 },
+  legalBtn: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
+  legalText: { color: C.fg, opacity: 0.75, fontSize: 10, letterSpacing: 1, fontWeight: '700', textDecorationLine: 'underline' },
+  legalDot: { color: C.fg, opacity: 0.5, fontSize: 10 },
   rtl: { writingDirection: 'rtl', textAlign: 'right' },
 });

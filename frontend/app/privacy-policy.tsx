@@ -44,6 +44,15 @@ export default function PrivacyPolicy() {
           </View>
           <Ionicons name="open-outline" size={16} color={C.info} />
         </Pressable>
+        {/* DATA DELETION — public request page (Google Play "Data deletion" URL) */}
+        <Pressable testID="privacy-delete-link" onPress={() => router.push('/delete-account' as any)} style={[st.publicBtn, { marginTop: 0 }]}>
+          <Ionicons name="trash-bin-outline" size={16} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={st.publicTitle}>{tt('delete_account.title')}</Text>
+            <Text style={st.publicUrl} numberOfLines={1}>{tt('delete_account.link')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={C.info} />
+        </Pressable>
 
         {/* LOCAL-FIRST PROMISE */}
         <View testID="privacy-local-first" style={st.promiseBox}>

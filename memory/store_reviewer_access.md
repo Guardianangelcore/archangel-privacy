@@ -48,3 +48,9 @@ the user. The pre-loaded demo contact is a non-routable placeholder number.
   return 403 for it.
 * Do **not** document the Founder account or the founder-only Demo Mode endpoint in store
   notes.
+
+
+## Google Play — Data safety › "Data deletion" URL
+Public page (no sign-in): `https://<your-deployed-domain>/delete-account`
+Describes both paths: in-app (Profile → DELETE ACCOUNT & ALL DATA, immediate) and the e-mail request form
+(processed by the Founder within 30 days via Profile-less API queue). What is erased vs. retained is listed on the page.

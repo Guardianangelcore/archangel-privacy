@@ -31,6 +31,10 @@ EARN_RULES = {
     "community_support": {"amount": 5.0,  "daily_max": 5,  "label": "Community support (Solidarity / Barter)", "verified_only": True},
     "document_scan":     {"amount": 2.0,  "daily_max": 10, "label": "Document scan — Life Card enrichment (Magic Lens)"},
 }
+# FARMING GUARD — activities WITHOUT peer verification (self-reported health insight, document scan)
+# share one combined daily ceiling, so an automated loop can never farm its way to a paid tier.
+UNVERIFIED_DAILY_CAP_GAT = 20.0
+UNVERIFIED_ACTIVITIES = tuple(k for k, r in EARN_RULES.items() if not r.get("verified_only"))
 SPEND_ITEMS = {
     "vip_sentinel_30d":    {"price": 100.0, "label": "VIP Sentinel tier (30 days)"},
     "expert_consult":      {"price": 40.0,  "label": "Expert Marketplace — consultation"},
@@ -134,6 +138,13 @@ async def award_tokens(user_id: str, activity: str, note: str = "") -> Optional[
         {"kind": "earn", "account": user_id, "meta.activity": activity, "at": {"$gte": day_start}})
     if today >= rule["daily_max"]:
         return None
+    if activity in UNVERIFIED_ACTIVITIES:
+        rows = await db.token_ledger.aggregate([
+            {"$match": {"kind": "earn", "account": user_id, "meta.activity": {"$in": list(UNVERIFIED_ACTIVITIES)},
+                        "at": {"$gte": day_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}]).to_list(1)
+        if float((rows[0]["total"] if rows else 0.0)) + rule["amount"] > UNVERIFIED_DAILY_CAP_GAT:
+            return None
     await _get_supply()
     res = await db.token_supply.update_one({"key": "gat", "treasury": {"$gte": rule["amount"]}},
                                            {"$inc": {"treasury": -rule["amount"], "circulating": rule["amount"]}})
@@ -332,7 +343,8 @@ async def token_wallet(authorization: Optional[str] = Header(None)):
             "vip_until": (fresh or {}).get("vip_until"),
             "hunter_priority_until": (fresh or {}).get("hunter_priority_until"),
             "subscription_allocation": allocation,
-            "txs": txs, "earn_rules": EARN_RULES, "spend_items": SPEND_ITEMS}
+            "txs": txs, "earn_rules": EARN_RULES, "spend_items": SPEND_ITEMS,
+            "unverified_daily_cap": UNVERIFIED_DAILY_CAP_GAT}
 
 @api.post("/token/earn")
 async def token_earn(body: EarnIn, authorization: Optional[str] = Header(None)):

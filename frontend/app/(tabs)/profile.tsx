@@ -615,6 +615,10 @@ export default function Profile() {
           <Ionicons name="globe-outline" size={18} color={C.info} />
           <Text style={[styles.qrBtnText, { color: C.info }]}>guardianangelcore.github.io/archangel-privacy</Text>
         </Pressable>
+        <Pressable testID="prof-delete-page" onPress={() => router.push('/delete-account' as any)} style={styles.qrBtn}>
+          <Ionicons name="trash-bin-outline" size={18} color={C.fg} />
+          <Text style={styles.qrBtnText}>{tt('delete_account.title')}</Text>
+        </Pressable>
 
         <Pressable testID="store-btn" onPress={() => router.push('/store' as any)} style={[styles.qrBtn, { borderColor: C.brand }]}>
           <Ionicons name="ribbon-outline" size={18} color={C.brand} />

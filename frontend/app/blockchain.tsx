@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { api } from '@/src/api';
 import { C, S, R } from '@/src/theme';
 import { tap, GoldButton } from '@/src/ui/glass';
+import { WalletLink } from '@/src/WalletLink';
 
 const KIND_LABEL: Record<string, string> = {
   earn: 'Earned', spend: 'Spent', purchase_grant: 'Purchase grant', subscription: 'Plan allocation',
@@ -97,10 +98,7 @@ export default function Blockchain() {
                       <Pressable testID="bc-unlink" onPress={unlinkWallet} disabled={chainBusy} hitSlop={8}><Text style={st.unlink}>UNLINK</Text></Pressable>
                     </View>
                   ) : (
-                    <>
-                      <TextInput testID="bc-addr" value={addr} onChangeText={setAddr} placeholder="Your Base wallet 0x…" placeholderTextColor={C.info} autoCapitalize="none" autoCorrect={false} style={st.input} />
-                      <GoldButton testID="bc-link" title="LINK WALLET" small onPress={linkWallet} loading={chainBusy} disabled={!/^0x[0-9a-fA-F]{40}$/.test(addr.trim())} />
-                    </>
+                    <WalletLink testID="bc" value={addr} onChange={setAddr} onLink={linkWallet} busy={chainBusy} />
                   )}
                   {!!chainMsg && <Text testID="bc-chain-msg" style={[st.msg, { color: chainMsg.startsWith('✓') ? C.accent : C.error }]}>{chainMsg}</Text>}
                   {mints.length > 0 && (

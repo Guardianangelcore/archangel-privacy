@@ -100,7 +100,7 @@ def clean(doc):
     return doc
 
 # Fields of a `users` document that must never be returned to a client.
-USER_PRIVATE_PROJECTION = {"_id": 0, "password_hash": 0}
+USER_PRIVATE_PROJECTION = {"_id": 0, "password_hash": 0, "ip_log": 0, "device_ids": 0}
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -129,7 +129,8 @@ from fastapi import Request
 
 _rate_buckets: dict = {}
 RATE_LIMITS_PER_MIN = {"login": 20, "register": 10, "dev_bypass": 30, "forgot_password": 5,
-                       "reset_password": 10, "tts": 30, "tts_intro": 10, "iap_sync": 60, "clinic_beam": 10}
+                       "reset_password": 10, "tts": 30, "tts_intro": 10, "iap_sync": 60, "clinic_beam": 10,
+                       "deletion_request": 5}
 
 
 def client_ip(request: Request) -> str:

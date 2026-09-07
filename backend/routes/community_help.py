@@ -8,14 +8,16 @@ Nobody can credit themselves any more. Flow:
   3. Requester confirms "yes, they helped me" → escrow is paid out to the helper (ledger `help_reward`).
   4. Safety: max 5 requests/day and 5 confirmations/day per user; a done-but-unconfirmed request
      expires 24 h after completion (open ones after 7 days) and the escrow is refunded to where it came from.
+  5. FARMING GUARD: help is never rewarded between two accounts that share a device (X-Device-Id) or a
+     recent network address, and the same two people can complete at most ONE rewarded help per 24 h.
 """
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Header, Request
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 import uuid
 
-from core import api, db, logger, clean, get_current_user, send_push
+from core import api, db, logger, clean, get_current_user, send_push, client_ip
 from routes.token import _ledger_append, _get_supply, debit_balance
 
 HELP_REWARD = 10.0
@@ -23,6 +25,8 @@ DAILY_MAX_REQUESTS = 5
 DAILY_MAX_CONFIRMS = 5
 CONFIRM_WINDOW_H = 24
 OPEN_TTL_DAYS = 7
+PAIR_WINDOW_H = 24            # one rewarded help per pair of accounts per 24 h
+ORIGIN_RECENT_DAYS = 7        # IPs seen within this window count as "same network"
 CATEGORIES = ("errand", "medication", "transport", "companionship", "household", "tech", "other")
 
 
@@ -32,6 +36,56 @@ def _now():
 
 def _day_start():
     return _now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+# ---------------- FARMING GUARD ----------------
+async def _touch_origin(request: Request, uid: str) -> None:
+    """Remember the device (X-Device-Id header, sent by the app) and IP this account acts from."""
+    dev = (request.headers.get("x-device-id") or "").strip()[:80]
+    ip = client_ip(request)
+    update: dict = {"$push": {"ip_log": {"$each": [{"ip": ip, "at": _now()}], "$slice": -30}}}
+    if dev:
+        update["$addToSet"] = {"device_ids": dev}
+    await db.users.update_one({"user_id": uid}, update)
+
+
+async def _shared_origin(a_uid: str, b_uid: str) -> Optional[str]:
+    """'device' | 'network' | None — do the two accounts share a device id or a recent IP?"""
+    rows = await db.users.find({"user_id": {"$in": [a_uid, b_uid]}}, {"_id": 0, "user_id": 1, "device_ids": 1, "ip_log": 1}).to_list(2)
+    by = {r["user_id"]: r for r in rows}
+    a, b = by.get(a_uid) or {}, by.get(b_uid) or {}
+    if set(a.get("device_ids") or []) & set(b.get("device_ids") or []):
+        return "device"
+    cutoff = _now() - timedelta(days=ORIGIN_RECENT_DAYS)
+
+    def recent(u):
+        out = set()
+        for e in u.get("ip_log") or []:
+            at = e.get("at")
+            if at is not None and at.tzinfo is None:
+                at = at.replace(tzinfo=timezone.utc)
+            if at and at >= cutoff and e.get("ip") not in (None, "", "unknown"):
+                out.add(e["ip"])
+        return out
+    if recent(a) & recent(b):
+        return "network"
+    return None
+
+
+async def _pair_recent(a_uid: str, b_uid: str, exclude_req: Optional[str] = None) -> bool:
+    q = {"status": "confirmed", "confirmed_at": {"$gte": _now() - timedelta(hours=PAIR_WINDOW_H)},
+         "$or": [{"requester_id": a_uid, "helper_id": b_uid}, {"requester_id": b_uid, "helper_id": a_uid}]}
+    if exclude_req:
+        q["req_id"] = {"$ne": exclude_req}
+    return await db.help_requests.count_documents(q) > 0
+
+
+async def _guard_pair(a_uid: str, b_uid: str, exclude_req: Optional[str] = None) -> None:
+    origin = await _shared_origin(a_uid, b_uid)
+    if origin:
+        raise HTTPException(403, f"same_origin: help between accounts on the same {origin} is not rewarded.")
+    if await _pair_recent(a_uid, b_uid, exclude_req):
+        raise HTTPException(429, f"pair_limit: you two already completed a rewarded help in the last {PAIR_WINDOW_H} h — next one tomorrow.")
 
 
 async def _reserve(user_id: str, amount: float) -> dict:
@@ -166,7 +220,8 @@ async def help_list(scope: str = "open", authorization: Optional[str] = Header(N
     supply = await _get_supply()
     return {"requests": [_view(r, uid, rep) for r in rows], "reward": HELP_REWARD, "my_reputation": rep.get(uid),
             "badges": {b: need for b, need in BADGES},
-            "limits": {"requests_today": made, "confirms_today": confirmed, "daily_max": DAILY_MAX_REQUESTS},
+            "limits": {"requests_today": made, "confirms_today": confirmed, "daily_max": DAILY_MAX_REQUESTS,
+                       "pair_window_h": PAIR_WINDOW_H, "same_origin_blocked": True},
             "community_fund": round(float(supply.get("treasury", 0.0)), 2), "categories": list(CATEGORIES)}
 
 
@@ -178,7 +233,7 @@ async def help_reputation(user_id: str, authorization: Optional[str] = Header(No
 
 
 @api.post("/help/requests", status_code=201)
-async def help_create(body: RequestIn, authorization: Optional[str] = Header(None)):
+async def help_create(body: RequestIn, request: Request, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     if body.category not in CATEGORIES:
@@ -186,6 +241,7 @@ async def help_create(body: RequestIn, authorization: Optional[str] = Header(Non
     made = await db.help_requests.count_documents({"requester_id": uid, "created_at": {"$gte": _day_start()}})
     if made >= DAILY_MAX_REQUESTS:
         raise HTTPException(429, f"daily_limit: max {DAILY_MAX_REQUESTS} help requests per day")
+    await _touch_origin(request, uid)
     reserved = await _reserve(uid, HELP_REWARD)
     now = _now()
     req = {"req_id": uuid.uuid4().hex[:16], "requester_id": uid, "requester_name": user.get("name") or "Guardian",
@@ -205,12 +261,14 @@ async def _load(req_id: str) -> dict:
 
 
 @api.post("/help/requests/{req_id}/accept")
-async def help_accept(req_id: str, authorization: Optional[str] = Header(None)):
+async def help_accept(req_id: str, request: Request, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     req = await _load(req_id)
     if req["requester_id"] == uid:
         raise HTTPException(400, "You cannot accept your own request")
+    await _touch_origin(request, uid)
+    await _guard_pair(uid, req["requester_id"])
     res = await db.help_requests.update_one({"req_id": req_id, "status": "open"},
                                             {"$set": {"status": "accepted", "helper_id": uid, "helper_name": user.get("name") or "Guardian",
                                                       "accepted_at": _now()}})
@@ -235,7 +293,7 @@ async def help_done(req_id: str, authorization: Optional[str] = Header(None)):
 
 
 @api.post("/help/requests/{req_id}/confirm")
-async def help_confirm(req_id: str, authorization: Optional[str] = Header(None)):
+async def help_confirm(req_id: str, request: Request, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     req = await _load(req_id)
@@ -244,6 +302,9 @@ async def help_confirm(req_id: str, authorization: Optional[str] = Header(None))
     confirmed = await db.help_requests.count_documents({"requester_id": uid, "confirmed_at": {"$gte": _day_start()}})
     if confirmed >= DAILY_MAX_CONFIRMS:
         raise HTTPException(429, f"daily_limit: max {DAILY_MAX_CONFIRMS} confirmations per day")
+    await _touch_origin(request, uid)
+    if req.get("helper_id"):
+        await _guard_pair(uid, req["helper_id"], exclude_req=req_id)
     res = await db.help_requests.update_one({"req_id": req_id, "status": "done"},
                                             {"$set": {"status": "confirmed", "confirmed_at": _now()}})
     if res.modified_count == 0:

@@ -505,13 +505,10 @@ USER_DATA_COLLECTIONS = [
     "arbitrage_quotes", "bio_identity", "duress_configs", "duress_events",
 ]
 
-@api.delete("/auth/account")
-async def delete_account(authorization: Optional[str] = Header(None)):
-    """Deletes the user's account and personal data. AML ledger entries are
-    retained (hashes only) for regulatory audit; donations/trades/bookings keep
+async def purge_user_data(uid: str) -> int:
+    """Erase an account and its personal data (in-app deletion AND Founder-processed public requests).
+    AML ledger entries are retained (hashes only) for regulatory audit; donations/trades/bookings keep
     counterparty records with the user_id but no personal payloads."""
-    user = await get_current_user(authorization)
-    uid = user["user_id"]
     removed = 0
     for col in USER_DATA_COLLECTIONS:
         res = await db[col].delete_many({"user_id": uid})
@@ -521,5 +518,13 @@ async def delete_account(authorization: Optional[str] = Header(None)):
     await db.user_sessions.delete_many({"user_id": uid})
     await db.users.delete_one({"user_id": uid})
     await _aml_ledger_append(uid, "account_deleted", {"records_removed": removed})
+    return removed
+
+
+@api.delete("/auth/account")
+async def delete_account(authorization: Optional[str] = Header(None)):
+    """Deletes the user's account and personal data (see purge_user_data)."""
+    user = await get_current_user(authorization)
+    removed = await purge_user_data(user["user_id"])
     return {"deleted": True, "records_removed": removed}
 

@@ -13,6 +13,7 @@
       "bundleIdentifier": "com.emergent.angelos.qvqss9",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "LSApplicationQueriesSchemes": ["metamask", "cbwallet"],
         "NSMotionUsageDescription": "Detect falls and inactivity to keep you safe",
         "NSFaceIDUsageDescription": "Unlock your private vault with Face ID",
         "NSLocationWhenInUseUsageDescription": "Send your location to family in emergencies",
