@@ -465,3 +465,23 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
   preview URL (`test_iter90_reviewer_demo.py` 7/7 still green). To run them locally: `DEV_BYPASS_ENABLED=true` +
   hit `http://localhost:8001` — or migrate the tests to password registration (backlog).
 - SEC-003 (MEDIUM, GA-T earn farming / self-dealing Community Help) intentionally NOT changed — business-logic decision pending.
+
+## Iter 93 — Camera bug: "tap camera → app jumps to the start/home screen" (user report)
+- **Root cause (confirmed, Founder account has `biometric_enabled: true`).** `src/biometric-gate.tsx` re-locked on EVERY
+  AppState background→active cycle (the 60 s `UNLOCK_GRACE_MS` existed but was unused) and rendered the lock screen
+  INSTEAD of its children → the whole `<Stack>` + `LaunchSequence` unmounted → navigation state destroyed, pending
+  `launchCameraAsync` promise orphaned → after unlock the cinematic intro ("start screen") replayed and the Stack
+  restarted at `/` → `/(tabs)`. On Android the camera permission dialog and the system camera Activity both report
+  'background', hence "immediately … instead of opening the camera".
+- **Fix 1 — BiometricGate.** Children are ALWAYS mounted; the probing splash / lock screen are an opaque absolute
+  overlay (`styles.overlay`, zIndex 1000) on top. Re-lock only when the app was away > `UNLOCK_GRACE_MS` (60 s);
+  short camera/picker/permission trips never re-lock. Navigation state + in-flight work survive.
+- **Fix 2 — Android process death while the camera is open** (secondary cause, per Expo docs). New `src/camera.ts`:
+  `launchCamera(route, opts)` (drop-in for `ImagePicker.launchCameraAsync`, remembers the launching route in
+  AsyncStorage on Android), `restorePendingCamera()` (cold start → route + `ImagePicker.getPendingResultAsync()`),
+  `takeRecoveredAsset()` (screen picks the photo up on mount). `RootNav` (`app/_layout.tsx`) waits for the check on
+  Android and, after `/(tabs)`, pushes the remembered route. Wired into `app/lens.tsx`, `app/translate.tsx`,
+  `app/health-timeline.tsx` (OCR extracted to `ocrAsset`), `src/SpiderHub.tsx` (`analyzeAsset`), `app/physio.tsx`
+  (route return only — video upload needs the selected guide). `magic-lens.tsx` uses in-app `CameraView` (unaffected).
+- Not reproducible on web (gate is pass-through without biometry hardware; camera button hidden on web) — needs a
+  device check in Expo Go / build: Lens → camera → photo → still on Lens with the photo attached.

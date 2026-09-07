@@ -12,6 +12,7 @@ import Svg, { Line, Circle } from 'react-native-svg';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { launchCamera, takeRecoveredAsset } from './camera';
 import { api, apiUpload } from './api';
 import { useAuth } from './auth';
 import { C, S, R } from './theme';
@@ -64,23 +65,32 @@ export function SpiderHub({ onClassic }: { onClassic: () => void }) {
 
   const askText = () => { const t = q.trim(); if (!t) return; tap('medium'); setQ(''); router.push({ pathname: '/jarvis', params: { q: t } } as any); };
   const askVoice = () => { tap('medium'); router.push({ pathname: '/jarvis', params: { voice: '1' } } as any); };
-  const askPhoto = async () => {
-    tap('medium');
+  const analyzeAsset = async (a: ImagePicker.ImagePickerAsset) => {
+    setPhotoBusy(true); setResult(null);
     try {
-      let perm = await ImagePicker.getCameraPermissionsAsync();
-      if (!perm.granted && perm.canAskAgain) perm = await ImagePicker.requestCameraPermissionsAsync();
-      const res = perm.granted && Platform.OS !== 'web'
-        ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-      if (res.canceled || !res.assets?.length) return;
-      const a = res.assets[0];
-      setPhotoBusy(true); setResult(null);
       const doc: any = await apiUpload('/vault/documents', a.uri, a.fileName || 'scan.jpg', a.mimeType || 'image/jpeg', { title: 'Jarvis scan' });
       const r: any = await api('/agents/run', { method: 'POST', body: JSON.stringify({ input_type: 'photo', doc_id: doc.doc_id, text: q.trim(), language: user?.language || 'sk' }) });
       setResult(r); setQ('');
       speak(r.reply, { mood: 'calm', language: user?.language || 'en' });
     } catch (e: any) { setResult({ error: String(e.message || e) }); }
     finally { setPhotoBusy(false); }
+  };
+  // Photo captured right before an Android process restart (see src/camera.ts)
+  useEffect(() => {
+    const a = takeRecoveredAsset();
+    if (a) analyzeAsset(a);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const askPhoto = async () => {
+    tap('medium');
+    try {
+      let perm = await ImagePicker.getCameraPermissionsAsync();
+      if (!perm.granted && perm.canAskAgain) perm = await ImagePicker.requestCameraPermissionsAsync();
+      const res = perm.granted && Platform.OS !== 'web'
+        ? await launchCamera('/(tabs)', { quality: 0.7 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      if (res.canceled || !res.assets?.length) return;
+      await analyzeAsset(res.assets[0]);
+    } catch (e: any) { setResult({ error: String(e.message || e) }); }
   };
 
   const accent = focus?.color || GOLD;

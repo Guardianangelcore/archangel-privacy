@@ -44,6 +44,7 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
   const [label, setLabel] = useState('FaceID');
   const [available, setAvailable] = useState<boolean | null>(null);
   const lastUnlockRef = useRef(0);
+  const backgroundAtRef = useRef(0);
   const greetedRef = useRef(false);
 
   // Detect biometry once per user session.
@@ -97,66 +98,77 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
     authenticate();
   }, [enabled, available, unlocked, prompting, authenticate]);
 
-  // Re-lock on app going background (>60s) — Apple/Tesla-grade privacy.
+  // Re-lock when the app was in the background for longer than the grace period.
+  // Short trips (system camera / image picker / permission dialogs — Android reports these as
+  // 'background') must NOT re-lock: that would look like the app "restarting" mid-task.
   useEffect(() => {
     if (!enabled || available !== true) return;
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'background') {
-        // remember the timestamp; if user resumes >60s later, re-prompt
-        lastUnlockRef.current = 0;
-      } else if (state === 'active' && unlocked && lastUnlockRef.current === 0) {
-        setUnlocked(false);
+        backgroundAtRef.current = Date.now();
+      } else if (state === 'active' && unlocked && backgroundAtRef.current) {
+        const away = Date.now() - backgroundAtRef.current;
+        backgroundAtRef.current = 0;
+        if (away > UNLOCK_GRACE_MS) { lastUnlockRef.current = 0; setUnlocked(false); }
       }
     });
     return () => sub.remove();
   }, [enabled, available, unlocked]);
 
-  // No gate → pass-through.
-  if (!enabled) return <>{children}</>;
-  // Hardware unavailable → soft-fail gracefully (do NOT block the user).
-  if (available === false) return <>{children}</>;
-  // Still probing → tiny splash so we don't flash unauthenticated content.
-  if (available === null) {
-    return (
-      <View style={styles.root}>
+  // The lock UI is an opaque OVERLAY on top of the (always mounted) children. Unmounting the
+  // navigation tree here would destroy the current screen and its in-flight work (e.g. a photo
+  // being taken) and dump the user back on the start/home screen after unlocking.
+  // No gate (opt-out) or hardware unavailable → no overlay, never block the user.
+  let overlay: React.ReactNode = null;
+  if (enabled && available === null) {
+    // Still probing → tiny splash so we don't flash unauthenticated content.
+    overlay = (
+      <View style={[styles.root, styles.overlay]}>
         <ActivityIndicator color={C.brand} size="large" />
+      </View>
+    );
+  } else if (enabled && available === true && !unlocked) {
+    // Locked screen — warm, single-purpose, apple-grade.
+    overlay = (
+      <View testID="biometric-gate" style={[styles.root, styles.overlay]}>
+        <View style={styles.iconRing}>
+          <Ionicons name={label === 'FaceID' ? 'scan-outline' : 'finger-print'} size={72} color={C.brand} />
+        </View>
+        <Text style={styles.brand}>{tt('c_biometric_gate.guardian')}</Text>
+        <Text style={styles.tag}>{tt('c_biometric_gate.unlock_with_your_personal_signal')}</Text>
+        <Text style={styles.method}>{label.toUpperCase()}</Text>
+        {!!err && <Text style={styles.err}>{err}</Text>}
+        <Pressable testID="biometric-unlock" onPress={authenticate} disabled={prompting} style={styles.cta}>
+          {prompting ? <ActivityIndicator color={C.onInverse} /> : (
+            <>
+              <Ionicons name="lock-open" size={18} color={C.onInverse} />
+              <Text style={styles.ctaText}>{tt('c_biometric_gate.unlock')}</Text>
+            </>
+          )}
+        </Pressable>
+        <Pressable testID="biometric-signout" onPress={signOut} style={styles.ghost}>
+          <Text style={styles.ghostText}>{tt('c_biometric_gate.sign_in_with_another_account')}</Text>
+        </Pressable>
+        {Platform.OS !== 'web' && (
+          <Pressable onPress={() => Linking.openSettings()} hitSlop={10}>
+            <Text style={styles.hint}>{tt('c_biometric_gate.nastavenia_biometrie')}</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
 
-  if (unlocked) return <>{children}</>;
-
-  // Locked screen — warm, single-purpose, apple-grade.
   return (
-    <View testID="biometric-gate" style={styles.root}>
-      <View style={styles.iconRing}>
-        <Ionicons name={label === 'FaceID' ? 'scan-outline' : 'finger-print'} size={72} color={C.brand} />
-      </View>
-      <Text style={styles.brand}>{tt('c_biometric_gate.guardian')}</Text>
-      <Text style={styles.tag}>{tt('c_biometric_gate.unlock_with_your_personal_signal')}</Text>
-      <Text style={styles.method}>{label.toUpperCase()}</Text>
-      {!!err && <Text style={styles.err}>{err}</Text>}
-      <Pressable testID="biometric-unlock" onPress={authenticate} disabled={prompting} style={styles.cta}>
-        {prompting ? <ActivityIndicator color={C.onInverse} /> : (
-          <>
-            <Ionicons name="lock-open" size={18} color={C.onInverse} />
-            <Text style={styles.ctaText}>{tt('c_biometric_gate.unlock')}</Text>
-          </>
-        )}
-      </Pressable>
-      <Pressable testID="biometric-signout" onPress={signOut} style={styles.ghost}>
-        <Text style={styles.ghostText}>{tt('c_biometric_gate.sign_in_with_another_account')}</Text>
-      </Pressable>
-      {Platform.OS !== 'web' && (
-        <Pressable onPress={() => Linking.openSettings()} hitSlop={10}>
-          <Text style={styles.hint}>{tt('c_biometric_gate.nastavenia_biometrie')}</Text>
-        </Pressable>
-      )}
+    <View style={styles.host}>
+      {children}
+      {overlay}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  host: { flex: 1 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, elevation: 1000 },
   root: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: S.xl, gap: S.md },
   iconRing: { width: 130, height: 130, borderRadius: 65, borderWidth: 2, borderColor: C.brand, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(212,175,55,0.08)' },
   brand: { color: C.fg, fontSize: 26, fontWeight: '900', letterSpacing: 4, marginTop: S.lg },

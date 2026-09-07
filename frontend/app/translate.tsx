@@ -10,6 +10,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { launchCamera, takeRecoveredAsset } from '@/src/camera';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { api, apiUpload, API_BASE, getToken } from '@/src/api';
 import { useAuth } from '@/src/auth';
@@ -72,6 +73,12 @@ export default function Translate() {
     finally { setBusy(false); setStage(''); }
   };
 
+  // Photo captured right before an Android process restart (see src/camera.ts)
+  useEffect(() => {
+    const a = takeRecoveredAsset();
+    if (a) processDoc(a.uri, a.fileName || 'lekarska_sprava.jpg', a.mimeType || 'image/jpeg');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const takePhoto = async () => {
     tap('medium');
     try {
@@ -83,7 +90,7 @@ export default function Translate() {
           if (!r.granted) { if (!r.canAskAgain) setCamBlocked(true); return; }
         }
       }
-      const res = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: false });
+      const res = await launchCamera('/translate', { quality: 0.8, allowsEditing: false });
       if (!res.canceled && res.assets?.length) {
         const a = res.assets[0];
         await processDoc(a.uri, a.fileName || 'lekarska_sprava.jpg', a.mimeType || 'image/jpeg');

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { launchCamera } from '@/src/camera';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { api, apiUpload, API_BASE, getToken } from '@/src/api';
 import { cachedVideo, prefetchVideo } from '@/src/media';
@@ -259,7 +260,7 @@ function ExpertVideos({ guideId }: { guideId: string }) {
           perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { if (perm.canAskAgain === false) setCamBlocked(true); return; }
         }
-        res = await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: 180, quality: 0.7 } as any);
+        res = await launchCamera('/physio', { mediaTypes: ['videos'], videoMaxDuration: 180, quality: 0.7 } as any);
       } else {
         res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 0.7 } as any);
       }

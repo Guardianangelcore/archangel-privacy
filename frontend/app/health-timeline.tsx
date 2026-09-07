@@ -9,6 +9,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { launchCamera, takeRecoveredAsset } from '@/src/camera';
 import { api, apiUpload } from '@/src/api';
 import { sharePdf } from '@/src/pdf';
 import { DateField } from '@/src/ui/fields';
@@ -191,6 +192,25 @@ export default function LifeCard() {
   };
 
   // OCR rodného listu — Guardian Eye prefills the identity form (user confirms save)
+  const ocrAsset = async (a: ImagePicker.ImagePickerAsset) => {
+    setErr(''); setOcrMsg('');
+    try {
+      setOcrBusy(true);
+      const r: any = await apiUpload('/lifecard/ocr', a.uri, a.fileName || 'rodny-list.jpg', a.mimeType || 'image/jpeg');
+      if (!r.found) { setOcrMsg('Could not recognize the document in the photo. Try a sharper photo in better light.'); return; }
+      if (r.full_name) setEName(r.full_name);
+      if (r.birth_date) setEBirth(r.birth_date);
+      if (r.blood_type) setEBlood(r.blood_type);
+      setOcrMsg('📄 Data read from the document — review and press SAVE DETAILS.');
+    } catch (e: any) { setErr(String(e.message || e)); }
+    finally { setOcrBusy(false); }
+  };
+  // Photo captured right before an Android process restart (see src/camera.ts)
+  useEffect(() => {
+    const a = takeRecoveredAsset();
+    if (a) ocrAsset(a);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runOcr = async (fromCamera: boolean) => {
     setErr(''); setOcrMsg(''); setCamBlocked(false);
     try {
@@ -202,21 +222,13 @@ export default function LifeCard() {
           const r = await ImagePicker.requestCameraPermissionsAsync();
           if (!r.granted) { if (!r.canAskAgain) setCamBlocked(true); return; }
         }
-        res = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: false });
+        res = await launchCamera('/health-timeline', { quality: 0.8, allowsEditing: false });
       } else {
         res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
       }
       if (res.canceled || !res.assets?.length) return;
-      const a = res.assets[0];
-      setOcrBusy(true);
-      const r: any = await apiUpload('/lifecard/ocr', a.uri, a.fileName || 'rodny-list.jpg', a.mimeType || 'image/jpeg');
-      if (!r.found) { setOcrMsg('Could not recognize the document in the photo. Try a sharper photo in better light.'); return; }
-      if (r.full_name) setEName(r.full_name);
-      if (r.birth_date) setEBirth(r.birth_date);
-      if (r.blood_type) setEBlood(r.blood_type);
-      setOcrMsg('📄 Data read from the document — review and press SAVE DETAILS.');
+      await ocrAsset(res.assets[0]);
     } catch (e: any) { setErr(String(e.message || e)); }
-    finally { setOcrBusy(false); }
   };
 
   // PDF Karty života — jedným ťukom pre lekára / rodinu

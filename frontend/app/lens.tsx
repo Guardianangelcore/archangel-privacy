@@ -1,11 +1,12 @@
 /* Copyright © 2026 Guardian Angel Sovereign Foundation (DAO). All Rights Reserved. This source code and its logic are the sole property of the Foundation. Unauthorized duplication, modification, or distribution is strictly prohibited. */
 // GUARDIAN LENS — one tap: photograph any medical artefact → AI identifies → instant workflow
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, Platform, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { launchCamera, takeRecoveredAsset } from '@/src/camera';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { api, apiUpload } from '@/src/api';
 import { cachedAudioUri } from '@/src/media';
@@ -24,6 +25,11 @@ export default function Lens() {
   const router = useRouter();
   const { user } = useAuth();
   const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
+  // Photo captured right before an Android process restart (see src/camera.ts)
+  useEffect(() => {
+    const a = takeRecoveredAsset();
+    if (a) setPhoto({ uri: a.uri, name: a.fileName || 'scan.jpg', type: a.mimeType || 'image/jpeg' });
+  }, []);
   const [scan, setScan] = useState<any>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
@@ -68,7 +74,7 @@ export default function Lens() {
           if (!r.granted) { if (!r.canAskAgain) setCamBlocked(true); return; }
         }
       }
-      const res = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: false });
+      const res = await launchCamera('/lens', { quality: 0.7, allowsEditing: false });
       if (!res.canceled && res.assets?.length) {
         const a = res.assets[0];
         setPhoto({ uri: a.uri, name: a.fileName || 'scan.jpg', type: a.mimeType || 'image/jpeg' });

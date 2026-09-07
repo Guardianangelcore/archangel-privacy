@@ -28,6 +28,7 @@ import { OnboardingTour } from "@/src/onboarding-tour";
 import { startPanicGesture } from "@/src/panic-gesture";
 import { CrisisHUD } from "@/src/CrisisHUD";
 import { DeviceIntegrityGuard } from "@/src/DeviceIntegrity";   // root / jailbreak warning + report
+import { restorePendingCamera } from "@/src/camera";
 
 
 LogBox.ignoreAllLogs(true);
@@ -55,6 +56,14 @@ function RootNav() {
   // 1 choose-language → 2 login/register → 3 user-type → 4 Spider Hub ((tabs) home).
   const langChosen = useLangChosen();
 
+  // CAMERA RETURN (Android) — if the OS killed the app while the system camera was open, go back to
+  // the screen that launched it instead of the home screen. undefined = still checking.
+  const [cameraResume, setCameraResume] = useState<string | null | undefined>(Platform.OS === 'android' ? undefined : null);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    restorePendingCamera().then(setCameraResume).catch(() => setCameraResume(null));
+  }, []);
+
   useEffect(() => {
     if (loading || langChosen === null) return;
     const seg0 = segments[0] as string | undefined;
@@ -67,9 +76,11 @@ function RootNav() {
     } else if (!user.user_type && seg0 !== 'user-type') {
       router.replace('/user-type' as any);
     } else if (entry) {
+      if (cameraResume === undefined) return;
       router.replace('/(tabs)');
+      if (cameraResume) { if (cameraResume !== '/(tabs)') router.push(cameraResume as any); setCameraResume(null); }
     }
-  }, [user, loading, segments, langChosen]);
+  }, [user, loading, segments, langChosen, cameraResume]);
 
   // Push: register token on login / app open (tokens rotate)
   useEffect(() => {
