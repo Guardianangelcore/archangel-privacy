@@ -510,3 +510,22 @@ OPEN: LLM key budget exhausted (user must top up). SOS voice keyword must be val
   sends a Project ID.
 - Tests: `backend/tests/test_iter94_guard_deletion.py` 8/8 (runs against localhost with spoofed X-Forwarded-For /
   X-Device-Id; founder test needs `FOUNDER_TEST_PASSWORD`). `/swarm/audit` 9/9 after the flows.
+
+## Iter 95 — Security re-audit fixes (CONDITIONAL PASS → hardened)
+- Re-audit confirmed SEC-001/002 (dev-bypass, founder fallback) + /docs closed. Remaining findings fixed:
+- **Trusted proxy hops (LOW → fixed).** Probe showed the ingress chain `client, cloudflare, google-lb` in X-Forwarded-For
+  (attacker can only PREPEND). `core.client_ip()` now takes the (TRUSTED_PROXY_HOPS+1)-th entry from the RIGHT
+  (`TRUSTED_PROXY_HOPS` env, default 2); short chains (direct/local calls) fall back to the first entry so local tests
+  can still spoof. Affects rate limits, consent-receipt IP, deletion-request IP, Community Help network guard.
+- **Community Help farming (MEDIUM → fixed).** `_require_device()` — accept/confirm return 400 `device_required` when
+  the `X-Device-Id` header is missing (the app always sends it); `_guard_fund_velocity()` — a helper may receive max
+  `FUND_DAILY_MAX_PER_HELPER=3` Community-Fund-sourced rewards per day (429 `fund_limit`; wallet-funded requests
+  unaffected). `clean()` now also strips `ip_log`/`device_ids` everywhere.
+- **Deletion request ownership proof (MEDIUM → fixed).** `POST /account/deletion-request` e-mails a 6-digit one-time
+  code (sha256(req_id:code) stored, 30 min TTL, 5 attempts) when the account exists — identical 202 response either
+  way; new public `POST /account/deletion-request/{req_id}/verify` (rate bucket `deletion_verify` 10/min) marks
+  `verified`. Founder `process` returns 412 `unverified` until then (override `?force=true` is recorded as `forced`).
+  Founder list never returns `code_hash`. Page `/delete-account` has the code step (`da-verify-step`, `da-code`, `da-verify`).
+  Note: the e-mail provider blocks undeliverable test domains (example.com) — real addresses work like password reset.
+- Tests: `tests/test_iter94_guard_deletion.py` 11/11 (device-required, fund cap, spoofed-XFF-hop ignored, code verify →
+  founder purge). Test deletion requests are cleaned from the DB after runs.

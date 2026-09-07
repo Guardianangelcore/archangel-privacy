@@ -21,6 +21,8 @@ export default function DeleteAccount() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState<{ req_id: string; processing_days: number } | null>(null);
+  const [code, setCode] = useState('');
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => { api('/account/deletion-policy').then(setPolicy).catch(() => {}); }, []);
 
@@ -30,6 +32,16 @@ export default function DeleteAccount() {
       const r: any = await api('/account/deletion-request', { method: 'POST', body: JSON.stringify({ email: email.trim(), reason: reason.trim() }) });
       setDone({ req_id: r.req_id, processing_days: r.processing_days });
     } catch (e) { setErr(errMsg(e)); }
+    finally { setBusy(false); }
+  };
+
+  const verify = async () => {
+    if (!done) return;
+    setErr(''); setBusy(true);
+    try {
+      await api(`/account/deletion-request/${done.req_id}/verify`, { method: 'POST', body: JSON.stringify({ code: code.trim() }) });
+      setVerified(true);
+    } catch { setErr(tt('delete_account.code_invalid')); }
     finally { setBusy(false); }
   };
 
@@ -64,10 +76,41 @@ export default function DeleteAccount() {
               <Text style={st.boxTitle}>{tt('delete_account.request_title')}</Text>
             </View>
             {done ? (
-              <View testID="da-done">
-                <Text style={st.ok}>{tt('delete_account.done', { days: done.processing_days })}</Text>
-                <Text style={st.ref}>{tt('delete_account.reference')} {done.req_id}</Text>
-              </View>
+              verified ? (
+                <View testID="da-done">
+                  <Text style={st.ok}>{tt('delete_account.done', { days: done.processing_days })}</Text>
+                  <Text style={st.ref}>{tt('delete_account.reference')} {done.req_id}</Text>
+                </View>
+              ) : (
+                <View testID="da-verify-step">
+                  <Text style={st.p}>{tt('delete_account.code_sent')}</Text>
+                  <TextInput
+                    testID="da-code"
+                    value={code}
+                    onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    placeholderTextColor={C.info}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    style={[st.input, st.codeInput]}
+                  />
+                  {!!err && <Text testID="da-err" style={st.err}>{err}</Text>}
+                  <Pressable
+                    testID="da-verify"
+                    onPress={verify}
+                    disabled={busy || code.length !== 6}
+                    style={[st.cta, { backgroundColor: C.brand }, (busy || code.length !== 6) && { opacity: 0.5 }]}
+                  >
+                    {busy ? <ActivityIndicator color={C.onInverse} /> : (
+                      <>
+                        <Ionicons name="checkmark-circle-outline" size={18} color={C.onInverse} />
+                        <Text style={st.ctaText}>{tt('delete_account.verify')}</Text>
+                      </>
+                    )}
+                  </Pressable>
+                  <Text style={st.ref}>{tt('delete_account.reference')} {done.req_id}</Text>
+                </View>
+              )
             ) : (
               <>
                 <Text style={st.p}>{tt('delete_account.request_text', { days })}</Text>
@@ -137,6 +180,7 @@ const st = StyleSheet.create({
   boxTitle: { color: C.brand, fontWeight: '900', fontSize: 12, letterSpacing: 1.5 },
   p: { color: C.fg, fontSize: 13, lineHeight: 20 },
   input: { minHeight: 48, color: C.fg, paddingHorizontal: S.md, borderWidth: 1, borderColor: C.border, borderRadius: R.sm, backgroundColor: C.surface2, fontSize: 14 },
+  codeInput: { textAlign: 'center', fontSize: 24, letterSpacing: 8, fontWeight: '800', marginTop: S.sm, marginBottom: S.sm },
   cta: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.error, borderRadius: R.sm, minHeight: 50 },
   ctaText: { color: C.onInverse, fontWeight: '900', letterSpacing: 1.5, fontSize: 12 },
   err: { color: C.error, fontSize: 12, fontWeight: '700' },

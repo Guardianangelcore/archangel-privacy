@@ -27,6 +27,7 @@ CONFIRM_WINDOW_H = 24
 OPEN_TTL_DAYS = 7
 PAIR_WINDOW_H = 24            # one rewarded help per pair of accounts per 24 h
 ORIGIN_RECENT_DAYS = 7        # IPs seen within this window count as "same network"
+FUND_DAILY_MAX_PER_HELPER = 3  # Community-Fund-sourced rewards one helper may receive per day
 CATEGORIES = ("errand", "medication", "transport", "companionship", "household", "tech", "other")
 
 
@@ -39,14 +40,24 @@ def _day_start():
 
 
 # ---------------- FARMING GUARD ----------------
+def _device_id(request: Request) -> str:
+    return (request.headers.get("x-device-id") or "").strip()[:80]
+
+
 async def _touch_origin(request: Request, uid: str) -> None:
     """Remember the device (X-Device-Id header, sent by the app) and IP this account acts from."""
-    dev = (request.headers.get("x-device-id") or "").strip()[:80]
+    dev = _device_id(request)
     ip = client_ip(request)
     update: dict = {"$push": {"ip_log": {"$each": [{"ip": ip, "at": _now()}], "$slice": -30}}}
     if dev:
         update["$addToSet"] = {"device_ids": dev}
     await db.users.update_one({"user_id": uid}, update)
+
+
+def _require_device(request: Request) -> None:
+    """Reward flows need a device identity — a client that hides it is not a Guardian app."""
+    if not _device_id(request):
+        raise HTTPException(400, "device_required: reward actions need the app's device identity.")
 
 
 async def _shared_origin(a_uid: str, b_uid: str) -> Optional[str]:
@@ -86,6 +97,19 @@ async def _guard_pair(a_uid: str, b_uid: str, exclude_req: Optional[str] = None)
         raise HTTPException(403, f"same_origin: help between accounts on the same {origin} is not rewarded.")
     if await _pair_recent(a_uid, b_uid, exclude_req):
         raise HTTPException(429, f"pair_limit: you two already completed a rewarded help in the last {PAIR_WINDOW_H} h — next one tomorrow.")
+
+
+async def _guard_fund_velocity(helper_id: str, req: dict) -> None:
+    """A helper may receive at most FUND_DAILY_MAX_PER_HELPER Community-Fund-sourced rewards per day
+    (wallet-funded rewards are the requester's own GA-T and stay unlimited within the daily caps)."""
+    if float(req.get("reserved", {}).get("fund", 0.0)) <= 0:
+        return
+    n = await db.help_requests.count_documents({"helper_id": helper_id, "status": {"$in": ["accepted", "done", "confirmed"]},
+                                                "reserved.fund": {"$gt": 0}, "accepted_at": {"$gte": _day_start()},
+                                                "req_id": {"$ne": req["req_id"]}})
+    if n >= FUND_DAILY_MAX_PER_HELPER:
+        raise HTTPException(429, f"fund_limit: max {FUND_DAILY_MAX_PER_HELPER} Community-Fund rewards per day — "
+                                 "requests paid from the requester's own wallet are still open to you.")
 
 
 async def _reserve(user_id: str, amount: float) -> dict:
@@ -267,8 +291,10 @@ async def help_accept(req_id: str, request: Request, authorization: Optional[str
     req = await _load(req_id)
     if req["requester_id"] == uid:
         raise HTTPException(400, "You cannot accept your own request")
+    _require_device(request)
     await _touch_origin(request, uid)
     await _guard_pair(uid, req["requester_id"])
+    await _guard_fund_velocity(uid, req)
     res = await db.help_requests.update_one({"req_id": req_id, "status": "open"},
                                             {"$set": {"status": "accepted", "helper_id": uid, "helper_name": user.get("name") or "Guardian",
                                                       "accepted_at": _now()}})
@@ -302,6 +328,7 @@ async def help_confirm(req_id: str, request: Request, authorization: Optional[st
     confirmed = await db.help_requests.count_documents({"requester_id": uid, "confirmed_at": {"$gte": _day_start()}})
     if confirmed >= DAILY_MAX_CONFIRMS:
         raise HTTPException(429, f"daily_limit: max {DAILY_MAX_CONFIRMS} confirmations per day")
+    _require_device(request)
     await _touch_origin(request, uid)
     if req.get("helper_id"):
         await _guard_pair(uid, req["helper_id"], exclude_req=req_id)

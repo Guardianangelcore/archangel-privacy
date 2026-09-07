@@ -97,6 +97,8 @@ def clean(doc):
     if isinstance(doc, dict):
         doc.pop("_id", None)
         doc.pop("password_hash", None)   # SEC: credential material never leaves the server
+        doc.pop("ip_log", None)          # SEC: anti-fraud origin tracking stays server-side
+        doc.pop("device_ids", None)
     return doc
 
 # Fields of a `users` document that must never be returned to a client.
@@ -130,13 +132,20 @@ from fastapi import Request
 _rate_buckets: dict = {}
 RATE_LIMITS_PER_MIN = {"login": 20, "register": 10, "dev_bypass": 30, "forgot_password": 5,
                        "reset_password": 10, "tts": 30, "tts_intro": 10, "iap_sync": 60, "clinic_beam": 10,
-                       "deletion_request": 5}
+                       "deletion_request": 5, "deletion_verify": 10}
+
+
+# Trusted reverse proxies in front of the app (Cloudflare + cloud load balancer on this platform = 2).
+# Each appends the address it received the request FROM to X-Forwarded-For, so the real client is
+# the (TRUSTED_PROXY_HOPS + 1)-th entry from the RIGHT; anything further left is client-controlled.
+TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS", "2"))
 
 
 def client_ip(request: Request) -> str:
-    fwd = request.headers.get("x-forwarded-for", "")
+    fwd = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",") if p.strip()]
     if fwd:
-        return fwd.split(",")[0].strip()
+        idx = -(TRUSTED_PROXY_HOPS + 1)
+        return fwd[idx] if len(fwd) >= TRUSTED_PROXY_HOPS + 1 else fwd[0]   # short chain = direct/local call
     return request.client.host if request.client else "unknown"
 
 

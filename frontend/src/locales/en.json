@@ -2220,7 +2220,7 @@
   "delete_account.in_app_title": "OPTION 1 — IN THE APP (IMMEDIATE)",
   "delete_account.in_app_steps": "Sign in → Profile → scroll down → DELETE ACCOUNT & ALL DATA → confirm. Your account and data are erased right away.",
   "delete_account.request_title": "OPTION 2 — REQUEST WITHOUT SIGNING IN",
-  "delete_account.request_text": "Enter the e-mail address of your account. We erase the account and its data within {days} days. No confirmation of the account's existence is sent to protect your privacy.",
+  "delete_account.request_text": "Enter the e-mail address of your account. We send a one-time code to that address to confirm ownership, then erase the account and its data within {days} days. We never confirm whether an account exists.",
   "delete_account.email_placeholder": "E-mail of the account",
   "delete_account.reason_placeholder": "Reason (optional)",
   "delete_account.submit": "REQUEST DELETION",
@@ -2238,5 +2238,8 @@
   "wallet_link.manual": "or type / paste your 0x… address",
   "wallet_link.no_address": "No wallet address (0x…) found in the clipboard.",
   "wallet_link.pasted": "Address pasted — check it and tap LINK WALLET.",
-  "wallet_link.link": "LINK WALLET"
+  "wallet_link.link": "LINK WALLET",
+  "delete_account.code_sent": "If an account exists for this e-mail, we've sent a 6-digit code to it. Enter the code to confirm you own the account — nothing is deleted without it.",
+  "delete_account.verify": "CONFIRM CODE",
+  "delete_account.code_invalid": "Invalid or expired code. Check the e-mail and try again."
 }

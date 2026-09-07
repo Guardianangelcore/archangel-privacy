@@ -2220,7 +2220,7 @@
   "delete_account.in_app_title": "MOŽNOSŤ 1 — V APLIKÁCII (OKAMŽITE)",
   "delete_account.in_app_steps": "Prihlás sa → Profil → posuň nadol → VYMAZAŤ ÚČET A VŠETKY ÚDAJE → potvrď. Účet a údaje sa vymažú ihneď.",
   "delete_account.request_title": "MOŽNOSŤ 2 — ŽIADOSŤ BEZ PRIHLÁSENIA",
-  "delete_account.request_text": "Zadaj e-mail svojho účtu. Účet a jeho údaje vymažeme do {days} dní. Kvôli ochrane súkromia nepotvrdzujeme, či účet existuje.",
+  "delete_account.request_text": "Zadaj e-mail svojho účtu. Na túto adresu pošleme jednorazový kód na potvrdenie vlastníctva a účet s údajmi potom vymažeme do {days} dní. Nikdy nepotvrdzujeme, či účet existuje.",
   "delete_account.email_placeholder": "E-mail účtu",
   "delete_account.reason_placeholder": "Dôvod (nepovinné)",
   "delete_account.submit": "POŽIADAŤ O VYMAZANIE",
@@ -2238,5 +2238,8 @@
   "wallet_link.manual": "alebo napíš / vlož svoju 0x… adresu",
   "wallet_link.no_address": "V schránke nie je adresa peňaženky (0x…).",
   "wallet_link.pasted": "Adresa vložená — skontroluj ju a ťukni na PREPOJIŤ PEŇAŽENKU.",
-  "wallet_link.link": "PREPOJIŤ PEŇAŽENKU"
+  "wallet_link.link": "PREPOJIŤ PEŇAŽENKU",
+  "delete_account.code_sent": "Ak k tomuto e-mailu existuje účet, poslali sme naň 6-miestny kód. Zadaj ho na potvrdenie, že si vlastníkom účtu — bez kódu sa nič nevymaže.",
+  "delete_account.verify": "POTVRDIŤ KÓD",
+  "delete_account.code_invalid": "Neplatný alebo expirovaný kód. Skontroluj e-mail a skús znova."
 }
