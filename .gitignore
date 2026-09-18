@@ -81,3 +81,9 @@ memory/test_credentials.md
 # Mobile development
 android-sdk/
 # env files are pipeline-provided and must stay in the deploy build context (EXPO_PUBLIC_* inlining)
+.env
+.env.*
+*.env
+credentials.json
+*.key
+.credentials

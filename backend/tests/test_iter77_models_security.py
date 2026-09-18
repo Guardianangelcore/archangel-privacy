@@ -114,26 +114,26 @@ def test_password_hash_not_in_any_user_response():
     assert r.status_code == 200 and "password_hash" not in r.text
 
 
-# ---------- SEC-001: dev-bypass only on preview/local hosts ----------
-def test_dev_bypass_rejected_for_production_host():
-    # The ingress overwrites Host/X-Forwarded-Host, so a spoof can only be simulated by
-    # talking to uvicorn directly (inside the pod) with a production-looking Host header.
+# ---------- SEC-001: the passwordless dev bypass is disabled everywhere (Iter 92) ----------
+def test_dev_bypass_disabled_for_everyone():
+    from conftest import real_post   # the suite-wide shim redirects dev-bypass to password sign-up; test the REAL gate
+    for email in (FOUNDER, f"iter77-plain-{uuid.uuid4().hex[:6]}@example.com"):
+        assert real_post(f"{BASE}/auth/dev-bypass", json={"email": email}, timeout=15).status_code == 403, email
+
+
+def test_dev_bypass_rejected_direct_to_uvicorn():
+    from conftest import real_post
+    # Even talking to uvicorn directly (inside the pod) with preview-looking headers the gate stays shut.
     try:
-        r = requests.post("http://localhost:8001/api/auth/dev-bypass", json={"email": FOUNDER},
-                          headers={"Host": "archangel.emergent.host"}, timeout=10)
+        r = real_post("http://localhost:8001/api/auth/dev-bypass", json={"email": FOUNDER},
+                      headers={"Host": "archangel.emergent.host"}, timeout=10)
     except requests.ConnectionError:
         import pytest
         pytest.skip("backend not reachable on localhost:8001 from this runner")
     assert r.status_code == 403, r.text
-    r = requests.post("http://localhost:8001/api/auth/dev-bypass", json={"email": FOUNDER},
-                      headers={"Host": "archangel.emergent.host", "X-Forwarded-Host": "x.preview.emergentagent.com"}, timeout=10)
+    r = real_post("http://localhost:8001/api/auth/dev-bypass", json={"email": f"iter77-{uuid.uuid4().hex[:6]}@example.com"},
+                  headers={"Host": "localhost", "X-Forwarded-Host": "x.preview.emergentagent.com"}, timeout=10)
     assert r.status_code == 403, r.text
-
-
-def test_dev_bypass_works_on_preview_host_but_never_for_founder():
-    r = requests.post(f"{BASE}/auth/dev-bypass", json={"email": f"iter77-plain-{uuid.uuid4().hex[:6]}@example.com"}, timeout=15)
-    assert r.status_code == 200 and r.json()["user"].get("tier", "sovereign") == "sovereign"
-    assert requests.post(f"{BASE}/auth/dev-bypass", json={"email": FOUNDER}, timeout=15).status_code == 403
 
 
 # ---------- Rate limiting ----------
