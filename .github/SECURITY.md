@@ -1,60 +1,66 @@
-# Security Policy - Archangel Privacy
+# Security Policy
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in this documentation or related systems:
+We take security seriously. If you discover a security vulnerability, please **do not** open a public GitHub issue. Instead:
 
-1. **Email us** at security@guardianangel.dev
+1. **Email us** with details at security@guardianangel.dev
 2. **Include:**
    - Description of the vulnerability
-   - Steps to reproduce
+   - Steps to reproduce (if applicable)
+   - Affected versions/components
    - Potential impact
-   - Suggested fixes
+   - Any suggested fixes
 
-3. **Response Timeline:**
-   - Acknowledgment: Within 48 hours
-   - Update: Every 72 hours
-   - Resolution: As soon as patch is available
-
-## About This Repository
-
-This repository contains privacy policies and documentation for Archangel OS. While this is a public repository, we maintain high security standards.
+3. **Timeline:**
+   - We aim to acknowledge reports within 48 hours
+   - We'll provide regular updates on our progress
+   - We'll work with you on timeline and disclosure
 
 ## Security Best Practices
 
-### For Contributors
-- ✅ Review changes before submitting PRs
-- ✅ Use secure communication channels
-- ✅ Don't commit sensitive information
-- ✅ Respect privacy and security guidelines
+### Data Protection
+- ✅ Review privacy policy regularly
+- ✅ Keep security measures updated
+- ✅ Report security concerns
+- ✅ Follow data protection standards
 
-### For Users
-- ✅ Review our privacy policy regularly
-- ✅ Keep your information up to date
-- ✅ Report privacy concerns to security@guardianangel.dev
-- ✅ Use strong passwords and 2FA
+### Secrets & Credentials
+- ❌ Never commit API keys, tokens, or credentials
+- ✅ Use GitHub Secrets for CI/CD pipelines
+- ✅ Rotate credentials if accidentally exposed
 
-## Data Protection
+### Code Security
+- ✅ Validate all user inputs
+- ✅ Use HTTPS for all external communications
+- ✅ Keep sensitive logs out of version control
+- ✅ Review security warnings in CI/CD
 
-- GDPR compliant
-- CCPA compliant
-- Privacy-first approach
-- Transparent data handling
-- User rights respected
+### Dependencies
+- ✅ Keep dependencies up to date
+- ✅ Monitor security advisories
+- ✅ Pin versions to avoid unexpected breaking changes
+
+## Security Scanning
+
+This repository has automated security scanning enabled:
+
+- **Secret Scanning**: Prevents accidental credential commits
+- **SAST (Static Analysis)**: Scans for common security issues
+- **Code Review**: All PRs require review before merge
 
 ## Compliance
 
-This repository documents our commitment to:
-- Privacy protection
-- Data security
-- User rights
-- Transparency
-- Regulatory compliance
+- GDPR compliance
+- Privacy-first approach
+- Transparent data handling
+- Regular security assessments
 
-## Contact
+## Additional Resources
 
-- **Security Issues:** security@guardianangel.dev
-- **Privacy Concerns:** privacy@guardianangel.dev
+- [OWASP Security Cheat Sheets](https://cheatsheetseries.owasp.org/)
+- [GDPR Compliance](https://gdpr-info.eu/)
+- [Privacy Best Practices](https://www.eff.org/)
 
 ---
 

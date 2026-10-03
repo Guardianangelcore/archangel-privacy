@@ -1,0 +1,8 @@
+# Default owners for the repository
+* @Guardianangelcore
+
+# Critical files
+/.github @Guardianangelcore
+
+# Security-sensitive files
+/.github/SECURITY.md @Guardianangelcore
