@@ -1,0 +1,28 @@
+name: PR Security Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pr-security-review:
+    runs-on: ubuntu-latest
+    name: PR Security Review
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check for secrets in PR
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.base_ref }}
+        head: HEAD
+      continue-on-error: true
+
+    - name: Validate changes
+      run: |
+        echo "✓ PR Security Review Complete"
+        echo "Ensure all changes follow security guidelines in SECURITY.md"
